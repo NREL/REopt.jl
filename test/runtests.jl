@@ -21,7 +21,7 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
-
+    
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "hybrid profile" begin
@@ -71,8 +71,8 @@ else  # run HiGHS tests
             # create wholesale_rate with compensation in January > retail rate
             jan_rate = data["ElectricTariff"]["monthly_energy_rates"][1]
             data["ElectricTariff"]["wholesale_rate"] =
-                append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
-            data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+                append!(repeat([jan_rate + 0.1], 31 * 24), zeros(8760 - 31*24))
+            data["ElectricTariff"]["monthly_demand_rates"] = zeros(12)
 
             s = Scenario(data)
             inputs = REoptInputs(s)
@@ -144,7 +144,7 @@ else  # run HiGHS tests
 
         @testset "Fifteen minute load" begin
             d = JSON.parsefile("scenarios/no_techs.json")
-            d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040))
+            d["ElectricLoad"] = Dict("loads_kw" => ones(35040))
             d["Settings"] = Dict("time_steps_per_hour" => 4)
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, d)
@@ -935,8 +935,8 @@ else  # run HiGHS tests
             # create wholesale_rate with compensation in January > retail rate
             jan_rate = data["ElectricTariff"]["monthly_energy_rates"][1]
             data["ElectricTariff"]["wholesale_rate"] =
-                append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
-            data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+                append!(repeat([jan_rate + 0.1], 31 * 24), zeros(8760 - 31*24))
+            data["ElectricTariff"]["monthly_demand_rates"] = zeros(12)
             data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
 
             s = Scenario(data)

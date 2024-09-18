@@ -122,10 +122,10 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
                      )
     n_time_steps = length(critical_loads_kw)
     n_steps_per_hour = Int(n_time_steps / 8760)
-    r = repeat([0.0], n_time_steps)
+    r = zeros(n_time_steps)
 
     if batt_kw == 0 || batt_kwh == 0
-        init_soc = repeat([0], n_time_steps)  # default is 0
+        init_soc = zeros(n_time_steps)  # default is 0
 
         if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && (isempty(wind_kw_ac_hourly) || (sum(wind_kw_ac_hourly) == 0)) && diesel_kw == 0
             # no pv, generator, wind, nor battery --> no resilience
@@ -141,10 +141,10 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     end
 
     if isempty(pv_kw_ac_hourly)
-        pv_kw_ac_hourly = repeat([0], n_time_steps)
+        pv_kw_ac_hourly = zeros(n_time_steps)
     end
     if isempty(wind_kw_ac_hourly)
-        wind_kw_ac_hourly = repeat([0], n_time_steps)
+        wind_kw_ac_hourly = zeros(n_time_steps)
     end
     load_minus_der = [ld - pv - wd for (pv, wd, ld) in zip(pv_kw_ac_hourly, wind_kw_ac_hourly, critical_loads_kw)]
     """

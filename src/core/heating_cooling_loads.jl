@@ -394,7 +394,7 @@ function get_default_fraction_of_total_electric(city, doe_reference_name, latitu
     crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year, nothing, Real[], nothing)
     
     default_fraction_of_total_electric_profile = crb_cooling_elec_loads_kw ./
-                                                    max.(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
+                                                    max.(crb_total_elec_loads_kw, 1.0E-6)
     return default_fraction_of_total_electric_profile
 end
 

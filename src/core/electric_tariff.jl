@@ -170,7 +170,7 @@ function ElectricTariff(;
         end
 
         if isempty(monthly_demand_rates)
-            monthly_demand_rates = repeat([0.0], 12)
+            monthly_demand_rates = zeros(12)
         end
 
         tou_demand_rates = Float64[]
@@ -197,7 +197,7 @@ function ElectricTariff(;
             monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
         end
         if isempty(monthly_demand_rates)
-            monthly_demand_rates = repeat([0.0], 12)
+            monthly_demand_rates = zeros(12)
         end
 
         fixed_monthly_charge = 0.0
@@ -374,7 +374,7 @@ No export rate provided by user: set to 0 dollars/kWh for all time
 N = length(energy_rates[:,1]) and should already account for time_steps_per_hour
 """
 function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1)
-    [0 for _ in range(1, stop=N)]
+    zeros(N)
 end
 
 
@@ -384,7 +384,7 @@ Case for scaler export rate provided -> convert to array of time_steps
 N = length(energy_rates[:,1]) and should already account for time_steps_per_hour
 """
 function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
-    repeat([float(-1*e)], N)
+    repeat([float(-e)], N)
 end
 
 
@@ -399,9 +399,9 @@ function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::In
         throw(@error("Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."))
     end
     if Ne != N  # upsample
-        export_rates = [-1*x for x in e for ts in 1:ts_per_hour]
+        export_rates = repeat(-e,inner=ts_per_hour)
     else
-        export_rates = -1*e
+        export_rates = -e
     end
     return export_rates
 end

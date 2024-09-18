@@ -13,8 +13,8 @@ check to make sure that PV does NOT export unless the site load is met first for
     # create wholesale_rate with compensation in January > retail rate
     jan_rate = data["ElectricTariff"]["monthly_energy_rates"][1]
     data["ElectricTariff"]["wholesale_rate"] =
-        append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
-    data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+        append!(repeat([jan_rate + 0.1], 31 * 24), zeros(8760 - 31*24))
+    data["ElectricTariff"]["monthly_demand_rates"] = zeros(12)
     data["ElectricUtility"]["allow_simultaneous_export_import"] = false
 
     s = Scenario(data)

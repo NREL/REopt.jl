@@ -193,7 +193,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
         export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax_bau"])
 
-        annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
+        annual_income_from_host_series = -r["annualized_payment_to_third_party"]*ones(years)
 
         if "Generator" in keys(d) && d["Generator"]["size_kw"] > 0
             generator_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax"])
