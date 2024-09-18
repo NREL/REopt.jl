@@ -4,12 +4,11 @@ using JuMP
 using HiGHS
 # using Xpress
 using JSON
-using StatsPlots
+# using StatsPlots
 
-using Printf
+# using Printf
 
 ENV["NREL_DEVELOPER_API_KEY"]="ogQAO0gClijQdYn7WOKeIS02zTUYLbwYJJczH9St"
-
 
 # function get_user_defined_inputs_for_cst(model::String)
 #     user_defined_inputs = Dict()
@@ -120,7 +119,7 @@ cities_dict = Dict(
 
 ### Testing swh model
 model = "swh_flatplate" #works
-model = "ptc_v3"
+#model = "ptc_v3"
 
 # R = Dict()
 # for (key, value) in cities_dict
@@ -133,13 +132,15 @@ model = "ptc_v3"
 # end
 
 
-case_file_path = joinpath(@__DIR__,"test_udi_" * model * ".json")
+case_file_path = joinpath(@__DIR__,"scenarios","swh_flat_test.json")
 case_data = JSON.parsefile(case_file_path)
 R = Dict()
 for (key, value) in cities_dict
     case_data["Site"]["latitude"] = value[1]
     case_data["Site"]["longitude"] = value[2]
-    R[string(key)] = run_ssc(case_data)
+    results = REopt.run_ssc(case_data)
+    println("DONE!!!")
+    # println(results["thermal_production"][1:10])
 end
 # print(R)
     #R[string(key)] = run_ssc(model,value[1],value[2],inputs,outputs_dict[model])
@@ -171,11 +172,11 @@ end
 # end
 # #print(R_all)
 
-using Plots
+# using Plots
 
-plot([1:120],R["Denver, CO"][4001:4120])
-print(maximum(R["Denver, CO"]))
-writedlm( "FileName.csv",  R["Denver, CO"], ',')
+# plot([1:120],R["Denver, CO"][4001:4120])
+# print(maximum(R["Denver, CO"]))
+# writedlm( "FileName.csv",  R["Denver, CO"], ',')
 
 
 # ### Plot results
