@@ -73,14 +73,14 @@ end
 function add_production_constraints(m, p; _n="")
 	# Constraint (4d): Electrical production sent to storage or export must be less than technology's rated production
     if isempty(p.s.electric_tariff.export_bins)
-        @constraint(m, [ts in p.time_steps_with_grid, t in p.techs.elec],
+        @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)  
             + m[Symbol("dvCurtail"*_n)][t, ts]
             <= 
             p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
         )
     else
-        @constraint(m, [ts in p.time_steps_with_grid, t in p.techs.elec],
+        @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)  
             + m[Symbol("dvCurtail"*_n)][t, ts]
             + sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t])
@@ -90,7 +90,7 @@ function add_production_constraints(m, p; _n="")
     end
 
 	# Constraint (4e): Electrical production sent to storage or curtailed must be less than technology's rated production - no grid
-	@constraint(m, [ts in p.time_steps_without_grid, t in p.techs.elec],
+	@constraint(m, [t in p.techs.elec, ts in p.time_steps_without_grid],
         sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
         + m[Symbol("dvCurtail"*_n)][t, ts]  
         <= 
@@ -124,7 +124,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     ==
                     p.heating_loads_kw[q][ts]
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
-                    + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.hot)
+                    + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.absorption_chillers_using_heating_load[q])
                     + sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.can_supply_steam_turbine)
                 )
@@ -135,7 +135,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     ==
                     p.heating_loads_kw[q][ts]
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
-                    + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.hot)
+                    + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.absorption_chillers_using_heating_load[q])
                 )
             end
@@ -150,7 +150,7 @@ function add_thermal_load_constraints(m, p; _n="")
                 + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.cold)
                 ==
                 p.s.cooling_load.loads_kw_thermal[ts]
-                + sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling, b in p.s.storage.types.cold)
+                + sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.cooling)
             )
         end
     end
