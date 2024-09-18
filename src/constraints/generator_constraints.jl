@@ -11,7 +11,7 @@ function add_fuel_burn_constraints(m,p)
 		(fuel_intercept_gal_per_hr * p.s.generator.fuel_higher_heating_value_kwh_per_gal * p.hours_per_time_step * m[:binGenIsOnInTS][t, ts])
 	)
 	@constraint(m,
-		sum(m[:dvFuelUsage][t, ts] for ts in p.time_steps, t in p.techs.gen) <=
+		sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) <=
 		p.s.generator.fuel_avail_gal * p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	)
 end
@@ -45,7 +45,7 @@ function add_gen_can_run_constraints(m,p)
 	end
 
 	if !(p.s.generator.sells_energy_back_to_grid)
-		for ts in p.time_steps, u in p.export_bins_by_tech[t], t in p.techs.gen
+		for t in p.techs.gen, u in p.export_bins_by_tech[t], ts in p.time_steps
 			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 	end
@@ -72,9 +72,9 @@ function add_gen_constraints(m, p)
 
     m[:TotalGenPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
         sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
-        m[:dvRatedProduction][t, ts] for ts in p.time_steps, t in p.techs.gen)
+        m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
     m[:TotalGenFuelCosts] = @expression(m,
-        sum(p.pwf_fuel[t] * sum(m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for ts in p.time_steps) for t in p.techs.gen)
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
     )
 end
