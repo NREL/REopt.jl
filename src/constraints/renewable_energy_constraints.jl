@@ -43,25 +43,25 @@ function add_re_elec_calcs(m,p)
 	# 	# Note: Steam turbine battery losses, curtailment, and exported RE terms are only accurate if all techs that can supply ST 
 	# 	#		have equal RE%, otherwise it is an approximation because the general equation is non linear. 
 	# 	SteamTurbineAnnualREEleckWh = @expression(m,p.hours_per_time_step * (
-	# 		p.STElecOutToThermInRatio * sum(m[:dvThermalToSteamTurbine][tst,ts]*p.tech_renewable_energy_fraction[tst] for tst in p.TechCanSupplySteamTurbine, ts in p.time_steps) # plus steam turbine RE generation 
-	# 		- sum(m[:dvProductionToStorage][b,t,ts] * SteamTurbinePercentREEstimate * (1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for ts in p.time_steps, t in p.steam, b in p.s.storage.types.elec) # minus battery storage losses from RE from steam turbine
-	# 		- sum(m[:dvCurtail][t,ts] * SteamTurbinePercentREEstimate for ts in p.time_steps, t in p.steam) # minus curtailment.
-	# 		- (1-p.s.site.include_exported_renewable_electricity_in_total)*sum(m[:dvProductionToGrid][t,u,ts]*SteamTurbinePercentREEstimate for ts in p.time_steps, u in p.export_bins_by_tech[t], t in p.steam) # minus exported RE from steam turbine, if RE accounting method = 0.
+	# 		p.STElecOutToThermInRatio * sum(m[:dvThermalToSteamTurbine][tst,ts]*p.tech_renewable_energy_fraction[tst] for ts in p.time_steps, tst in p.TechCanSupplySteamTurbine) # plus steam turbine RE generation 
+	# 		- sum(m[:dvProductionToStorage][b,t,ts] * SteamTurbinePercentREEstimate * (1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in p.steam, b in p.s.storage.types.elec, ts in p.time_steps) # minus battery storage losses from RE from steam turbine
+	# 		- sum(m[:dvCurtail][t,ts] * SteamTurbinePercentREEstimate for t in p.steam, ts in p.time_steps) # minus curtailment.
+	# 		- (1-p.s.site.include_exported_renewable_electricity_in_total)*sum(m[:dvProductionToGrid][t,u,ts]*SteamTurbinePercentREEstimate for t in p.steam,  u in p.export_bins_by_tech[t], ts in p.time_steps) # minus exported RE from steam turbine, if RE accounting method = 0.
 	# 	))
 	# end
 
 	m[:AnnualREEleckWh] = @expression(m,p.hours_per_time_step * (
-			sum(sum(p.production_factor[t,ts] * m[:dvRatedProduction][t,ts] for ts in p.time_steps) * p.levelization_factor[t] * 
-				p.tech_renewable_energy_fraction[t] for t in p.techs.elec
+			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
+				p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps
 			) - #total RE elec generation, excl steam turbine
 			sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(
 				1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) 
-				for ts in p.time_steps, t in p.techs.elec, b in p.s.storage.types.elec
+				for t in p.techs.elec, b in p.s.storage.types.elec, ts in p.time_steps
 			) - #minus battery efficiency losses
-			sum(m[:dvCurtail][t,ts]*p.tech_renewable_energy_fraction[t] for ts in p.time_steps, t in p.techs.elec) - # minus curtailment.
+			sum(m[:dvCurtail][t,ts]*p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps) - # minus curtailment.
 			(1 - p.s.site.include_exported_renewable_electricity_in_total) *
 			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_fraction[t] 
-				for ts in p.time_steps, u in p.export_bins_by_tech[t], t in p.techs.elec 
+				for t in p.techs.elec,  u in p.export_bins_by_tech[t], ts in p.time_steps
 			) # minus exported RE, if RE accounting method = 0.
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
