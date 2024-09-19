@@ -58,8 +58,8 @@ function ConcentratingSolar(;
         max_kw::Real = BIG_NUMBER,
         capacity_factor_series::AbstractVector{<:Real} = Float64[],
         elec_consumption_factor_series::AbstractVector{<:Real} = Float64[],
-        macrs_option_years::Int = 0,
-        macrs_bonus_fraction::Real = 0.0,
+        macrs_option_years::Union{Int,Nothing} = nothing,
+        macrs_bonus_fraction::Union{Real,Nothing} = nothing,
         installed_cost_per_kw::Union{Real,Nothing} = nothing,
         om_cost_per_kw::Union{Real,Nothing} = nothing,  #per kw per year
         om_cost_per_kwh::Union{Real,Nothing} = nothing,   #per kwh produced
@@ -89,16 +89,39 @@ function ConcentratingSolar(;
     end
 
     defaults = get_cst_defaults(tech_type)
-
-    """
-    min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
-    max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
-
-    # Convert cost basis of mmbtu/mmbtu_per_hour to kwh/kw
-    installed_cost_per_kw = installed_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
-    om_cost_per_kw = om_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
-    om_cost_per_kwh = om_cost_per_mmbtu / KWH_PER_MMBTU
-    """
+    if isnothing(macrs_option_years)
+        macrs_option_years = defaults["macrs_option_years"]
+    end
+    if isnothing(macrs_bonus_fraction)
+        macrs_bonus_fraction = defaults["macrs_bonus_fraction"]
+    end
+    if isnothing(installed_cost_per_kw)
+        installed_cost_per_kw = defaults["installed_cost_per_kw"]
+    end
+    if isnothing(om_cost_per_kw)
+        om_cost_per_kw = defaults["om_cost_per_kw"]
+    end
+    if isnothing(om_cost_per_kwh)
+        om_cost_per_kwh = defaults["om_cost_per_kwh"]
+    end
+    if isnothing(acres_per_kw)
+        acres_per_kw = defaults["acres_per_kw"]
+    end
+    if isnothing(can_supply_steam_turbine)
+        can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
+    end
+    if isnothing(can_serve_dhw)
+        can_serve_dhw = defaults["can_serve_dhw"]
+    end
+    if isnothing(can_serve_space_heating)
+        can_serve_space_heating = defaults["can_serve_space_heating"]
+    end
+    if isnothing(can_serve_process_heat)
+        can_serve_process_heat = defaults["can_serve_process_heat"]
+    end
+    if isnothing(charge_storage_only)
+        charge_storage_only = defaults["charge_storage_only"]
+    end
 
     ConcentratingSolar(
         min_kw,
