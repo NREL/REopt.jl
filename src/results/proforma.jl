@@ -105,6 +105,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         if p.s.generator.existing_kw > 0
             fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_before_tax_bau"] + 
                                    d["Generator"]["year_one_variable_om_cost_before_tax_bau"]
+            fixed_and_var_om -= fixed_and_var_om_bau
             year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_before_tax_bau"]
         end
 
@@ -253,10 +254,10 @@ function proforma_results(p::REoptInputs, d::Dict)
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
         r["offtaker_annual_free_cashflows"] = append!([0.0], 
-            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series
+            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series + m.om_series_bau
         )
         r["offtaker_annual_free_cashflows_bau"] = append!([0.0], 
-            electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau
+            electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau + m.om_series_bau
             )
 
     else  # get cumulative cashflow for offtaker
