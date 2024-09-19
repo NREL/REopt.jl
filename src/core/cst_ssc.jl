@@ -238,8 +238,8 @@ function run_ssc(case_data::Dict)
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
 
-        R["thermal_production"] = min.(1,thermal_production_norm)
-        R["electric_consumption"] = min.(1,electric_consumption_norm)
+        R["thermal_production_series"] = thermal_production_norm
+        R["electric_consumption_series"] = electric_consumption_norm
         ### Check for errors
         if error == ""
             error = "No errors found."
