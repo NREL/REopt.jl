@@ -72,24 +72,24 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
     
     ### Create weather data dataframe for SAM
     weatherdata = Dict()
-    weatherdata["tz"] = parse(Int64,df."Time Zone"[1])
-    weatherdata["elev"] = parse(Float64,df."Elevation"[1])
-    weatherdata["lat"] = parse(Float64,df."Latitude"[1])
-    weatherdata["lon"] = parse(Float64,df."Longitude"[1])
-    new_df = vcat(df[3:end, :])
-    weatherdata["year"] = parse.(Int64,new_df."Source") # Source --> year 
-    weatherdata["month"] = parse.(Int64,new_df."Location ID") # Location ID --> month
-    weatherdata["day"] = parse.(Int64,new_df."City") # City --> day 
-    weatherdata["hour"] = parse.(Int64,new_df."State") # State --> hour
-    weatherdata["minute"] = parse.(Int64,new_df."Country") # Country --> minute
-    weatherdata["dn"] = parse.(Float64,new_df."Time Zone") # Time Zone --> dn (DNI)
-    weatherdata["df"] = parse.(Float64,new_df."Longitude") # Longitude --> df (DHI)
-    weatherdata["gh"] = parse.(Float64,new_df."Latitude") # Latitude --> gh (GHI)
-    weatherdata["wspd"] = parse.(Float64,new_df."Elevation") # Elevation --> wspd
-    weatherdata["wdir"] = parse.(Int64,new_df."Local Time Zone") # Local Time Zone --> wdir
-    weatherdata["tdry"] = parse.(Float64,new_df."Dew Point Units") # Dew Point Units --> tdry
-    weatherdata["tdew"] = parse.(Float64,new_df."DNI Units") # Clearsky DNI Units --> rhum (RH)
-    weatherdata["pres"] = parse.(Float64,new_df."DHI Units") # Clearsky DHI Units --> pres
+
+    weatherdata["tz"] = lead_df."Time Zone"[1]
+    weatherdata["elev"] = lead_df."Elevation"[1]
+    weatherdata["lat"] = lead_df."Latitude"[1]
+    weatherdata["lon"] = lead_df."Longitude"[1]
+    weatherdata["year"] = df."Year" # Source --> year 
+    weatherdata["month"] = df."Month" # Location ID --> month
+    weatherdata["day"] = df."Day" # City --> day 
+    weatherdata["hour"] = df."Hour" # State --> hour
+    weatherdata["minute"] = df."Minute" # Country --> minute
+    weatherdata["dn"] = df."DNI" # Time Zone --> dn (DNI)
+    weatherdata["df"] = df."DHI" # Longitude --> df (DHI)
+    weatherdata["gh"] = df."GHI" # Latitude --> gh (GHI)
+    weatherdata["wspd"] = df."Wind Speed" # Elevation --> wspd
+    weatherdata["wdir"] = df."Wind Direction" # Local Time Zone --> wdir
+    weatherdata["tdry"] = df."Temperature" # Dew Point Units --> tdry
+    weatherdata["tdew"] = df."Dew Point" # Clearsky DNI Units --> rhum (RH)
+    weatherdata["pres"] = df."Pressure" # Clearsky DHI Units --> pres
     ### Full list of weather data types (not all are required)
     # (numbers): lat, lon, tz, elev, 
     # (arrays): year, month, day, hour, minute, gh, dn, df, poa, wspd, wdir, tdry, twet, tdew, rhum, pres, snow, alb, aod
