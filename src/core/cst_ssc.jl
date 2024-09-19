@@ -59,7 +59,9 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
         "&wkt=POINT(",lon,"%20",lat,")&attributes=",attributes_tmy_updated,
         "&names=tmy&utc=false&leap_day=true&interval=60&email=jeffrey.gifford@nrel.gov")
     r = HTTP.request("GET", url)
-    df = DataFrame(CSV.File(IOBuffer(String(r.body)), silencewarnings = true))
+    s = String(r.body)
+    lead_df = DataFrame(CSV.File(IOBuffer(s), silencewarnings = true, delim=",", header=1, limit=1))
+    df = DataFrame(CSV.File(IOBuffer(s), silencewarnings = true, delim=",", header=3))
     
     ### Write csv file for checking (can comment out/delete when not debugging)
     debug = false
