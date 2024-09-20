@@ -24,6 +24,8 @@ Classify the change according to the following categories:
     ### Removed
 
 ## Develop 08-09-2024
+### Added
+- Ouput which has "net year one" CapEx after incentives except for MACRS, which helps with users defining their own "simple payback period"
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage.
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail.
