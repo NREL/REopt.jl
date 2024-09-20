@@ -947,10 +947,60 @@ else  # run HiGHS tests
                     if results["PV"]["electric_to_grid_series_kw"][i] > 0)
         end
 
+        #=
+        Battery degradation replacement strategy test can be validated against solvers like Xpress.
+        Commented out of this testset due to solve time constraints using open-source solvers.
+        This test has been validated via local testing.
+        =#
+        @testset "Battery degradation replacement strategy" begin
+            # Replacement
+            nothing
+            # d = JSON.parsefile("scenarios/batt_degradation.json");
+
+            # d["ElectricStorage"]["macrs_option_years"] = 0
+            # d["ElectricStorage"]["macrs_bonus_fraction"] = 0.0
+            # d["ElectricStorage"]["macrs_itc_reduction"] = 0.0
+            # d["ElectricStorage"]["total_itc_fraction"] = 0.0
+            # d["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
+            # d["ElectricStorage"]["replace_cost_per_kw"] = 0.0
+            # d["Financial"] = Dict(
+            #     "offtaker_tax_rate_fraction" => 0.0,
+            #     "owner_tax_rate_fraction" => 0.0
+            # )
+            # d["ElectricStorage"]["degradation"]["installed_cost_per_kwh_declination_rate"] = 0.2
+
+            # d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+
+            # s = Scenario(d)
+            # p = REoptInputs(s)
+            # for t in 1:4380
+            #     p.s.electric_tariff.energy_rates[2*t-1] = 0
+            #     p.s.electric_tariff.energy_rates[2*t] = 10.0
+            # end
+            # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            # results = run_reopt(m, p)
+
+            # @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
+            # @test results["ElectricStorage"]["size_kwh"] ≈ 14.07 atol=0.05
+            # @test results["ElectricStorage"]["replacement_month"] == 8
+            # @test results["ElectricStorage"]["maintenance_cost"] ≈ 32820.9 atol=1
+            # @test results["ElectricStorage"]["state_of_health"][8760] ≈ -6.8239 atol=0.001
+            # @test results["ElectricStorage"]["residual_value"] ≈ 2.61 atol=0.1
+            # @test sum(results["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 43800 atol=1.0 #battery should serve all load, every other period
+
+
+            # # Validate model decision variables make sense.
+            # replace_month = Int(value.(m[:months_to_first_replacement]))+1
+            # @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
+            # @test sum(value.(m[:binSOHIndicator])[replace_month:end]) ≈ 0.0
+            # @test sum(value.(m[:binSOHIndicatorChange])) ≈ value.(m[:binSOHIndicatorChange])[replace_month] ≈ 1.0
+            # @test value.(m[:binSOHIndicator])[end] ≈ 0.0
+        end
+
         @testset "Solar and ElectricStorage w/BAU and degradation" begin
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            d = JSON.parsefile("scenarios/pv_storage.json");
+            d = JSON.parsefile("pv_storage.json");
             d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
             results = run_reopt([m1,m2], d)
 
@@ -967,33 +1017,34 @@ else  # run HiGHS tests
             # compare avg soc with and without degradation, 
             # using default augmentation battery maintenance strategy
             avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
+
+            d = JSON.parsefile("pv_storage.json");
             d["ElectricStorage"]["model_degradation"] = true
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r_degr = run_reopt(m, d)
             avg_soc_degr = sum(r_degr["ElectricStorage"]["soc_series_fraction"]) / 8760
             @test avg_soc_no_degr > avg_soc_degr
 
-            # test the replacement strategy
-            d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            set_optimizer_attribute(m, "mip_rel_gap", 0.01)
-            r = run_reopt(m, d)
-            @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
+            # test the replacement strategy ## Cannot test with open source solvers.
+            # d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
+            # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            # set_optimizer_attribute(m, "mip_rel_gap", 0.01)
+            # r = run_reopt(m, d)
+            # @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
             # #optimal SOH at end of horizon is 80\% to prevent any replacement
-            # @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
+            # @test sum(value.(m[:dvSOHChangeTimesEnergy])) ≈ 68.48 atol=0.01
             # # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
             # # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
             # @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-            # @test last(value.(m[:SOH])) ≈ 66.633  rtol=0.01
-            # @test r["ElectricStorage"]["size_kwh"] ≈ 83.29  rtol=0.01
+            # @test last(value.(m[:SOH])) ≈ 42.95 rtol=0.01
+            # @test r["ElectricStorage"]["size_kwh"] ≈ 68.48 rtol=0.01
 
             # test minimum_avg_soc_fraction
             d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
-            @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
-            # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
+            @test round(sum(r["ElectricStorage"]["soc_series_fraction"])/8760, digits=2) >= 0.72
         end
 
         @testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
