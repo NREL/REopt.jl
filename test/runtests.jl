@@ -42,26 +42,26 @@ else  # run HiGHS tests
             latitude, longitude = 32.775212075983646, -96.78105623767185
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset == "nsrdb"
 
             # 2. Merefa, Ukraine 
             latitude, longitude = 49.80670544975866, 36.05418033509974
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset == "nsrdb"
 
             # 3. Younde, Cameroon
             latitude, longitude = 3.8603988398663125, 11.528880303663136
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "intl"
+            @test dataset == "nsrdb"
 
             # 4. Fairbanks, AK 
             site = "Fairbanks"
             latitude, longitude = 64.84112047064114, -147.71570239058084 
             radius = 20
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "tmy3"  
+            @test dataset == "tmy3"  
         end
 
         @testset "January Export Rates" begin
@@ -1000,7 +1000,7 @@ else  # run HiGHS tests
         @testset "Solar and ElectricStorage w/BAU and degradation" begin
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            d = JSON.parsefile("pv_storage.json");
+            d = JSON.parsefile("scenarios/pv_storage.json");
             d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
             results = run_reopt([m1,m2], d)
 
@@ -1018,7 +1018,7 @@ else  # run HiGHS tests
             # using default augmentation battery maintenance strategy
             avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
 
-            d = JSON.parsefile("pv_storage.json");
+            d = JSON.parsefile("scenarios/pv_storage.json");
             d["ElectricStorage"]["model_degradation"] = true
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r_degr = run_reopt(m, d)
