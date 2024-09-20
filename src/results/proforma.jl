@@ -24,7 +24,7 @@ Recreates the ProForma spreadsheet calculations to get the simple payback period
 party case), and payment to third party (3rd party case).
 
 return Dict(
-    "simple_payback_years" => 0.0,
+    "simple_payback_years" => 0.0, # The year in which cumulative net free cashflows become positive. For a third party analysis, the SPP is for the developer.
     "internal_rate_of_return" => 0.0,
     "net_present_cost" => 0.0,
     "annualized_payment_to_third_party" => 0.0,
@@ -32,7 +32,8 @@ return Dict(
     "offtaker_annual_free_cashflows_bau" => Float64[],
     "offtaker_discounted_annual_free_cashflows" => Float64[],
     "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
-    "developer_annual_free_cashflows" => Float64[]
+    "developer_annual_free_cashflows" => Float64[],
+    "net_capital_costs_without_macrs" => 0.0 # Initial capital costs after ibi, cbi, and ITC incentives
 )
 """
 function proforma_results(p::REoptInputs, d::Dict)
@@ -97,9 +98,8 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     # calculate Generator o+m costs, incentives, and depreciation
     if "Generator" in keys(d) && d["Generator"]["size_kw"] > 0
-        # In the two party case the developer does not include the fuel cost in their costs
-        # It is assumed that the offtaker will pay for this at a rate that is not marked up
-        # to cover developer profits
+        # In the two party case the developer does not include the fuel cost or O&M costs for existing assets in their costs
+        # It is assumed that the offtaker will pay for this at a rate that is not marked up to cover developer profits
         fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost_before_tax"] + d["Generator"]["year_one_variable_om_cost_before_tax"]
         fixed_and_var_om_bau = 0.0
         year_one_fuel_cost_bau = 0.0
