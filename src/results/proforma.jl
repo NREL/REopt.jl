@@ -106,7 +106,9 @@ function proforma_results(p::REoptInputs, d::Dict)
         if p.s.generator.existing_kw > 0
             fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_before_tax_bau"] + 
                                    d["Generator"]["year_one_variable_om_cost_before_tax_bau"]
-            fixed_and_var_om -= fixed_and_var_om_bau
+            if third_party
+                fixed_and_var_om -= fixed_and_var_om_bau
+            end
             year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_before_tax_bau"]
         end
 
