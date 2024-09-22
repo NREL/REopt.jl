@@ -629,6 +629,19 @@ else  # run HiGHS tests
             results = run_reopt(m, inputs)
             @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 8760 * (0.5 * 0.6 + 0.5 * 0.8 + 0.3 * 0.7) atol = 1.0
             
+            # Test for unaddressable heating load fuel and emissions outputs
+            unaddressable = results["HeatingLoad"]["annual_total_unaddressable_heating_load_mmbtu"]
+            addressable = results["HeatingLoad"]["annual_calculated_total_heating_boiler_fuel_load_mmbtu"]
+            total = unaddressable + addressable
+            # Find the weighted average addressable_load_fraction from the fractions and loads above
+            weighted_avg_addressable_fraction = (0.5 * 0.6 + 0.5 * 0.8 + 0.3 * 0.7) / (0.5 + 0.5 + 0.3)
+            @test round(abs(addressable / total - weighted_avg_addressable_fraction), digits=3) == 0
+
+            unaddressable_emissions = results["HeatingLoad"]["annual_emissions_from_unaddressable_heating_load_mmbtu"]
+            addressable_site_fuel_emissions = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
+            total_site_emissions = unaddressable_emissions + addressable_site_fuel_emissions
+            @test round(abs(addressable_site_fuel_emissions / total_site_emissions - weighted_avg_addressable_fraction), digits=3) == 0
+            
             # Monthly fuel load input with addressable_load_fraction is processed to expected thermal load
             data = JSON.parsefile("./scenarios/thermal_load.json")
             data["DomesticHotWaterLoad"]["monthly_mmbtu"] = repeat([100], 12)
