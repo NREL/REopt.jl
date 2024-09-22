@@ -162,16 +162,15 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 
     for p in ps
         _n = string("_", p.s.site.node)
-		print("\n For node $(_n)")
-		print("\n   The p.s.storage.types.all is: ")
+		print("\n For node $(_n):")
+		print("   The p.s.storage.types.all is: ")
 		print(p.s.storage.types.all)
-		print("\n   The p.s.storage.types.elec is: ")
+		print("   The p.s.storage.types.elec is: ")
 		print(p.s.storage.types.elec)
-		print("\n")
-
+		
 		for b in p.s.storage.types.all
             if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
-                @info "For node $(_n), the storage input size was 0 kW or 0 kWh, so the battery will not be used"
+                @info "\n For node $(_n), the storage input size was 0 kW or 0 kWh, so the battery will not be used"
 				@constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
                 @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == 0)
@@ -181,7 +180,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
 				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b,ts] == 0)
             else 
-				@info "Adding electric storage constraints for node $(_n)"
+				@info "\n Adding electric storage constraints for node $(_n)"
                 add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)				
 				add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
@@ -201,12 +200,12 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 		
 		# Only apply the load balance constraint to nodes that aren't the facility meter node. The facility meter node may be used as a meter for the microgrid, so the "grid_import" is set to the power flow through the line upstream of that node
 		if string(p.s.site.node) != p.s.settings.facilitymeter_node  
-			print("\n Applying the electrical load balance constraint to the node: "*_n)
+			print("\n            Applying the electrical load balance constraint to the node: "*_n)
 			add_elec_load_balance_constraints(m, p; _n=_n)
 			add_production_constraints(m, p; _n=_n)
 		else
-			print("\n Not applying the load balance constraint to the node: "*_n)
-			print("\n Note: this node will serve as the metered node. No technologies should be applied to it")
+			print("\n            Not applying the load balance constraint to the node: "*_n)
+			print(" This node will serve as the metered node. No technologies should be applied to it")
 		end       
     
         #if !isempty(p.s.electric_tariff.export_bins)

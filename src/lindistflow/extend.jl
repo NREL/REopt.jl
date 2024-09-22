@@ -77,10 +77,10 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
     
     for j in p.busses
         if j in keys(p.Pload)
-            print("\n the j variable is: $(j) ")
+            #print("\n the j variable is: $(j) ")
             if parse(Int, j) in reopt_nodes
                 if j != "15" 
-                    print("\n j is not 15")               
+                    #print("\n j is not 15")               
                     @constraint(m, [t in 1:p.Ntimesteps],
                         Pⱼ[j,t] == 1e3/p.Sbase * (  # 1e3 b/c REopt values in kW
                             m[Symbol("TotalExport_" * j)][t]
@@ -106,7 +106,7 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
         if j in keys(p.Qload)
             if parse(Int, j) in reopt_nodes
                 if j != "15"
-                    print("\n (reactive power) j is not 15") 
+                    #print("\n (reactive power) j is not 15") 
                     @constraint(m, [t in 1:p.Ntimesteps],
                         Qⱼ[j,t] == 1e3/p.Sbase * p.pf * (  # 1e3 b/c REopt values in kW
                         m[Symbol("TotalExport_" * j)][t]

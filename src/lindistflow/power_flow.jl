@@ -285,7 +285,7 @@ function DetermineLineNominalVoltage(p::PowerFlowInputs)  # determine the nomina
                 LineNominalVoltages_Summary = merge!(LineNominalVoltages_Summary, Dict(line => LineVoltage))
                 # Note: The lines between the two transformer nodes should be modeled as very short
             elseif node == p.substation_bus # if node is the substation, then that node takes the Vbase defined by the user
-                BusVoltage = string(p.Vbase) # this is already in volts
+                BusVoltage = string(Float64(p.Vbase)) # this is already in volts
                 print("\n  Bus "*string(node)*" is the substation, with a nominal voltage of "*string(BusVoltage))
                 # there are no lines upstream of the substation in the network, so don't define a line voltage here
             else 
@@ -295,7 +295,7 @@ function DetermineLineNominalVoltage(p::PowerFlowInputs)  # determine the nomina
                 for x in 1:length(p.busses)+1 
                     if UpstreamNode == p.substation_bus
                         # Bus nominal voltages
-                        BusVoltage = string(p.Vbase) # Vbase is already in units of volts
+                        BusVoltage = string(Float64(p.Vbase)) # Vbase is already in units of volts
                         print("\n  Bus voltage at node "*string(node)*" is "*string(BusVoltage)*" note: the substation is upstream of this node")
                         # Line nominal voltage 
                         DirectlyUpstreamNode = i_to_j(node, p) 
@@ -371,7 +371,7 @@ function constrain_KVL(m, p::PowerFlowInputs, line_upgrades_each_line, lines_for
 
     LineNominalVoltages_dict, BusNominalVoltages_dict = DetermineLineNominalVoltage(p)   
    
-    if Microgrid_Inputs["Model_Line_Upgrades"] == true
+    if Microgrid_Inputs.Model_Line_Upgrades == true
         print("\n Generating the line_rmatrix and xmatrix variables for the upgradabe lines $(lines_for_upgrades)")
         @variable(m, line_rmatrix[lines_for_upgrades] >= 0)
         @variable(m, line_xmatrix[lines_for_upgrades] >= 0)
@@ -394,7 +394,7 @@ function constrain_KVL(m, p::PowerFlowInputs, line_upgrades_each_line, lines_for
                 @constraint(m, [t in 1:p.Ntimesteps], w[j,t] == parse(Float64, p.regulators[j]))  
                 print("\n  Applying voltage regulator to node $(j) with a per unit voltage of "*string(parse(Float64, p.regulators[j]) ))
             
-            elseif i_j in lines_for_upgrades && Microgrid_Inputs["Nonlinear_Solver"] == true
+            elseif i_j in lines_for_upgrades && Microgrid_Inputs.Nonlinear_Solver == true
                 # If the line is upgradable, account for how the rmatrix and xmatrix can change
                 
                 @constraint(m, m[:line_rmatrix][i_j] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[i_j]["rmatrix"][i] for i in 1:number_of_entries))
@@ -408,7 +408,7 @@ function constrain_KVL(m, p::PowerFlowInputs, line_upgrades_each_line, lines_for
                 #xᵢⱼ = m[:line_xmatrix][i_j] * linelength * p.Sbase / (LineNominalVoltage^2)
                 #vcon = @constraint(m, [t in 1:p.Ntimesteps],
                 #    w[j,t] == w[i,t] - 2*(rᵢⱼ * P[i_j,t] +  xᵢⱼ * Q[i_j,t])    )
-            elseif i_j in lines_for_upgrades && Microgrid_Inputs["Nonlinear_Solver"] == false
+            elseif i_j in lines_for_upgrades && Microgrid_Inputs.Nonlinear_Solver == false
                 # If the solver is a linear solver, then the rmatrix and xmatrix are fixed to be that of the un-upgraded line
                 
                 rᵢⱼ = p.Zdict[line_code]["rmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
