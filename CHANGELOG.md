@@ -27,7 +27,7 @@ Classify the change according to the following categories:
 ### Added
 - Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
 - In `src/core/existing_chiller.jl`, Added new atttribute **retire_in_optimal** to the **ExistingChiller** struct
-
+- Financial output **net_capital_costs_without_macrs** which has "net year one" CapEx after incentives except for MACRS, which helps with users defining their own "simple payback period"
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage.
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail.

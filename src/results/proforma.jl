@@ -24,7 +24,7 @@ Recreates the ProForma spreadsheet calculations to get the simple payback period
 party case), and payment to third party (3rd party case).
 
 return Dict(
-    "simple_payback_years" => 0.0,
+    "simple_payback_years" => 0.0, # The year in which cumulative net free cashflows become positive. For a third party analysis, the SPP is for the developer.
     "internal_rate_of_return" => 0.0,
     "net_present_cost" => 0.0,
     "annualized_payment_to_third_party" => 0.0,
@@ -32,7 +32,8 @@ return Dict(
     "offtaker_annual_free_cashflows_bau" => Float64[],
     "offtaker_discounted_annual_free_cashflows" => Float64[],
     "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
-    "developer_annual_free_cashflows" => Float64[]
+    "developer_annual_free_cashflows" => Float64[],
+    "net_capital_costs_without_macrs" => 0.0 # Initial capital costs after ibi, cbi, and ITC incentives
 )
 """
 function proforma_results(p::REoptInputs, d::Dict)
@@ -45,7 +46,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         "offtaker_annual_free_cashflows_bau" => Float64[],
         "offtaker_discounted_annual_free_cashflows" => Float64[],
         "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
-        "developer_annual_free_cashflows" => Float64[]
+        "developer_annual_free_cashflows" => Float64[],
+        "net_capital_costs_without_macrs" => 0.0
     )
     years = p.s.financial.analysis_years
     escalate_elec(val) = [-1 * val * (1 + p.s.financial.elec_cost_escalation_rate_fraction)^yr for yr in 1:years]
@@ -96,15 +98,17 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     # calculate Generator o+m costs, incentives, and depreciation
     if "Generator" in keys(d) && d["Generator"]["size_kw"] > 0
-        # In the two party case the developer does not include the fuel cost in their costs
-        # It is assumed that the offtaker will pay for this at a rate that is not marked up
-        # to cover developer profits
+        # In the two party case the developer does not include the fuel cost or O&M costs for existing assets in their costs
+        # It is assumed that the offtaker will pay for this at a rate that is not marked up to cover developer profits
         fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost_before_tax"] + d["Generator"]["year_one_variable_om_cost_before_tax"]
         fixed_and_var_om_bau = 0.0
         year_one_fuel_cost_bau = 0.0
         if p.s.generator.existing_kw > 0
             fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_before_tax_bau"] + 
                                    d["Generator"]["year_one_variable_om_cost_before_tax_bau"]
+            if third_party
+                fixed_and_var_om -= fixed_and_var_om_bau
+            end
             year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_before_tax_bau"]
         end
 
@@ -246,6 +250,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
+    r["net_capital_costs_without_macrs"] = d["Financial"]["initial_capital_costs"] - m.total_ibi_and_cbi - m.federal_itc
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
     # At this point the logic branches based on third-party ownership or not - see comments    
@@ -279,10 +284,10 @@ function proforma_results(p::REoptInputs, d::Dict)
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
         r["offtaker_annual_free_cashflows"] = append!([0.0], 
-            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series
+            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series + m.om_series_bau
         )
         r["offtaker_annual_free_cashflows_bau"] = append!([0.0], 
-            electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau
+            electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau + m.om_series_bau
             )
 
     else  # get cumulative cashflow for offtaker
