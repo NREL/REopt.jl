@@ -147,10 +147,13 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
+    can_export_to_grid::Bool = false
     installed_cost_per_kw::Real = 910.0
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
     replace_cost_per_kwh::Real = 318.0
+    om_cost_per_kw::Real = 0.0 # Capacity-based O&M costs in \$/kW-rated/year. When including battery replacement costs, the user should ensure that O&M costs do not account for augmentation/replacement.
+    om_cost_per_kwh::Real = 0.0 # Capacity-based O&M costs in \$/kWh-rated/year. When including battery replacement costs, the user should ensure that O&M costs do not account for augmentation/replacement.
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
@@ -165,7 +168,11 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-```
+    self_discharge_fraction_per_timestep::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
+    fixed_duration::Union{Real, Nothing} = nothing
+    optimize_soc_init_fraction::Bool = false
+    allow_simultaneous_charge_discharge::Bool = true # Simultaneous charge/discharge is typically suboptimal anyway and allowing this avoids additional binary variables (which can slow solve time)
+``` 
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
@@ -180,10 +187,13 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
+    can_export_to_grid::Bool = false
     installed_cost_per_kw::Real = 910.0
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
     replace_cost_per_kwh::Real = 318.0
+    om_cost_per_kw::Real = 0.0
+    om_cost_per_kwh::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
@@ -198,6 +208,10 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    self_discharge_fraction_per_timestep::Float64 = 0.0
+    fixed_duration::Union{Real, Nothing} = nothing
+    optimize_soc_init_fraction::Bool = false
+    allow_simultaneous_charge_discharge::Bool = true
 end
 
 
@@ -219,10 +233,13 @@ struct ElectricStorage <: AbstractElectricStorage
     soc_min_applies_during_outages::Bool
     soc_init_fraction::Float64
     can_grid_charge::Bool
+    can_export_to_grid::Bool
     installed_cost_per_kw::Real
     installed_cost_per_kwh::Real
     replace_cost_per_kw::Real
     replace_cost_per_kwh::Real
+    om_cost_per_kw::Real
+    om_cost_per_kwh::Real
     inverter_replacement_year::Int
     battery_replacement_year::Int
     macrs_option_years::Int
@@ -239,6 +256,10 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
+    self_discharge_fraction_per_timestep::Float64
+    fixed_duration::Union{Real, Nothing}
+    optimize_soc_init_fraction::Bool
+    allow_simultaneous_charge_discharge::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -307,10 +328,13 @@ struct ElectricStorage <: AbstractElectricStorage
             s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
+            s.can_export_to_grid,
             s.installed_cost_per_kw,
             s.installed_cost_per_kwh,
             replace_cost_per_kw,
             replace_cost_per_kwh,
+            s.om_cost_per_kw,
+            s.om_cost_per_kwh,
             s.inverter_replacement_year,
             s.battery_replacement_year,
             s.macrs_option_years,
@@ -326,7 +350,11 @@ struct ElectricStorage <: AbstractElectricStorage
             net_present_cost_per_kwh,
             s.model_degradation,
             degr,
-            s.minimum_avg_soc_fraction
+            s.minimum_avg_soc_fraction,
+            s.self_discharge_fraction_per_timestep,
+            s.fixed_duration,
+            s.optimize_soc_init_fraction,
+            s.allow_simultaneous_charge_discharge
         )
     end
 end

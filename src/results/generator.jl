@@ -32,6 +32,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 			for t in p.techs.gen, ts in p.time_steps)
 	)
 	r["size_kw"] = round(value(sum(m[:dvSize][t] for t in p.techs.gen)), digits=2)
+	r["initial_capital_cost"] = round(value(sum(m[:dvSize][t] for t in p.techs.gen)) * p.s.generator.installed_cost_per_kw, digits=3)
 	r["lifecycle_fixed_om_cost_after_tax"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
 	r["lifecycle_variable_om_cost_after_tax"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalGenFuelCosts]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=2)
