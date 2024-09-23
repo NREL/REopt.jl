@@ -677,7 +677,7 @@ else  # run HiGHS tests
             weighted_avg_addressable_fraction = (0.5 * 0.6 + 0.5 * 0.8 + 0.3 * 0.7) / (0.5 + 0.5 + 0.3)
             @test round(abs(addressable / total - weighted_avg_addressable_fraction), digits=3) == 0
 
-            unaddressable_emissions = results["HeatingLoad"]["annual_emissions_from_unaddressable_heating_load_mmbtu"]
+            unaddressable_emissions = results["HeatingLoad"]["annual_emissions_from_unaddressable_heating_load_tonnes_CO2"]
             addressable_site_fuel_emissions = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
             total_site_emissions = unaddressable_emissions + addressable_site_fuel_emissions
             @test round(abs(addressable_site_fuel_emissions / total_site_emissions - weighted_avg_addressable_fraction), digits=3) == 0
