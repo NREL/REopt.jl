@@ -130,7 +130,7 @@ function run_ssc(case_data::Dict)
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
     # First set user defined inputs to default just in case
-    defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_step1_" * model * ".json") ## TODO update this to step 1 default jsons once they're ready
+    defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * ".json") ## TODO update this to step 1 default jsons once they're ready
     defaults = JSON.parsefile(defaults_file)
     for i in user_defined_inputs_list[model]
         if (i == "tilt") || (i == "lat")
@@ -148,7 +148,7 @@ function run_ssc(case_data::Dict)
     else
         ### Setup SSC
         global hdl = nothing
-        libfile = "ssc.dll"
+        libfile = "ssc_new.dll"
         global hdl = joinpath(@__DIR__, "sam", libfile)
         ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
@@ -156,7 +156,7 @@ function run_ssc(case_data::Dict)
 
         ### Import defaults
         # defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_step1_" * model * ".json")
+        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
         defaults = JSON.parsefile(defaults_file)
         set_ssc_data_from_dict(defaults,model,data)
 
@@ -171,14 +171,15 @@ function run_ssc(case_data::Dict)
         ### Execute simulation
         test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
         print(test)
+        
         ### Retrieve results
         ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
-            "mst" => ["Q_thermal","P_tower_pump","q_pb_design","solarm"],         # locked in [W]
-            "lf" => ["q_dot_to_heat_sink"], # locked in [W]
-            "ptc" => ["q_dot_htf_sf_out","P_loss","q_pb_design",2.5],  # locked in [MWt]
-            "swh_flatplate" => ["Q_useful","P_pump","system_capacity",1.0],           # kW, kW, kW
-            "swh_evactube" => ["Q_useful","P_pump","system_capacity",1.0]           # kW, kW, kW
+            "mst" => ["Q_thermal","P_tower_pump",0.0,"q_pb_design","solarm"],         # locked in [W]
+            "lf" => ["q_dot_to_heat_sink","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
+            "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # locked in [MWt]
+            "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # kW, kW, kW
+            "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # kW, kW, kW
         )
         thermal_conversion_factor = Dict(
             "mst" => 1,         # locked in [W]
@@ -199,34 +200,44 @@ function run_ssc(case_data::Dict)
         len = 8760
         len_ref = Ref(len)
         thermal_production_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[1]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
-        electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
+        # electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
         thermal_production = []
-        elec_consumption = []
+        # elec_consumption = []
         for i in 1:8760
             push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
-            push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
+            # push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
         end
-        if outputs[3] in keys(user_defined_inputs)
-            tpow = user_defined_inputs[outputs[3]]
+        # if typeof(outputs[3]) == String
+        #     secondary_consumption_response =  @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[3]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
+        #     for i in 1:8760
+        #         elec_consumption[i] += unsafe_load(secondary_consumption_response, i)
+        #     end
+        # end
+        if outputs[4] in keys(user_defined_inputs)
+            tpow = user_defined_inputs[outputs[4]]
         else
-            tpow = defaults[outputs[3]]
+            tpow = defaults[outputs[4]]
         end
-        if typeof(outputs[4]) != String
-            mult = outputs[4]
-        elseif outputs[4] in keys(user_defined_inputs)
-            mult = user_defined_inputs[outputs[4]]
+        if typeof(outputs[5]) != String
+            mult = outputs[5]
+        elseif outputs[5] in keys(user_defined_inputs)
+            mult = user_defined_inputs[outputs[5]]
         else
-            mult = defaults[outputs[4]]
+            mult = defaults[outputs[5]]
         end
-        println("tpow ", tpow, " mult ", mult)
+        # println("tpow ", tpow, " mult ", mult)
         rated_power = tpow * mult
         
         tcf = thermal_conversion_factor[model]
         ecf = elec_conversion_factor[model]
         #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         # print(c_response)
-        thermal_production_norm = thermal_production .* tcf ./ rated_power # normalize_response(thermal_production_response,case_data,rated_power)
-        electric_consumption_norm = elec_consumption .* ecf ./ rated_power
+        if model == "ptc"
+            thermal_production_norm = normalize_response(thermal_production, case_data)
+        else
+            thermal_production_norm = thermal_production .* tcf ./ rated_power
+        end
+        electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         # R[k] = response_norm
         # end
         ### Free SSC
@@ -241,6 +252,7 @@ function run_ssc(case_data::Dict)
         end
         R["error"] = error
         #return R
+        
     end
     return R
 end
