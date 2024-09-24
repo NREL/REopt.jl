@@ -37,8 +37,8 @@ function print_results(results)
     else
         println("\tSteam Turbine not in results.")
     end
-    if "ConcentratingSolar" in keys(results)
-        println(@sprintf("\tConcentrating Solar: %5.3f kW", results["ConcentratingSolar"]["size_kw"]))
+    if "CST" in keys(results)
+        println(@sprintf("\tConcentrating Solar: %5.3f kW", results["CST"]["size_kw"]))
     else
         println("\tConcentrating Solar not in results.")
     end
@@ -119,19 +119,19 @@ function print_results(results)
         println("\tSteam Turbine to Process Heat Load: ", round(sum(results["SteamTurbine"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
     end
 
-    if "ConcentratingSolar" in keys(results)
-        println("ConcentratingSolar:")
-        println("\tConcentratingSolar Size: ", results["ConcentratingSolar"]["size_kw"], " kW")
-        # println("\tConcentratingSolar Electric Consumption: ", round(results["ConcentratingSolar"]["annual_electric_consumption_kwh"], digits = 2), " kWh")
-        println("\tConcentratingSolar Thermal to Load: ", round(sum(results["ConcentratingSolar"]["thermal_to_load_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
-        # println(results["ConcentratingSolar"]["thermal_to_load_series_mmbtu_per_hour"][1:24])
-        println("\tConcentratingSolar Thermal to Turbine: ", round(sum(results["ConcentratingSolar"]["thermal_to_steamturbine_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to All Hot Storage: ", round(sum(results["ConcentratingSolar"]["thermal_to_storage_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to HotSensibleTes: ", round(sum(results["ConcentratingSolar"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println(results["ConcentratingSolar"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"][1:24])
-        println("\tConcentratingSolar Thermal to Hot Water: ", round(sum(results["ConcentratingSolar"]["thermal_to_dhw_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to Space Heating: ", round(sum(results["ConcentratingSolar"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to Process Heat: ", round(sum(results["ConcentratingSolar"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+    if "CST" in keys(results)
+        println("CST:")
+        println("\tCST Size: ", results["CST"]["size_kw"], " kW")
+        # println("\tCST Electric Consumption: ", round(results["CST"]["annual_electric_consumption_kwh"], digits = 2), " kWh")
+        println("\tCST Thermal to Load: ", round(sum(results["CST"]["thermal_to_load_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
+        # println(results["CST"]["thermal_to_load_series_mmbtu_per_hour"][1:24])
+        println("\tCST Thermal to Turbine: ", round(sum(results["CST"]["thermal_to_steamturbine_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
+        println("\tCST Thermal to All Hot Storage: ", round(sum(results["CST"]["thermal_to_storage_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to HotSensibleTes: ", round(sum(results["CST"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println(results["CST"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"][1:24])
+        println("\tCST Thermal to Hot Water: ", round(sum(results["CST"]["thermal_to_dhw_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to Space Heating: ", round(sum(results["CST"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to Process Heat: ", round(sum(results["CST"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
     end
 end
 
@@ -145,7 +145,7 @@ function power_flow_to_file(results, thermalfile="thermal_results.csv", elecfile
     if "ElectricHeater" in keys(results)
         write(therm, "ElecHeaterToLoad,")
     end
-    if "ConcentratingSolar" in keys(results)
+    if "CST" in keys(results)
         write(therm, "CSTtoLoad,")
     end
     if "SteamTurbine" in keys(results)
@@ -157,7 +157,7 @@ function power_flow_to_file(results, thermalfile="thermal_results.csv", elecfile
     if "HotThermalStorage" in keys(results)
         write(therm, "HotTEStoLoad,")
     end
-    if "ConcentratingSolar" in keys(results) && ("HotThermalStorage" in keys(results) || "HotSensibleTes" in keys(results))
+    if "CST" in keys(results) && ("HotThermalStorage" in keys(results) || "HotSensibleTes" in keys(results))
         write(therm, "CSTtoStorage,")
     end  
     if "ElectricHeater" in keys(results) && ("HotThermalStorage" in keys(results) || "HotSensibleTes" in keys(results))
@@ -181,8 +181,8 @@ function power_flow_to_file(results, thermalfile="thermal_results.csv", elecfile
         if "ElectricHeater" in keys(results)
             write(therm, string(REopt.KWH_PER_MMBTU*results["ElectricHeater"]["thermal_to_process_heat_load_series_mmbtu_per_hour"][ts])*",")
         end
-        if "ConcentratingSolar" in keys(results)
-            write(therm, string(REopt.KWH_PER_MMBTU*results["ConcentratingSolar"]["thermal_to_process_heat_load_series_mmbtu_per_hour"][ts])*",")
+        if "CST" in keys(results)
+            write(therm, string(REopt.KWH_PER_MMBTU*results["CST"]["thermal_to_process_heat_load_series_mmbtu_per_hour"][ts])*",")
         end
         if "SteamTurbine" in keys(results)
             write(therm, string(REopt.KWH_PER_MMBTU*results["SteamTurbine"]["thermal_to_process_heat_load_series_mmbtu_per_hour"][ts])*",")
@@ -193,8 +193,8 @@ function power_flow_to_file(results, thermalfile="thermal_results.csv", elecfile
         if "HotThermalStorage" in keys(results)
             write(therm, string(REopt.KWH_PER_MMBTU*results["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"][ts])*",")
         end
-        if "ConcentratingSolar" in keys(results) && ("HotThermalStorage" in keys(results) || "HotSensibleTes" in keys(results))
-            write(therm, string(REopt.KWH_PER_MMBTU*results["ConcentratingSolar"]["thermal_to_storage_series_mmbtu_per_hour"][ts])*",")
+        if "CST" in keys(results) && ("HotThermalStorage" in keys(results) || "HotSensibleTes" in keys(results))
+            write(therm, string(REopt.KWH_PER_MMBTU*results["CST"]["thermal_to_storage_series_mmbtu_per_hour"][ts])*",")
         end  
         if "ElectricHeater" in keys(results) && ("HotThermalStorage" in keys(results) || "HotSensibleTes" in keys(results))
             write(therm, string(REopt.KWH_PER_MMBTU*results["ElectricHeater"]["thermal_to_storage_series_mmbtu_per_hour"][ts])*",")
@@ -274,9 +274,9 @@ function power_flow_to_plot(results, t_start=24*150, t_end=24*153, outfile="ther
         append!(labels, "ElecHeaterToLoad")
         append!(data,results["ElectricHeater"]["thermal_to_load_series_mmbtu_per_hour"][t_start:t_end])
     end
-    if "ConcentratingSolar" in keys(results)
+    if "CST" in keys(results)
         append!(labels, "CSTtoLoad")
-        append!(data,results["ConcentratingSolar"]["thermal_to_load_series_mmbtu_per_hour"][t_start:t_end])
+        append!(data,results["CST"]["thermal_to_load_series_mmbtu_per_hour"][t_start:t_end])
     end
     if "SteamTurbine" in keys(results)
         append!(labels, "SteamTurbinetoLoad")
@@ -290,9 +290,9 @@ function power_flow_to_plot(results, t_start=24*150, t_end=24*153, outfile="ther
         append!(labels, "HotTEStoLoad")
         append!(data,results["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"][t_start:t_end])
     end
-    if "ConcentratingSolar" in keys(results)
+    if "CST" in keys(results)
         append!(labels, "CSTtoStorage")
-        append!(data,results["ConcentratingSolar"]["thermal_to_storage_series_mmbtu_per_hour"][t_start:t_end])
+        append!(data,results["CST"]["thermal_to_storage_series_mmbtu_per_hour"][t_start:t_end])
     end  
     if "ElectricHeater" in keys(results)
         append!(labels, "ElecHeatertoStorage")
@@ -440,11 +440,11 @@ end
 
 ##Case 6: Only PV, Elecric Heater or CST -> Hot Sensible TES
 d = JSON.parsefile("./scenarios/pv_cst_PTES_with_process_heat_no_turbine.json")
-d["ConcentratingSolar"]["elec_consumption_factor_series"] = zeros(8760)
-d["ConcentratingSolar"]["installed_cost_per_kw"] = 100.0
-d["ConcentratingSolar"]["min_kw"] = 1000
+d["CST"]["elec_consumption_factor_series"] = zeros(8760)
+d["CST"]["installed_cost_per_kw"] = 100.0
+d["CST"]["min_kw"] = 1000
 d["PV"]["min_kw"] = 1000
-d["ConcentratingSolar"]["max_kw"] = 1000
+d["CST"]["max_kw"] = 1000
 d["PV"]["max_kw"] = 1000
 d["ProcessHeatLoad"] = Dict()
 d["ElectricTariff"] = Dict()

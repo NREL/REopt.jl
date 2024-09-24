@@ -471,7 +471,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         cooling_cf["GHP"] = ones(length(time_steps))
     end
 
-    if "ConcentratingSolar" in techs.all
+    if "CST" in techs.all
         setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     end
 
@@ -944,14 +944,14 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
 end
 
 function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
-    max_sizes["ConcentratingSolar"] = s.cst.max_kw
-    min_sizes["ConcentratingSolar"] = s.cst.min_kw
-    om_cost_per_kw["ConcentratingSolar"] = s.cst.om_cost_per_kw
-    heating_cop["ConcentratingSolar"] = 1000*ones(s.settings.time_steps_per_hour*8760)  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
-    heating_cf["ConcentratingSolar"] = s.cst.capacity_factor_series
+    max_sizes["CST"] = s.cst.max_kw
+    min_sizes["CST"] = s.cst.min_kw
+    om_cost_per_kw["CST"] = s.cst.om_cost_per_kw
+    heating_cop["CST"] = 1000*ones(s.settings.time_steps_per_hour*8760)  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
+    heating_cf["CST"] = s.cst.capacity_factor_series
 
     if s.cst.macrs_option_years in [5, 7]
-        cap_cost_slope["ConcentratingSolar"] = effective_cost(;
+        cap_cost_slope["CST"] = effective_cost(;
             itc_basis = s.cst.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
@@ -964,7 +964,7 @@ function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_k
             rebate_per_kw = 0.0
         )
     else
-        cap_cost_slope["ConcentratingSolar"] = s.cst.installed_cost_per_kw
+        cap_cost_slope["CST"] = s.cst.installed_cost_per_kw
     end
 
 end

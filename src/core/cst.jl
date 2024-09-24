@@ -1,4 +1,4 @@
-struct ConcentratingSolar <: AbstractThermalTech
+struct CST <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
     capacity_factor_series::AbstractVector{<:Real}
@@ -22,14 +22,14 @@ struct ConcentratingSolar <: AbstractThermalTech
 end
 
 """
-    ConcentratingSolar
+    CST
 
-If a user provides the `ConcentratingSolar` key then the optimal scenario has the option to purchase this new 
-`ConcentratingSolar` technology to meet compatible heating loads in addition to using the `ExistingBoiler` 
+If a user provides the `CST` key then the optimal scenario has the option to purchase this new 
+`CST` technology to meet compatible heating loads in addition to using the `ExistingBoiler` 
 to meet the heating load(s). 
 
 ```julia
-function ConcentratingSolar(;
+function CST(;
     min_mmbtu_per_hour::Real = 0.0, # Minimum thermal power size
     max_mmbtu_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
     capacity_factor_series::AbstractVector{<:Real} = Float64[],  production factor
@@ -45,7 +45,7 @@ function ConcentratingSolar(;
     can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If Boiler can supply heat to the process heating load
-    charge_storage_only::Bool = true # If ConcentratingSolar can only supply hot TES (i.e., cannot meet load directly)
+    charge_storage_only::Bool = true # If CST can only supply hot TES (i.e., cannot meet load directly)
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
@@ -53,7 +53,7 @@ function ConcentratingSolar(;
 )
 ```
 """
-function ConcentratingSolar(;
+function CST(;
         min_kw::Real = 0.0,
         max_kw::Real = BIG_NUMBER,
         capacity_factor_series::AbstractVector{<:Real} = Float64[],
@@ -77,15 +77,15 @@ function ConcentratingSolar(;
     )
 
     if isnothing(tech_type)
-        throw(@error("ConcentratingSolar.tech_type is a required input but not provided."))
+        throw(@error("CST.tech_type is a required input but not provided."))
     elseif !(tech_type in CST_TYPES)
-        throw(@error("ConcentratingSolar.tech_type value is invalid."))
+        throw(@error("CST.tech_type value is invalid."))
     end
     if isempty(capacity_factor_series)
-        throw(@error("ConcentratingSolar.capacity_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
+        throw(@error("CST.capacity_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
     if isempty(elec_consumption_factor_series)
-        throw(@error("ConcentratingSolar.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
+        throw(@error("CST.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
 
     defaults = get_cst_defaults(tech_type)
@@ -123,7 +123,7 @@ function ConcentratingSolar(;
         charge_storage_only = defaults["charge_storage_only"]
     end
 
-    ConcentratingSolar(
+    CST(
         min_kw,
         max_kw,
         capacity_factor_series,
@@ -157,7 +157,7 @@ inputs
 tech_type::String -- identifier of CST technology type
 
 returns
-cst_defaults::Dict -- Dictionary containing defaults for ConcentratingSolar technology type
+cst_defaults::Dict -- Dictionary containing defaults for CST technology type
 """
 function get_cst_defaults(tech_type::String="")
     if !(tech_type in CST_TYPES)

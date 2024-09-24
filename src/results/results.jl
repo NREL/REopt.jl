@@ -108,7 +108,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_electric_heater_results(m, p, d; _n)
     end
 
-    if "ConcentratingSolar" in p.techs.electric_heater
+    if "CST" in p.techs.electric_heater
         add_concentrating_solar_results(m, p, d; _n)
     end
     if "ASHP_SpaceHeater" in p.techs.ashp
@@ -119,6 +119,8 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_ashp_wh_results(m, p, d; _n)
     end
     
+    d["model"] = m
+
     return d
 end
 
