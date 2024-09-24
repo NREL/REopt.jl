@@ -25,7 +25,7 @@ struct Scenario <: AbstractScenario
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
-    cst::Union{ConcentratingSolar, Nothing}
+    cst::Union{CST, Nothing}
     ashp::Union{ASHP, Nothing}
     ashp_wh::Union{ASHP, Nothing}
 end
@@ -55,7 +55,7 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
-- [ConcentratingSolar](@ref) (optional)
+- [CST](@ref) (optional)
 - [ASHP_SpaceHeater](@ref) (optional)
 - [ASHP_WaterHeater](@ref) (optional)
 
@@ -663,13 +663,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     cst = nothing
     if haskey(d, "CST") && (!haskey(d["CST"], "max_kw") || d["CST"]["max_kw"] > 0.0)
         if !haskey(d,"Site") || !haskey(d["Site"], "land_acres")
-            throw(@error("Site.land_acres not provided as an input, which is required when ConcentratingSolar is included as a technology."))
+            throw(@error("Site.land_acres not provided as an input, which is required when CST is included as a technology."))
         end
         cst_ssc_response = run_ssc(d)
         d["CST"]["capacity_factor_series"] = cst_ssc_response["thermal_production_series"]
         d["CST"]["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption_series"]
         pop!(d["CST"],"SSC_Inputs")
-        cst = ConcentratingSolar(;dictkeys_tosymbols(d["CST"])...)
+        cst = CST(;dictkeys_tosymbols(d["CST"])...)
     end
 
     # ASHP

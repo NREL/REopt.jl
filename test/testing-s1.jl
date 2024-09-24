@@ -120,18 +120,18 @@ function print_results(results)
     end
 
     if "CST" in keys(results)
-        println("ConcentratingSolar:")
-        println("\tConcentratingSolar Size: ", results["CST"]["size_kw"], " kW")
-        # println("\tConcentratingSolar Electric Consumption: ", round(results["CST"]["annual_electric_consumption_kwh"], digits = 2), " kWh")
-        println("\tConcentratingSolar Thermal to Load: ", round(sum(results["CST"]["thermal_to_load_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
+        println("CST:")
+        println("\tCST Size: ", results["CST"]["size_kw"], " kW")
+        # println("\tCST Electric Consumption: ", round(results["CST"]["annual_electric_consumption_kwh"], digits = 2), " kWh")
+        println("\tCST Thermal to Load: ", round(sum(results["CST"]["thermal_to_load_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
         # println(results["CST"]["thermal_to_load_series_mmbtu_per_hour"][1:24])
-        println("\tConcentratingSolar Thermal to Turbine: ", round(sum(results["CST"]["thermal_to_steamturbine_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to All Hot Storage: ", round(sum(results["CST"]["thermal_to_storage_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to HotSensibleTes: ", round(sum(results["CST"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to Turbine: ", round(sum(results["CST"]["thermal_to_steamturbine_series_mmbtu_per_hour"]), digits = 2), " mmbtu")
+        println("\tCST Thermal to All Hot Storage: ", round(sum(results["CST"]["thermal_to_storage_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to HotSensibleTes: ", round(sum(results["CST"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
         println(results["CST"]["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"][1:24])
-        println("\tConcentratingSolar Thermal to Hot Water: ", round(sum(results["CST"]["thermal_to_dhw_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to Space Heating: ", round(sum(results["CST"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
-        println("\tConcentratingSolar Thermal to Process Heat: ", round(sum(results["CST"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to Hot Water: ", round(sum(results["CST"]["thermal_to_dhw_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to Space Heating: ", round(sum(results["CST"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
+        println("\tCST Thermal to Process Heat: ", round(sum(results["CST"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]),digits = 2), " mmbtu")
     end
 end
 

@@ -1,8 +1,8 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
-`ConcentratingSolar` results keys:
-- `size_kw`  # Thermal production capacity size of the ConcentratingSolar [MMBtu/hr]
+`CST` results keys:
+- `size_kw`  # Thermal production capacity size of the CST [MMBtu/hr]
 - `electric_consumption_series_kw`  # Fuel consumption series [kW]
 - `annual_electric_consumption_kwh`  # Fuel consumed in a year [kWh]
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
@@ -22,88 +22,88 @@
 function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["CST"]), digits=3)
-    @expression(m, ConcentratingSolarElectricConsumptionSeries[ts in p.time_steps],
+    @expression(m, CSTElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction]["CST",q,ts] / p.heating_cop["CST"][ts] 
         for q in p.heating_loads))
-    r["electric_consumption_series_kw"] = round.(value.(ConcentratingSolarElectricConsumptionSeries), digits=3)
+    r["electric_consumption_series_kw"] = round.(value.(CSTElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
 
-    @expression(m, ConcentratingSolarThermalProductionSeries[ts in p.time_steps],
+    @expression(m, CSTThermalProductionSeries[ts in p.time_steps],
         sum(m[:dvHeatingProduction]["CST",q,ts] for q in p.heating_loads))
 	r["thermal_production_series_mmbtu_per_hour"] = 
-        round.(value.(ConcentratingSolarThermalProductionSeries) / KWH_PER_MMBTU, digits=5)
+        round.(value.(CSTThermalProductionSeries) / KWH_PER_MMBTU, digits=5)
 	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
 
 	if !isempty(p.s.storage.types.hot)
-        @expression(m, ConcentratingSolarToHotTESKW[ts in p.time_steps],
+        @expression(m, CSTToHotTESKW[ts in p.time_steps],
 		    sum(m[:dvHeatToStorage][b,"CST",q,ts] for b in p.s.storage.types.hot, q in p.heating_loads)
             )
-        @expression(m, ConcentratingSolarToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 
+        @expression(m, CSTToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 
             sum(m[:dvHeatToStorage][b,"CST",q,ts] for b in p.s.storage.types.hot)
             )
         if "HotSensibleTes" in p.s.storage.types.hot
-            @expression(m, ConcentratingSolarToHotSensibleTESKW[ts in p.time_steps],
+            @expression(m, CSTToHotSensibleTESKW[ts in p.time_steps],
                 sum(m[:dvHeatToStorage]["HotSensibleTes","CST",q,ts] for q in p.heating_loads)
                 )
         else
-            @expression(m, ConcentratingSolarToHotSensibleTESKW[ts in p.time_steps], 0.0)
+            @expression(m, CSTToHotSensibleTESKW[ts in p.time_steps], 0.0)
         end
     else
-        @expression(m, ConcentratingSolarToHotTESKW[ts in p.time_steps], 0.0)
-        @expression(m, ConcentratingSolarToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
-        @expression(m, ConcentratingSolarToHotSensibleTESKW[ts in p.time_steps], 0.0)
+        @expression(m, CSTToHotTESKW[ts in p.time_steps], 0.0)
+        @expression(m, CSTToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
+        @expression(m, CSTToHotSensibleTESKW[ts in p.time_steps], 0.0)
     end
-	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToHotTESKW) / KWH_PER_MMBTU, digits=3)
-    r["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToHotSensibleTESKW) / KWH_PER_MMBTU, digits=3)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CSTToHotTESKW) / KWH_PER_MMBTU, digits=3)
+    r["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"] = round.(value.(CSTToHotSensibleTESKW) / KWH_PER_MMBTU, digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.cst.can_supply_steam_turbine
-        @expression(m, ConcentratingSolarToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["CST",q,ts] for q in p.heating_loads))
-        @expression(m, ConcentratingSolarToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], m[:dvThermalToSteamTurbine]["CST",q,ts])
+        @expression(m, CSTToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["CST",q,ts] for q in p.heating_loads))
+        @expression(m, CSTToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], m[:dvThermalToSteamTurbine]["CST",q,ts])
     else
-        ConcentratingSolarToSteamTurbine = zeros(length(p.time_steps))
-        @expression(m, ConcentratingSolarToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
+        CSTToSteamTurbine = zeros(length(p.time_steps))
+        @expression(m, CSTToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
     end
-    r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToSteamTurbine) / KWH_PER_MMBTU, digits=3)
+    r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CSTToSteamTurbine) / KWH_PER_MMBTU, digits=3)
 
-    @expression(m, ConcentratingSolarToWaste[ts in p.time_steps],
+    @expression(m, CSTToWaste[ts in p.time_steps],
 		sum(m[:dvProductionToWaste]["CST", q, ts] for q in p.heating_loads)
     )
-    @expression(m, ConcentratingSolarToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps],
+    @expression(m, CSTToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps],
 		m[:dvProductionToWaste]["CST", q, ts]
     )
-    r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToWaste) / KWH_PER_MMBTU, digits=3)
+    r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(CSTToWaste) / KWH_PER_MMBTU, digits=3)
 
-	@expression(m, ConcentratingSolarToLoad[ts in p.time_steps],
-		sum(m[:dvHeatingProduction]["CST", q, ts] for q in p.heating_loads) - ConcentratingSolarToHotTESKW[ts] - ConcentratingSolarToSteamTurbine[ts] - ConcentratingSolarToWaste[ts]
+	@expression(m, CSTToLoad[ts in p.time_steps],
+		sum(m[:dvHeatingProduction]["CST", q, ts] for q in p.heating_loads) - CSTToHotTESKW[ts] - CSTToSteamTurbine[ts] - CSTToWaste[ts]
     )
-	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToLoad) / KWH_PER_MMBTU, digits=3)
+	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CSTToLoad) / KWH_PER_MMBTU, digits=3)
 
     if "DomesticHotWater" in p.heating_loads && p.s.cst.can_serve_dhw
-        @expression(m, ConcentratingSolarToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CST","DomesticHotWater",ts] - ConcentratingSolarToHotTESByQualityKW["DomesticHotWater",ts] - ConcentratingSolarToSteamTurbineByQuality["DomesticHotWater",ts] - ConcentratingSolarToWasteByQualityKW["DomesticHotWater",ts]
+        @expression(m, CSTToDHWKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["CST","DomesticHotWater",ts] - CSTToHotTESByQualityKW["DomesticHotWater",ts] - CSTToSteamTurbineByQuality["DomesticHotWater",ts] - CSTToWasteByQualityKW["DomesticHotWater",ts]
         )
     else
-        @expression(m, ConcentratingSolarToDHWKW[ts in p.time_steps], 0.0)
+        @expression(m, CSTToDHWKW[ts in p.time_steps], 0.0)
     end
-    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(CSTToDHWKW ./ KWH_PER_MMBTU), digits=5)
     
     if "SpaceHeating" in p.heating_loads && p.s.cst.can_serve_space_heating
-        @expression(m, ConcentratingSolarToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CST","SpaceHeating",ts] - ConcentratingSolarToHotTESByQualityKW["SpaceHeating",ts] - ConcentratingSolarToSteamTurbineByQuality["SpaceHeating",ts] - ConcentratingSolarToWasteByQualityKW["SpaceHeating",ts]
+        @expression(m, CSTToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["CST","SpaceHeating",ts] - CSTToHotTESByQualityKW["SpaceHeating",ts] - CSTToSteamTurbineByQuality["SpaceHeating",ts] - CSTToWasteByQualityKW["SpaceHeating",ts]
         )
     else
-        @expression(m, ConcentratingSolarToSpaceHeatingKW[ts in p.time_steps], 0.0)
+        @expression(m, CSTToSpaceHeatingKW[ts in p.time_steps], 0.0)
     end
-    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(CSTToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
     
     if "ProcessHeat" in p.heating_loads && p.s.cst.can_serve_process_heat
-        @expression(m, ConcentratingSolarToProcessHeatKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CST","ProcessHeat",ts] - ConcentratingSolarToHotTESByQualityKW["ProcessHeat",ts] - ConcentratingSolarToSteamTurbineByQuality["ProcessHeat",ts] - ConcentratingSolarToWasteByQualityKW["ProcessHeat",ts]
+        @expression(m, CSTToProcessHeatKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["CST","ProcessHeat",ts] - CSTToHotTESByQualityKW["ProcessHeat",ts] - CSTToSteamTurbineByQuality["ProcessHeat",ts] - CSTToWasteByQualityKW["ProcessHeat",ts]
         )
     else
-        @expression(m, ConcentratingSolarToProcessHeatKW[ts in p.time_steps], 0.0)
+        @expression(m, CSTToProcessHeatKW[ts in p.time_steps], 0.0)
     end
-    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
+    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(CSTToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
     d["CST"] = r
 	nothing
