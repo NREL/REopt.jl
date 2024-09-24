@@ -98,7 +98,7 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
 end
 
 function normalize_response(response,case_data,rated_power)
-    model = case_data["ConcentratingSolar"]["tech_type"]
+    model = case_data["CST"]["type"]
     if model =="ptc"
         heat_sink = case_data["ConcentratingSolar"]["q_pb_design"]
         SM = 2.5
@@ -109,7 +109,7 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    model = case_data["ConcentratingSolar"]["tech_type"]
+    model = case_data["CST"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
         "mst" => "tcsmolten_salt",
@@ -136,7 +136,7 @@ function run_ssc(case_data::Dict)
         if (i == "tilt") || (i == "lat")
             user_defined_inputs[i] = lat
         else
-            user_defined_inputs[i] = case_data["ConcentratingSolar"]["SSC_Inputs"][i]
+            user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
         end
     end
 
@@ -229,8 +229,6 @@ function run_ssc(case_data::Dict)
         electric_consumption_norm = elec_consumption .* ecf ./ rated_power
         # R[k] = response_norm
         # end
-        println(thermal_production_norm[1:100])
-        println(electric_consumption_norm[1:100])
         ### Free SSC
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid

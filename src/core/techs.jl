@@ -270,20 +270,20 @@ function Techs(s::Scenario)
     end
     
     if !isnothing(s.cst)
-        push!(all_techs, "ConcentratingSolar")
-        push!(heating_techs, "ConcentratingSolar")
-        push!(electric_heaters, "ConcentratingSolar")
+        push!(all_techs, "CST")
+        push!(heating_techs, "CST")
+        push!(electric_heaters, "CST")
         if s.cst.can_supply_steam_turbine
-            push!(techs_can_supply_steam_turbine, "ConcentratingSolar")
+            push!(techs_can_supply_steam_turbine, "CST")
         end
         if s.cst.can_serve_space_heating
-            push!(techs_can_serve_space_heating, "ConcentratingSolar")
+            push!(techs_can_serve_space_heating, "CST")
         end
         if s.cst.can_serve_dhw
-            push!(techs_can_serve_dhw, "ConcentratingSolar")
+            push!(techs_can_serve_dhw, "CST")
         end
         if s.cst.can_serve_process_heat
-            push!(techs_can_serve_process_heat, "ConcentratingSolar")
+            push!(techs_can_serve_process_heat, "CST")
         end
     end
 

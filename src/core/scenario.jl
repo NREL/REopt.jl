@@ -661,15 +661,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     cst = nothing
-    if haskey(d, "ConcentratingSolar") && (!haskey(d["ConcentratingSolar"], "max_kw") || d["ConcentratingSolar"]["max_kw"] > 0.0)
+    if haskey(d, "CST") && (!haskey(d["CST"], "max_kw") || d["CST"]["max_kw"] > 0.0)
         if !haskey(d,"Site") || !haskey(d["Site"], "land_acres")
             throw(@error("Site.land_acres not provided as an input, which is required when ConcentratingSolar is included as a technology."))
         end
         cst_ssc_response = run_ssc(d)
-        d["ConcentratingSolar"]["capacity_factor_series"] = cst_ssc_response["thermal_production_series"]
-        d["ConcentratingSolar"]["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption_series"]
-        pop!(d["ConcentratingSolar"],"SSC_Inputs")
-        cst = ConcentratingSolar(;dictkeys_tosymbols(d["ConcentratingSolar"])...)
+        d["CST"]["capacity_factor_series"] = cst_ssc_response["thermal_production_series"]
+        d["CST"]["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption_series"]
+        pop!(d["CST"],"SSC_Inputs")
+        cst = ConcentratingSolar(;dictkeys_tosymbols(d["CST"])...)
     end
 
     # ASHP

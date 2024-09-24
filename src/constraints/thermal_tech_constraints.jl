@@ -64,7 +64,7 @@ function add_heating_tech_constraints(m, p; _n="")
     # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
     if !isempty(setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)))
         @constraint(m, [t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)), ts in p.time_steps],
-            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t] * p.heating_cf[t][ts]
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= p.heating_cf[t][ts] * m[Symbol("dvSize"*_n)][t]
         )
     end
     # Constraint (7_heating_load_compatability): Set production variables for incompatible heat loads to zero
@@ -107,19 +107,19 @@ function add_heating_tech_constraints(m, p; _n="")
         end
     end
 
-    if "ConcentratingSolar" in p.techs.electric_heater
+    if "CST" in p.techs.electric_heater
         @constraint(m, CSTHeatProduction[ts in p.time_steps],
-            sum(m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] for q in p.heating_loads) == p.heating_cf["ConcentratingSolar"][ts] * m[Symbol("dvSize"*_n)]["ConcentratingSolar"]
+            sum(m[Symbol("dvHeatingProduction"*_n)]["CST",q,ts] for q in p.heating_loads) == p.heating_cf["CST"][ts] * m[Symbol("dvSize"*_n)]["CST"]
         )
         if p.s.cst.charge_storage_only
             #assume sensible TES first, and hot water otherwise.
             if "HotSensibleTes" in p.s.storage.types.hot
                 @constraint(m, ConcentratingSolarToStorageOnly[q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] == m[Symbol("dvProductionToWaste"*_n)]["ConcentratingSolar",q,ts] + m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes","ConcentratingSolar",q,ts]
+                    m[Symbol("dvHeatingProduction"*_n)]["CST",q,ts] == m[Symbol("dvProductionToWaste"*_n)]["CST",q,ts] + m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes","CST",q,ts]
                 )
             elseif "HotThermalStorage" in p.s.storage.types.hot
                 @constraint(m, ConcentratingSolarToStorageOnly[q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] == m[Symbol("dvProductionToWaste"*_n)]["ConcentratingSolar",q,ts] + m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage","ConcentratingSolar",q,ts]
+                    m[Symbol("dvHeatingProduction"*_n)]["CST",q,ts] == m[Symbol("dvProductionToWaste"*_n)]["CST",q,ts] + m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage","CST",q,ts]
                 )
             else
                 @warn "ConcentratingSolar.charge_storage_only is set to True, but no hot storage technologies exist."
