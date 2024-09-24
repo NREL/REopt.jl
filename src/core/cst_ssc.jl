@@ -97,14 +97,20 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
     return weatherdata
 end
 
-function normalize_response(response,case_data,rated_power)
-    model = case_data["CST"]["type"]
+function normalize_response(thermal_power_produced,case_data)
+    model = case_data["CST"]["tech_type"]
     if model =="ptc"
-        heat_sink = case_data["ConcentratingSolar"]["q_pb_design"]
-        SM = 2.5
-        return response ./ (SM * heat_sink)
+        heat_sink = case_data["CST"]["SSC_Inputs"]["q_pb_design"]
+        rated_power_per_area = 39.37 / 60000.0 # MWt / m2, TODO: update with median values from SAM params
+        if case_data["CST"]["SSC_Inputs"]["use_solar_mult_or_aperture_area"] > 0
+            rated_power = rated_power_per_area * case_data["CST"]["SSC_Inputs"]["specified_total_aperture"]
+        else
+            rated_power = 3.0 * heat_sink
+        end
     end
-
+    thermal_power_produced_norm = thermal_power_produced ./ (rated_power) 
+    thermal_power_produced_norm[thermal_power_produced_norm .< 0] .= 0  # remove negative values
+    return thermal_power_produced_norm
 end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
