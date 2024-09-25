@@ -53,6 +53,12 @@ struct ASHP <: AbstractThermalTech
     max_ton::Real
     installed_cost_per_ton::Real
     om_cost_per_ton::Real
+    heating_cop_reference::Array{<:Real,1}
+    heating_cf_reference::Array{<:Real,1}
+    heating_reference_temps_degF::Array{<:Real,1}
+    cooling_cop_reference::Array{<:Real,1}
+    cooling_cf_reference::Array{<:Real,1}
+    cooling_reference_temps_degF::Array{<:Real,1}
 end
 
 
@@ -242,7 +248,13 @@ function ASHPSpaceHeater(;
         avoided_capex_by_ashp_present_value,
         max_ton,
         installed_cost_per_ton,
-        om_cost_per_ton
+        om_cost_per_ton,
+        heating_cop_reference,
+        heating_cf_reference,
+        heating_reference_temps_degF,
+        cooling_cop_reference,
+        cooling_cf_reference,
+        cooling_reference_temps_degF
     )
 end
 
@@ -390,7 +402,13 @@ function ASHPWaterHeater(;
         avoided_capex_by_ashp_present_value,
         max_ton,
         installed_cost_per_ton,
-        om_cost_per_ton
+        om_cost_per_ton,
+        heating_cop_reference,
+        heating_cf_reference,
+        heating_reference_temps_degF,
+        Real[],
+        Real[],
+        Real[]
     )
 end
 
