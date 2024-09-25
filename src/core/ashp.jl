@@ -68,7 +68,7 @@ function ASHPSpaceHeater(;
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
-    force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
+    force_into_system::Bool = false # force into system to serve all space heating loads if true
     avoided_capex_by_ashp_present_value::Real = 0.0 # avoided capital expenditure due to presence of ASHP system vs. defaults heating and cooling techs
 
     #The following inputs are used to create the attributes heating_cop and heating cf: 
@@ -101,7 +101,7 @@ function ASHPSpaceHeater(;
         macrs_bonus_fraction::Real = 0.0,
         avoided_capex_by_ashp_present_value::Real = 0.0,
         can_serve_cooling::Union{Bool, Nothing} = nothing,
-        force_into_system::Union{Bool, Nothing} = nothing,
+        force_into_system::Bool = false,
         heating_cop_reference::Array{<:Real,1} = Real[],
         heating_cf_reference::Array{<:Real,1} = Real[],
         heating_reference_temps_degF::Array{<:Real,1} = Real[],
@@ -114,18 +114,14 @@ function ASHPSpaceHeater(;
         cooling_load::Array{<:Real,1} = Real[]
     )
 
-    defaults = get_ashp_defaults("SpaceHeating")
+    defaults = get_ashp_defaults("SpaceHeating",force_into_system)
 
     # populate defaults as needed
     if isnothing(installed_cost_per_ton)
         installed_cost_per_ton = defaults["installed_cost_per_ton"]
     end
     if isnothing(om_cost_per_ton)
-        if force_into_system == true
-            om_cost_per_ton = 0
-        else
-            om_cost_per_ton = defaults["om_cost_per_ton"]
-        end
+        om_cost_per_ton = defaults["om_cost_per_ton"]
     end
     if isnothing(can_serve_cooling)
         can_serve_cooling = defaults["can_serve_cooling"]
@@ -140,11 +136,7 @@ function ASHPSpaceHeater(;
         max_ton = defaults["max_ton"]
     end
     if isnothing(sizing_factor)
-        if force_into_system == true
-            sizing_factor = defaults["sizing_factor"]
-        else
-            sizing_factor = 1
-        end
+        sizing_factor = defaults["sizing_factor"]
     end
 
     if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps_degF)
@@ -264,7 +256,7 @@ function ASHPWaterHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     avoided_capex_by_ashp_present_value::Real = 0.0 # avoided capital expenditure due to presence of ASHP system vs. defaults heating and cooling techs
-    force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all hot water loads if true
+    force_into_system::Bool = false # force into system to serve all hot water loads if true
     
     #The following inputs are used to create the attributes heating_cop and heating cf: 
     heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
@@ -289,7 +281,7 @@ function ASHPWaterHeater(;
     macrs_option_years::Int = 0,
     macrs_bonus_fraction::Real = 0.0,
     avoided_capex_by_ashp_present_value::Real = 0.0,
-    force_into_system::Union{Bool, Nothing} = nothing,
+    force_into_system::Bool = false,
     heating_cop_reference::Array{<:Real,1} = Real[],
     heating_cf_reference::Array{<:Real,1} = Real[],
     heating_reference_temps_degF::Array{<:Real,1} = Real[],
@@ -298,21 +290,14 @@ function ASHPWaterHeater(;
     heating_load::Array{<:Real,1} = Real[]
     )
 
-    defaults = get_ashp_defaults("DomesticHotWater")
+    defaults = get_ashp_defaults("DomesticHotWater",force_into_system)
 
     # populate defaults as needed
     if isnothing(installed_cost_per_ton)
         installed_cost_per_ton = defaults["installed_cost_per_ton"]
     end
     if isnothing(om_cost_per_ton)
-        if force_into_system == true
-            om_cost_per_ton = 0
-        else
-            om_cost_per_ton = defaults["om_cost_per_ton"]
-        end
-    end
-    if isnothing(force_into_system)
-        force_into_system = defaults["force_into_system"]
+        om_cost_per_ton = defaults["om_cost_per_ton"]
     end
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
@@ -321,11 +306,7 @@ function ASHPWaterHeater(;
         max_ton = defaults["max_ton"]
     end
     if isnothing(sizing_factor)
-        if force_into_system == true
-            sizing_factor = defaults["sizing_factor"]
-        else
-            sizing_factor = 1
-        end
+        sizing_factor = defaults["sizing_factor"]
     end
 
     if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps_degF)
@@ -410,16 +391,22 @@ Obtains defaults for the ASHP from a JSON data file.
 
 inputs
 load_served::String -- identifier of heating load served by AHSP system
+force_into_system::Bool -- exclusively serves compatible thermal loads if true (i.e., replaces existing technologies)
 
 returns
 ashp_defaults::Dict -- Dictionary containing defaults for ASHP
 """
-function get_ashp_defaults(load_served::String="SpaceHeating")
+function get_ashp_defaults(load_served::String="SpaceHeating", force_into_system::Bool=false)
     if !(load_served in ["SpaceHeating", "DomesticHotWater"])
         throw(@error("Invalid inputs: argument `load_served` to function get_ashp_defaults() must be a String in the set ['SpaceHeating', 'DomesticHotWater']."))
     end
     all_ashp_defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "ashp", "ashp_defaults.json"))
-    return all_ashp_defaults[load_served]
+    defaults = all_ashp_defaults[load_served]
+    if force_into_system
+        defaults["sizing_factor"] = 1.1
+        defaults["om_cost_per_ton"] = 0.0
+    end
+    return defaults
 end
 
 """
