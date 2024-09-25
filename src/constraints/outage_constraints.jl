@@ -289,8 +289,8 @@ function add_MG_elec_storage_dispatch_constraints(m,p,b)
 
 	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
     @constraint(m, [ts in p.time_steps_without_grid],
-        m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (  
-            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) 
+        m[:dvStorageEnergy][b] >= m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (  
+            p.s.storage.attr[b].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) 
         )
     )
 
