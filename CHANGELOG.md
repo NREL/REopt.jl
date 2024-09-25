@@ -29,7 +29,6 @@ Classify the change according to the following categories:
 - Added outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
 - Added new input **self_discharge_fraction_per_timestep** to `ElectricStorage` for modeling battery self-discharge
 - Added input option **can_export_to_grid** (defaults to _false_) to `ElectricStorage` and decision variable **dvStorageToGrid**
-- Added input **allow_simultaneous_charge_discharge** (defaults to _true_) to `ElectricStorage` to give option to disallow battery from simultaneously charging and discharging, which adds binary decision variables often unnecessarily
 - Added input **fixed_duration** to `ElectricStorage`, which fixes the ratio between **size_kw** and **size_kwh** in the optimized solution if provided
 - Added input option **optimize_soc_init_fraction** (defaults to _false_) to `ElectricStorage`, which makes the optimization choose the inital SOC (equal to final SOC) instead of using **soc_init_fraction**. The initial SOC is also constrained to equal the final SOC, which eliminates the "free energy" issue. We currently do not fix SOC when **soc_init_fraction** is used because this has caused infeasibility. 
 - Added output **initial_capital_cost** to all techs

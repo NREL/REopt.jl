@@ -228,7 +228,6 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     can_grid_charge::Bool = true
     can_export_to_grid::Bool = false
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
-    allow_simultaneous_charge_discharge::Bool = true
 end
 ```
 """
@@ -246,7 +245,6 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
     self_discharge_fraction_per_timestep::Float64 = 0.0
-    allow_simultaneous_charge_discharge::Bool = true
 end
 
 
