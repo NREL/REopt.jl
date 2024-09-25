@@ -101,6 +101,7 @@ function proforma_results(p::REoptInputs, d::Dict)
                 depreciation_schedule = get_depreciation_schedule(p, storage, federal_itc_basis)
                 m.total_depreciation += depreciation_schedule
             end
+        end
     end
 
     # calculate Generator o+m costs, incentives, and depreciation
