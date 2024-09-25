@@ -23,11 +23,11 @@ function add_cooling_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     r["electric_chiller_base_load_series_kw"] = load_series_kw ./ p.s.cooling_load.existing_chiller_cop
 
     r["annual_calculated_tonhour"] = round(
-        sum(r["load_series_ton"]) / p.s.settings.time_steps_per_hour, digits=2
+        sum(r["load_series_ton"]) * p.hours_per_time_step, digits=2
     )
     
     r["annual_electric_chiller_base_load_kwh"] = round(
-        sum(r["electric_chiller_base_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
+        sum(r["electric_chiller_base_load_series_kw"]) * p.hours_per_time_step, digits=2
     )
 
     d["CoolingLoad"] = r
@@ -76,13 +76,13 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     r["total_heating_boiler_fuel_load_series_mmbtu_per_hour"] =   r["dhw_boiler_fuel_load_series_mmbtu_per_hour"] .+ r["space_heating_boiler_fuel_load_series_mmbtu_per_hour"] .+ r["process_heat_boiler_fuel_load_series_mmbtu_per_hour"]
 
     r["annual_calculated_dhw_thermal_load_mmbtu"] = round(
-        sum(r["dhw_thermal_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits =   2
+        sum(r["dhw_thermal_load_series_mmbtu_per_hour"]) * p.hours_per_time_step, digits =   2
     )
     r["annual_calculated_space_heating_thermal_load_mmbtu"] = round(
-        sum(r["space_heating_thermal_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits =   2
+        sum(r["space_heating_thermal_load_series_mmbtu_per_hour"]) * p.hours_per_time_step, digits =   2
     )
     r["annual_calculated_process_heat_thermal_load_mmbtu"] = round(
-        sum(r["process_heat_thermal_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits =   2
+        sum(r["process_heat_thermal_load_series_mmbtu_per_hour"]) * p.hours_per_time_step, digits =   2
     )
     r["annual_calculated_total_heating_thermal_load_mmbtu"] =   r["annual_calculated_dhw_thermal_load_mmbtu"] + r["annual_calculated_space_heating_thermal_load_mmbtu"] + r["annual_calculated_process_heat_thermal_load_mmbtu"]
     
