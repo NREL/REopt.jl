@@ -78,9 +78,6 @@ function build_mpc!(m::JuMP.AbstractModel, ps::AbstractVector{MPCInputs})
 				else
 					@error("Invalid storage does not fall in a thermal or electrical set")
 				end
-				if b in p.s.storage.types.elec_no_simultaneous_charge_discharge
-					add_simultaneous_charge_discharge_constraint(m, p, b; _n=_n)
-				end
 			end
 		end
 
