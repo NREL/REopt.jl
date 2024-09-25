@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-09-07
+## Develop LDES
 ### Added
 - Added inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
 - Added outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
@@ -37,7 +37,7 @@ Classify the change according to the following categories:
 - Added missing outputs **lifecycle_export_benefit_before_tax** and **year_one_export_benefit_after_tax** to `ElectricTariff`
 - Add missing output **year_one_om_cost_before_tax** to `PV`
 
-## v0.47.3
+## Develop 08-09-2024
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
