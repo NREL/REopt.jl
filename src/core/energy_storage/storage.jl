@@ -22,6 +22,7 @@ end
 mutable struct StorageTypes
     all::Vector{String}
     elec::Vector{String}
+    elec_no_simultaneous_charge_discharge::Vector{String}
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
@@ -33,6 +34,7 @@ mutable struct StorageTypes
             String[],
             String[],
             String[],
+            String[],
             String[]
         )
     end
@@ -40,6 +42,7 @@ mutable struct StorageTypes
     function StorageTypes(d::Dict{String, AbstractStorage})
         all_storage = String[]
         elec_storage = String[]
+        elec_storage_no_simul_charge_discharge = String[]
         hot_storage = String[]
         cold_storage = String[]
 
@@ -50,13 +53,15 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
-
+                    if !v.allow_simultaneous_charge_discharge
+                        push!(elec_storage_no_simul_charge_discharge, k)
+                    end
                 elseif typeof(v) <: HotThermalStorage
                     push!(hot_storage, k)
                 elseif typeof(v) <: ColdThermalStorage
                     push!(cold_storage, k)
                 else
-                    throw(@error("Storage not labeled as Hot or Cold, or Electric."))
+                    throw(@error("Storage not labeled as Hot, Cold, or Electric."))
                 end
             end
         end
@@ -66,6 +71,7 @@ mutable struct StorageTypes
         new(
             all_storage,
             elec_storage,
+            elec_storage_no_simul_charge_discharge,
             thermal_storage,
             hot_storage,
             cold_storage
