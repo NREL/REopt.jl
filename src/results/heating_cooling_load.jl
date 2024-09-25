@@ -91,6 +91,12 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     r["annual_calculated_process_heat_boiler_fuel_load_mmbtu"]  =   r["annual_calculated_process_heat_thermal_load_mmbtu"] / existing_boiler_efficiency
     r["annual_calculated_total_heating_boiler_fuel_load_mmbtu"] =   r["annual_calculated_total_heating_thermal_load_mmbtu"] / existing_boiler_efficiency
 
+    r["annual_total_unaddressable_heating_load_mmbtu"] = (p.s.dhw_load.unaddressable_annual_fuel_mmbtu + 
+                                                    p.s.space_heating_load.unaddressable_annual_fuel_mmbtu + 
+                                                    p.s.process_heat_load.unaddressable_annual_fuel_mmbtu)
+
+    r["annual_emissions_from_unaddressable_heating_load_mmbtu"] = r["annual_total_unaddressable_heating_load_mmbtu"] * p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu * TONNE_PER_LB
+
     d["HeatingLoad"] =   r
     nothing
 end
