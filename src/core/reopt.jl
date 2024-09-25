@@ -617,13 +617,6 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 				
 	end
 
-	for b in p.s.storage.types.elec
-		if !(p.s.storage.attr[b].allow_simultaneous_charge_discharge)
-			@warn "Adding binary variable to prevent simultaneous battery charge/discharge. Some solvers are very slow with integer variables."
-			@variable(m, binBattCharging[p.time_steps], Bin) # Binary for battery charging (vs discharging)
-		end
-	end
-
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
 		@variables m begin
