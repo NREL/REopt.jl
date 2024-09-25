@@ -155,18 +155,18 @@ function ASHPSpaceHeater(;
         throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps_degF must all be the same length."))
     else
         if length(heating_cop_reference) == 0
-            heating_cop_reference = defaults["heating_cop_reference"]
-            heating_cf_reference = defaults["heating_cf_reference"]
-            heating_reference_temps_degF = defaults["heating_reference_temps_degF"]
+            heating_cop_reference = convert(Vector{Float64}, defaults["heating_cop_reference"])
+            heating_cf_reference = convert(Vector{Float64}, defaults["heating_cf_reference"])
+            heating_reference_temps_degF = convert(Vector{Float64}, defaults["heating_reference_temps_degF"])
         end
     end
     if length(cooling_cop_reference) != length(cooling_cf_reference) || length(cooling_cf_reference) != length(cooling_reference_temps_degF)
         throw(@error("cooling_cop_reference, cooling_cf_reference, and cooling_reference_temps_degF must all be the same length."))
     else
         if length(cooling_cop_reference) == 0 && can_serve_cooling
-            cooling_cop_reference = defaults["cooling_cop_reference"]
-            cooling_cf_reference = defaults["cooling_cf_reference"]
-            cooling_reference_temps_degF = defaults["cooling_reference_temps_degF"]
+            cooling_cop_reference = convert(Vector{Float64}, defaults["cooling_cop_reference"])
+            cooling_cf_reference = convert(Vector{Float64}, defaults["cooling_cf_reference"])
+            cooling_reference_temps_degF = convert(Vector{Float64}, defaults["cooling_reference_temps_degF"])
         end
     end
 
@@ -334,9 +334,9 @@ function ASHPWaterHeater(;
         throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps_degF must all be the same length."))
     else
         if length(heating_cop_reference) == 0
-            heating_cop_reference = defaults["heating_cop_reference"]
-            heating_cf_reference = defaults["heating_cf_reference"]
-            heating_reference_temps_degF = defaults["heating_reference_temps_degF"]
+            heating_cop_reference = convert(Vector{Float64}, defaults["heating_cop_reference"])
+            heating_cf_reference = convert(Vector{Float64}, defaults["heating_cf_reference"])
+            heating_reference_temps_degF = convert(Vector{Float64}, defaults["heating_reference_temps_degF"])
         end
     end
 
