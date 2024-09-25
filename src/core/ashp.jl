@@ -9,21 +9,21 @@ to meet the heating load.
 
 ASHPSpaceHeater has the following attributes: 
 ```julia
-    min_kw::Real = 0.0, # Minimum thermal power size
-    max_kw::Real = BIG_NUMBER, # Maximum thermal power size
-    min_allowable_kw::Real = 0.0 # Minimum nonzero thermal power size if included
-    sizing_factor::Real = 1.1 # Size multiplier of system, relative that of the max load given by dispatch profile
-    installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
-    om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
-    macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
-    macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
-    heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    cooling_cop::Array{<:Real,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
-    heating_cf::Array{<:Real,1}, # ASHP's heating capacity factor curves
-    cooling_cf::Array{<:Real,1}, # ASHP's cooling capacity factor curves
-    can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
-    force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
-    back_up_temp_threshold_degF::Real = 10 # Degree in F that system switches from ASHP to resistive heater 
+    min_kw::Real # Minimum thermal power size
+    max_kw::Real # Maximum thermal power size
+    min_allowable_kw::Real # Minimum nonzero thermal power size if included
+    sizing_factor::Real # Size multiplier of system, relative that of the max load given by dispatch profile
+    installed_cost_per_ton::Real # Thermal power-based cost
+    om_cost_per_ton::Real # Thermal power-based fixed O&M cost
+    macrs_option_years::Int # MACRS schedule for financial analysis. Set to zero to disable
+    macrs_bonus_fraction::Real # Fraction of upfront project costs to depreciate under MACRS
+    heating_cop::Array{<:Real,1} # COP of the heating (i.e., thermal produced / electricity consumed)
+    cooling_cop::Array{<:Real,1} # COP of the cooling (i.e., thermal produced / electricity consumed)
+    heating_cf::Array{<:Real,1} # ASHP's heating capacity factor curves
+    cooling_cf::Array{<:Real,1} # ASHP's cooling capacity factor curves
+    can_serve_cooling::Bool # If ASHP can supply heat to the cooling load
+    force_into_system::Bool # force into system to serve all space heating loads if true
+    back_up_temp_threshold_degF::Real # Degree in F that system switches from ASHP to resistive heater 
 ```
 """
 struct ASHP <: AbstractThermalTech
