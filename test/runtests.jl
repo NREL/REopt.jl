@@ -92,7 +92,7 @@ else  # run HiGHS tests
             latitude, longitude = 65.0102196310875, 25.465387094897675
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset ≈ "intl"
 
             # 4. Fairbanks, AK 
             site = "Fairbanks"
