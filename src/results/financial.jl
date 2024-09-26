@@ -191,6 +191,14 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
 
+    if "ASHPSpaceHeater" in p.techs.all
+        initial_capex += p.s.ashp.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPSpaceHeater"]
+    end
+
+    if "ASHPWaterHeater" in p.techs.all
+        initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
+    end    
+
     return initial_capex
 end
 
