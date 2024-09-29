@@ -52,7 +52,7 @@ function add_storage_size_constraints(m, p, b; _n="")
 end
 
 
-function add_general_general_storage_dispatch_constraints(m, p, b; _n="")
+function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	#@constraint(m,
     #    m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
