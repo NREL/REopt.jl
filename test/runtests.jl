@@ -1979,6 +1979,8 @@ else  # run HiGHS tests
             boreholes = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
             boreholes_len = results["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
 
+            # Initial capital cost = initial cap cost of GHP + initial cap cost of hydronic loop
+            @test ghp_lccc_initial - results["GHP"]["size_heat_pump_ton"]*1075 - ghp_data["GHP"]["building_sqft"]*1.7 ≈ 0.0 atol = 0.1
             # LCC = LCCC + Electricity Bill
             @test ghp_lcc - ghp_lccc - ghp_ebill ≈ 0.0 atol = 0.1
             # LCCC should be around be around 52% of initial capital cost due to incentive and bonus
@@ -1997,10 +1999,13 @@ else  # run HiGHS tests
             ghx_lccc = results["Financial"]["lifecycle_capital_costs"]
             ghx_lccc_initial = results["Financial"]["initial_capital_costs"]
             ghp_size = results["GHP"]["size_heat_pump_ton"]
+            boreholes = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
+            boreholes_len = results["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
             
+            # Initial capital cost = initial cap cost of GHX
+            @test ghx_lccc_initial - boreholes*boreholes_len*14 ≈ 0.0 atol = 0.01
             # GHP size must be 0
             @test ghp_size ≈ 0.0 atol = 0.01
-            
             # LCCC should be around be around 52% of initial capital cost due to incentive and bonus
             @test ghx_lccc/ghx_lccc_initial ≈ 0.518 atol = 0.01
         end
