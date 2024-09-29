@@ -150,7 +150,7 @@ function add_electrothermal_storage_dispatch_constraints(m, p, b; _n="")
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].electric_discharge_efficiency_fraction
             - m[Symbol("dvThermalDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].thermal_discharge_efficiency_fraction
         )
-            - ((0.01/24)*m[Symbol("dvStoredEnergy"*_n)][b, ts]) # TEO added this to account for 1% thermal loss of LDES; this line currently only works for hourly data
+            - ((0.01/(p.s.settings.time_steps_per_hour*24))*m[Symbol("dvStoredEnergy"*_n)][b, ts]) # TEO added this to account for 1% thermal loss of LDES
         
 	)
 
@@ -166,7 +166,7 @@ function add_electrothermal_storage_dispatch_constraints(m, p, b; _n="")
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].electric_discharge_efficiency_fraction
             - m[Symbol("dvThermalDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].thermal_discharge_efficiency_fraction
         )
-        - ((0.01/24)*m[Symbol("dvStoredEnergy"*_n)][b, ts]) # TEO added this to account for 1% thermal loss of LDES; this line currently only works for hourly data
+        - ((0.01/(p.s.settings.time_steps_per_hour*24))*m[Symbol("dvStoredEnergy"*_n)][b, ts]) # TEO added this to account for 1% thermal loss of LDES
         
     )
     # TEO: Commented-out this constraint so the inverter is sized only to the discharge
