@@ -73,7 +73,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
                             #batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity # commented out to let the battery charge more than discharge
                             (diesel_min_turndown * diesel_kw - load_kw) / n_steps_per_hour * batt_roundtrip_efficiency  # excess energy
                         ])
-                    end
+                    end 
                 end
                 load_kw = 0
 
@@ -271,7 +271,8 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     batt_kwh = 0
     batt_kw = 0
     init_soc = zeros(length(p.time_steps))
-    
+    batt_roundtrip_efficiency = 0
+
     if "ElectricStorage" in keys(d)
         batt_roundtrip_efficiency = (p.s.storage.attr["ElectricStorage"].charge_efficiency *
                                 p.s.storage.attr["ElectricStorage"].discharge_efficiency)
@@ -287,8 +288,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
        batt_kw = get(d["ElectrothermalStorage"], "size_kw", 0)
        init_soc = get(d["ElectrothermalStorage"], "soc_series_fraction", zeros(length(p.time_steps)))
     end 
-
-
+    
     if microgrid_only && !Bool(get(d["Outages"], "storage_upgraded", false))
         batt_kwh = 0
         batt_kw = 0

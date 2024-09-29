@@ -54,9 +54,14 @@ end
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
-	@constraint(m,
-        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
-    )
+	#@constraint(m,
+    #    m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+    #)
+
+    # Updated: require the battery start and end charge to be the same (let REopt decide what that charge should be)
+    @constraint(m,
+            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[Symbol("dvStoredEnergy"*_n)][b, maximum(p.time_steps)]
+        )
 
     #Constraint (4n): State of charge upper bound is storage system size
     @constraint(m, [ts in p.time_steps],
@@ -148,6 +153,11 @@ function add_electrothermal_storage_dispatch_constraints(m, p, b; _n="")
             - ((0.01/24)*m[Symbol("dvStoredEnergy"*_n)][b, ts]) # TEO added this to account for 1% thermal loss of LDES; this line currently only works for hourly data
         
 	)
+
+    # Require battery to be a certain duration battery
+    #@constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / 48)
+
+
 
 	# Constraint (4h): state-of-charge for electrothermal storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
