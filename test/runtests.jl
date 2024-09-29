@@ -1976,8 +1976,16 @@ else  # run HiGHS tests
             ghp_lccc = results["Financial"]["lifecycle_capital_costs"]
             ghp_lccc_initial = results["Financial"]["initial_capital_costs"]
             ghp_ebill = results["Financial"]["lifecycle_elecbill_after_tax"]
-            @test ghp_lcc - ghp_lccc - ghp_ebill <= 0.1
-            @test ghp_lccc/ghp_lccc_initial - 0.51 <= 0.01
+            boreholes = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
+            boreholes_len = results["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+
+            # LCC = LCCC + Electricity Bill
+            @test ghp_lcc - ghp_lccc - ghp_ebill ≈ 0.0 atol = 0.1
+            # LCCC should be around be around 52% of initial capital cost due to incentive and bonus
+            @test ghp_lccc/ghp_lccc_initial ≈ 0.518 atol = 0.01
+            # GHX size must be 0
+            @test boreholes ≈ 0.0 atol = 0.01
+            @test boreholes_len ≈ 0.0 atol = 0.01
 
             # Check GHX LCC calculation for URBANopt
             ghx_data = JSON.parsefile("scenarios/ghx_urbanopt.json")
@@ -1988,8 +1996,13 @@ else  # run HiGHS tests
             ghx_lcc = results["Financial"]["lcc"]
             ghx_lccc = results["Financial"]["lifecycle_capital_costs"]
             ghx_lccc_initial = results["Financial"]["initial_capital_costs"]
-            @test ghx_lcc <= ghx_lccc
-            @test ghx_lccc/ghx_lccc_initial - 0.51 <= 0.01
+            ghp_size = results["GHP"]["size_heat_pump_ton"]
+            
+            # GHP size must be 0
+            @test ghp_size ≈ 0.0 atol = 0.01
+            
+            # LCCC should be around be around 52% of initial capital cost due to incentive and bonus
+            @test ghx_lccc/ghx_lccc_initial ≈ 0.518 atol = 0.01
         end
 
         @testset "Hybrid GHX and GHP calculated costs validation" begin
