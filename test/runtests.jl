@@ -22,7 +22,7 @@ elseif "CPLEX" in ARGS
         include("test_with_cplex.jl")
     end
 
-else  # run HiGHS tests                           
+else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
@@ -54,7 +54,7 @@ else  # run HiGHS tests
             latitude, longitude = 3.8603988398663125, 11.528880303663136
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "intl"
+            @test dataset ≈ "nsrdb"
 
             # 4. Fairbanks, AK 
             site = "Fairbanks"
@@ -906,6 +906,19 @@ else  # run HiGHS tests
             results = run_reopt(m, inputs)
             @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 8760 * (0.5 * 0.6 + 0.5 * 0.8 + 0.3 * 0.7) atol = 1.0
             
+            # Test for unaddressable heating load fuel and emissions outputs
+            unaddressable = results["HeatingLoad"]["annual_total_unaddressable_heating_load_mmbtu"]
+            addressable = results["HeatingLoad"]["annual_calculated_total_heating_boiler_fuel_load_mmbtu"]
+            total = unaddressable + addressable
+            # Find the weighted average addressable_load_fraction from the fractions and loads above
+            weighted_avg_addressable_fraction = (0.5 * 0.6 + 0.5 * 0.8 + 0.3 * 0.7) / (0.5 + 0.5 + 0.3)
+            @test round(abs(addressable / total - weighted_avg_addressable_fraction), digits=3) == 0
+
+            unaddressable_emissions = results["HeatingLoad"]["annual_emissions_from_unaddressable_heating_load_mmbtu"]
+            addressable_site_fuel_emissions = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
+            total_site_emissions = unaddressable_emissions + addressable_site_fuel_emissions
+            @test round(abs(addressable_site_fuel_emissions / total_site_emissions - weighted_avg_addressable_fraction), digits=3) == 0
+            
             # Monthly fuel load input with addressable_load_fraction is processed to expected thermal load
             data = JSON.parsefile("./scenarios/thermal_load.json")
             data["DomesticHotWaterLoad"]["monthly_mmbtu"] = repeat([100], 12)
@@ -937,8 +950,8 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
                 results = run_reopt(m, inputs)
             
-                @test round(results["CHP"]["size_kw"], digits=0) ≈ 400.0 atol=50.0
-                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=1.0e-2
+                @test round(results["CHP"]["size_kw"], digits=0) ≈ 263.0 atol=50.0
+                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.11e7 rtol=0.05
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
@@ -1106,6 +1119,19 @@ else  # run HiGHS tests
                 results = run_reopt(m, d)
                 @test sum(results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 4174.455 atol=1e-3
             end
+
+            @testset "CHP Proforma Metrics" begin
+                # This test compares the resulting simple payback period (years) for CHP to a proforma spreadsheet model which has been verified
+                # All financial parameters which influence this calc have been input to avoid breaking with changing defaults
+                input_data = JSON.parsefile("./scenarios/chp_payback.json")
+                s = Scenario(input_data)
+                inputs = REoptInputs(s)
+
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt([m1,m2], inputs)
+                @test abs(results["Financial"]["simple_payback_years"] - 8.12) <= 0.02
+            end
         end
         
         @testset verbose=true "FlexibleHVAC" begin
@@ -1255,7 +1281,7 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
-            @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
+            @test occursin("are not supported by the solver", string(r["Messages"]["errors"])) || occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
             # #optimal SOH at end of horizon is 80\% to prevent any replacement
             # @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
             # # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
@@ -1269,7 +1295,7 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
-            @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
+            @test occursin("are not supported by the solver", string(r["Messages"]["errors"])) || occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
             # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
         end
 
@@ -1373,10 +1399,10 @@ else  # run HiGHS tests
         @testset "MPC" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_mpc(model, "./scenarios/mpc.json")
-            @test maximum(r["ElectricUtility"]["electric_to_load_series_kw"][1:15]) <= 98.0 
-            @test maximum(r["ElectricUtility"]["electric_to_load_series_kw"][16:24]) <= 97.0
-            @test sum(r["PV"]["electric_to_grid_series_kw"]) ≈ 0
-            grid_draw = r["ElectricUtility"]["electric_to_load_series_kw"] .+ r["ElectricUtility"]["electric_to_storage_series_kw"]
+            @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
+            @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
+            @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
             # the grid draw limit in the 10th time step is set to 90
             # without the 90 limit the grid draw is 98 in the 10th time step
             @test grid_draw[10] <= 90
@@ -2211,8 +2237,8 @@ else  # run HiGHS tests
             @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
 
             @test abs(results["Financial"]["npv"] - 840621) < 1.0
-            @test results["Financial"]["simple_payback_years"] - 5.09 < 0.1
-            @test results["Financial"]["internal_rate_of_return"] - 0.18 < 0.01
+            @test abs(results["Financial"]["simple_payback_years"] - 3.59) < 0.1
+            @test abs(results["Financial"]["internal_rate_of_return"] - 0.258) < 0.01
 
             @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
 

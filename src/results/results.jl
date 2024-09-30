@@ -61,7 +61,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         @debug "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 
-    if !isempty(union(p.techs.chp, p.techs.heating))
+    if !isempty(p.techs.heating)
         add_heating_load_results(m, p, d)
     end
 

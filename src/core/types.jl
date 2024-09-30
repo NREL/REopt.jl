@@ -48,11 +48,13 @@ mutable struct Techs
     absorption_chiller::Vector{String}
     steam_turbine::Vector{String}
     can_supply_steam_turbine::Vector{String}
-    electric_heater::Vector{String}
+    electric_heater::Vector{String}    
     can_serve_dhw::Vector{String}
     can_serve_space_heating::Vector{String}
     can_serve_process_heat::Vector{String}
-    ghp::Vector{String}
+    ghp_techs::Vector{String}
+    ashp::Vector{String}
+    ashp_wh::Vector{String}
 end
 ```
 """
@@ -85,4 +87,6 @@ mutable struct Techs
     can_serve_space_heating::Vector{String}
     can_serve_process_heat::Vector{String}
     ghp::Vector{String}
+    ashp::Vector{String}
+    ashp_wh::Vector{String}
 end
