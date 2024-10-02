@@ -14,13 +14,27 @@
 - Return the REopt inputs Dictionary
 """
 
+# Notes for REopt
+# Still currently relying on DesignAlgorithmProperties.ProposedEnergyProducerOptions, but if that goes away we will have to read 
+#  in all Options and throw an error if duplicate types
+# Only looking at the first entry in ProposedSiteLocations for the site location
+# Only reading/using the first entry of ProposedSiteLocation.LoadGroup
+# Only using the first entry of LoadGroup.EnergyConsumers, but not really using EnergyConsumer for anything other than indexing on the LoadForecase
+# Only using value1 for real power entries in the EnergyConsumerSchedule.RegularTimePoints list of dictionaries for load profile
+
 function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     reopt_inputs = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "mgravens_fields_defaults.json"))
 
     # Get the names of the chosen ProposedEnergyProducerAssets
     tech_names = mgravens["DesignAlgorithmProperties"]["DesignAlgorithmProperties.ProposedEnergyProducerOptions"]
 
-    # Major assumptions: every ProposedEnergyProducerOption has the same SiteLocation, GeographicalRegion, and LoadGroup
+    # Analysis period
+    lifetime_str = get(mgravens["DesignAlgorithmProperties"], "DesignAlgorithmProperties.analysisPeriod", nothing)
+    if !isnothing(lifetime_str)
+        reopt_inputs["Financial"]["analysis_years"] = parse(Int64, split(split(lifetime_str, "P")[2], "Y")[1])
+    end
+
+    # Major assumptions: every ProposedEnergyProducerOption has the same SiteLocation, Region, and LoadGroup
     # TODO add error checking in case above is not true
     errors = []
     warnings = []
@@ -40,67 +54,57 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         if i == 1
             # Site data (lat, long, area) - lat/long is only needed if relying on PV or Wind APIs; default area is a Big Number
             site_name = tech_data["ProposedAssetOption.ProposedLocations"][1]
-            land_sq_meter = get(mgravens["ProposedSiteLocation"][site_name], "ProposedSiteLocation.availableArea", nothing)
+            land_sq_meter = get(mgravens["ProposedSiteLocations"][site_name], "ProposedSiteLocation.availableArea", nothing)
             if !isnothing(land_sq_meter)
                 reopt_inputs["Site"]["land_acres"] = land_sq_meter / 4046.86
             end
-            position_points = mgravens["ProposedSiteLocation"][site_name]["Location.PositionPoints"][1]
+            position_points = mgravens["ProposedSiteLocations"][site_name]["Location.PositionPoints"][1]
             reopt_inputs["Site"]["latitude"] = get(position_points, "PositionPoint.yPosition", nothing)
             reopt_inputs["Site"]["longitude"] = get(position_points, "PositionPoint.xPosition", nothing)
-            # Also from SiteLocation, get needed references for 1) LoadGroup for load profile and 2) GeographicalRegion for energy price
-            # Have to extract just the name we want from lumped string value, e.g. "Group.LoadGroup": "LoadGroup::'ResidentialGroup'" (want just "ResidentialGroup)
-            load_group_lumped = get(mgravens["ProposedSiteLocation"][site_name], "Group.LoadGroup", nothing)
-            load_group = replace(split(load_group_lumped, "::")[2], "'" => "")
-            region_lumped = get(mgravens["ProposedSiteLocation"][site_name], "Group.GeographicalRegion", nothing)
-            region = replace(split(region_lumped, "::")[2], "'" => "")
-
+            # Also from SiteLocation, get needed references for 1) LoadGroup for load profile and 2) SubGeographicalRegion for energy prices
+            load_group = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"][1]
+            # Have to extract just the name we want from lumped string value, e.g. "SubGeographicalRegion::'County1'" (want just 'County1')
+            # Need to assume only one/first EnergyConsumer which is tied to a LoadForecast
+            energy_consumer_name = replace(split(mgravens["Group"]["LoadGroup"][load_group]["LoadGroup.EnergyConsumers"][1], "::")[2], "'" => "")
+            load_forecast_name = replace(split(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"][energy_consumer_name]["EnergyConsumer.LoadProfile"], "::")[2], "'" => "")
+            
             # ElectricLoad.loads_kw electric load profile
-            load_group_dict = get(mgravens["Group"]["LoadGroup"], load_group, nothing)
-            if !isnothing(load_group_dict)
-                timestep_sec = load_group_dict["ConformLoadGroup.ConformLoadSchedules"][1]["RegularIntervalSchedule.timeStep"]
+            load_forecast_dict = get(mgravens["BasicIntervalSchedule"], load_forecast_name, nothing)
+            if !isnothing(load_forecast_dict)
+                timestep_sec = load_forecast_dict["EnergyConsumerSchedule.timeStep"]
                 if timestep_sec in [900, 3600]
                     reopt_inputs["Settings"]["time_steps_per_hour"] = 3600 / timestep_sec
                     reopt_inputs["ElectricLoad"]["loads_kw"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                    load_list_of_dict = load_group_dict["ConformLoadGroup.ConformLoadSchedules"][1]["RegularIntervalSchedule.TimePoints"]
+                    load_list_of_dict = load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"]
                     for (ts, data) in enumerate(load_list_of_dict)
+                        # Ignoring value2 which is "VAr" (reactive power)
                         reopt_inputs["ElectricLoad"]["loads_kw"][ts] = data["RegularTimePoint.value1"]
                     end                    
                 else 
-                    append!(errors, ["Valid RegularIntervalSchedule.timeStep for LoadGroup ConformLoadSchedules is 900 and 3600"])
+                    append!(errors, ["Valid EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast is 900 and 3600, input of $timestep_sec"])
                 end
             else
-                append!(errors, ["No LoadGroup $load_group found in Group.LoadGroup"])
+                append!(errors, ["No BasicIntervalSchedule $load_forecast found in Group.LoadGroup"])
             end
 
-            # Financial inputs and Find EnergyPrice references from GeographicalRegion (for ElectricTariff energy and demand prices)
-            region_dict = get(mgravens["Group"]["GeographicalRegion"], region, nothing)
-            if !isnothing(region_dict)
-                # Financial inputs (optional)
-                financial_map = [("discountRate", "offtaker_discount_rate_fraction"), 
-                                ("inflationRate", "om_cost_escalation_rate_fraction"),
-                                ("taxRate", "offtaker_tax_rate_fraction")]
-                economic_props = mgravens["Group"]["GeographicalRegion"][region]["GeographicalRegion.Regions"][1]["Regions.EconomicProperty"]
-                for param in financial_map
-                    if !isnothing(get(economic_props, "EconomicProperty."*param[1], nothing))
-                        reopt_inputs["Financial"][param[2]] = round(economic_props["EconomicProperty."*param[1]] / 100.0, digits=4)  # Convert percent to decimal
-                    end
+            # A bunch of financial stuff depends on the Region name
+            subregion_name = replace(split(mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
+            region_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.Region"], "::")[2], "'" => "")
+            region_dict = mgravens["Group"]["GeographicalRegion"][region_name]["GeographicalRegion.Regions"][1]
+            
+            # Financial inputs (optional)
+            financial_map = [("discountRate", "offtaker_discount_rate_fraction"), 
+                            ("inflationRate", "om_cost_escalation_rate_fraction"),
+                            ("taxRate", "offtaker_tax_rate_fraction")]
+            economic_props = region_dict["Regions.EconomicProperty"]
+            for param in financial_map
+                if !isnothing(get(economic_props, "EconomicProperty."*param[1], nothing))
+                    reopt_inputs["Financial"][param[2]] = round(economic_props["EconomicProperty."*param[1]] / 100.0, digits=4)  # Convert percent to decimal
                 end
-                # EnergyPrices references
-                lmp_name_lumped = mgravens["Group"]["GeographicalRegion"][region]["GeographicalRegion.Regions"][1]["Regions.EnergyPrices"]["EnergyPrices.LocationalMarginalPrices"]
-                lmp_name = replace(split(lmp_name_lumped, "::")[2], "'" => "")
-                capacity_name_lumped = mgravens["Group"]["GeographicalRegion"][region]["GeographicalRegion.Regions"][1]["Regions.EnergyPrices"]["EnergyPrices.CapacityPrices"]
-                capacity_name = replace(split(capacity_name_lumped, "::")[2], "'" => "")
-            else
-                append!(errors, ["No Region $region found in Group.GeographicalRegion"])
-            end
-
-            # Analysis period
-            lifetime_str = get(mgravens["DesignAlgorithmProperties"], "DesignAlgorithmProperties.analysisPeriod", nothing)
-            if !isnothing(lifetime_str)
-                reopt_inputs["Financial"]["analysis_years"] = parse(Int64, split(split(lifetime_str, "P")[2], "Y")[1])
             end
 
             # LMP - energy prices
+            lmp_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.LocationalMarginalPrices"], "::")[2], "'" => "")
             lmp_dict = get(mgravens["EnergyPrices"]["LocationalMarginalPrices"], lmp_name, nothing)
             if !isnothing(lmp_dict)
                 # LMP - energy prices
@@ -119,7 +123,9 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             end
 
             # Capacity prices (monthly)
-            capacity_dict = get(mgravens["EnergyPrices"]["CapacityPrices"], capacity_name, nothing)
+            capacity_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CapacityPrices"], "::")[2], "'" => "")
+            capacity_dict = get(mgravens["EnergyPrices"]["CapacityPrices"], capacity_prices_name, nothing)
+            print("capacity_dict = ", capacity_dict)
             if !isnothing(capacity_dict)
                 capacity_list_of_dict = capacity_dict["CapacityPrices.CapacityPriceCurve"]["PriceCurve.CurveDatas"]
                 if length(capacity_list_of_dict) == 12
