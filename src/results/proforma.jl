@@ -199,6 +199,32 @@ function proforma_results(p::REoptInputs, d::Dict)
         update_ghp_metrics(m, p, p.s.ghp_option_list[d["GHP"]["ghp_option_chosen"]], "GHP", d, third_party)
     end
 
+    # calculate ASHPSpaceHeater o+m costs and depreciation (no incentives currently, other than MACRS)
+    if "ASHPSpaceHeater" in keys(d) && d["ASHPSpaceHeater"]["size_ton"] > 0
+        fixed_om = p.s.ashp.om_cost_per_kw * KWH_THERMAL_PER_TONHOUR * d["ASHPSpaceHeater"]["size_ton"]
+        annual_om = -1 * (fixed_om)
+        m.om_series += escalate_om(annual_om)
+        
+        # Depreciation
+        if p.s.ashp.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, p.s.ashp)
+            m.total_depreciation += depreciation_schedule
+        end
+    end  
+
+    # calculate ASHPWaterHeater o+m costs and depreciation (no incentives currently, other than MACRS)
+    if "ASHPWaterHeater" in keys(d) && d["ASHPWaterHeater"]["size_ton"] > 0
+        fixed_om = p.s.ashp.om_cost_per_kw * KWH_THERMAL_PER_TONHOUR * d["ASHPWaterHeater"]["size_ton"]
+        annual_om = -1 * (fixed_om)
+        m.om_series += escalate_om(annual_om)
+        
+        # Depreciation
+        if p.s.ashp.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, p.s.ashp_wh)
+            m.total_depreciation += depreciation_schedule
+        end
+    end  
+
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
     export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
