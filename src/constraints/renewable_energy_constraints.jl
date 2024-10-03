@@ -3,6 +3,7 @@
 	add_re_elec_constraints(m,p)
 
 Function to add minimum and/or maximum renewable electricity (as percentage of load) constraints, if specified by user.
+Function modified to include cef fraction from the grid in accounting for renewable energy percentage of load.
 
 !!! note
     When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
@@ -50,7 +51,14 @@ function add_re_elec_calcs(m,p)
 	# 	))
 	# end
 
-	m[:AnnualREEleckWh] = @expression(m,p.hours_per_time_step * (
+	# Function modified to add clean energy fraction to in annual renewable energy calculations
+
+	calc_clean_grid_kWh(m, p)
+
+	m[:AnnualREEleckWh] = @expression(m, p.hours_per_time_step * (
+			(p.s.electric_utility.include_grid_clean_energy_in_re ? 
+				sum(m[:grid_clean_energy_series_kw][ts] for ts in p.time_steps) : 0) +  # Include grid clean energy fraction conditionally
+			+  # Clean energy fraction of grid electricity to load and battery 
 			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
 				p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps
 			) - #total RE elec generation, excl steam turbine
