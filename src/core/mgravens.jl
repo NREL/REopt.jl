@@ -43,11 +43,13 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         tech_data = mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]
 
         # Specific names that were given to certain categories/classes of data
-        site_name = ""
-        load_group = ""
-        region = ""
+        site_name = ""  # Only one, assumed to be the site location of the first ProposedAssetOption
+        load_groups = []  # May be one or more than one, e.g. ["ResidentialGroup", "IndustrialGroup"]
+        energy_consumer_names = []  # One set (1+) for each LoadGroup, e.g. ["670a_residential2", "670b_residential2"]
+        load_forecast_names = []  # One-to-one with energy_consumer_names
+        region_name = ""
         lmp_name = ""
-        capacity_name = ""
+        capacity_prices_name = ""
         
         # Assign site, load, and energy prices attributes, using only the first ProducerOption because they **should** all be the same
         # TODO track all missing required inputs, and key optional inputs that rely on defaults
@@ -62,32 +64,43 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             reopt_inputs["Site"]["latitude"] = get(position_points, "PositionPoint.yPosition", nothing)
             reopt_inputs["Site"]["longitude"] = get(position_points, "PositionPoint.xPosition", nothing)
             # Also from SiteLocation, get needed references for 1) LoadGroup for load profile and 2) SubGeographicalRegion for energy prices
-            load_group = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"][1]
+            load_groups = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"]
             # Have to extract just the name we want from lumped string value, e.g. "SubGeographicalRegion::'County1'" (want just 'County1')
             # Need to assume only one/first EnergyConsumer which is tied to a LoadForecast
-            energy_consumer_name = replace(split(mgravens["Group"]["LoadGroup"][load_group]["LoadGroup.EnergyConsumers"][1], "::")[2], "'" => "")
-            load_forecast_name = replace(split(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"][energy_consumer_name]["EnergyConsumer.LoadProfile"], "::")[2], "'" => "")
-            
-            # ElectricLoad.loads_kw electric load profile
-            load_forecast_dict = get(mgravens["BasicIntervalSchedule"], load_forecast_name, nothing)
-            if !isnothing(load_forecast_dict)
-                timestep_sec = load_forecast_dict["EnergyConsumerSchedule.timeStep"]
-                if timestep_sec in [900, 3600]
-                    reopt_inputs["Settings"]["time_steps_per_hour"] = 3600 / timestep_sec
-                    reopt_inputs["ElectricLoad"]["loads_kw"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+            for load_group in load_groups
+                lumped_ec_list = mgravens["Group"]["LoadGroup"][load_group]["LoadGroup.EnergyConsumers"]
+                for lumped_ec in lumped_ec_list
+                    append!(energy_consumer_names, [replace(split(lumped_ec, "::")[2], "'" => "")])
+                end
+            end
+            for energy_consumer_name in energy_consumer_names
+                append!(load_forecast_names, [replace(split(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"][energy_consumer_name]["EnergyConsumer.LoadProfile"], "::")[2], "'" => "")])
+            end
+            # ElectricLoad.loads_kw electric load profile - loop across all load_forecast_names and sum/aggregate/total them together
+            # Need timestep_sec from ONE forecast for initializing loads_kw, but we do validation of timestep_sec and length of EACH load profile in the loop below
+            timestep_sec = mgravens["BasicIntervalSchedule"][load_forecast_names[1]]["EnergyConsumerSchedule.timeStep"]
+            reopt_inputs["Settings"]["time_steps_per_hour"] = 3600 / timestep_sec
+            reopt_inputs["ElectricLoad"]["loads_kw"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+            # Sum up the loads in all load forecasts to aggregate into a single load profile
+            for load_forecast_name in load_forecast_names
+                load_forecast_dict = get(mgravens["BasicIntervalSchedule"], load_forecast_name, nothing)
+                if !isnothing(load_forecast_dict)
+                    # TODO allow 24 hour, 168 hour, etc load profile inputs and scale to 1 year? Need to be consistent with prices 
+                    timestep_sec = load_forecast_dict["EnergyConsumerSchedule.timeStep"]
+                    if !(timestep_sec in [900, 3600])
+                        throw(@error("Valid EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast is 900 and 3600, input of $timestep_sec"))
+                    end
                     load_list_of_dict = load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"]
                     for (ts, data) in enumerate(load_list_of_dict)
                         # Ignoring value2 which is "VAr" (reactive power)
-                        reopt_inputs["ElectricLoad"]["loads_kw"][ts] = data["RegularTimePoint.value1"]
-                    end                    
-                else 
-                    append!(errors, ["Valid EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast is 900 and 3600, input of $timestep_sec"])
+                        reopt_inputs["ElectricLoad"]["loads_kw"][ts] += data["RegularTimePoint.value1"]
+                    end
+                else
+                    throw(@error("No $load_forecast_name load_forecast_name found in BasicIntervalSchedule"))
                 end
-            else
-                append!(errors, ["No BasicIntervalSchedule $load_forecast found in Group.LoadGroup"])
             end
 
-            # A bunch of financial stuff depends on the Region name
+            # A bunch of financial/prices stuff depends on the Region name, but this is all assumed to apply for all/aggregate loads
             subregion_name = replace(split(mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
             region_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.Region"], "::")[2], "'" => "")
             region_dict = mgravens["Group"]["GeographicalRegion"][region_name]["GeographicalRegion.Regions"][1]
@@ -111,9 +124,11 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 lmp_list_of_dict = lmp_dict["LocationalMarginalPrices.LMPCurve"]["PriceCurve.CurveDatas"]
                 # Note, if 15-minute interval analysis, must supply LMPs in 15-minute interval, so they have one-to-one data
                 reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                # reopt_inputs["ElectricTariff"]["wholesale_rate"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
                 if length(lmp_list_of_dict) == length(reopt_inputs["ElectricLoad"]["loads_kw"])
                     for (ts, data) in enumerate(lmp_list_of_dict)
                         reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"][ts] = data["CurveData.y1value"]
+                        # reopt_inputs["ElectricTariff"]["wholesale_rate"][ts] = data["CurveData.y1value"]
                     end                    
                 else
                     append!(errors, ["Interval of Load RegularIntervalSchedule.TimePoints must match the interval of LMP PriceCurve.CurveDatas"])
@@ -125,7 +140,6 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # Capacity prices (monthly)
             capacity_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CapacityPrices"], "::")[2], "'" => "")
             capacity_dict = get(mgravens["EnergyPrices"]["CapacityPrices"], capacity_prices_name, nothing)
-            print("capacity_dict = ", capacity_dict)
             if !isnothing(capacity_dict)
                 capacity_list_of_dict = capacity_dict["CapacityPrices.CapacityPriceCurve"]["PriceCurve.CurveDatas"]
                 if length(capacity_list_of_dict) == 12
@@ -137,8 +151,19 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                     append!(errors, ["Length of CapacityPrices PriceCurve.CurveDatas must be equal to 12 (monthly)"])
                 end
             else
-                append!(errors, ["No Capacity name $capacity_name found in EnergyPrices.CapacityPrices"])
+                append!(errors, ["No Capacity name $capacity_prices_name found in EnergyPrices.CapacityPrices"])
             end
+
+            # Printing for debugging
+            # println("")
+            # println("site_name = $site_name")
+            # println("load_groups = $load_groups")
+            # println("energy_consumer_names = $energy_consumer_names")
+            # println("load_forecast_names = $load_forecast_names")
+            # println("subregion_name = $subregion_name")
+            # println("region_name = $region_name")
+            # println("lmp_name = $lmp_name")
+            # println("capacity_prices_name = $capacity_prices_name")
 
             # Outages: NOTE, REopt cannot consider different outage durations for differerent outage start times
             #   it can only consider the same set of outage durations with their specified probabilities (sum equals one) across ALL outage start times
@@ -149,16 +174,19 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             for outage in keys(get(mgravens, "OutageScenario", []))
                 duration_str = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedDuration"]
                 append!(duration, [parse(Int64, split(split(duration_str, "P")[2], "H")[1])])
-                append!(critical_load_fraction, mgravens["OutageScenario"][outage]["OutageScenario.loadFractionCritical"] / 100.0)
-                start_date_str = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedStartDay"]
-                # TODO what year is it? For now, assume 2024
-                year = 2024        
-                reopt_inputs["ElectricLoad"]["year"] = year
-                monthly_time_steps = get_monthly_time_steps(year; time_steps_per_hour = convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                start_month = parse(Int64, split(start_date_str, "-")[3])
-                start_day_of_month = parse(Int64, split(start_date_str, "-")[4])
-                start_hour_of_day = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedStartHour"]
-                append!(outage_start_time_steps, [monthly_time_steps[start_month][(start_day_of_month - 1) * 24 + start_hour_of_day]])
+                append!(critical_load_fraction, [mgravens["OutageScenario"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
+                start_date_str = get(mgravens["OutageScenario"][outage], "OutageScenario.anticipatedStartDay", nothing)
+                # Optional to input start date and hour, and otherwise REopt will use default 4 seasonal peak outages
+                if !isnothing(start_date_str)
+                    # TODO what year is it? For now, assume 2024. Doesn't matter as long as load aligns with LMPs
+                    year = 2024        
+                    reopt_inputs["ElectricLoad"]["year"] = year
+                    monthly_time_steps = get_monthly_time_steps(year; time_steps_per_hour = convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                    start_month = parse(Int64, split(start_date_str, "-")[3])
+                    start_day_of_month = parse(Int64, split(start_date_str, "-")[4])
+                    start_hour_of_day = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedStartHour"]
+                    append!(outage_start_time_steps, [monthly_time_steps[start_month][(start_day_of_month - 1) * 24 + start_hour_of_day]])
+                end
             end
             duration_avg = convert(Int64, round(sum(duration) / length(duration), digits=0))
             critical_load_fraction_avg = sum(critical_load_fraction) / length(critical_load_fraction)
@@ -167,7 +195,9 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # TODO, figure out if this is right: the get_monthly_time_steps is cutting out the leap day timesteps, while the REopt model may be cutting off 12/31
             #  If user inputs 2024 load data, including the lead day load shouldn't we include the leap day for outage_start_time_steps?
             #  The most important thing is aligning the energy costs with the load
-            reopt_inputs["ElectricUtility"]["outage_start_time_steps"] = outage_start_time_steps
+            if !isempty(outage_start_time_steps)
+                reopt_inputs["ElectricUtility"]["outage_start_time_steps"] = outage_start_time_steps
+            end
             reopt_inputs["ElectricLoad"]["critical_load_fraction"] = critical_load_fraction_avg
         end
 
