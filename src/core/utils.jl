@@ -159,6 +159,12 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
+            "heating_cop_reference",
+            "heating_cf_reference",
+            "heating_reference_temps_degF",
+            "cooling_cop_reference",
+            "cooling_cf_reference",
+            "cooling_reference_temps_degF",
             #for ERP
             "pv_production_factor_series", "wind_production_factor_series",
             "battery_starting_soc_series_fraction",
@@ -461,7 +467,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
 
     try
         @info "Querying PVWatts for production factor and ambient air temperature... "
-        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        r = HTTP.get(url, ["User-Agent" => "REopt.jl"]; keepalive=true, readtimeout=10)
         response = JSON.parse(String(r.body))
         if r.status != 200
             throw(@error("Bad response from PVWatts: $(response["errors"])"))

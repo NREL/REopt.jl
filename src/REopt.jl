@@ -25,6 +25,8 @@ export
     cambium_emissions_profile,
     easiur_data,
     get_existing_chiller_default_cop,
+    get_electric_heater_defaults,
+    get_ashp_defaults,
     convert_mgravens_inputs_to_reopt_inputs,
     update_mgravens_with_reopt_results!
 
@@ -137,6 +139,7 @@ include("core/chp.jl")
 include("core/ghp.jl")
 include("core/steam_turbine.jl")
 include("core/electric_heater.jl")
+include("core/ashp.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
@@ -182,6 +185,7 @@ include("results/thermal_storage.jl")
 include("results/outages.jl")
 include("results/wind.jl")
 include("results/electric_load.jl")
+include("results/heating_cooling_load.jl")
 include("results/existing_boiler.jl")
 include("results/boiler.jl")
 include("results/existing_chiller.jl")
@@ -191,7 +195,7 @@ include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
 include("results/electric_heater.jl")
-include("results/heating_cooling_load.jl")
+include("results/ashp.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

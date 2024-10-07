@@ -23,6 +23,36 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.48.0
+### Added
+- Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
+- In `src/core/existing_chiller.jl`, Added new atttribute **retire_in_optimal** to the **ExistingChiller** struct
+- Financial output **initial_capital_costs_after_incentives_without_macrs** which has "net year one" CapEx after incentives except for MACRS, which helps with users defining their own "simple payback period"
+### Changed
+- Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage.
+- Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail.
+- Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings.
+- Updated/specified User-Agent header of "REopt.jl" for PVWatts and Wind Toolkit API requests; default before was "HTTP.jl"; this allows specific tracking of REopt.jl usage which call PVWatts and Wind Toolkit through api.data.gov.
+- Improves DRY coding by replacing multiple instances of the same chunks of code for MACRS deprecation and CHP capital cost into functions that are now in financial.jl.
+- Simplifies the CHP sizing test to avoid a ~30 minute solve time, by avoiding the fuel burn y-intercept binaries which come with differences between full-load and part-load efficiency.
+- For third party analysis proforma.jl metrics, O&M cost for existing Generator is now kept with offtaker, not the owner/developer
+### Fixed
+- Proforma calcs including "simple" payback and IRR for thermal techs/scenarios.
+  - The operating costs of fuel and O&M were missing for all thermal techs such as ExistingBoiler, CHP, and others; this adds those sections of code to properly calculate the operating costs.
+- Added a test to validate the simple payback calculation with CHP (and ExistingBoiler) and checks the REopt result value against a spreadsheet proforma calculation (see Bill's spreadsheet).
+- Added a couple of missing techs for the initial capital cost calculation in financial.jl.
+- An issue with setup_boiler_inputs in reopt_inputs.jl.
+- Fuel costs in proforma.jl were not consistent with the optimization costs, so that was corrected so that they are only added to the offtaker cashflows and not the owner/developer cashflows for third party.
+
+## v0.47.2
+### Fixed
+- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits.
+- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs.
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits.
+- Index utility rate demand and energy tier limits on month and/or ratchet in addition to tier.  This allows for the inclusion of multi-tiered energy and demand rates in which the rates may vary by month or ratchet, whereas previously only the maximum tier limit was used.
+### Added
+- Added thermal efficiency as input to chp defaults function.
+
 ## v0.47.1
 ### Fixed
 - Type issue with `CoolingLoad` monthly energy input
@@ -40,16 +70,12 @@ Classify the change according to the following categories:
 - Refactored various functions to ensure **ProcessHeatLoad** is processed correctly in line with other heating loads.
 - When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 - Refactored heating flow constraints to be in ./src/constraints/thermal_tech_constraints.jl instead of its previous separate locations in the storage and turbine constraints.
+- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults.
 ### Fixed
 - Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
 - Fixed a bug in which excess heat from one heating technology resulted in waste heat from another technology.
 - Modified thermal waste heat constraints for heating technologies to avoid errors in waste heat results tracking.
-
-## v0.46.2
-### Changed
-- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
-- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
 
 ## v0.46.1
 ### Changed
@@ -182,7 +208,7 @@ Classify the change according to the following categories:
 ## v0.37.5
 ### Fixed
 - Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
-- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- Fix setting of equal demand tiers in `scrub_urdb_demand_tiers`, now renamed `scrub_urdb_tiers`. 
 - When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
 - Update the outages dispatch results to align with CHP availability during outages
 
