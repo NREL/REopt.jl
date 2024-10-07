@@ -15,29 +15,31 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
     days = 1:365*p.s.financial.analysis_years
     ts_per_day = 24 / p.hours_per_time_step
     ts_per_year = ts_per_day * 365
+    ts0 = Dict()
+    tsF = Dict()
     for d in days
-        ts0 = Int((ts_per_day * (d - 1) + 1) % ts_per_year)
-        tsF = Int(ts_per_day * d % ts_per_year)
-        if tsF == 0
-            tsF = Int(ts_per_day * 365)
+        ts0[d] = Int((ts_per_day * (d - 1) + 1) % ts_per_year)
+        tsF[d] = Int(ts_per_day * d % ts_per_year)
+        if tsF[d] == 0
+            tsF[d] = Int(ts_per_day * 365)
         end
-        @constraint(m, 
-            m[:Eavg][d] == 1/ts_per_day * sum(m[:dvStoredEnergy][b, ts] for ts in ts0:tsF)
-        )
-        @constraint(m,
-            m[:Eplus_sum][d] == 
-                p.hours_per_time_step * (
-                    sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec, ts in ts0:tsF) 
-                    + sum(m[:dvGridToStorage][b, ts] for ts in ts0:tsF)
-                )
-        )
-        @constraint(m,
-            m[:Eminus_sum][d] == p.hours_per_time_step * sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
-        )
-        @constraint(m,
-            m[:EFC][d] == (m[:Eplus_sum][d] + m[:Eminus_sum][d]) / 2
-        )
     end
+    @constraint(m, [d in days],
+        m[:Eavg][d] == 1/ts_per_day * sum(m[:dvStoredEnergy][b, ts] for ts in ts0[d]:tsF[d])
+    )
+    @constraint(m, [d in days],
+        m[:Eplus_sum][d] == 
+            p.hours_per_time_step * (
+                sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec, ts in ts0[d]:tsF[d]) 
+                + sum(m[:dvGridToStorage][b, ts] for ts in ts0[d]:tsF[d])
+            )
+    )
+    @constraint(m, [d in days],
+        m[:Eminus_sum][d] == p.hours_per_time_step * sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0[d]:tsF[d])
+    )
+    @constraint(m, [d in days],
+        m[:EFC][d] == (m[:Eplus_sum][d] + m[:Eminus_sum][d]) / 2
+    )
 end
 
 
