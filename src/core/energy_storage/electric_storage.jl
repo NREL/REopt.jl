@@ -97,10 +97,11 @@ C_{\\text{repl}} = B_{\\text{kWh}} N_{\\text{repl}} f(d_{80}) C_{\\text{install}
 
 where:
 - ``B_{\\text{kWh}}`` is the optimal battery capacity (`ElectricStorage.size_kwh` in the results dictionary);
-- ``N_{\\text{repl}}`` is the number of battery replacments required (a function of the month in which the `SOH` reaches 80% of original capacity);
-- ``f(d_{80})`` is the present worth factor at approximately the 15th day of the month that the `SOH` crosses 80% of original capacity;
+- ``N_{\\text{repl}}`` is the number of battery replacments required (a function of the month in which the `SOH` falls below 80% of original capacity);
+- ``f(d_{80})`` is the present worth factor at approximately the 15th day of the month in which the `SOH` falls below 80% of original capacity;
 - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
 The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
+
 ## Battery residual value
 Since the battery can be replaced one-to-many times under this strategy, battery residual value captures the \$ value of remaining battery life at end of analysis period.
 For example if replacement happens in month 145, then assuming 25 year analysis period there will be 2 replacements (months 145 and 290). 
@@ -111,11 +112,11 @@ A residual value cost vector is created to hold this value for all months. Resid
 C_{\\text{residual}} = R f(d_{\\text{last}}) C_{\\text{install}}
 ``
 where:
-- ``R`` is the `residual_factor` which determines portion of battery life remaining at end of analysis period;
-- ``f(d_{\\text{last}})`` is the present worth factor at approximately the 15th day of last month in analysis period;
+- ``R`` is the `residual_factor` which determines portion of battery life remaining at the end of the analysis period;
+- ``f(d_{\\text{last}})`` is the present worth factor at approximately the 15th day of the last month in the analysis period;
 - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
 
-The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
+The ``C_{\\text{residual}}`` is added to the objective function to be minimized with all other costs.
 
 # Example of inputs
 The following shows how one would use the degradation model in REopt via the [Scenario](@ref) inputs:
