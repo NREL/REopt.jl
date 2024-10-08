@@ -32,6 +32,7 @@ Classify the change according to the following categories:
 - Added input **fixed_duration** to `ElectricStorage`, which fixes the ratio between **size_kw** and **size_kwh** in the optimized solution if provided
 - Added input option **optimize_soc_init_fraction** (defaults to _false_) to `ElectricStorage`, which makes the optimization choose the inital SOC (equal to final SOC) instead of using **soc_init_fraction**. The initial SOC is also constrained to equal the final SOC, which eliminates the "free energy" issue. We currently do not fix SOC when **soc_init_fraction** is used because this has caused infeasibility. 
 - Added output **initial_capital_cost** to all techs
+- Added ability to model multiple `ElectricStorage` at once. Inputs are provided as a _list_ of _dict_ under the `ElectricStorage` key and outputs are similarly formatted. This mirrors the existing multiple `PV` implementation. This functionality is not yet implemented for MPC scenarios.
 ### Fixed
 - Added missing outputs **lifecycle_export_benefit_before_tax** and **year_one_export_benefit_after_tax** to `ElectricTariff`
 - Add missing output **year_one_om_cost_before_tax** to `PV`
