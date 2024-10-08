@@ -15,7 +15,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     # Note: the node number is an empty string if evaluating a single `Site`.
 
     kwh_per_gal = 1.0 #get_kwh_per_gal(p.s.storage.attr[b].hot_water_temp_degF,
-                                    p.s.storage.attr[b].cool_water_temp_degF)
+                                    # p.s.storage.attr[b].cool_water_temp_degF)
     
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
