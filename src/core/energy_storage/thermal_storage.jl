@@ -264,7 +264,7 @@ struct HotThermalStorage <: AbstractThermalStorage
 
     function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
-        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
+        kwh_per_gal = 1.0 #code hacking for now: get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
