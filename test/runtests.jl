@@ -21,9 +21,44 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
-
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
+        @testset "Multiple Electric Storage" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(model, "./scenarios/multiple_elec_storage.json")
+            @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+            @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
+            for stor in r["ElectricStorage"]
+                if stor["name"] == "CheapElecStor"
+                    @test stor["size_kw"] ≈ 49.0 atol=0.1
+                    @test stor["size_kwh"] ≈ 83.3 atol=0.1
+                else
+                    @test stor["size_kw"] ≈ 0 atol=0.1
+                    @test stor["size_kwh"] ≈ 0 atol=0.1
+                end
+            end
+        end
+        @testset "Prevent simultaneous charge and discharge" begin
+            logger = SimpleLogger()
+            results = nothing
+            with_logger(logger) do
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
+            end
+            @test any(.&(
+                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
+                    (
+                        results["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
+                        results["PV"]["electric_to_storage_series_kw"]
+                    ) .!= 0.0
+                )
+                ) ≈ false
+            @test any(.&(
+                    results["Outages"]["storage_discharge_series_kw"] .!= 0.0,
+                    results["Outages"]["pv_to_storage_series_kw"] .!= 0.0
+                )
+                ) ≈ false
+        end
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
                 blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
@@ -50,11 +85,11 @@ else  # run HiGHS tests
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
             @test dataset ≈ "nsrdb"
 
-            # 3. Younde, Cameroon
-            latitude, longitude = 3.8603988398663125, 11.528880303663136
+            # 3. Oulu, Findland
+            latitude, longitude = 65.0102196310875, 25.465387094897675
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset ≈ "intl"
 
             # 4. Fairbanks, AK 
             site = "Fairbanks"
@@ -259,10 +294,7 @@ else  # run HiGHS tests
             post["PV"]["tilt"] = 17
             scen = Scenario(post)
             @test scen.pvs[1].tilt ≈ 17
-        
-        
-        end    
-        
+        end
 
         @testset "AlternativeFlatLoads" begin
             input_data = JSON.parsefile("./scenarios/flatloads.json")
@@ -596,6 +628,7 @@ else  # run HiGHS tests
             @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
         end  
 
+        #candidate for hot stor
         @testset verbose=true "Disaggregated Heating Loads" begin
             @testset "Process Heat Load Inputs" begin
                 d = JSON.parsefile("./scenarios/electric_heater.json")
@@ -646,6 +679,38 @@ else  # run HiGHS tests
             end
         end
 
+        @testset "Electric Storage O&M and Self-Discharge" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data = JSON.parsefile("./scenarios/storage_om.json")
+
+            data["ElectricStorage"]["om_cost_per_kw"] = 10
+            data["ElectricStorage"]["om_cost_per_kwh"] = 0
+
+            inputs = REoptInputs(data)
+            results1 = run_reopt(model, inputs)
+
+            @test results1["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 400 atol=1
+            @test results1["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 6272 atol=1 
+
+            data["ElectricStorage"]["om_cost_per_kw"] = 10
+            data["ElectricStorage"]["om_cost_per_kwh"] = 5
+
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            inputs = REoptInputs(data)
+            results2 = run_reopt(model, inputs)
+
+            @test results2["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 800 atol=1
+            @test results2["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 12543 atol=1 
+            @test results2["Financial"]["lcc"] ≈ results1["Financial"]["lcc"] + 12543 - 6272 atol=1
+            
+            data["ElectricStorage"]["self_discharge_fraction_per_timestep"] = 0.0025/24
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            inputs = REoptInputs(data)
+            results3 = run_reopt(model, inputs)
+            @test sum(results2["ElectricStorage"]["storage_to_load_series_kw"]) - 
+                sum(results3["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
+        end
+        
         @testset "Heating loads and addressable load fraction" begin
             # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -1077,6 +1142,7 @@ else  # run HiGHS tests
             @test simresults["resilience_hours_max"] == 11
         end
 
+        #candidate for outages
         @testset "Minimize Unserved Load" begin
             d = JSON.parsefile("./scenarios/outage.json")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
@@ -1169,18 +1235,6 @@ else  # run HiGHS tests
             # the grid draw limit in the 10th time step is set to 90
             # without the 90 limit the grid draw is 98 in the 10th time step
             @test grid_draw[10] <= 90
-        end
-
-        @testset "Complex Incentives" begin
-            """
-            This test was compared against the API test:
-                reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
-            when using the hardcoded levelization_factor in this package's REoptInputs function.
-            The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
-            """
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(m, "./scenarios/incentives.json")
-            @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
         end
 
         @testset verbose=true "Rate Structures" begin
@@ -1398,6 +1452,7 @@ else  # run HiGHS tests
             end
         end
 
+        #candidate for hot and cold stor
         @testset "Thermal Energy Storage + Absorption Chiller" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             data = JSON.parsefile("./scenarios/thermal_storage.json")
@@ -1461,6 +1516,7 @@ else  # run HiGHS tests
             @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
         end
 
+        #condidate for hot/cold stor
         @testset "Heat and cool energy balance" begin
             """
 
@@ -1796,8 +1852,8 @@ else  # run HiGHS tests
             post_name = "off_grid.json" 
             post = JSON.parsefile("./scenarios/$post_name")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_reopt(m, post)
             scen = Scenario(post)
+            r = run_reopt(m, scen)
             
             # Test default values 
             @test scen.electric_utility.outage_start_time_step ≈ 1

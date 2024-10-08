@@ -56,7 +56,7 @@ struct Financial
     owner_tax_rate_fraction::Float64
     owner_discount_rate_fraction::Float64
     analysis_years::Int
-    value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
+    value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real}
     microgrid_upgrade_cost_fraction::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}

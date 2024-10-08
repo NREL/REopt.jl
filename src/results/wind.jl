@@ -26,14 +26,12 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["production_factor_series"] = Vector(p.production_factor[t, :])
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
-	r["size_kw"] = round(value(m[:dvSize][t]), digits=2)
+	r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=2)
 	r["lifecycle_om_cost_after_tax"] = round(value(per_unit_size_om) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
 	r["year_one_om_cost_before_tax"] = round(value(per_unit_size_om) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	if !isempty(p.s.storage.types.elec)
 		WindToStorage = (sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-		PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
@@ -66,6 +64,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_energy_produced_kwh"] = round(value(AvgWindProd), digits=0)
 
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
+	r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)][t]) * p.s.wind.installed_cost_per_kw, digits=3)
 	d[t] = r
     nothing
 end

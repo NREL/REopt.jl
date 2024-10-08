@@ -2,7 +2,6 @@
 
 
 function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
-	
 	dvs_idx_on_techs = String[
 		"dvSize",
 		"dvPurchaseSize",
@@ -16,7 +15,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		"dvStorageEnergy",
 	]
 	dvs_idx_on_storagetypes_time_steps = String[
-		"dvDischargeFromStorage"
+		"dvDischargeFromStorage",
+		"dvStorageToGrid"
 	]
 	for p in ps
 		_n = string("_", p.s.site.node)
@@ -134,7 +134,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
         end
 
         if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-            add_storage_sum_constraints(m, p; _n=_n)
+            add_storage_sum_grid_constraints(m, p; _n=_n)
         end
     
         add_production_constraints(m, p; _n=_n)
