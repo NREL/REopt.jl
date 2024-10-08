@@ -23,11 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop fix-warning-threshold-for-wholesale
+### Fixed
+- Fixed an issue in which a warning on the wholesale benefit threshold being met is shown when no warning should be present. 
+
 ## v0.48.0
 ### Added
 - Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
 - In `src/core/existing_chiller.jl`, Added new atttribute **retire_in_optimal** to the **ExistingChiller** struct
 - Financial output **initial_capital_costs_after_incentives_without_macrs** which has "net year one" CapEx after incentives except for MACRS, which helps with users defining their own "simple payback period"
+
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage.
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail.
@@ -43,6 +48,7 @@ Classify the change according to the following categories:
 - Added a couple of missing techs for the initial capital cost calculation in financial.jl.
 - An issue with setup_boiler_inputs in reopt_inputs.jl.
 - Fuel costs in proforma.jl were not consistent with the optimization costs, so that was corrected so that they are only added to the offtaker cashflows and not the owner/developer cashflows for third party.
+
 
 ## v0.47.2
 ### Fixed
