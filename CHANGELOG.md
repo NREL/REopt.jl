@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Guidelines
-- When making a Pull Request into `develop` start a new double-hash header for "Develop - YYYY-MM-DD"
+- When working in feature branch, start a new double-hash header with the name of the branch and record changes under that
+- When merging `develop` into a feature branch, keep the feature branch section and the "Develop" section separate to simplify merge conflicts
+- When making a Pull Request into `develop`, merge the feature branch section into the "Develop" section (if it exists), else rename the feature branch header to "Develop"
 - When making a Pull Request into `master` change "Develop" to the next version number
 
 ### Formatting
@@ -37,7 +39,7 @@ Classify the change according to the following categories:
 - Added missing outputs **lifecycle_export_benefit_before_tax** and **year_one_export_benefit_after_tax** to `ElectricTariff`
 - Add missing output **year_one_om_cost_before_tax** to `PV`
 
-## Develop simul charge discharge
+## Develop #prevent-simul-charge-discharge
 ### Changed
 - Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
 - Rename function `add_storage_sum_constraints` to `add_storage_sum_grid_constraints` for clarity
