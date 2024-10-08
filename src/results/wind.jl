@@ -32,8 +32,6 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
 	if !isempty(p.s.storage.types.elec)
 		WindToStorage = (sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-		PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
