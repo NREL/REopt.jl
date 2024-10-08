@@ -26,9 +26,6 @@ else  # run HiGHS tests
         @testset "Multiple Electric Storage" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt(model, "./scenarios/multiple_elec_storage.json")
-            open("debug_results.json","w") do f
-                JSON.print(f, r, 4)
-            end
             @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
             @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
             for stor in r["ElectricStorage"]
