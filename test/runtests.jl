@@ -1900,6 +1900,8 @@ else  # run HiGHS tests
             4. GHP serves all the Cooling load
             5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
             6. Hybrid GHP capability functions as expected
+            7. Check GHP LCC calculation for URBANopt
+            8. Check GHX LCC calculation for URBANopt
 
             """
             # Load base inputs
@@ -1972,6 +1974,49 @@ else  # run HiGHS tests
             # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
             @test heating_cop_avg <= 4.0
             @test cooling_cop_avg <= 8.0
+
+            # Check GHP LCC calculation for URBANopt
+            ghp_data = JSON.parsefile("scenarios/ghp_urbanopt.json")
+            s = Scenario(ghp_data)
+            ghp_inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt(m, ghp_inputs)
+            ghp_lcc = results["Financial"]["lcc"]
+            ghp_lccc = results["Financial"]["lifecycle_capital_costs"]
+            ghp_lccc_initial = results["Financial"]["initial_capital_costs"]
+            ghp_ebill = results["Financial"]["lifecycle_elecbill_after_tax"]
+            boreholes = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
+            boreholes_len = results["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+
+            # Initial capital cost = initial cap cost of GHP + initial cap cost of hydronic loop
+            @test ghp_lccc_initial - results["GHP"]["size_heat_pump_ton"]*1075 - ghp_data["GHP"]["building_sqft"]*1.7 ≈ 0.0 atol = 0.1
+            # LCC = LCCC + Electricity Bill
+            @test ghp_lcc - ghp_lccc - ghp_ebill ≈ 0.0 atol = 0.1
+            # LCCC should be around be around 52% of initial capital cost due to incentive and bonus
+            @test ghp_lccc/ghp_lccc_initial ≈ 0.518 atol = 0.01
+            # GHX size must be 0
+            @test boreholes ≈ 0.0 atol = 0.01
+            @test boreholes_len ≈ 0.0 atol = 0.01
+
+            # Check GHX LCC calculation for URBANopt
+            ghx_data = JSON.parsefile("scenarios/ghx_urbanopt.json")
+            s = Scenario(ghx_data)
+            ghx_inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt(m, ghx_inputs)
+            ghx_lcc = results["Financial"]["lcc"]
+            ghx_lccc = results["Financial"]["lifecycle_capital_costs"]
+            ghx_lccc_initial = results["Financial"]["initial_capital_costs"]
+            ghp_size = results["GHP"]["size_heat_pump_ton"]
+            boreholes = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
+            boreholes_len = results["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+            
+            # Initial capital cost = initial cap cost of GHX
+            @test ghx_lccc_initial - boreholes*boreholes_len*14 ≈ 0.0 atol = 0.01
+            # GHP size must be 0
+            @test ghp_size ≈ 0.0 atol = 0.01
+            # LCCC should be around be around 52% of initial capital cost due to incentive and bonus
+            @test ghx_lccc/ghx_lccc_initial ≈ 0.518 atol = 0.01
         end
 
         @testset "Hybrid GHX and GHP calculated costs validation" begin
