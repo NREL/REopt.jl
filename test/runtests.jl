@@ -613,7 +613,6 @@ else  # run HiGHS tests
             @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
         end  
 
-        #candidate for hot stor
         @testset verbose=true "Disaggregated Heating Loads" begin
             @testset "Process Heat Load Inputs" begin
                 d = JSON.parsefile("./scenarios/electric_heater.json")
@@ -1095,7 +1094,6 @@ else  # run HiGHS tests
             @test simresults["resilience_hours_max"] == 11
         end
 
-        #candidate for outages
         @testset "Minimize Unserved Load" begin
             d = JSON.parsefile("./scenarios/outage.json")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
@@ -1405,7 +1403,6 @@ else  # run HiGHS tests
             end
         end
 
-        #candidate for hot and cold stor
         @testset "Thermal Energy Storage + Absorption Chiller" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             data = JSON.parsefile("./scenarios/thermal_storage.json")
@@ -1469,7 +1466,6 @@ else  # run HiGHS tests
             @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
         end
 
-        #condidate for hot/cold stor
         @testset "Heat and cool energy balance" begin
             """
 
