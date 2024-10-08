@@ -267,11 +267,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:GHPCapCosts] = 0.0
     m[:GHPOMCosts] = 0.0
 	m[:AvoidedCapexByGHP] = 0.0
+	m[:AvoidedCapexByASHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
-	if !isempty(p.techs.all)
-		add_tech_size_constraints(m, p)
+	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
+		if !isempty(p.techs.all)
+			add_tech_size_constraints(m, p)
+		end
         
         if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
@@ -300,13 +303,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_heating_tech_constraints(m, p)
         end
 
-        # Zero out ExistingBoiler production if retire_in_optimal; new_heating_techs avoids zeroing for BAU 
-        new_heating_techs = ["CHP", "Boiler", "ElectricHeater", "SteamTurbine"]
-        if !isempty(intersect(new_heating_techs, p.techs.all))
-            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
-                no_existing_boiler_production(m, p)
-            end
+        # Zero out ExistingBoiler production if retire_in_optimal
+		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal && !isempty(setdiff(union(p.techs.chp,p.techs.heating), ["ExistingBoiler"]))
+			no_existing_boiler_production(m, p)
         end
+		
 
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
@@ -317,6 +318,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.techs.cooling)
             add_cooling_tech_constraints(m, p)
         end
+
+		# Zero out ExistingChiller production if retire_in_optimal; setdiff avoids zeroing for BAU 
+		if !isnothing(p.s.existing_chiller) && p.s.existing_chiller.retire_in_optimal && !isempty(setdiff(p.techs.cooling, ["ExistingChiller"]))
+			no_existing_chiller_production(m, p)
+		end
+
+        if !isempty(setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp))
+            add_heating_cooling_constraints(m, p)
+        end
+
+		if !isempty(p.techs.ashp)
+			add_ashp_force_in_constraints(m, p)
+		end
+
+		if !isempty(p.avoided_capex_by_ashp_present_value) && !isempty(p.techs.ashp)
+			avoided_capex_by_ashp(m, p)
+		end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
@@ -496,7 +514,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] -
 
 		# Subtract capital expenditures avoided by inclusion of GHP and residual present value of GHX.
-		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost]
+		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost] - 
+
+		# Subtract capital expenditures avoided by inclusion of ASHP
+		m[:AvoidedCapexByASHP]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)

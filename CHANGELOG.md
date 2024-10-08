@@ -52,7 +52,7 @@ Classify the change according to the following categories:
 - Change type of **value_of_lost_load** in **FinancialInputs** struct to fix convert error when user provides an _Int_
 - Change international location in "Solar Dataset" test set from Cameroon to Oulu because the locations in the NSRDB have been expanded significantly so there is now an NSRDB point at Cameroon
 
-## Develop
+## v0.48.0
 ### Added
 - Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
 - In `src/core/existing_chiller.jl`, Added new atttribute **retire_in_optimal** to the **ExistingChiller** struct

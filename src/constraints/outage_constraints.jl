@@ -49,22 +49,22 @@ function add_outage_cost_constraints(m,p)
         end
     end
 
-    if !isempty(p.techs.segmented)
+    if !isempty(intersect(p.techs.segmented, p.techs.elec))
         @warn "Adding binary variable(s) to model cost curves in stochastic outages"
         if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
-            @constraint(m, [t in p.techs.segmented],  # cannot have this for statement in sum( ... for t in ...) ???
+            @constraint(m, [t in intersect(p.techs.segmented, p.techs.elec)],  # cannot have this for statement in sum( ... for t in ...) ???
                 m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
                     sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                         p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])}
                 )
         else
-            @constraint(m, [t in p.techs.segmented],  
+            @constraint(m, [t in intersect(p.techs.segmented, p.techs.elec)],  
                 m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
                     sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                         p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) -
                         (maximum(p.cap_cost_slope[t][s] for s in 1:p.n_segs_by_tech[t]) * p.max_sizes[t] + maximum(p.seg_yint[t][s] for s in 1:p.n_segs_by_tech[t]))*(1-m[:binMGTechUsed][t])
                 )
-            @constraint(m, [t in p.techs.segmented], m[:dvMGTechUpgradeCost][t] >= 0.0)
+            @constraint(m, [t in intersect(p.techs.segmented, p.techs.elec)], m[:dvMGTechUpgradeCost][t] >= 0.0)
         end
     end
 

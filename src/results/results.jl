@@ -100,8 +100,16 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_steam_turbine_results(m, p, d; _n)
     end
 
-    if !isempty(p.techs.electric_heater)
+    if "ElectricHeater" in p.techs.electric_heater
         add_electric_heater_results(m, p, d; _n)
+    end
+
+    if "ASHPSpaceHeater" in p.techs.ashp
+        add_ashp_results(m, p, d; _n)
+    end
+    
+    if "ASHPWaterHeater" in p.techs.ashp_wh
+        add_ashp_wh_results(m, p, d; _n)
     end
     
     return d
