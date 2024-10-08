@@ -105,7 +105,7 @@ function normalize_response(thermal_power_produced,case_data)
         if case_data["CST"]["SSC_Inputs"]["use_solar_mult_or_aperture_area"] > 0
             rated_power = rated_power_per_area * case_data["CST"]["SSC_Inputs"]["specified_total_aperture"]
         else
-            rated_power = 3.0 * heat_sink
+            rated_power = case_data["CST"]["SSC_Inputs"]["specified_solar_multiple"] * heat_sink
         end
     end
     thermal_power_produced_norm = thermal_power_produced ./ (rated_power) 
@@ -141,11 +141,11 @@ function run_ssc(case_data::Dict)
     for i in user_defined_inputs_list[model]
         if (i == "tilt") || (i == "lat")
             user_defined_inputs[i] = lat
-        else
-            user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
         end
     end
-
+    for i in keys(case_data["CST"]["SSC_Inputs"])
+        user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
+    end
     R = Dict()
     error = ""
     
