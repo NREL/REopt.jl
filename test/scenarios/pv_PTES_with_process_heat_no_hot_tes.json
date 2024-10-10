@@ -18,7 +18,8 @@
         "retire_in_optimal": false
     },
     "ProcessHeatLoad": {
-        "annual_mmbtu": 876000.0
+        "annual_mmbtu": 876000.0,
+        "industry_reference_name": "FlatLoad"
     },
     "SteamTurbine": {
         "min_kw": 1000.0,
@@ -56,9 +57,9 @@
         "charge_storage_only": true
      },
      "HotSensibleTes": {
-         "min_gal": 100.0,
-         "max_gal": 5000000.0,
-         "installed_cost_per_gal": 600.0,
+         "min_kwh": 100.0,
+         "max_kwh": 10000.0,
+         "installed_cost_per_kwh": 15.0,
          "can_supply_steam_turbine": true,
          "can_serve_dhw": false,
          "can_serve_space_heating": false,

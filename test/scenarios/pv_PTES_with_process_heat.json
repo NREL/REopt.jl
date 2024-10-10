@@ -56,9 +56,9 @@
         "charge_storage_only": true
      },
      "HotSensibleTes": {
-         "min_gal": 100.0,
-         "max_gal": 5000000000.0,
-         "installed_cost_per_gal": 600.0,
+         "min_kwh": 100.0,
+         "max_kwh": 100000.0,
+         "installed_cost_per_kwh": 100.0,
          "can_supply_steam_turbine": true,
          "can_serve_dhw": false,
          "can_serve_space_heating": false,

@@ -19,7 +19,8 @@
         "retire_in_optimal": false
     },
     "ProcessHeatLoad": {
-        "annual_mmbtu": 876000.0
+        "annual_mmbtu": 876000.0,
+        "industry_reference_name": "FlatLoad"
     },
     "ElectricHeater": {
         "min_mmbtu_per_hour": 0.0, 
@@ -36,15 +37,15 @@
         "charge_storage_only": true
      },
      "HotSensibleTes": {
-         "min_gal": 6081.302,
-         "max_gal": 6081.302,
-         "installed_cost_per_gal": 60.0,
+         "min_kwh": 10000.0,
+         "max_kwh": 10000.0,
+         "installed_cost_per_kwh": 15.0,
          "thermal_decay_rate_fraction": 0.0001,
          "can_supply_steam_turbine": true,
          "can_serve_dhw": false,
          "can_serve_space_heating": false,
          "can_serve_process_heat": false,
-         "supply_turbine_only": true,
+         "supply_turbine_only": false,
          "one_direction_flow": false,
          "soc_min_fraction": 0.0,
          "soc_init_fraction": 0.0
