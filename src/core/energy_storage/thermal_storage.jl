@@ -120,16 +120,16 @@ end
 """
 Base.@kwdef struct HotSensibleTesDefaults <: AbstractThermalStorageDefaults
     fluid::String = "INCOMP::NaK"
-    min_gal::Float64 = 0.0
-    max_gal::Float64 = 0.0
+    min_kwh::Float64 = 0.0
+    max_kwh::Float64 = 0.0
     hot_temp_degF::Float64 = 1065.0
     cool_temp_degF::Float64 = 554.0
     internal_efficiency_fraction::Float64 = 0.999999
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
-    installed_cost_per_gal::Float64 = 1.50
+    installed_cost_per_kwh::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
-    om_cost_per_gal::Float64 = 0.0
+    om_cost_per_kwh::Float64 = 0.0
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
@@ -264,7 +264,7 @@ struct HotThermalStorage <: AbstractThermalStorage
 
     function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
-        kwh_per_gal = 1.0 #code hacking for now: get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
+        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
@@ -328,16 +328,12 @@ REopt HotSensibleTes and Financial inputs.
 """
 struct HotSensibleTes <: AbstractThermalStorage
     fluid::String
-    min_gal::Float64
-    max_gal::Float64
     hot_temp_degF::Float64
     cool_temp_degF::Float64
     internal_efficiency_fraction::Float64
     soc_min_fraction::Float64
     soc_init_fraction::Float64
-    installed_cost_per_gal::Float64
     thermal_decay_rate_fraction::Float64
-    om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
     total_rebate_per_kwh::Float64
@@ -359,19 +355,19 @@ struct HotSensibleTes <: AbstractThermalStorage
 
     function HotSensibleTes(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
-        kwh_per_gal = get_kwh_per_gal(s.hot_temp_degF, s.cool_temp_degF, s.fluid)
-        min_kwh = s.min_gal * kwh_per_gal
-        max_kwh = s.max_gal * kwh_per_gal
-        min_kw = min_kwh * time_steps_per_hour
-        max_kw = max_kwh * time_steps_per_hour
-        om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
+        # kwh_per_gal = get_kwh_per_gal(s.hot_temp_degF, s.cool_temp_degF, s.fluid)
+        # min_kwh = s.min_gal * kwh_per_gal
+        # max_kwh = s.max_gal * kwh_per_gal
+        min_kw = s.min_kwh * time_steps_per_hour
+        max_kw = s.max_kwh * time_steps_per_hour
+        # om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
         charge_efficiency = s.internal_efficiency_fraction^0.5
         discharge_efficiency = s.internal_efficiency_fraction^0.5
-        installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
+        # installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
-            itc_basis = installed_cost_per_kwh,
+            itc_basis = s.installed_cost_per_kwh,
             replacement_cost = 0.0,
             replacement_year = 100,
             discount_rate = f.owner_discount_rate_fraction,
@@ -384,28 +380,24 @@ struct HotSensibleTes <: AbstractThermalStorage
     
         return new(
             s.fluid,
-            s.min_gal,
-            s.max_gal,
             s.hot_temp_degF,
             s.cool_temp_degF,
             s.internal_efficiency_fraction,
             s.soc_min_fraction,
             s.soc_init_fraction,
-            s.installed_cost_per_gal,
             s.thermal_decay_rate_fraction,
-            s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
             s.total_rebate_per_kwh,
             min_kw,
             max_kw,
-            min_kwh,
-            max_kwh,
-            installed_cost_per_kwh,
+            s.min_kwh,
+            s.max_kwh,
+            s.installed_cost_per_kwh,
             charge_efficiency,
             discharge_efficiency,
             net_present_cost_per_kwh,
-            om_cost_per_kwh,
+            s.om_cost_per_kwh,
             s.can_supply_steam_turbine,
             s.can_serve_dhw,
             s.can_serve_space_heating,
