@@ -25,8 +25,9 @@
 function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     reopt_inputs = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "mgravens_fields_defaults.json"))
 
-    # Get the names of the chosen ProposedEnergyProducerAssets
-    tech_names = mgravens["DesignAlgorithmProperties"]["DesignAlgorithmProperties.ProposedEnergyProducerOptions"]
+    # Assume any key within ProposedAssetOption.ProposedEnergyProducerOption are unique and compatible DERs to evaluate in REopt (and have the same site location, etc)
+    tech_names = keys(mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"])
+    # TODO if there are duplicative DER types or incompatible DER types, throw an error
 
     # Analysis period
     lifetime_str = get(mgravens["DesignAlgorithmProperties"], "DesignAlgorithmProperties.analysisPeriod", nothing)
@@ -64,10 +65,11 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             reopt_inputs["Site"]["latitude"] = get(position_points, "PositionPoint.yPosition", nothing)
             reopt_inputs["Site"]["longitude"] = get(position_points, "PositionPoint.xPosition", nothing)
             # Also from SiteLocation, get needed references for 1) LoadGroup for load profile and 2) SubGeographicalRegion for energy prices
-            load_groups = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"]
+            load_groups_lumped = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"]
             # Have to extract just the name we want from lumped string value, e.g. "SubGeographicalRegion::'County1'" (want just 'County1')
             # Need to assume only one/first EnergyConsumer which is tied to a LoadForecast
-            for load_group in load_groups
+            for load_group_lumped in load_groups_lumped
+                load_group = replace(split(load_group_lumped, "::")[2], "'" => "")
                 lumped_ec_list = mgravens["Group"]["LoadGroup"][load_group]["LoadGroup.EnergyConsumers"]
                 for lumped_ec in lumped_ec_list
                     append!(energy_consumer_names, [replace(split(lumped_ec, "::")[2], "'" => "")])
@@ -85,12 +87,28 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             for load_forecast_name in load_forecast_names
                 load_forecast_dict = get(mgravens["BasicIntervalSchedule"], load_forecast_name, nothing)
                 if !isnothing(load_forecast_dict)
-                    # TODO allow 24 hour, 168 hour, etc load profile inputs and scale to 1 year? Need to be consistent with prices 
+                    # Currently allowing 24 hour, 168 hour, and 8760 hour load profile inputs and scaling to 1-year if not the full 8760
+                    # TODO make sure it's consistent with prices by creating a "time_interval_length" variable to cross-check with all time-series input data
                     timestep_sec = load_forecast_dict["EnergyConsumerSchedule.timeStep"]
                     if !(timestep_sec in [900, 3600])
                         throw(@error("Valid EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast is 900 and 3600, input of $timestep_sec"))
                     end
                     load_list_of_dict = load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"]
+                    # TODO make appending shorter horizon load data to make 8760 more efficient than below which is appending many many dictionaries
+                    #   instead, make an array of e.g. length 24, and then append just the numbers to get 8760 before assigning to loads_kw
+                    # if length(load_list_of_dict) == 24
+                    #     for _ in 1:364
+                    #         append!(load_list_of_dict, load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"])
+                    #     end
+                    # elseif length(load_list_of_dict) == 168
+                    #     for _ in 1:52
+                    #         append!(load_list_of_dict, load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"])
+                    #     end
+                    #     # Have to add one more day's worth of time, so take the first 24 hours of the week again for the last 24 hours of the 8760
+                    #     append!(load_list_of_dict, load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"][1:24])           
+                    # elseif !(length(load_list_of_dict) in [8760, 35040])
+                    #     throw(@error("Valid length of load forecast data is 24, 168, or 8760"))
+                    # end
                     for (ts, data) in enumerate(load_list_of_dict)
                         # Ignoring value2 which is "VAr" (reactive power)
                         reopt_inputs["ElectricLoad"]["loads_kw"][ts] += data["RegularTimePoint.value1"]
@@ -125,6 +143,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 # Note, if 15-minute interval analysis, must supply LMPs in 15-minute interval, so they have one-to-one data
                 reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
                 # reopt_inputs["ElectricTariff"]["wholesale_rate"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                # TODO allow e.g. list of 24 for LMP if the load forecast is also 24, and just replicate e.g. 365 times
                 if length(lmp_list_of_dict) == length(reopt_inputs["ElectricLoad"]["loads_kw"])
                     for (ts, data) in enumerate(lmp_list_of_dict)
                         reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"][ts] = data["CurveData.y1value"]
@@ -297,21 +316,74 @@ end
 function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict)
     # Convert from REopt --> MG-Ravens outputs and update or add fields to MG-Ravens data .json
     # We are NOT creating a separate mgravens.json - only adding or maybe updating values (but mostly adding)
-    tech_names = mgravens["DesignAlgorithmProperties"]["DesignAlgorithmProperties.ProposedEnergyProducerOptions"]
-    for (i, name) in enumerate(tech_names)
-        tech_data = mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]
-        # Currently, we are populating each asset with this same data that does not change (until the schema gets updated)
-        mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]["ProposedEnergyProducerOption.lifecycleCost"] = reopt_results["Financial"]["lcc"]
-        mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]["ProposedEnergyProducerOption.netPresentValue"] = reopt_results["Financial"]["npv"]
-        if tech_data["Ravens.CimObjectType"] == "ProposedPhotovoltaicUnitOption"
-            # Add PV stuff
-            mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]["ProposedEnergyProducerOption.capacity"] = reopt_results["PV"]["size_kw"]
-        elseif tech_data["Ravens.CimObjectType"] == "ProposedBatteryUnitOption"
-            # Add Battery stuff
-            mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]["ProposedEnergyProducerOption.capacity"] = reopt_results["ElectricStorage"]["size_kw"]
-            mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]["ProposedEnergyProducerOption.energyCapacity"] = reopt_results["ElectricStorage"]["size_kwh"]
+    # Create unique REopt output names for techs which were evaluated in REopt, to later add them to ProposedAsset dictionary
+    possible_techs = [("PV", "REopt_PV"), ("ElectricStorage", "REopt_ESS")]
+    tech_names = []
+    for tech in possible_techs
+        if tech[1] in keys(reopt_results)
+            append!(tech_names, [tech[2]])
         end
     end
+    # "REopt_output" name below is up to REopt to name however, but we will stick with that for now
+    if !("ProposedAssetSet" in keys(mgravens["Group"]))
+        mgravens["Group"]["ProposedAssetSet"] = Dict()
+    end
+    mgravens["Group"]["ProposedAssetSet"]["REopt_output"] = Dict(
+        "IdentifiedObject.name"=> "REopt_output",
+        "IdentifiedObject.mRID"=> "50eb10ba-ea39-454b-831c-144215287a02",
+        "Ravens.CimObjectType"=> "ProposedAssetSet",
+        "ProposedAssetSet.ProposedAssets"=> ["ProposedAsset::'$tech_name'" for tech_name in tech_names]
+    )
+    for (i, name) in enumerate(tech_names)
+        if !("ProposedAsset" in keys(mgravens))
+            mgravens["ProposedAsset"] = Dict()
+        end
+        
+        proposed_asset_template = Dict(
+            "IdentifiedObject.name" => name,
+            "IdentifiedObject.mRID" => "",  # TODO add UUIDS package and create
+            "Ravens.CimObjectType" => "",
+            "ProposedAsset.ProposedAssetOption" => "",
+            "ProposedAsset.Costs" => Dict(
+              "IdentifiedObject.mRID" => "",  # TODO add UUIDS package and create
+              "IdentifiedObject.name" => "",
+              "Ravens.CimObjectType" => "ProposedAssetCosts",
+              # Currently, we are populating each asset with this same data that does not change (until the schema gets updated)
+              "ProposedAssetCosts.lifecycleCost" => reopt_results["Financial"]["lcc"],
+              "ProposedAssetCosts.netPresentValue" => reopt_results["Financial"]["npv"]
+        )
+        )
+
+        if occursin("PV", name)
+            # Add PV stuff
+            proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = reopt_results["PV"]["size_kw"]
+            proposed_asset_template["Ravens.CimObjectType"] = "ProposedEnergyProducerAsset"
+            # TODO somehow link this ProposedAsset to the ProposedEnergyProducerOption by linking PV to that specific name
+            proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedEnergyProducerOption::'proposedPV1'"
+            proposed_asset_template["ProposedAsset.Costs"]["IdentifiedObject.name"] = name*"_costs"
+            proposed_asset_template["ProposedEnergyProducerAsset.PowerDispatchCurve"] = Dict(
+                "IdentifiedObject.name" => "PVProfile",
+                "IdentifiedObject.mRID" => "532b634e-b243-4012-88d0-2a27bf90b0ef",
+                "Ravens.CimObjectType" => "DispatchCurve",
+                "Curve.xUnit" => "h",
+                "Curve.CurveDatas" => []
+                )
+            for ts in 1:8760
+                append!(proposed_asset_template["ProposedEnergyProducerAsset.PowerDispatchCurve"]["Curve.CurveDatas"], 
+                [Dict("CurveData.xvalue" => ts-1, "CurveData.y1value" => reopt_results["PV"]["production_factor_series"][ts])])
+            end
+        elseif occursin("ESS", name)
+            # Add Battery stuff
+            proposed_asset_template["Ravens.CimObjectType"] = "ProposedBatteryUnit"
+            # TODO somehow link this ProposedAsset to the ProposedEnergyProducerOption by linking ElectricStorage to that specific name
+            proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedEnergyProducerOption::'proposedESS1'"
+            proposed_asset_template["ProposedAsset.Costs"]["IdentifiedObject.name"] = name*"_costs"
+            proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = reopt_results["ElectricStorage"]["size_kw"]
+            proposed_asset_template["ProposedEnergyProducerAsset.energyCapacity"] = reopt_results["ElectricStorage"]["size_kwh"]
+        end
+
+        mgravens["ProposedAsset"][name] = proposed_asset_template
+    end   
 end
 
 
