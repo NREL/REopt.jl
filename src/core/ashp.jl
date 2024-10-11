@@ -444,14 +444,14 @@ function get_ashp_performance(cop_reference,
                 cf_reference,
                 reference_temps,
                 ambient_temp_degF,
-                back_up_temp_threshold_degF = 10.0
+                back_up_temp_threshold_degF
                 )
 """
 function get_ashp_performance(cop_reference,
     cf_reference,
     reference_temps,
     ambient_temp_degF,
-    back_up_temp_threshold_degF = 10.0
+    back_up_temp_threshold_degF
     )
     num_timesteps = length(ambient_temp_degF)
     cop = zeros(num_timesteps)
@@ -493,9 +493,9 @@ Obtains the default minimum allowable size for ASHP system.  This is calculated 
 """
 function get_ashp_default_min_allowable_size(heating_load::Array{<:Real,1}, 
     heating_cf::Array{<:Real,1}, 
-    cooling_load::Array{<:Real,1} = Real[], 
-    cooling_cf::Array{<:Real,1} = Real[],
-    peak_load_thermal_factor::Real = 0.5
+    cooling_load::Array{<:Real,1}, 
+    cooling_cf::Array{<:Real,1},
+    peak_load_thermal_factor::Real
     )
 
     if isempty(cooling_cf)
