@@ -39,7 +39,7 @@ Classify the change according to the following categories:
 - Added missing outputs **lifecycle_export_benefit_before_tax** and **year_one_export_benefit_after_tax** to `ElectricTariff`
 - Add missing output **year_one_om_cost_before_tax** to `PV`
 
-## Develop #prevent-simul-charge-discharge
+## Develop
 ### Changed
 - Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
 - Rename function `add_storage_sum_constraints` to `add_storage_sum_grid_constraints` for clarity
@@ -53,6 +53,7 @@ Classify the change according to the following categories:
 - Remove extraneous line of code in `results/wind.jl`
 - Change type of **value_of_lost_load** in **FinancialInputs** struct to fix convert error when user provides an _Int_
 - Change international location in "Solar Dataset" test set from Cameroon to Oulu because the locations in the NSRDB have been expanded significantly so there is now an NSRDB point at Cameroon
+- Handle edge case where the values of **outage_start_time_steps** and **outage_durations** makes an outage extend beyond the end of the year. The outage will now wrap around to the beginning of the year.
 
 ## v0.48.0
 ### Added

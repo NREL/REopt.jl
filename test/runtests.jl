@@ -175,17 +175,6 @@ else  # run HiGHS tests
             @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
         end
 
-        @testset "Outage with Generator" begin
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(model, "./scenarios/generator.json")
-            @test results["Generator"]["size_kw"] ≈ 9.55 atol=0.01
-            @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
-                sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
-            p = REoptInputs("./scenarios/generator.json")
-            simresults = simulate_outages(results, p)
-            @test simresults["resilience_hours_max"] == 11
-        end
-
         # TODO test MPC with outages
         @testset "MPC" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -193,6 +182,10 @@ else  # run HiGHS tests
             @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
             @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
             @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
+            # the grid draw limit in the 10th time step is set to 90
+            # without the 90 limit the grid draw is 98 in the 10th time step
+            @test grid_draw[10] <= 90
         end
 
         @testset "MPC Multi-node" begin
@@ -628,7 +621,6 @@ else  # run HiGHS tests
             @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
         end  
 
-        #candidate for hot stor
         @testset verbose=true "Disaggregated Heating Loads" begin
             @testset "Process Heat Load Inputs" begin
                 d = JSON.parsefile("./scenarios/electric_heater.json")
@@ -1142,7 +1134,6 @@ else  # run HiGHS tests
             @test simresults["resilience_hours_max"] == 11
         end
 
-        #candidate for outages
         @testset "Minimize Unserved Load" begin
             d = JSON.parsefile("./scenarios/outage.json")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
@@ -1223,18 +1214,6 @@ else  # run HiGHS tests
             ];
             results = run_reopt(m, ps)
             @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.2830872235e7 rtol=1e-5
-        end
-
-        @testset "MPC" begin
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_mpc(model, "./scenarios/mpc.json")
-            @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
-            @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
-            @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
-            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
-            # the grid draw limit in the 10th time step is set to 90
-            # without the 90 limit the grid draw is 98 in the 10th time step
-            @test grid_draw[10] <= 90
         end
 
         @testset verbose=true "Rate Structures" begin
@@ -1452,7 +1431,6 @@ else  # run HiGHS tests
             end
         end
 
-        #candidate for hot and cold stor
         @testset "Thermal Energy Storage + Absorption Chiller" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             data = JSON.parsefile("./scenarios/thermal_storage.json")
@@ -1516,7 +1494,6 @@ else  # run HiGHS tests
             @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
         end
 
-        #condidate for hot/cold stor
         @testset "Heat and cool energy balance" begin
             """
 
