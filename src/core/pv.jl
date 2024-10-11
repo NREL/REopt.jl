@@ -13,7 +13,7 @@
     location::String="both", # one of ["roof", "ground", "both"]
     existing_kw::Real=0,
     min_kw::Real=0,
-    max_kw::Real=1.0e9, # max new capacity (beyond existing_kw)
+    max_kw::Real=1.0e9, # max new DC capacity (beyond existing_kw)
     installed_cost_per_kw::Real=1790.0,
     om_cost_per_kw::Real=18.0,
     degradation_fraction::Real=0.005,
