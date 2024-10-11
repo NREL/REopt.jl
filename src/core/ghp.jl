@@ -164,10 +164,9 @@ function GHP(response::Dict, d::Dict)
     # Convert boolean input into an integer for the model
     if typeof(ghp.require_ghp_purchase) == Bool && ghp.require_ghp_purchase
         ghp.require_ghp_purchase = 1
-    else
+    elseif typeof(ghp.require_ghp_purchase) == Bool && ghp.require_ghp_purchase == false
         ghp.require_ghp_purchase = 0
     end
-
     return ghp
 end
 
@@ -227,8 +226,15 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     #    and then use the value above for heat pump capacity to calculate the final absolute cost for GHP
 
     if ghp.heat_pump_configuration == "WSHP"
-        ghp.installed_cost_per_kw = [0, (ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost) / 
-                                        ghp.heatpump_capacity_ton + ghp.installed_cost_heatpump_per_ton]
+        if !(ghp.heatpump_capacity_ton == 0)
+            ghp.installed_cost_per_kw = [0, (ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost) / 
+                                            ghp.heatpump_capacity_ton + ghp.installed_cost_heatpump_per_ton]
+        else  # For just costing ground heat exchanger for URBANopt
+            # Approximate investment-based incentive (ibi) stacking, ignores max incentive for state and utility
+            base_cost = ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost
+            ibi_net_fraction = (1 - ghp.federal_itc_fraction) * (1 - ghp.state_ibi_fraction) * (1 - ghp.utility_ibi_fraction)
+            ghp.installed_cost_per_kw = [base_cost * ibi_net_fraction, 0.0]
+        end
     elseif ghp.heat_pump_configuration == "WWHP"
         # Divide by two to avoid double counting non-heatpump costs
         ghp.wwhp_heating_pump_installed_cost_curve = [0, (ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost) / 2 /
