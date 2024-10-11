@@ -25,7 +25,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop #prevent-simul-charge-discharge
+## Develop
 ### Changed
 - Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
 - Rename function `add_storage_sum_constraints` to `add_storage_sum_grid_constraints` for clarity
