@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-10-11
+### Added
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+
 ## v0.48.0
 ### Added
 - Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
@@ -59,8 +63,6 @@ Classify the change according to the following categories:
 - `simulated_load()` response for `annual_mmbtu` for individual heating loads (fixed to fuel instead of thermal)
 
 ## v0.47.0
-### Added
-- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 ### Added
 - Added inputs options and handling for ProcessHeatLoad for scaling annual or monthly fuel consumption values with reference hourly profiles, same as other loads
 ### Changed
