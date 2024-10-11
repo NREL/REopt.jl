@@ -2907,4 +2907,4 @@ else  # run HiGHS tests
             @test length(r["Messages"]["warnings"]) > 0
         end
     end
-end
+end 
