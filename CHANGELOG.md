@@ -41,7 +41,9 @@ Classify the change according to the following categories:
 - Change type of **value_of_lost_load** in **FinancialInputs** struct to fix convert error when user provides an _Int_
 - Change international location in "Solar Dataset" test set from Cameroon to Oulu because the locations in the NSRDB have been expanded significantly so there is now an NSRDB point at Cameroon
 - Handle edge case where the values of **outage_start_time_steps** and **outage_durations** makes an outage extend beyond the end of the year. The outage will now wrap around to the beginning of the year.
-- Fixed an issue in which a warning on the wholesale benefit threshold being met is shown when no warning should be present. 
+- Enforce minimum allowable sizes for ASHP technologies by introducing improved big-M values for segmented size constraints.
+- Removed default values from ASHP functions that calculate minimum allowable size and performance.
+- Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
 
 ## v0.48.0
 ### Added
