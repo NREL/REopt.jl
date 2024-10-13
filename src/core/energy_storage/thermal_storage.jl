@@ -41,7 +41,7 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
     min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 1000.0
+    max_duration_hours::Real = 10000000.0
 end
 
 
@@ -89,7 +89,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
     min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 1000.0
+    max_duration_hours::Real = 10000000.0
 end
 
 
