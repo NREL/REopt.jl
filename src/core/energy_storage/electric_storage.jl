@@ -166,7 +166,7 @@ end
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
-    max_duration_hours::Real = 1000000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+    max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -201,7 +201,7 @@ Base.@kwdef struct ElectricStorageDefaults
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 1000000.0
+    max_duration_hours::Real = 100000.0
 end
 
 
