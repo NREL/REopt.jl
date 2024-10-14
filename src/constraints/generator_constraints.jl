@@ -74,7 +74,11 @@ function add_gen_constraints(m, p)
         sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
         m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
-    m[:TotalGenFuelCosts] = @expression(m,
-        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
-    )
+
+
+	#If p.fuel_cost_per_kwh is actually cost per time step (rather than per kWh), we might need to divide by p.hours_per_time_step to get the correct hourly rate
+	m[:TotalGenFuelCosts] = @expression(m,
+    sum(p.pwf_fuel[t] * m[:dvFuelUsage][t,ts] * (p.fuel_cost_per_kwh[t][ts] / p.hours_per_time_step)
+        for t in p.techs.gen, ts in p.time_steps)
+)
 end
