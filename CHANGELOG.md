@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-10-11
+### Added
+- Add new **ElectricStorage**, **ColdThermalStorage**, and **HotThermalStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+  
 ## Develop
 ### Changed
 - Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
