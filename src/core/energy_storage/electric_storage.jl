@@ -109,6 +109,16 @@ The last battery which was placed in service during month 290 only serves for 10
 In this case, the battery has 93.1% of residual life remaining as useful life left after analysis period ends.
 A residual value cost vector is created to hold this value for all months. Residual value is calculated as:
 
+``
+C_{\\text{residual}} = R f(d_{\\text{last}}) C_{\\text{install}}
+``
+where:
+- ``R`` is the `residual_factor` which determines portion of battery life remaining at the end of the analysis period;
+- ``f(d_{\\text{last}})`` is the present worth factor at approximately the 15th day of the last month in the analysis period;
+- ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
+
+The ``C_{\\text{residual}}`` is added to the objective function to be minimized with all other costs.
+
 # Example of inputs
 The following shows how one would use the degradation model in REopt via the [Scenario](@ref) inputs:
 ```javascript
@@ -131,16 +141,6 @@ The following shows how one would use the degradation model in REopt via the [Sc
 ```
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
-
-# ``
-# C_{\\text{residual}} = R f(d_{\\text{last}}) C_{\\text{install}}
-# ``
-# where:
-# - ``R`` is the `residual_factor` which determines portion of battery life remaining at the end of the analysis period;
-# - ``f(d_{\\text{last}})`` is the present worth factor at approximately the 15th day of the last month in the analysis period;
-# - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
-
-# The ``C_{\\text{residual}}`` is added to the objective function to be minimized with all other costs.
 
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
