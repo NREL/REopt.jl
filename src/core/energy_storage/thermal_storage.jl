@@ -22,6 +22,8 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
+    min_duration_hours::Real = 0.0
+    max_duration_hours::Real = 100000.0
 ```
 """
 Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
@@ -67,6 +69,8 @@ end
     can_serve_dhw::Bool = true
     can_serve_space_heating:Bool = true
     can_serve_process_heat::Bool = false
+    min_duration_hours::Real = 0.0
+    max_duration_hours::Real = 100000.0
 ```
 """
 Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
