@@ -27,7 +27,7 @@ Classify the change according to the following categories:
 
 ## Develop - 2024-10-11
 ### Added
-- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+- Add new **ElectricStorage**, **ColdThermalStorage**, and **HotThermalStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
   
 ## Develop
 ### Changed
