@@ -118,27 +118,29 @@ The ``C_{\\text{repl}}`` is added to the objective function to be minimized with
 
 # The ``C_{\\text{residual}}`` is added to the objective function to be minimized with all other costs.
 
-# # Example of inputs
-# The following shows how one would use the degradation model in REopt via the [Scenario](@ref) inputs:
-# ```javascript
-# {
-#     ...
-#     "ElectricStorage": {
-#         "installed_cost_per_kwh": 390,
-#         ...
-#         "model_degradation": true,
-#         "degradation": {
-#             "calendar_fade_coefficient": 2.86E-03,
-#             "cycle_fade_coefficient": 6.22E-05,
-#             "installed_cost_per_kwh_declination_rate": 0.06,
-#             "maintenance_strategy": "replacement",
-#             ...
-#         }
-#     },
-#     ...
-# }
-# ```
-# Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
+"""
+# Example of inputs
+The following shows how one would use the degradation model in REopt via the [Scenario](@ref) inputs:
+```javascript
+{
+    ...
+    "ElectricStorage": {
+        "installed_cost_per_kwh": 390,
+        ...
+        "model_degradation": true,
+        "degradation": {
+            "calendar_fade_coefficient": 2.86E-03,
+            "cycle_fade_coefficient": 6.22E-05,
+            "installed_cost_per_kwh_declination_rate": 0.06,
+            "maintenance_strategy": "replacement",
+            ...
+        }
+    },
+    ...
+}
+```
+Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
+"""
 
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
