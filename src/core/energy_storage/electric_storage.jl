@@ -78,30 +78,30 @@ where
 
 
 The ``C_{\\text{aug}}`` is added to the objective function to be minimized with all other costs.
+
+# Replacement Maintenance Strategy
+Modeling the replacement maintenance strategy is more complex than the augmentation strategy.
+Effectively the replacement strategy says that the battery has to be replaced once the `SOH` drops below 80%
+of the optimal, purchased capacity. It is possible that multiple replacements (at same replacement frequency) could be required under
+this strategy.
+
+!!! warn
+    The "replacement" maintenance strategy requires integer decision variables.
+    Some solvers are slow with integer decision variables.
+
+The replacement strategy cost is:
+
+``
+C_{\\text{repl}} = B_{\\text{kWh}} N_{\\text{repl}} f(d_{80}) C_{\\text{install}}
+``
+
+where:
+- ``B_{\\text{kWh}}`` is the optimal battery capacity (`ElectricStorage.size_kwh` in the results dictionary);
+- ``N_{\\text{repl}}`` is the number of battery replacments required (a function of the month in which the `SOH` falls below 80% of original capacity);
+- ``f(d_{80})`` is the present worth factor at approximately the 15th day of the month in which the `SOH` falls below 80% of original capacity;
+- ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
+The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
 """
-# # Replacement Maintenance Strategy
-# Modeling the replacement maintenance strategy is more complex than the augmentation strategy.
-# Effectively the replacement strategy says that the battery has to be replaced once the `SOH` drops below 80%
-# of the optimal, purchased capacity. It is possible that multiple replacements (at same replacement frequency) could be required under
-# this strategy.
-
-# !!! warn
-#     The "replacement" maintenance strategy requires integer decision variables.
-#     Some solvers are slow with integer decision variables.
-
-# The replacement strategy cost is:
-
-# ``
-# C_{\\text{repl}} = B_{\\text{kWh}} N_{\\text{repl}} f(d_{80}) C_{\\text{install}}
-# ``
-
-# where:
-# - ``B_{\\text{kWh}}`` is the optimal battery capacity (`ElectricStorage.size_kwh` in the results dictionary);
-# - ``N_{\\text{repl}}`` is the number of battery replacments required (a function of the month in which the `SOH` falls below 80% of original capacity);
-# - ``f(d_{80})`` is the present worth factor at approximately the 15th day of the month in which the `SOH` falls below 80% of original capacity;
-# - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
-# The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
-
 # ## Battery residual value
 # Since the battery can be replaced one-to-many times under this strategy, battery residual value captures the \$ value of remaining battery life at end of analysis period.
 # For example if replacement happens in month 145, then assuming 25 year analysis period there will be 2 replacements (months 145 and 290). 
@@ -139,7 +139,6 @@ The ``C_{\\text{aug}}`` is added to the objective function to be minimized with 
 # }
 # ```
 # Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
-
 
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
