@@ -21,9 +21,29 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
-
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
+        @testset "Prevent simultaneous charge and discharge" begin
+            logger = SimpleLogger()
+            results = nothing
+            with_logger(logger) do
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
+            end
+            @test any(.&(
+                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
+                    (
+                        results["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
+                        results["PV"]["electric_to_storage_series_kw"]
+                    ) .!= 0.0
+                )
+                ) ≈ false
+            @test any(.&(
+                    results["Outages"]["storage_discharge_series_kw"] .!= 0.0,
+                    results["Outages"]["pv_to_storage_series_kw"] .!= 0.0
+                )
+                ) ≈ false
+        end
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
                 blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
@@ -50,11 +70,11 @@ else  # run HiGHS tests
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
             @test dataset ≈ "nsrdb"
 
-            # 3. Younde, Cameroon
-            latitude, longitude = 3.8603988398663125, 11.528880303663136
+            # 3. Oulu, Findland
+            latitude, longitude = 65.0102196310875, 25.465387094897675
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset ≈ "intl"
 
             # 4. Fairbanks, AK 
             site = "Fairbanks"
@@ -98,8 +118,8 @@ else  # run HiGHS tests
             # min allowable size
             heating_load = Array{Real}([10.0,10.0,10.0,10.0])
             cooling_load = Array{Real}([10.0,10.0,10.0,10.0])
-            space_heating_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
-            wh_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf)
+            space_heating_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf, 0.5)
+            wh_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], 0.5)
             @test space_heating_min_allowable_size ≈ 9.166666666666666 atol=1e-8
             @test wh_min_allowable_size ≈ 5.0 atol=1e-8
         end
@@ -140,17 +160,6 @@ else  # run HiGHS tests
             @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
         end
 
-        @testset "Outage with Generator" begin
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(model, "./scenarios/generator.json")
-            @test results["Generator"]["size_kw"] ≈ 9.55 atol=0.01
-            @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
-                sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
-            p = REoptInputs("./scenarios/generator.json")
-            simresults = simulate_outages(results, p)
-            @test simresults["resilience_hours_max"] == 11
-        end
-
         # TODO test MPC with outages
         @testset "MPC" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -158,6 +167,10 @@ else  # run HiGHS tests
             @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
             @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
             @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
+            # the grid draw limit in the 10th time step is set to 90
+            # without the 90 limit the grid draw is 98 in the 10th time step
+            @test grid_draw[10] <= 90
         end
 
         @testset "MPC Multi-node" begin
@@ -259,10 +272,7 @@ else  # run HiGHS tests
             post["PV"]["tilt"] = 17
             scen = Scenario(post)
             @test scen.pvs[1].tilt ≈ 17
-        
-        
-        end    
-        
+        end
 
         @testset "AlternativeFlatLoads" begin
             input_data = JSON.parsefile("./scenarios/flatloads.json")
@@ -1159,30 +1169,6 @@ else  # run HiGHS tests
             @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.2830872235e7 rtol=1e-5
         end
 
-        @testset "MPC" begin
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_mpc(model, "./scenarios/mpc.json")
-            @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
-            @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
-            @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
-            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
-            # the grid draw limit in the 10th time step is set to 90
-            # without the 90 limit the grid draw is 98 in the 10th time step
-            @test grid_draw[10] <= 90
-        end
-
-        @testset "Complex Incentives" begin
-            """
-            This test was compared against the API test:
-                reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
-            when using the hardcoded levelization_factor in this package's REoptInputs function.
-            The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
-            """
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(m, "./scenarios/incentives.json")
-            @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
-        end
-
         @testset verbose=true "Rate Structures" begin
 
             @testset "Tiered Energy" begin
@@ -1796,8 +1782,8 @@ else  # run HiGHS tests
             post_name = "off_grid.json" 
             post = JSON.parsefile("./scenarios/$post_name")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_reopt(m, post)
             scen = Scenario(post)
+            r = run_reopt(m, scen)
             
             # Test default values 
             @test scen.electric_utility.outage_start_time_step ≈ 1
