@@ -1,84 +1,84 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-# """
-#     Degradation
+"""
+    Degradation
 
-# Inputs used when `ElectricStorage.model_degradation` is `true`:
-# ```julia
-# Base.@kwdef mutable struct Degradation
-#     calendar_fade_coefficient::Real = 2.46E-03
-#     cycle_fade_coefficient::Real = 7.82E-05
-#     time_exponent::Real = 0.5
-#     installed_cost_per_kwh_declination_rate::Float64 = 0.05
-#     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
-#     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
-# end
-# ```
+Inputs used when `ElectricStorage.model_degradation` is `true`:
+```julia
+Base.@kwdef mutable struct Degradation
+    calendar_fade_coefficient::Real = 2.46E-03
+    cycle_fade_coefficient::Real = 7.82E-05
+    time_exponent::Real = 0.5
+    installed_cost_per_kwh_declination_rate::Float64 = 0.05
+    maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
+    maintenance_cost_per_kwh::Vector{<:Real} = Real[]
+end
+```
 
-# None of the above values are required. If `ElectricStorage.model_degradation` is `true` then the 
-# defaults above are used. If the `maintenance_cost_per_kwh` is not provided then it is determined using the `ElectricStorage.installed_cost_per_kwh` and the `installed_cost_per_kwh_declination_rate` along with a present worth factor ``f`` to account for the present cost of buying a battery in the future. The present worth factor for each day is:
+None of the above values are required. If `ElectricStorage.model_degradation` is `true` then the 
+defaults above are used. If the `maintenance_cost_per_kwh` is not provided then it is determined using the `ElectricStorage.installed_cost_per_kwh` and the `installed_cost_per_kwh_declination_rate` along with a present worth factor ``f`` to account for the present cost of buying a battery in the future. The present worth factor for each day is:
 
-# ``
-# f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
-# ``
+``
+f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
+``
 
-# where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.financial.owner_discount_rate_fraction`.
+where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.financial.owner_discount_rate_fraction`.
 
-# Note this day-specific calculation of the present-worth factor accumulates differently from the annually updated discount
-# rate for other net-present value calculations in REopt, and has a higher effective discount rate as a result.  The present 
-# worth factor is used in the same manner irrespective of the `maintenance_strategy`.
+Note this day-specific calculation of the present-worth factor accumulates differently from the annually updated discount
+rate for other net-present value calculations in REopt, and has a higher effective discount rate as a result.  The present 
+worth factor is used in the same manner irrespective of the `maintenance_strategy`.
 
-# !!! warn
-#     When modeling degradation the following ElectricStorage inputs are not used:
-#     - `replace_cost_per_kwh`
-#     - `battery_replacement_year`
-#     The are replaced by the `maintenance_cost_per_kwh` vector.
-#     Inverter replacement costs and inverter replacement year should still be used to model scheduled replacement of inverter.
+!!! warn
+    When modeling degradation the following ElectricStorage inputs are not used:
+    - `replace_cost_per_kwh`
+    - `battery_replacement_year`
+    The are replaced by the `maintenance_cost_per_kwh` vector.
+    Inverter replacement costs and inverter replacement year should still be used to model scheduled replacement of inverter.
 
-# !!! note
-#     When providing the `maintenance_cost_per_kwh` it must have a length equal to `Financial.analysis_years*365`-1.
-
-
-# # Battery State Of Health
-# The state of health [`SOH`] is a linear function of the daily average state of charge [`Eavg`] and
-# the daily equivalent full cycles [`EFC`]. The initial `SOH` is set to the optimal battery energy capacity 
-# (in kWh). The evolution of the `SOH` beyond the first day is:
-
-# ``
-# SOH[d] = SOH[d-1] - h\\left(
-#     \\frac{1}{2} k_{cal} Eavg[d-1] / \\sqrt{d} + k_{cyc} EFC[d-1] \\quad \\forall d \\in \\{2\\dots D\\}
-# \\right)
-# ``
-
-# where:
-# - ``k_{cal}`` is the `calendar_fade_coefficient`
-# - ``k_{cyc}`` is the `cycle_fade_coefficient`
-# - ``h`` is the hours per time step
-# - ``D`` is the total number of days, 365 * `analysis_years`
-
-# The `SOH` is used to determine the maintence cost of the storage system, which depends on the `maintenance_strategy`.
-
-# !!! note
-#     Battery degradation parameters are from based on laboratory aging data, and are expected to be reasonable only within 
-#     the range of conditions tested. Battery lifetime can vary widely from these estimates based on battery use and system design. 
-#     Battery cost estimates are based on domain expertise and published guidelines and are not to be taken as an indicator of real 
-#     system costs.
-
-# # Augmentation Maintenance Strategy
-# The augmentation maintenance strategy assumes that the battery energy capacity is maintained by replacing
-# degraded cells daily in terms of cost. Using the definition of the `SOH` above the maintenance cost is:
-
-# ``
-# C_{\\text{aug}} = \\sum_{d \\in \\{2\\dots D\\}} C_{\\text{install}} f(day) \\left( SOH[d-1] - SOH[d] \\right)
-# ``
-
-# where
-# - ``f(day)`` is the present worth factor of battery degradation costs as described above;
-# - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`; and
-# - ``SOH[d-1] - SOH[d]`` is the incremental amount of battery capacity lost in a day.
+!!! note
+    When providing the `maintenance_cost_per_kwh` it must have a length equal to `Financial.analysis_years*365`-1.
 
 
-# The ``C_{\\text{aug}}`` is added to the objective function to be minimized with all other costs.
+# Battery State Of Health
+The state of health [`SOH`] is a linear function of the daily average state of charge [`Eavg`] and
+the daily equivalent full cycles [`EFC`]. The initial `SOH` is set to the optimal battery energy capacity 
+(in kWh). The evolution of the `SOH` beyond the first day is:
 
+``
+SOH[d] = SOH[d-1] - h\\left(
+    \\frac{1}{2} k_{cal} Eavg[d-1] / \\sqrt{d} + k_{cyc} EFC[d-1] \\quad \\forall d \\in \\{2\\dots D\\}
+\\right)
+``
+
+where:
+- ``k_{cal}`` is the `calendar_fade_coefficient`
+- ``k_{cyc}`` is the `cycle_fade_coefficient`
+- ``h`` is the hours per time step
+- ``D`` is the total number of days, 365 * `analysis_years`
+
+The `SOH` is used to determine the maintence cost of the storage system, which depends on the `maintenance_strategy`.
+
+!!! note
+    Battery degradation parameters are from based on laboratory aging data, and are expected to be reasonable only within 
+    the range of conditions tested. Battery lifetime can vary widely from these estimates based on battery use and system design. 
+    Battery cost estimates are based on domain expertise and published guidelines and are not to be taken as an indicator of real 
+    system costs.
+
+# Augmentation Maintenance Strategy
+The augmentation maintenance strategy assumes that the battery energy capacity is maintained by replacing
+degraded cells daily in terms of cost. Using the definition of the `SOH` above the maintenance cost is:
+
+``
+C_{\\text{aug}} = \\sum_{d \\in \\{2\\dots D\\}} C_{\\text{install}} f(day) \\left( SOH[d-1] - SOH[d] \\right)
+``
+
+where
+- ``f(day)`` is the present worth factor of battery degradation costs as described above;
+- ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`; and
+- ``SOH[d-1] - SOH[d]`` is the incremental amount of battery capacity lost in a day.
+
+
+The ``C_{\\text{aug}}`` is added to the objective function to be minimized with all other costs.
+"""
 # # Replacement Maintenance Strategy
 # Modeling the replacement maintenance strategy is more complex than the augmentation strategy.
 # Effectively the replacement strategy says that the battery has to be replaced once the `SOH` drops below 80%
@@ -139,7 +139,7 @@
 # }
 # ```
 # Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
-# """
+
 
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
