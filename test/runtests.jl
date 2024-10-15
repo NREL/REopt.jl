@@ -23,6 +23,21 @@ elseif "CPLEX" in ARGS
     end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
+        @testset "Multiple Electric Storage" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(model, "./scenarios/multiple_elec_storage.json")
+            @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+            @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
+            for stor in r["ElectricStorage"]
+                if stor["name"] == "CheapElecStor"
+                    @test stor["size_kw"] ≈ 49.0 atol=0.1
+                    @test stor["size_kwh"] ≈ 83.3 atol=0.1
+                else
+                    @test stor["size_kw"] ≈ 0 atol=0.1
+                    @test stor["size_kwh"] ≈ 0 atol=0.1
+                end
+            end
+        end
         @testset "Prevent simultaneous charge and discharge" begin
             logger = SimpleLogger()
             results = nothing
@@ -656,6 +671,38 @@ else  # run HiGHS tests
             end
         end
 
+        @testset "Electric Storage O&M and Self-Discharge" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data = JSON.parsefile("./scenarios/storage_om.json")
+
+            data["ElectricStorage"]["om_cost_per_kw"] = 10
+            data["ElectricStorage"]["om_cost_per_kwh"] = 0
+
+            inputs = REoptInputs(data)
+            results1 = run_reopt(model, inputs)
+
+            @test results1["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 400 atol=1
+            @test results1["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 6272 atol=1 
+
+            data["ElectricStorage"]["om_cost_per_kw"] = 10
+            data["ElectricStorage"]["om_cost_per_kwh"] = 5
+
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            inputs = REoptInputs(data)
+            results2 = run_reopt(model, inputs)
+
+            @test results2["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 800 atol=1
+            @test results2["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 12543 atol=1 
+            @test results2["Financial"]["lcc"] ≈ results1["Financial"]["lcc"] + 12543 - 6272 atol=1
+            
+            data["ElectricStorage"]["self_discharge_fraction_per_timestep"] = 0.0025/24
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            inputs = REoptInputs(data)
+            results3 = run_reopt(model, inputs)
+            @test sum(results2["ElectricStorage"]["storage_to_load_series_kw"]) - 
+                sum(results3["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
+        end
+        
         @testset "Heating loads and addressable load fraction" begin
             # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -2860,4 +2907,4 @@ else  # run HiGHS tests
             @test length(r["Messages"]["warnings"]) > 0
         end
     end
-end
+end 
