@@ -7,8 +7,8 @@
     Bus_Coordinates::String="",  # Location of the csv document with the bus coordinates
     MicrogridType::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
     Nonlinear_Solver::Bool=false,
+    Model_Type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution"
     REoptInputsList::Array=[], 
-    RunOpenDSS::Bool=false,
     FacilityMeter_Node::String="",
     AllowExportBeyondSubstation::Bool=false,
     SubstationExportLimit::Real=0,
@@ -45,9 +45,9 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     FolderLocation
     Bus_Coordinates
     MicrogridType
+    Model_Type
     Nonlinear_Solver
     REoptInputsList
-    RunOpenDSS
     FacilityMeter_Node
     AllowExportBeyondSubstation
     SubstationExportLimit
@@ -83,9 +83,9 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         FolderLocation::String="",
         Bus_Coordinates::String="",  # Location of the csv document with the bus coordinates
         MicrogridType::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
+        Model_Type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution"
         Nonlinear_Solver::Bool=false,
         REoptInputsList::Array=[], 
-        RunOpenDSS::Bool=false,
         FacilityMeter_Node::String="",
         AllowExportBeyondSubstation::Bool=false,
         SubstationExportLimit::Real=0,
@@ -122,10 +122,10 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     new(
         FolderLocation,
         Bus_Coordinates,  
-        MicrogridType,  
+        MicrogridType,
+        Model_Type,  
         Nonlinear_Solver,
-        REoptInputsList, 
-        RunOpenDSS,
+        REoptInputsList,
         FacilityMeter_Node,
         AllowExportBeyondSubstation,
         SubstationExportLimit,
@@ -161,9 +161,8 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     end
 end
 
-
 # The main function to run all parts of the model
-function Microgrid_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictionary)
+function Microgrid_Model(JuMP_Model, Microgrid_Inputs; ldf_inputs_dictionary="")
     StartTime_EntireModel = now() # Record the start time for the computation
     Microgrid_Settings = REopt.MicrogridInputs(; REopt.dictkeys_tosymbols(Microgrid_Inputs)...)
     cd(Microgrid_Settings.FolderLocation)
@@ -177,7 +176,6 @@ function Microgrid_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictionary)
     if Microgrid_Settings.Generate_Results_Plots == true
         mkdir(Microgrid_Settings.FolderLocation*"/results_"*TimeStamp*"/Outage_Simulation_Plots") 
     end
-
     
     # Prepare the electric loads
     REopt_inputs_all_nodes = Microgrid_Settings.REoptInputsList
@@ -239,73 +237,90 @@ function Microgrid_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictionary)
         push!(REopt_dictionary, REoptInputs_dictionary[i])
     end
     
-    # Run function to check for errors in the model inputs
-    RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
     
-    # Run the optimization:
-    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model, lines_for_upgrades, line_upgrade_options, transformer_upgrade_options, line_upgrade_results, transformer_upgrade_results, line_upgrades_each_line, all_lines = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
-    
-    # Run the outage simulator if "RunOutageSimulator" is set to true
-    if Microgrid_Settings.RunOutageSimulator == true
-        OutageLengths = Microgrid_Settings.LengthOfOutages_timesteps 
-        TimeStepsPerHour = Microgrid_Settings.TimeStepsPerHour 
-        NumberOfOutagesToTest = Microgrid_Settings.NumberOfOutagesToEvaluate
-        line_max_amps = value.(model[:line_max_amps])
-        if Microgrid_Settings.Model_Line_Upgrades == true && Microgrid_Settings.Nonlinear_Solver == true
-            lines_rmatrix = value.(model[:line_rmatrix])
-            lines_xmatrix = value.(model[:line_xmatrix])
+    if Microgrid_Settings.Model_Type == "BasicLinear"
+        # Run function to check for errors in the model inputs
+        RunDataChecks(Microgrid_Settings, REopt_dictionary; ldf_inputs_dictionary = ldf_inputs_dictionary)
+            
+        # Run the optimization:
+        DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model, lines_for_upgrades, line_upgrade_options, transformer_upgrade_options, line_upgrade_results, transformer_upgrade_results, line_upgrades_each_line, all_lines = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
+        
+        # Run the outage simulator if "RunOutageSimulator" is set to true
+        if Microgrid_Settings.RunOutageSimulator == true
+            OutageLengths = Microgrid_Settings.LengthOfOutages_timesteps 
+            TimeStepsPerHour = Microgrid_Settings.TimeStepsPerHour 
+            NumberOfOutagesToTest = Microgrid_Settings.NumberOfOutagesToEvaluate
+            line_max_amps = value.(model[:line_max_amps])
+            if Microgrid_Settings.Model_Line_Upgrades == true && Microgrid_Settings.Nonlinear_Solver == true
+                lines_rmatrix = value.(model[:line_rmatrix])
+                lines_xmatrix = value.(model[:line_xmatrix])
+            else
+                lines_rmatrix = []
+                lines_xmatrix = []
+            end
+            transformer_max_kva = value.(model[:transformer_max_kva])
+            Outage_Results = Dict([])
+            for i in 1:length(OutageLengths)
+                OutageLength = OutageLengths[i]
+                OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived = Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Settings, line_max_amps, lines_rmatrix, lines_xmatrix, lines_for_upgrades, line_upgrades_each_line, all_lines, transformer_max_kva, TimeStamp; NumberOfOutagesToTest = NumberOfOutagesToTest, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = TimeStepsPerHour, OutageLength_TimeSteps_Input = OutageLength)
+                Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
+            end 
         else
-            lines_rmatrix = []
-            lines_xmatrix = []
-        end
-        transformer_max_kva = value.(model[:transformer_max_kva])
-        Outage_Results = Dict([])
-        for i in 1:length(OutageLengths)
-            OutageLength = OutageLengths[i]
-            OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived = Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Settings, line_max_amps, lines_rmatrix, lines_xmatrix, lines_for_upgrades, line_upgrades_each_line, all_lines, transformer_max_kva, TimeStamp; NumberOfOutagesToTest = NumberOfOutagesToTest, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = TimeStepsPerHour, OutageLength_TimeSteps_Input = OutageLength)
-            Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
+            print("\n  Not running the microgrid outage simulator in this model")
+            Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
         end 
-    else
-        print("\n  Not running the microgrid outage simulator in this model")
-        Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
-    end 
 
-    # TODO: configure OpenDSS to run as an islanded microgrid during the defined outage
-    if Microgrid_Settings.RunOpenDSS == true
-        OpenDSSResults = RunOpenDSS(results, Microgrid_Settings)
-    else
-        OpenDSSResults = "OpenDSS Not Run" 
+        EndTime_EntireModel = now()
+        ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
+        # Results processing and generation of outputs:
+        system_results = Results_Processing(results, Outage_Results, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, line_upgrade_results, transformer_upgrade_results, TimeStamp, ComputationTime_EntireModel)
+    
+        transformer_upgrade_options_output = transformer_upgrade_options
+        transformer_upgrade_results_output = transformer_upgrade_results
+        line_upgrade_options_output = line_upgrade_options
+        line_upgrade_results_output = line_upgrade_results
+    
+       # Compile output data into a dictionary to return from the dictionary
+        CompiledResults = Dict([("System_Results", system_results),
+                                ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
+                                ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
+                                ("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
+                                ("ldf_inputs", ldf_inputs),
+                                ("REopt_results", results),
+                                ("Outage_Results", Outage_Results),
+                                ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
+                                ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
+                                ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
+                                ("ComputationTime_EntireModel", ComputationTime_EntireModel),
+                                ("line_upgrade_options", line_upgrade_options_output),
+                                ("transformer_upgrade_options", transformer_upgrade_options_output),
+                                ("line_upgrade_results", line_upgrade_results_output),
+                                ("transformer_upgrade_results", transformer_upgrade_results_output)
+                                ])
+        
+        if Microgrid_Settings.Generate_Results_Plots == true
+            # Note: PlotlyJS is required to run these functions, and PlotlyJS must be in the local development environment.
+            CreateResultsMap(CompiledResults, Microgrid_Settings, TimeStamp)
+            Aggregated_PowerFlows_Plot(ldf_inputs_dictionary, CompiledResults, TimeStamp)
+        end
+
+        
+    elseif Microgrid_Settings.Model_Type == "PowerModelsDistribution"
+        # Run function to check for errors in the model inputs
+        RunDataChecks(Microgrid_Settings, REopt_dictionary)
+        
+        results = Microgrid_REopt_Model_2()
+       
+        transformer_upgrade_options_output = "N/A" # transformer_upgrade_options
+        transformer_upgrade_results_output = "N/A" # transformer_upgrade_results
+        line_upgrade_options_output = "N/A" #line_upgrade_options
+        line_upgrade_results_output = "N/A" #line_upgrade_results 
     end
-    
-    EndTime_EntireModel = now()
-    ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
 
-    # Results processing and generation of outputs:
-    system_results = Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, line_upgrade_results, transformer_upgrade_results, TimeStamp, ComputationTime_EntireModel)
-
-    transformer_upgrade_options_output = transformer_upgrade_options
-    transformer_upgrade_results_output = transformer_upgrade_results
-    line_upgrade_options_output = line_upgrade_options
-    line_upgrade_results_output = line_upgrade_results
+ 
     
-    # Compile output data into a dictionary to return from the dictionary
-    CompiledResults = Dict([("System_Results", system_results),
-                            ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
-                            ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
-                            ("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
-                            ("ldf_inputs", ldf_inputs),
-                            ("REopt_results", results),
-                            ("Outage_Results", Outage_Results),
-                            ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
-                            ("OpenDSSResults", OpenDSSResults),
-                            ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
-                            ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
-                            ("ComputationTime_EntireModel", ComputationTime_EntireModel),
-                            ("line_upgrade_options", line_upgrade_options_output),
-                            ("transformer_upgrade_options", transformer_upgrade_options_output),
-                            ("line_upgrade_results", line_upgrade_results_output),
-                            ("transformer_upgrade_results", transformer_upgrade_results_output)
-                            ])
+  
+
     return CompiledResults, model  
 end
 
@@ -821,6 +836,8 @@ if Microgrid_Inputs.Generate_Results_Plots == true
         Plots.savefig(Microgrid_Inputs.FolderLocation*"/results_"*TimeStamp*"/Power_Flow_through_Each_Line/Line_$(edge)_PowerFlows"*TimeStamp*".png")
     end
 end 
+
+
 
 if Microgrid_Inputs.Model_Transformer_Upgrades == true
     transformer_upgrade_results = DataFrame(fill(Any[], 4), [:Transformer, :Upgraded, :MaximumkVA, :UpgradeCost])
@@ -1446,290 +1463,15 @@ return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSu
 end 
 
 
-# Function to run OpenDSS as a post processor for the data
+# Function to run the microgrid model with the PowerModelsDistribution.jl package
     # NOTE: this function is still in development
-    # This function only works with hourly interval data currently
-function RunOpenDSS(REoptresults, Microgrid_Inputs)
-    #using OpenDSSDirect # TODO: add OpenDSSDirect to the REopt dependencies and REopt.jl file
-    #REoptresults = results 
-    # Step 1: Save the power flows for each node into a csv file
-    cd(Microgrid_Inputs.FolderLocation)
-    # Step 2: Initiate the OpenDSS model
-    dss("""
-        Clearall
-        Clear
-        New object=circuit.NewCircuit basekv = 22.7 bus1 = 0.1 pu=1.00 phases=1
-        """)
-    # TODO: change the basekv to be defined by the substation voltage defined in the REopt model
-
-    # Step 3: bring the existing line and linecodes files into the model
-    
-    dss("redirect Scenario1A_linecodes.dss")    
-    dss("redirect Scenario1A_lines.dss") 
-        
-     #   dss("""redirect Scenario1A_transformers.dss""")
-     
-
-    # Step 2: generate load shapes for each power profile
-    #REoptresults = results
-
-    LoadShapes = Dict([])
-
-    # because the kw will be set to 1 when defining the loads at each bus, the loadshape can just be in units of kW
-    KeyList = [i for i in keys(REoptresults)]
-    # use a for loop to generate a loadshape, load, and monitor for each bus, based on the results for each node in the REopt results
-    for i in 1:length(KeyList)
-        NodeNumber = KeyList[i]
-
-        # Step 1: Define the load shapes
-        TotalLoad_temp = REoptresults[NodeNumber]["ElectricLoad"]["load_series_kw"]
-        TotalLoad_temp_string = chop(string(TotalLoad_temp), head = 4, tail = 0)   # use the chop to eliminate the "Real" type of the vector in the string
-        #LoadShapes_temp = Dict([ ["Node"*string(NodeNumber)] => TotalLoad_temp]) # - TotalPVGeneration_temp - Battery_dischargeandexport_temp ]) # note: the loadshape will be negative if PV is exporting, this will signal to OpenDSS that the node is exporting power
-        
-        dss("new Loadshape.Node$(NodeNumber)LoadShape npts=8760 interval=1  mult= $(TotalLoad_temp_string)  ") #(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2)") #  (file=../LoadShapes/Node1_loadshape.csv")
-        
-        # Define the load at each bus, using the load shape defined above
-        # TODO: update the kv in the load definition
-        dss("new load.Node$(NodeNumber)REopt  conn=Delta bus1=$(NodeNumber).1  kv = 22.7  kw = 1 pf = 0.99  phases = 1  yearly =Node$(NodeNumber)LoadShape") # yearly = Node1LoadShape")
-        # Add a monitor to the load
-        dss("New monitor.monitor_Node$(NodeNumber) element=load.Node$(NodeNumber)REopt terminal=1 mode=0")
-
-        # Step 2: Define the PV generation profile
-        # Compute the PV production shape
-        if "PV" in keys(REoptresults[NodeNumber])
-            if REoptresults[NodeNumber]["PV"]["size_kw"] > 0
-                TotalPVGeneration_temp = REoptresults[NodeNumber]["PV"]["electric_to_grid_series_kw"] + 
-                                        REoptresults[NodeNumber]["PV"]["electric_to_load_series_kw"] +
-                                        REoptresults[NodeNumber]["PV"]["electric_to_storage_series_kw"] + 
-                                        REoptresults[NodeNumber]["PV"]["electric_curtailed_series_kw"]
-                PVGenerationLoadShape_temp = TotalPVGeneration_temp / REoptresults[NodeNumber]["PV"]["size_kw"]
-                #print(PVGenerationLoadShape_temp)
-                PVGenerationLoadShape = chop(string(PVGenerationLoadShape_temp), head = 0, tail = 0)
-                
-                PVkw = REoptresults[NodeNumber]["PV"]["size_kw"]
-
-                # note can define an hourly interval as either minterval=60 or interval=1
-                dss("new Loadshape.Node$(NodeNumber)PVLoadShape npts=8760 minterval=60  mult= $(PVGenerationLoadShape)  ")
-                dss("New 'PVSystem.PVNode$(NodeNumber)' phases=1 bus1=$(NodeNumber).1 kV=22.7 kva=$(PVkw) pmpp=$(PVkw) yearly=Node$(NodeNumber)PVLoadShape ")
-            else 
-                TotalPVGeneration_temp = zeros(8760)
-                PVGenerationLoadShape = string(TotalPVGeneration_temp)
-            end
-        else 
-            TotalPVGeneration_temp = zeros(8760)
-            PVGenerationLoadShape = string(TotalPVGeneration_temp)
-        end
-
-        
-        #TODO: does the PVGenerationLoadShape have to be in the load shape variable type?
-        #TODO: change the kV and kva based on REopt inputs
-        #TODO: what is the pmpp?
-        #dss("New 'PVSystem.PV$(NodeNumber)' phases=1 bus1=$(NodeNumber).1 kV=22.7 kva=2000 pmpp=2000 yearly=$(PVGenerationLoadShape) ")
-        
-        # Step 3: Define the battery
-
-        # Compute the electric storage output
-        if "ElectricStorage" in keys(REoptresults[NodeNumber]) 
-            if REoptresults[NodeNumber]["ElectricStorage"]["size_kw"] > 0
-                Battery_discharge_temp = REoptresults[NodeNumber]["ElectricStorage"]["storage_to_grid_series_kw"] +
-                                                REoptresults[NodeNumber]["ElectricStorage"]["storage_to_load_series_kw"]
-                Battery_SOC_percent = 100*REoptresults[NodeNumber]["ElectricStorage"]["soc_series_fraction"]
-                if "PV" in keys(REoptresults[NodeNumber])
-                    Battery_charge_temp = REoptresults[NodeNumber]["PV"]["electric_to_storage_series_kw"] +
-                                      REoptresults[NodeNumber]["ElectricUtility"]["electric_to_storage_series_kw"]
-                else
-                    Battery_charge_temp = REoptresults[NodeNumber]["ElectricUtility"]["electric_to_storage_series_kw"]
-                end
-                
-                BatteryLoadShape = (Battery_discharge_temp + -Battery_charge_temp)/REoptresults[NodeNumber]["ElectricStorage"]["size_kw"]
-                
-                Battery_kw = REoptresults[NodeNumber]["ElectricStorage"]["size_kw"]
-                Battery_kwh = REoptresults[NodeNumber]["ElectricStorage"]["size_kwh"]
-
-                dss("new Loadshape.Node$(NodeNumber)BatteryLoadShape npts=8760 interval=1  mult= $(BatteryLoadShape)  ")
-                dss("New 'Storage.ElectricStorageNode$(NodeNumber)' phases=1 bus1=$(NodeNumber).1 kV=22.7 kva=$(Battery_kw) kWrated=$(Battery_kw) yearly=Node$(NodeNumber)BatteryLoadShape  kWhrated=$(Battery_kwh) %Stored=100 %reserve=20 %EffCharge=98.5 %EffDischarge=98.5") # conn=delta ")
-
-            else 
-                Battery_dischargeandexport_temp = zeros(8760)
-                Battery_SOC_percent = zeros(8760)     
-            end                       
-        else
-            Battery_dischargeandexport_temp = zeros(8760)
-            Battery_SOC_percent = zeros(8760) 
-        end
-        # storage may need to have double quotes
-        # TODO: storage % stored based on the REopt results
-        # TODO: change the kV and kva based on REopt inputs
-        #dss("New 'Storage.ElectricStorage$(NodeNumber)' phases=1 bus1=$(NodeNumber).1 kV=22.7 kva=2000 kWrated=2000  kWhrated=6000 %Stored=100 %reserve=20 %EffCharge=98.5 %EffDischarge=98.5") # conn=delta ")
-
-        # Step 4: Define the generator
-
-
-
-    end 
-    
-    #PVGenerationLoadShape = chop(string(0.95*ones(8760)), head = 0, tail = 0)
-    #dss("new Loadshape.Node10PVLoadShape npts=8760 interval=1  mult= $(PVGenerationLoadShape)  ")
-    #NodeNum = 10
-    #dss("New 'PVSystem.PVNode$(NodeNum)' phases=1 bus1=10.1 kV=22.7 kva=2000 pmpp=2000 yearly=Node10PVLoadShape ")
-    #dss("New 'Storage.ElectricStorageNode8' phases=1 bus1=8.1 kV=22.7 kva=500 kWrated=500  kWhrated=6000 %Stored=100 %reserve=20 %EffCharge=98.5 %EffDischarge=98.5") # conn=delta ")
-
-    # Step 5: Define a grid-forming inverter; this is required if the distribution system is operating disconnected from the grid
-
-    dss("New InvControl.GridFormingInverter DERList=[PVSystem.PVNode3 Storage.ElectricStorageNode7] mode=GFM")
-    # Storage.ElectricStorageNode8 PVSystem.PVNode10
-
-    # print some information to make sure the data was added to the OpenDSS model
-    println("The Load Shapes defined are: ")
-    println(OpenDSSDirect.LoadShape.AllNames())
-
-    println("The Loads defined are: ")
-    println(OpenDSSDirect.Loads.AllNames()) #AllNames) 
-
-    println("")
-
-    # Step 6: Add energy monitors to record the data 
-
-    dss("New monitor.monitor_1 element=load.node5reopt terminal=1 mode=0")
-    dss("New monitor.line_test element=line.1_5 terminal=1 mode=0")
-
-
-    
-
-    # Step 4: set additional key features in the OpenDSS model 
-        # To solve just the first part of the yearly profile, can say "set number = 7" to, for instance, solve the first 7 hours
-    # Solve the full year grid-connected
-    dss("""
-        Set voltagebases = (10)  !modify this for base voltages
-        Calcvoltagebases 
-
-        set mode = yearly
-        set number = 8760  ! The number of increments
-        set stepsize = 1h  ! The time step length
-
-        solve
-    """)
-
-    # Powerflow analysis for a bunch of different outages throughout the year
-    dss("""
-        !Solve grid connected for a few hours
-
-        set number=4069 
-        solve
-        
-        ! Opens line 0_1 and solves 
-        open line.0_1 terminal=1
-        edit PVSystem.PVNode3 ControlMode=GFM ! make the PVSystem grid forming (aka the reference) for a couple of hours, can't pick up the storage 
-        edit storage.ElectricStorageNode7 State = Discharging ControlMode = GFL !initially was GFL and Idling ! Enables the storage device (fully charged) to operate as grid forming inverter remains like that for 6 hours
-        set number=1
-        solve
-        
-        ! Make the storage and/or PV the reference again 
-        edit PVSystem.myPV ControlMode=GFL
-        
-        close line.0_1 terminal=1
-        set number=4690
-        solve
-        """)
-    # Define the outage window in the OpenDSS model
-    # as seen in the OpenDSS example code online for islanded Microgrids:   
-        
-        #=
-        # Step 1: run the OpenDSS model first for the non-outage times
-        dss("set mode=yearly number=4050") # simulate the first 4050 hours
-        dss("Solve")
-
-        # Step 2: run outage:
-        dss("Open Line.0_1  terminal=1") # open the line (creates an outage in the distribution system)
-        dss("edit storage.ElectricStorageNode6 State=Discharging ControlMode=GFM")
-        dss("edit PVSystem.PVNode10") # ControlMode=GFM")
-        dss("set number=20") # a 20 hour outage
-        dss("Solve")
-
-        # Step 3: run the rest of the simulation without the outage:
-        dss("edit storage.ElectricStorageNode6 State=Charging ControlMode=GFL")
-        dss("edit PVSystem.PVNode10") # ControlMode=GFL")
-        dss("Close Line.0_1 terminal=1")
-        dss("set number=4690")
-        dss("Solve")
-        =#
-
-
-    #dss("Solve")
-
-    # can export the monitor data to a csv file
-    dss("Set ShowExport = No")
-    dss("CD C:/Users/toddleif/Documents/OpenDSSResults/testing_17Jan")
-    dss("Export monitor monitor_1")  # This exports all of the data from the monitor into a csv document
-
-    # See this export for the problem
-        # OpenDSS's V1 value is not close to 10 kV at all, but it thinks the per unit value is close to 1
-    dss("Export Voltages")  # exports the voltages (I think from the last time step, this also shows the per unit value too)
-
-    # Access the data from the monitors directly
-    #OpenDSSDirect.Monitors.Element("line_test") # This appears to cause problems with accessing the data, use the .Name instead # sets this as the element of interest I think
-    #OpenDSSDirect.Monitors.NumChannels()  #displays the number of channels on the monitor
-    #OpenDSSDirect.Monitors.Header()  # displays a list of the headers from that monitor's data
-    #OpenDSSDirect.Monitors.Element()  # displays what monitor is currently being looked at
-    
-    Monitors = OpenDSSDirect.Monitors.AllNames() # shows the names of all of the monitors
-    NodeResults = Dict() # initiate a dictionary to store the results
-    # Save data from all of the monitors
-    for i in 1:length(Monitors)
-        OpenDSSDirect.Monitors.Name(Monitors[i]) # set the active monitor, which is the monitor to pull data from
-        MonitorName = OpenDSSDirect.Monitors.Name() # displays the name of the monitor
-        DataList = OpenDSSDirect.Monitors.Header() # determine the headers available in the monitor data
-        
-        # TODO: change the 22.7 to the base voltage at the monitory (note: the base voltage may change based on the use of transformers) 
-        HeaderIndex = 1
-        Data_raw = OpenDSSDirect.Monitors.Channel(HeaderIndex)
-        # use the sqrt(3) if it's three phase power (I think)
-        #Data_voltage = (Data_raw*(sqrt(3)/1000))/22.7  # normalize this to the base voltage to get a perunit value
-        
-        Data_voltage = (Data_raw*(1/1000))/22.7
-        DataPulled = DataList[1] # shows the header of the data that was pulled
-
-        NodeResults[MonitorName] = Dict([DataPulled => Data_voltage])  # save results to a dictionary; create a subdictionary for each node so can save other results for that node
-
-        # TODO: plot the results based on user defined plotting time window
-        DayNumber = collect(1:8760)/24
-        Plots.plot(Data_voltage, label = "OpenDSS Solution")
-        Plots.xlabel!("Day Number In Year")
-        Plots.ylabel!("Voltage (kV)") 
-        Plots.xlims!(4000,4250)
-        display(Plots.title!("Voltage at $(MonitorName)"))
-    end
-
-    SolutionConverged = OpenDSSDirect.Solution.Converged()  # see if the solution converged in OpenDSS
-    SolutionConvergenceTolerance = OpenDSSDirect.Solution.Convergence()  # see the convergence tolerance, can also use a similar method to define the convergence tolerance when creating the OpenDSS model
-    
-    NumberOfPVSystems = OpenDSSDirect.PVsystems.Count() 
-    PVPowerOutput_LastTimeStep = OpenDSSDirect.PVsystems.kW()
-
-    # Plot the total load and total generation
-
-    TotalLoad = REoptresults[2]["ElectricLoad"]["load_series_kw"] + 
-                REoptresults[5]["ElectricLoad"]["load_series_kw"] +
-                REoptresults[7]["ElectricLoad"]["load_series_kw"] +
-                REoptresults[9]["ElectricLoad"]["load_series_kw"]
-
-
-    # to get the per unit voltage at all nodes 
-        # note: this is just for one time step (I believe just the last time step), need to add a monitor to get results for all time steps
-        # note: this method is from Nick Laws's Branch Flow Model
-    voltages_perunit = Dict()
-    for b in OpenDSSDirect.Circuit.AllBusNames()
-        OpenDSSDirect.Circuit.SetActiveBus(b)
-        voltages_perunit[b] = OpenDSSDirect.Bus.puVmagAngle()[1:2:end]
-    end
-    # End of Nick Laws's Method
-
-    # TODO: add additional outputs from OpenDSS
-
-    return SolutionConverged
+function Microgrid_REopt_Model_2()
+   
+    results = "N/A"
+    return results
 end
 
-function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, dataframe_line_upgrade_summary, dataframe_transformer_upgrade_summary, TimeStamp, ComputationTime_EntireModel)
+function Results_Processing(results, Outage_Results, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, dataframe_line_upgrade_summary, dataframe_transformer_upgrade_summary, TimeStamp, ComputationTime_EntireModel)
 
     InputsList = Microgrid_Settings.REoptInputsList
     LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Settings.FacilityMeter_Node
@@ -1922,17 +1664,6 @@ function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_S
             end 
         end
                
-        # Add OpenDSS results to the results dataframe
-        if Microgrid_Settings.RunOpenDSS == true
-            OpenDSSSolutionConverged = OpenDSSResults
-
-            push!(DataLabels,"---OpenDSS Solution---")
-            push!(Data,"")
-
-            push!(DataLabels,"Did the solution converge?")
-            push!(Data,OpenDSSSolutionConverged)
-        end
-
         # Save the dataframe as a csv document
         dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
         CSV.write(Microgrid_Settings.FolderLocation*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
@@ -2014,25 +1745,259 @@ function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_S
     return system_results    
 end
 
+
+function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
+
+    lines = keys(results["FromREopt_Dictionary_LineFlow_Power_Series"])
+
+    # Extract the latitude and longitude for the busses
+    bus_coordinates_filename = Microgrid_Inputs.Bus_Coordinates
+    data_input = CSV.read(bus_coordinates_filename, DataFrame, header =1)
+    latitudes = vec(Matrix(data_input[:,[:Latitude]]))
+    longitudes = vec(Matrix(data_input[:,[:Longitude]]))
+    busses = vec(Matrix(data_input[:,[:Bus]]))
+
+    # Create a dictionary of the bus coordinates
+    bus_cords = Dict([])
+    for i in 1:length(busses)
+        bus_cords[string(busses[i])] = [latitudes[i], longitudes[i]]
+    end
+
+    # Create a dictionary of the line segment start and end coordinates
+    line_cords = Dict([])
+    for i in keys(bus_cords)
+        for x in keys(bus_cords)
+            if i != x
+                if i*"-"*x in lines
+                    line_cords[i*"-"*x] = [bus_cords[i],bus_cords[x]]
+                end
+            end
+        end
+    end
+    
+    bus_key_values = collect(keys(bus_cords))
+    line_key_values = collect(keys(line_cords))
+
+    # Create a dictionary of the technology sizing at each node, which will be plotted on the map:
+    results_by_node = Dict([])
+    for i in busses 
+        if i in keys(results["REopt_results"])
+            if "PV" in keys(results["REopt_results"][i])
+                if results["REopt_results"][i]["PV"]["size_kw"] > 0
+                    PV = "PV: "*string(round(results["REopt_results"][i]["PV"]["size_kw"], digits=0))
+                else
+                    PV = ""  
+                end
+            else            
+                PV = ""
+            end
+
+            if "Generator" in keys(results["REopt_results"][i])
+                if results["REopt_results"][i]["Generator"]["size_kw"] > 0
+                    Generator = "Gen: "*string(round(results["REopt_results"][i]["Generator"]["size_kw"], digits=0))
+                else
+                    Generator = ""
+                end
+            else
+                Generator = ""
+            end
+
+            if "ElectricStorage" in keys(results["REopt_results"][i])
+                if results["REopt_results"][i]["ElectricStorage"]["size_kw"] > 0
+                    Battery =  "Bat: "*string(round(results["REopt_results"][i]["ElectricStorage"]["size_kw"],digits=1))*"kW"*","*string(round(results["REopt_results"][i]["ElectricStorage"]["size_kwh"],digits=1))*"kWh"
+                else
+                    Battery = ""
+                end
+            else
+                Battery = ""
+            end
+            
+            if PV != "" || Generator != "" || Battery != ""
+                punctuation = ": "
+            else
+                punctuation = ""
+            end
+            
+            results_by_node[string(i)] = punctuation*PV*Generator*Battery
+        else
+            results_by_node[string(i)] = ""
+        end
+    end
+
+    traces = PlotlyJS.GenericTrace[] # initiate the vector as a vector of PlotlyJS traces
+
+    # Add traces for the nodes
+    for i in 1:length(bus_key_values)
+        trace_bus = PlotlyJS.scattergeo(;locationmode = "USA-states",
+                        lat = [bus_cords[bus_key_values[i]][1]],
+                        lon = [bus_cords[bus_key_values[i]][2]],
+                        marker_size = 8,
+                        marker_color = "blue",
+                        mode = "markers+text",
+                        text = bus_key_values[i]*results_by_node[bus_key_values[i]], # Show the technology sizing next to each node
+                        textposition = "right"
+                        )
+        push!(traces, trace_bus)
+    end
+
+    # Add traces for the lines
+    for i in 1:length(line_key_values)
+        trace_line     = PlotlyJS.scattergeo(;locationmode = "USA-states",
+                    lat = [line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]],
+                    lon = [line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]],
+                    mode = "lines",
+                    line_color = "black",
+                    line_width = 2) 
+        push!(traces, trace_line)
+    end
+    geo = PlotlyJS.attr(scope = "usa",
+                projection_type = "albers usa",
+                showland = true,
+                landcolor = "rgb(217,217,217)",
+                subunitwidth =1,
+                countrywidth=1,
+                fitbounds = "locations",
+                subunitcolor = "rgb(255,255,255)",
+                countrycolor = "rgb(255,255,255)")
+    layout = PlotlyJS.Layout(; title="Microgrid Results and Layout", geo=geo,  showlegend = false)
+    
+    p = PlotlyJS.plot(traces,layout)
+    PlotlyJS.savefig(p, Microgrid_Inputs.FolderLocation*"/results_"*TimeStamp*"/Results_and_Layout.html")
+    display(p)
+
+end
+
+# Function to create additional plots using PlotlyJS
+function Aggregated_PowerFlows_Plot(ldf_inputs_dictionary, results, TimeStamp, Microgrid_Inputs)
+    # Additonal plotting using PlotlyJS
+
+        OutageStartTimeStep = Microgrid_Inputs.SingleOutageStartTimeStep
+        OutageStopTimeStep = Microgrid_Inputs.SingleOutageStopTimeStep
+        
+        NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"])) 
+        TotalLoad_series = zeros(8760) # initiate the total load as 0
+        for n in NodeList
+            NodeNum = parse(Int,n)
+            TotalLoad_series = TotalLoad_series + results["REopt_results"][NodeNum]["ElectricLoad"]["load_series_kw"] 
+        end
+    
+        # determine all of the nodes with PV and determine total PV output across the entire network
+        NodesWithPV = []
+        for i in keys(results["REopt_results"])
+            if "PV" in keys(results["REopt_results"][i])
+                push!(NodesWithPV, i)
+            end
+        end
+        PVOutput = zeros(8760)
+        for NodeNumberTemp in NodesWithPV
+            PVOutput = PVOutput + results["REopt_results"][NodeNumberTemp]["PV"]["electric_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["PV"]["electric_to_grid_series_kw"]
+        end
+    
+        # determine all of the nodes with Battery
+        NodesWithBattery = []
+        for i in keys(results["REopt_results"])
+            if "ElectricStorage" in keys(results["REopt_results"][i])
+                push!(NodesWithBattery, i)
+            end
+        end
+        BatteryOutput = zeros(8760)
+        for NodeNumberTemp in NodesWithBattery
+            if results["REopt_results"][NodeNumberTemp]["ElectricStorage"]["size_kw"] > 0  # include this if statement to prevent trying to add in empty electric storage time series vectors
+                BatteryOutput = BatteryOutput + results["REopt_results"][NodeNumberTemp]["ElectricStorage"]["storage_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["ElectricStorage"]["storage_to_grid_series_kw"] 
+            end
+        end
+    
+        # determine all of the nodes with generator
+        NodesWithGenerator = []
+        for i in keys(results["REopt_results"])
+            if "Generator" in keys(results["REopt_results"][i])
+                push!(NodesWithBattery, i)
+            end
+        end
+        GeneratorOutput = zeros(8760)
+        for NodeNumberTemp in NodesWithGenerator
+            GeneratorOutput = GeneratorOutput + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_grid_series_kw"] + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_storage_series_kw"] 
+        end
+    
+        #Plot the network-wide power use 
+
+        # Static plot
+        days = collect(1:8760)/24
+        Plots.plot(days, TotalLoad_series, label="Total Load")
+        Plots.plot!(days, PVOutput, label="Combined PV Output")
+        Plots.plot!(days, BatteryOutput, label = "Combined Battery Output")
+        Plots.plot!(days, GeneratorOutput, label = "Combined Generator Output")
+        Plots.plot!(days, results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"])
+        display(Plots.title!("System Wide Power Demand and Generation"))
+               
+        if (OutageStopTimeStep - OutageStartTimeStep) > 0
+            OutageStart_Line = OutageStartTimeStep/24
+            OutageStop_Line = OutageStopTimeStep/24
+            Plots.plot!([OutageStart_Line, OutageStart_Line],[0,maximum(TotalLoad_series)], label= "Outage Start")
+            Plots.plot!([OutageStop_Line, OutageStop_Line],[0,maximum(TotalLoad_series)], label= "Outage End")
+        end
+        
+        # Interactive plot using PlotlyJS
+        traces = PlotlyJS.GenericTrace[]
+        layout = PlotlyJS.Layout(title_text = "System Wide Power Demand and Generation", xaxis_title_text = "Day", yaxis_title_text = "Power (kW)")
+        
+        push!(traces, PlotlyJS.scatter(name = "Total load", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            x = days,
+            y = TotalLoad_series
+        ))
+        push!(traces, PlotlyJS.scatter(name = "Combined PV Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            x = days,
+            y = PVOutput
+        ))
+        push!(traces, PlotlyJS.scatter(name = "Combined Battery Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            x = days,
+            y = BatteryOutput
+        ))
+        push!(traces, PlotlyJS.scatter(name = "Combined Generator Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            x = days,
+            y = GeneratorOutput
+        ))    
+        push!(traces, PlotlyJS.scatter(name = "Power from Substation", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            x = days,
+            y = results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"]
+        ))  
+        
+        if (OutageStopTimeStep - OutageStartTimeStep) > 0
+            OutageStart_Line = OutageStartTimeStep/24
+            OutageStop_Line = OutageStopTimeStep/24
+            push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+                x = [OutageStart_Line, OutageStart_Line],
+                y = [0,maximum(TotalLoad_series)]
+            ))  
+            push!(traces, PlotlyJS.scatter(name = "Outage End", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+                x = [OutageStop_Line, OutageStop_Line],
+                y = [0,maximum(TotalLoad_series)]
+            ))  
+        end
+
+        p = PlotlyJS.plot(traces, layout)
+        display(p)
+        PlotlyJS.savefig(p, Microgrid_Settings.FolderLocation*"/results_"*TimeStamp*"/CombinedResults_PowerOutput_interactiveplot.html")
+    end
+
+
+
 # Function to check for errors in the data inputs for the model
-function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
+function RunDataChecks(Microgrid_Settings,  REopt_dictionary; ldf_inputs_dictionary="")
 
     ps = REopt_dictionary
     
     for p in ps
         node_temp = p.s.site.node
+
         if p.s.settings.facilitymeter_node != Microgrid_Settings.FacilityMeter_Node
             throw(@error("The facilitymeter_node input for each REopt node must equal the FacilityMeter_Node defined in the microgrid settings, which is $(FacilityMeter_Node)"))
         end
+
         if p.s.settings.time_steps_per_hour != Microgrid_Settings.TimeStepsPerHour
             throw(@error("The time steps per hour for each REopt node must match the time steps per hour defined in the microgrid settings dictionary"))
         end
-        if p.s.settings.time_steps_per_hour != Int(ldf_inputs_dictionary["T"]/8760)
-            throw(@error("The number of time steps in the ldf_inputs_dictionary must correlate to the time_steps_per_hour in all REopt nodes"))
-        end
-        if string(p.s.site.node) ∉ keys(ldf_inputs_dictionary["load_nodes"]) #  ∉ is the "not in" symbol
-            throw(@error("The REopt node $(node_temp) is not in the list of nodes in the ldf_inputs_dictionary"))
-        end
+        
         if Microgrid_Settings.Critical_Load_Method == "Fraction"
             if string(p.s.site.node) ∉ keys(Microgrid_Settings.Critical_Load_Fraction)
                 if sum(p.s.electric_load.loads_kw) > 0
@@ -2040,6 +2005,7 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
                 end
             end
         end
+
         if Microgrid_Settings.Critical_Load_Method == "TimeSeries"
             if string(p.s.site.node) ∉ keys(Microgrid_Settings.Critical_Load_TimeSeries)
                 if sum(p.s.electric_load.loads_kw) > 0
@@ -2052,16 +2018,27 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
         if Int(length(p.s.electric_load.loads_kw)) != Int(8760 * Microgrid_Settings.TimeStepsPerHour)
             throw(@error("At REopt node $(node_temp), the length of the electric loads vector does not correlate with the time steps per hour defined in the Microgrid_Settings dictionary"))
         end
+
+        if Microgrid_Settings.Model_Type == "BasicLinear"
+            if p.s.settings.time_steps_per_hour != Int(ldf_inputs_dictionary["T"]/8760)
+                throw(@error("The number of time steps in the ldf_inputs_dictionary must correlate to the time_steps_per_hour in all REopt nodes"))
+            end
+            if string(p.s.site.node) ∉ keys(ldf_inputs_dictionary["load_nodes"]) #  ∉ is the "not in" symbol
+                throw(@error("The REopt node $(node_temp) is not in the list of nodes in the ldf_inputs_dictionary"))
+            end
+        end
+
+    end
+    
+    if Microgrid_Settings.Model_Type == "BasicLinear"
+        if ldf_inputs_dictionary["v0_input"] > ldf_inputs_dictionary["v_uplim_input"]
+            throw(@error("In the ldf_inputs_dictionary, the v0_input value must be less than the v_uplim_input value"))
+        end 
+        if ldf_inputs_dictionary["v0_input"] < ldf_inputs_dictionary["v_lolim_input"]
+            throw(@error("In the ldf_inputs_dictionary, the v0_input value must be greater than the v_lolim_input value"))
+        end   
     end
 
-    if ldf_inputs_dictionary["v0_input"] > ldf_inputs_dictionary["v_uplim_input"]
-        throw(@error("In the ldf_inputs_dictionary, the v0_input value must be less than the v_uplim_input value"))
-    end 
-
-    if ldf_inputs_dictionary["v0_input"] < ldf_inputs_dictionary["v_lolim_input"]
-        throw(@error("In the ldf_inputs_dictionary, the v0_input value must be greater than the v_lolim_input value"))
-    end   
-    
     if Microgrid_Settings.MicrogridType ∉ ["CommunityDistrict", "BehindTheMeter", "OffGrid"]
         throw(@error("An invalid microgrid type was provided in the inputs"))
     end
@@ -2089,6 +2066,7 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
     if Microgrid_Settings.SingleOutageStartTimeStep > Microgrid_Settings.SingleOutageStopTimeStep
         throw(@error("In the Microgrid_Settings dictionary, the single outage start time must be a smaller value than the single outage stop time"))
     end
+
     if Microgrid_Settings.SingleOutageStopTimeStep > (8760 * Microgrid_Settings.TimeStepsPerHour)
         TotalNumberOfTimeSteps = Int(8760 * Microgrid_Settings.TimeStepsPerHour)
         throw(@error("In the Microgrid_Settings dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))

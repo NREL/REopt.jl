@@ -51,6 +51,7 @@ import Plots
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
+    @require PlotlyJS="f0f68f2c-4968-5e81-91da-67840de0976a" println("Using the PlotlyJS package")
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
