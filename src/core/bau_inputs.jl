@@ -25,9 +25,12 @@ function BAUInputs(p::REoptInputs)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
-    cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
-    heating_cop = Dict{String, Float64}()
+    heating_cop = Dict{String, Array{Float64,1}}()
+    cooling_cop = Dict{String, Array{Float64,1}}()
+    heating_cf = Dict{String, Array{Float64,1}}() 
+    cooling_cf = Dict{String, Array{Float64,1}}() 
+    avoided_capex_by_ashp_present_value = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -90,13 +93,13 @@ function BAUInputs(p::REoptInputs)
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+            heating_cf)
     end
 
+    cooling_cop["ExistingChiller"] = ones(length(p.time_steps))
     if "ExistingChiller" in techs.all
-        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
-    else
-        cop["ExistingChiller"] = 1.0
+        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop, cooling_cf)
     end
 
     # Assign null GHP parameters for REoptInputs
@@ -170,7 +173,6 @@ function BAUInputs(p::REoptInputs)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        cop,
         thermal_cop,
         p.time_steps,
         p.time_steps_with_grid,
@@ -223,11 +225,15 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
         heating_cop,
+        cooling_cop,
+        heating_cf,
+        cooling_cf,
         heating_loads,
         heating_loads_kw,
         heating_loads_served_by_tes,
         unavailability,
-        absorption_chillers_using_heating_load
+        absorption_chillers_using_heating_load,
+        avoided_capex_by_ashp_present_value
     )
 end
 
@@ -281,7 +287,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
         bau_grid_to_load = [max(i,0) for i in bau_grid_to_load]
     end
 
-    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
+    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) * p.hours_per_time_step
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
     ## Generator emissions (during outages)
