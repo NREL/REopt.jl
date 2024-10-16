@@ -68,7 +68,7 @@ Solve the model using a `Scenario` or `BAUScenario`.
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 	
 	try
-		if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
+		if (!isnothing(s.site.CO2_emissions_reduction_min_fraction) && s.site.CO2_emissions_reduction_min_fraction > 0.0) || (!isnothing(s.site.CO2_emissions_reduction_max_fraction) && s.site.CO2_emissions_reduction_max_fraction < 1.0)
 			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
 		end
 		run_reopt(m, REoptInputs(s))
@@ -247,7 +247,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
+		add_storage_sum_grid_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
@@ -267,8 +267,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
-	if !isempty(p.techs.all)
-		add_tech_size_constraints(m, p)
+	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
+		if !isempty(p.techs.all)
+			add_tech_size_constraints(m, p)
+		end
         
         if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
