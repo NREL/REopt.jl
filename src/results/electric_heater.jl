@@ -21,7 +21,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ElectricHeater"]) / KWH_PER_MMBTU, digits=3)
     @expression(m, ElectricHeaterElectricConsumptionSeries[ts in p.time_steps],
-        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t] 
+        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t][ts] 
         for q in p.heating_loads, t in p.techs.electric_heater))
     r["electric_consumption_series_kw"] = round.(value.(ElectricHeaterElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
@@ -54,14 +54,21 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     end
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToSteamTurbine) / KWH_PER_MMBTU, digits=3)
 
+    @expression(m, ElectricHeaterToWaste[ts in p.time_steps],
+        sum(m[:dvProductionToWaste]["ElectricHeater", q, ts] for q in p.heating_loads) 
+    )
+    @expression(m, ElectricHeaterToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps], 
+        m[:dvProductionToWaste]["ElectricHeater",q,ts]
+    )
+
 	@expression(m, ElectricHeaterToLoad[ts in p.time_steps],
-		sum(m[:dvHeatingProduction]["ElectricHeater", q, ts] for q in p.heating_loads) - ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbine[ts]
+		sum(m[:dvHeatingProduction]["ElectricHeater", q, ts] for q in p.heating_loads) - ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbine[ts] - ElectricHeaterToWaste[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToLoad) / KWH_PER_MMBTU, digits=3)
 
     if "DomesticHotWater" in p.heating_loads && p.s.electric_heater.can_serve_dhw
         @expression(m, ElectricHeaterToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ElectricHeater","DomesticHotWater",ts] - ElectricHeaterToHotTESByQualityKW["DomesticHotWater",ts] - ElectricHeaterToSteamTurbineByQuality["DomesticHotWater",ts]
+            m[:dvHeatingProduction]["ElectricHeater","DomesticHotWater",ts] - ElectricHeaterToHotTESByQualityKW["DomesticHotWater",ts] - ElectricHeaterToSteamTurbineByQuality["DomesticHotWater",ts] - ElectricHeaterToWasteByQualityKW["DomesticHotWater",ts]
         )
     else
         @expression(m, ElectricHeaterToDHWKW[ts in p.time_steps], 0.0)
@@ -70,7 +77,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     
     if "SpaceHeating" in p.heating_loads && p.s.electric_heater.can_serve_space_heating
         @expression(m, ElectricHeaterToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ElectricHeater","SpaceHeating",ts] - ElectricHeaterToHotTESByQualityKW["SpaceHeating",ts] - ElectricHeaterToSteamTurbineByQuality["SpaceHeating",ts]
+            m[:dvHeatingProduction]["ElectricHeater","SpaceHeating",ts] - ElectricHeaterToHotTESByQualityKW["SpaceHeating",ts] - ElectricHeaterToSteamTurbineByQuality["SpaceHeating",ts] - ElectricHeaterToWasteByQualityKW["SpaceHeating",ts]
         )
     else
         @expression(m, ElectricHeaterToSpaceHeatingKW[ts in p.time_steps], 0.0)
@@ -79,7 +86,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     
     if "ProcessHeat" in p.heating_loads && p.s.electric_heater.can_serve_process_heat
         @expression(m, ElectricHeaterToProcessHeatKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ElectricHeater","ProcessHeat",ts] - ElectricHeaterToHotTESByQualityKW["ProcessHeat",ts] - ElectricHeaterToSteamTurbineByQuality["ProcessHeat",ts]
+            m[:dvHeatingProduction]["ElectricHeater","ProcessHeat",ts] - ElectricHeaterToHotTESByQualityKW["ProcessHeat",ts] - ElectricHeaterToSteamTurbineByQuality["ProcessHeat",ts] - ElectricHeaterToWasteByQualityKW["ProcessHeat",ts]
         )
     else
         @expression(m, ElectricHeaterToProcessHeatKW[ts in p.time_steps], 0.0)

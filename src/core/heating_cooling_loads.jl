@@ -18,13 +18,15 @@ There are many ways in which a DomesticHotWaterLoad can be defined:
 3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
 
 !!! note "Hot water loads"
-    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
-    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
+    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
+    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
+    demand.
 
 """
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
     annual_mmbtu::Real
+    unaddressable_annual_fuel_mmbtu::Real
 
     function DomesticHotWaterLoad(;
         doe_reference_name::String = "",
@@ -62,6 +64,7 @@ struct DomesticHotWaterLoad
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
+            unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction)) / time_steps_per_hour
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
@@ -72,12 +75,14 @@ struct DomesticHotWaterLoad
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
                                                     existing_boiler_efficiency)
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
         else
             throw(@error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
                 [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
@@ -90,7 +95,8 @@ struct DomesticHotWaterLoad
 
         new(
             loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
+            unaddressable_annual_fuel_mmbtu
         )
     end
 end
@@ -127,12 +133,14 @@ In this case the values provided for `doe_reference_name`, or  `blended_doe_refe
 `blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
 
 !!! note "Space heating loads"
-    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
-    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
+    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
+    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
+    emand.
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
     annual_mmbtu::Real
+    unaddressable_annual_fuel_mmbtu::Real
 
     function SpaceHeatingLoad(;
         doe_reference_name::String = "",
@@ -170,6 +178,7 @@ struct SpaceHeatingLoad
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
+            unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction))  / time_steps_per_hour
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
@@ -180,12 +189,14 @@ struct SpaceHeatingLoad
             if length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)           
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
                                                     existing_boiler_efficiency)
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)                                                   
         else
             throw(@error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
                 [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
@@ -198,7 +209,8 @@ struct SpaceHeatingLoad
 
         new(
             loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
+            unaddressable_annual_fuel_mmbtu
         )
     end
 end
@@ -1426,17 +1438,28 @@ end
 """
 `ProcessHeatLoad` is an optional REopt input with the following keys and default values:
 ```julia
-    annual_mmbtu::Union{Real, Nothing} = nothing
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+    industry_reference_name::String = "",
+    sector::String = "",
+    blended_industry_reference_names::Array{String, 1} = String[],
+    blended_industry_reference_percents::Array{<:Real, 1} = Real[],
+    annual_mmbtu::Union{Real, Nothing} = nothing,
+    monthly_mmbtu::Array{<:Real,1} = Real[],
+    addressable_load_fraction::Any = 1.0,
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+    latitude::Real = 0.0,
+    longitude::Real = 0.0,
+    existing_boiler_efficiency::Real = NaN
 ```
 
 There are many ways in which a ProcessHeatLoad can be defined:
-1. One can provide the `fuel_loads_mmbtu_per_hour` value in the `ProcessHeatLoad` key within the `Scenario`.
-2. One can provide the `annual_mmbtu` value in the `ProcessHeatLoad` key within the `Scenario`; this assumes a flat load.
+1. When using either `industry_reference_name` or `blended_industry_reference_names`
+2. One can provide the `industry_reference_name` or `blended_industry_reference_names` directly in the `ProcessHeatLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the industry reference profile(s).
+3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `ProcessHeatLoad` key within the `Scenario`.
 
 !!! note "Process heat loads"
-    These loads are presented in terms of process heat required without regard to the efficiency of the input heating,
-    unlike the hot-water and space heating loads which are provided in terms of fuel input.
+    Process heat "load" inputs are in terms of fuel energy input required (boiler fuel), not the actual thermal demand.
+    The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy demand.
 
 """
 function BuiltInProcessHeatLoad(
@@ -1485,9 +1508,11 @@ function BuiltInProcessHeatLoad(
 
     built_in_load("process_heat", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
 end
+
 struct ProcessHeatLoad
     loads_kw::Array{Real, 1}
     annual_mmbtu::Real
+    unaddressable_annual_fuel_mmbtu::Real
 
     function ProcessHeatLoad(;
         industry_reference_name::String = "",
@@ -1532,6 +1557,7 @@ struct ProcessHeatLoad
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
+            unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction))  / time_steps_per_hour       
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "ProcessHeatLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
@@ -1542,15 +1568,18 @@ struct ProcessHeatLoad
             if length(blended_doe_reference_names) > 0
                 @warn "ProcessHeatLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)          
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInProcessHeatLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
                                                     existing_boiler_efficiency)
+            
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
         else
             throw(@error("Cannot construct BuiltInProcessHeatLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
+                [industry_reference_name, city], or [blended_industry_reference_names, blended_industry_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
@@ -1560,7 +1589,29 @@ struct ProcessHeatLoad
 
         new(
             loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
+            unaddressable_annual_fuel_mmbtu
+
         )
     end
+end
+
+"""
+    get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
+    
+Get unaddressable fuel load, for reporting
+    :addressable_load_fraction is the fraction of the input fuel load that is addressable to supply by energy technologies, like CHP
+    :annual_mmbtu and :monthly_mmbtu is assumed to be fuel, not thermal, in this function
+    :loads_kw is assumed to be thermal in this function, with units of kw_thermal, so needs to be converted to fuel mmbtu
+"""
+function get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
+    # Get unaddressable fuel load, for reporting
+    if !isempty(monthly_mmbtu)
+        unaddressable_annual_fuel_mmbtu = sum(monthly_mmbtu .* (1 .- addressable_load_fraction))
+    elseif !isnothing(annual_mmbtu)
+        unaddressable_annual_fuel_mmbtu = annual_mmbtu * (1 - addressable_load_fraction)
+    else # using the default CRB annual_mmbtu, so rely on loads_kw (thermal) assuming single addressable_load_fraction
+        unaddressable_annual_fuel_mmbtu = sum(loads_kw) / (KWH_PER_MMBTU * existing_boiler_efficiency)                
+    end
+    return unaddressable_annual_fuel_mmbtu
 end
