@@ -34,7 +34,7 @@ Classify the change according to the following categories:
 ### Removed
 - 80% scaling of battery maintenance costs when using augmentation strategy
 
-## Develop
+## v0.48.1
 ### Changed
 - Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
 - Rename function `add_storage_sum_constraints` to `add_storage_sum_grid_constraints` for clarity
