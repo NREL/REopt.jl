@@ -395,7 +395,7 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
         "&lat=", latitude , "&lon=", longitude, "&radius=", radius, "&all=", 0 
         )
     try
-        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        r = HTTP.get(url, keepalive=true, readtimeout=15)
         response = JSON.parse(String(r.body))
 
         if r.status != 200
