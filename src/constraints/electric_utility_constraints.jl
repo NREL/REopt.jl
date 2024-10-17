@@ -314,6 +314,42 @@ function add_energy_tier_constraints(m, p; _n="")
     # TODO implement NewMaxUsageInTier
 end
 
+"""
+    add_flexible_index_energy_tier_constraints(m, p; _n="")
+
+Only necessary if n_energy_tiers > 1
+If market based flexible index energy rates are being used, energy cost varies by a threshold demand `t` in a ts.
+
+- If demand <= t -> charge fixed energy rate
+- If demand > t, charge market rate.
+
+"""
+function add_flexible_index_energy_tier_constraints(m, p; _n="")
+    @warn "**test** Adding binary variables to model energy cost tiers."
+    ntiers = p.s.electric_tariff.n_energy_tiers
+    dv = "binFlexIndEnergyTier" * _n
+    m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, base_name = dv)
+    b = m[Symbol(dv)]
+    
+    ##Constraint (10a): Usage limits by pricing tier, by timestep
+    @constraint(m, [ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers, mth in p.months],
+        m[Symbol("dvGridPurchase"*_n)][ts, tier] <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier]
+    )
+    
+    ##Constraint (10b): Ordering of pricing tiers
+    @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
+        b[mth, tier] - b[mth, tier-1] <= 0
+    )
+
+    ## Constraint (10c): One tier must be full before any usage in next tier
+    @constraint(m, [ts in p.time_steps, mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
+        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier-1] - 
+        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier-1]) 
+        <= 0
+    )
+    # TODO implement NewMaxUsageInTier
+end
+
 
 """
     add_demand_lookback_constraints(m, p; _n="")
@@ -377,6 +413,7 @@ function add_elec_utility_expressions(m, p; _n="")
         m[Symbol("TotalExportBenefit"*_n)] = 0
     end
 
+    ## Inspect these elements when testing.
     m[Symbol("TotalEnergyChargesUtil"*_n)] = @expression(m, p.pwf_e * p.hours_per_time_step * 
         sum( p.s.electric_tariff.energy_rates[ts, tier] * m[Symbol("dvGridPurchase"*_n)][ts, tier] 
             for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) 
