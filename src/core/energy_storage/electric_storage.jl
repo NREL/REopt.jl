@@ -15,10 +15,7 @@ end
 ```
 
 None of the above values are required. If `ElectricStorage.model_degradation` is `true` then the 
-defaults above are used.
-If the `maintenance_cost_per_kwh` is not provided then it is determined using the `ElectricStorage.installed_cost_per_kwh`
-and the `installed_cost_per_kwh_declination_rate` along with a present worth factor ``f`` to account for the present cost
-of buying a battery in the future. The present worth factor for each day is:
+defaults above are used. If the `maintenance_cost_per_kwh` is not provided then it is determined using the `ElectricStorage.installed_cost_per_kwh` and the `installed_cost_per_kwh_declination_rate` along with a present worth factor ``f`` to account for the present cost of buying a battery in the future. The present worth factor for each day is:
 
 ``
 f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
@@ -28,18 +25,17 @@ where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.fin
 
 Note this day-specific calculation of the present-worth factor accumulates differently from the annually updated discount
 rate for other net-present value calculations in REopt, and has a higher effective discount rate as a result.  The present 
-worth factor is used in two different ways, depending on the `maintenance_strategy`, which is described below.
+worth factor is used in the same manner irrespective of the `maintenance_strategy`.
 
 !!! warn
     When modeling degradation the following ElectricStorage inputs are not used:
-    - `replace_cost_per_kw`
     - `replace_cost_per_kwh`
-    - `inverter_replacement_year`
     - `battery_replacement_year`
     The are replaced by the `maintenance_cost_per_kwh` vector.
+    Inverter replacement costs and inverter replacement year should still be used to model scheduled replacement of inverter.
 
 !!! note
-    When providing the `maintenance_cost_per_kwh` it must have a length equal to `Financial.analysis_years*365`.
+    When providing the `maintenance_cost_per_kwh` it must have a length equal to `Financial.analysis_years*365`-1.
 
 
 # Battery State Of Health
@@ -61,16 +57,22 @@ where:
 
 The `SOH` is used to determine the maintence cost of the storage system, which depends on the `maintenance_strategy`.
 
+!!! note
+    Battery degradation parameters are from based on laboratory aging data, and are expected to be reasonable only within 
+    the range of conditions tested. Battery lifetime can vary widely from these estimates based on battery use and system design. 
+    Battery cost estimates are based on domain expertise and published guidelines and are not to be taken as an indicator of real 
+    system costs.
+
 # Augmentation Maintenance Strategy
 The augmentation maintenance strategy assumes that the battery energy capacity is maintained by replacing
 degraded cells daily in terms of cost. Using the definition of the `SOH` above the maintenance cost is:
 
 ``
-C_{\\text{aug}} = \\sum_{d \\in \\{2\\dots D\\}} 0.8 C_{\\text{install}} f(day) \\left( SOH[d-1] - SOH[d] \\right)
+C_{\\text{aug}} = \\sum_{d \\in \\{2\\dots D\\}} C_{\\text{install}} f(day) \\left( SOH[d-1] - SOH[d] \\right)
 ``
 
 where
-- the ``0.8`` factor accounts for sunk costs that do not need to be paid;
+- ``f(day)`` is the present worth factor of battery degradation costs as described above;
 - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`; and
 - ``SOH[d-1] - SOH[d]`` is the incremental amount of battery capacity lost in a day.
 
@@ -79,13 +81,13 @@ The ``C_{\\text{aug}}`` is added to the objective function to be minimized with 
 
 # Replacement Maintenance Strategy
 Modeling the replacement maintenance strategy is more complex than the augmentation strategy.
-Effectively the replacement strategy says that the battery has to be replaced once the `SOH` hits 80%
-of the optimal, purchased capacity. It is possible that multiple replacements could be required under
+Effectively the replacement strategy says that the battery has to be replaced once the `SOH` drops below 80%
+of the optimal, purchased capacity. It is possible that multiple replacements (at same replacement frequency) could be required under
 this strategy.
 
 !!! warn
-    The "replacement" maintenance strategy requires integer variables and indicator constraints.
-    Not all solvers support indicator constraints and some solvers are slow with integer variables.
+    The "replacement" maintenance strategy requires integer decision variables.
+    Some solvers are slow with integer decision variables.
 
 The replacement strategy cost is:
 
@@ -95,10 +97,27 @@ C_{\\text{repl}} = B_{\\text{kWh}} N_{\\text{repl}} f(d_{80}) C_{\\text{install}
 
 where:
 - ``B_{\\text{kWh}}`` is the optimal battery capacity (`ElectricStorage.size_kwh` in the results dictionary);
-- ``N_{\\text{repl}}`` is the number of battery replacments required (a function of the month in which the `SOH` reaches 80% of original capacity);
--  ``f(d_{80})`` is the present worth factor at approximately the 15th day of the month that the `SOH` reaches 80% of original capacity.
-
+- ``N_{\\text{repl}}`` is the number of battery replacments required (a function of the month in which the `SOH` falls below 80% of original capacity);
+- ``f(d_{80})`` is the present worth factor at approximately the 15th day of the month in which the `SOH` falls below 80% of original capacity;
+- ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
 The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
+
+## Battery residual value
+Since the battery can be replaced one-to-many times under this strategy, battery residual value captures the \$ value of remaining battery life at end of analysis period.
+For example if replacement happens in month 145, then assuming 25 year analysis period there will be 2 replacements (months 145 and 290). 
+The last battery which was placed in service during month 290 only serves for 10 months (i.e. 6.89% of its expected life assuming 145 month replacement frequecy).
+In this case, the battery has 93.1% of residual life remaining as useful life left after analysis period ends.
+A residual value cost vector is created to hold this value for all months. Residual value is calculated as:
+
+``
+C_{\\text{residual}} = R f(d_{\\text{last}}) C_{\\text{install}}
+``
+where:
+- ``R`` is the `residual_factor` which determines portion of battery life remaining at the end of the analysis period;
+- ``f(d_{\\text{last}})`` is the present worth factor at approximately the 15th day of the last month in the analysis period;
+- ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
+
+The ``C_{\\text{residual}}`` is added to the objective function to be minimized with all other costs.
 
 # Example of inputs
 The following shows how one would use the degradation model in REopt via the [Scenario](@ref) inputs:
@@ -122,10 +141,11 @@ The following shows how one would use the degradation model in REopt via the [Sc
 ```
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
+
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Real = 2.46E-03
-    cycle_fade_coefficient::Real = 7.82E-05
-    time_exponent::Real = 0.5
+    calendar_fade_coefficient::Real = 2.55E-03
+    cycle_fade_coefficient::Real = 9.83E-05
+    time_exponent::Real = 0.42
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
@@ -251,9 +271,20 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
+        # copy the replace_costs in case we need to change them
+        replace_cost_per_kw = s.replace_cost_per_kw 
+        replace_cost_per_kwh = s.replace_cost_per_kwh
+        if s.model_degradation
+            if haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
+                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
+            end
+            replace_cost_per_kwh = 0.0 # Always modeled using maintenance_cost_vector in degradation model.
+            # replace_cost_per_kw is unchanged here.
+        end
+
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
-            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
+            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
@@ -265,7 +296,7 @@ struct ElectricStorage <: AbstractElectricStorage
         )
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,
-            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
+            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
@@ -281,18 +312,6 @@ struct ElectricStorage <: AbstractElectricStorage
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
         else
             degr = Degradation()
-        end
-
-        # copy the replace_costs in case we need to change them
-        replace_cost_per_kw = s.replace_cost_per_kw 
-        replace_cost_per_kwh = s.replace_cost_per_kwh
-        if s.model_degradation
-            if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
-                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacement costs to zero. Using degradation.maintenance_cost_per_kwh instead."
-            end
-            replace_cost_per_kw = 0.0
-            replace_cost_per_kwh = 0.0
         end
     
         return new(
