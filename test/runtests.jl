@@ -1778,7 +1778,10 @@ else  # run HiGHS tests
         end
 
         @testset "OffGrid" begin
+            @info "Starting OffGrid tests"
+        
             ## Scenario 1: Solar, Storage, Fixed Generator - Baseline Test
+            @info "Running Scenario 1: Baseline Test (1-hour intervals)"
             post_name = "off_grid.json"
             post = JSON.parsefile("./scenarios/$post_name")
             
@@ -1796,6 +1799,7 @@ else  # run HiGHS tests
             @test r_1hr["PV"]["size_kw"] ≈ 5050.0
         
             ## Scenario 2: Solar, Storage, Fixed Generator - 30-minute intervals
+            @info "Running Scenario 2: 30-minute intervals"
             # Set time_steps_per_hour = 2 (30-minute intervals)
             post["Settings"]["time_steps_per_hour"] = 2
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -1809,16 +1813,17 @@ else  # run HiGHS tests
             @test sum(r_30min["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) / 2 ≈ sum(r_1hr["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) rtol=0.002
             @test r_30min["ElectricLoad"]["offgrid_load_met_fraction"] ≈ r_1hr["ElectricLoad"]["offgrid_load_met_fraction"] atol=0.01
             @test r_30min["PV"]["size_kw"] ≈ r_1hr["PV"]["size_kw"] atol=0.01
-            
+        
             ## Scenario 3: Fixed Generator only
+            @info "Running Scenario 3: Fixed Generator only"
             post["ElectricLoad"]["annual_kwh"] = 100.0
             post["PV"]["max_kw"] = 0.0
             post["ElectricStorage"]["max_kw"] = 0.0
             post["Generator"]["min_turn_down_fraction"] = 0.0
-
+        
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt(m, post)
-
+        
             # Test generator outputs
             @test r["Generator"]["annual_fuel_consumption_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
             @test r["Generator"]["annual_energy_produced_kwh"] ≈ 99.0
@@ -1829,8 +1834,9 @@ else  # run HiGHS tests
             @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
             @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
             @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
-
+        
             ## Scenario 4: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
+            @info "Running Scenario 4: Fixed Generator with Load Operating Reserve Requirement"
             ## This test ensures the load operating reserve requirement is being enforced
             post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
             post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
@@ -1838,21 +1844,22 @@ else  # run HiGHS tests
             post["PV"]["max_kw"] = 0.0
             post["ElectricStorage"]["max_kw"] = 0.0
             post["Generator"]["min_turn_down_fraction"] = 0.0
-
+        
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt(m, post)
-
+        
             # Test generator outputs
             @test typeof(r) == Model # this is true when the model is infeasible
-
-            ### Scenario 5: Indonesia. Wind (custom prod) and Generator only
+        
+            ## Scenario 5: Indonesia. Wind (custom prod) and Generator only
+            @info "Running Scenario 5: Indonesia - Wind and Generator only"
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             post_name = "wind_intl_offgrid.json" 
             post = JSON.parsefile("./scenarios/$post_name")
             post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
             scen = Scenario(post)
             post["Wind"]["production_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
-
+        
             results = run_reopt(m, post)
             
             @test results["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
@@ -1862,11 +1869,10 @@ else  # run HiGHS tests
                     f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
                     f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
                     f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
-
+        
             windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
             loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
             @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
-
         end
 
         @testset "GHP" begin
