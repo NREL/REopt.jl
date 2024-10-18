@@ -124,6 +124,7 @@ function built_in_load(
     year::Int, 
     annual_energy::Real, 
     monthly_energies::AbstractArray{<:Real,1},
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[],
     boiler_efficiency_input::Union{Real,Nothing}=nothing
     )
 
@@ -132,10 +133,15 @@ function built_in_load(
     lib_path = joinpath(@__DIR__, "..", "..", "data", "load_profiles", type)
 
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
-    if occursin("FlatLoad", buildingtype)
-        normalized_profile = custom_normalized_flatload(buildingtype, year)
-    else 
-        normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+    input_normalized = false
+    if isempty(normalized_profile)
+        if occursin("FlatLoad", buildingtype)
+            normalized_profile = custom_normalized_flatload(buildingtype, year)
+        else 
+            normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+        end
+    else
+        input_normalized = true
     end
 
     if length(monthly_energies) == 12
@@ -143,7 +149,7 @@ function built_in_load(
         t0 = 1
         for month in 1:12
             plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-            if month == 2 && isleapyear(year)
+            if month == 2 && isleapyear(year) && !input_normalized  # for a leap year with normalized_profile, the last day is assumed to be truncated
                 plus_hours -= 24
             end
             month_total = sum(normalized_profile[t0:t0+plus_hours-1])

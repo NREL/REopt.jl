@@ -86,6 +86,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     function ElectricLoad(;
         off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
+        normalize_and_scale_load_profile_input::Bool = false,
         path_to_csv::String = "",
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
@@ -126,11 +127,20 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
         end
 
-        if length(loads_kw) > 0
+        if length(loads_kw) > 0 && !normalize_and_scale_load_profile_input
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
                 throw(@error("Provided electric load does not match the time_steps_per_hour."))
             end
+        
+        elseif length(loads_kw) > 0 && normalize_and_scale_load_profile_input
+            if !isempty(doe_reference_name)
+                @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and building type inputs, and only using the year and annual or monthly energy inputs with the load profile"
+            end
+            # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
+            normalized_profile = loads_kw ./ sum(loads_kw)
+            # Need year still mainly for
+            loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile)            
 
         elseif !isempty(path_to_csv)
             try
@@ -194,6 +204,7 @@ function BuiltInElectricLoad(
     year::Int,
     annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
     )
     
     annual_loads = Dict(
@@ -519,5 +530,5 @@ function BuiltInElectricLoad(
         end
     end
 
-    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh)
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, normalized_profile)
 end
