@@ -24,6 +24,10 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+    
+## Develop gen-bug-fix
+### Fixed
+- Modified the fuel cost calculation to correctly account for the time step duration when using subhourly data.
 
 ## Develop degradation-cleanup
 ### Added
