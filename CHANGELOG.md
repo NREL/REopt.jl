@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop boiler-series-fix
+### Fixed
+- When setting **thermal_production_series_mmbtu_per_hour** output in **ExistingBoiler**, sum over heating loads instead of time steps
+
 ## Develop degradation-cleanup
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
