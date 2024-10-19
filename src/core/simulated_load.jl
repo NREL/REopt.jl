@@ -24,6 +24,15 @@ function simulated_load(d::Dict)
     # Check consistency between type/length of doe_reference_name and percent_share (for blended/hybrid buildings)
     doe_reference_name_input = get(d, "doe_reference_name", nothing)
     percent_share_input = get(d, "percent_share", Real[])
+
+    # Input which then expects a custom load_profile along with annual or monthly energy values
+    normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
+    load_profile = get(d, "load_profile", Real[])
+    if normalize_and_scale_load_profile_input
+        if isempty(load_profile)
+            throw(@error("The load_profile must be provided to normalize_and_scale_load_profile_input"))
+        end
+    end
     
     # Determine which set of valid names to use based on the origin of the input
     valid_names = default_buildings
@@ -116,7 +125,7 @@ function simulated_load(d::Dict)
                 throw(@error("Invalid key $key for load_type=electric"))
             end
         end
-        if isnothing(doe_reference_name)
+        if isnothing(doe_reference_name) && !normalize_and_scale_load_profile_input
             throw(@error("Please supply a doe_reference_name and optionally scaling parameters (annual_kwh or monthly_totals_kwh)."))
         end
         # Annual loads (default is nothing)
@@ -140,11 +149,16 @@ function simulated_load(d::Dict)
 
         # Build dependent inputs for electric load
         elec_load_inputs = Dict{Symbol, Any}()
-        if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
-            elec_load_inputs[:blended_doe_reference_names] = doe_reference_name
-            elec_load_inputs[:blended_doe_reference_percents] = percent_share_list
+        if !normalize_and_scale_load_profile_input
+            if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
+                elec_load_inputs[:blended_doe_reference_names] = doe_reference_name
+                elec_load_inputs[:blended_doe_reference_percents] = percent_share_list
+            else
+                elec_load_inputs[:doe_reference_name] = doe_reference_name[1]
+            end
         else
-            elec_load_inputs[:doe_reference_name] = doe_reference_name[1]
+            elec_load_inputs[:normalize_and_scale_load_profile_input] = normalize_and_scale_load_profile_input
+            elec_load_inputs[:loads_kw] = load_profile
         end
 
         electric_load = ElectricLoad(; elec_load_inputs...,
