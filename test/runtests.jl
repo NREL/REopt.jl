@@ -2910,5 +2910,50 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
         end
+
+        @testset "Normalize and scale load profile input to annual and monthly energy" begin
+            # Normalize and scale input load profile based on annual or monthly energy uses
+            # The purpose of this is to be able to build a load profile shape, and then scale to the typical monthly energy data that users have
+
+            input_data = JSON.parsefile("./scenarios/norm_scale_load.json")
+
+            # Start with normalizing and scaling electric load only
+            input_data["ElectricLoad"]["loads_kw"] = fill(10.0, 8760)
+            input_data["ElectricLoad"]["loads_kw"][5:28] .= 20.0
+            input_data["ElectricLoad"]["year"] = 2017
+            # input_data["ElectricLoad"]["annual_kwh"] = 87600.0
+
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = fill(87600.0/12, 12)
+            input_data["ElectricLoad"]["monthly_totals_kwh"][2] *= 2
+            input_data["ElectricLoad"]["normalize_and_scale_load_profile_input"] = true
+
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+
+            # Check that monthly energy input is preserved when normalizing and scaling the hourly profile
+            @test abs(sum(s.electric_load.loads_kw) - sum(input_data["ElectricLoad"]["monthly_totals_kwh"])) < 0.01
+
+            # This get_monthly_energy function is only equivalent for non-leap years with loads_kw normalization and scaling because it removes the leap day from the processing of monthly hours/energy
+            monthly_totals_kwh = REopt.get_monthly_energy(s.electric_load.loads_kw; year=2017)
+            # Check that each month matches
+            @test sum(monthly_totals_kwh .- input_data["ElectricLoad"]["monthly_totals_kwh"]) < 0.1
+
+            # Check that the load ratio within a month is proportional to the loads_kw ratio
+            @test abs(s.electric_load.loads_kw[6] / s.electric_load.loads_kw[4] - input_data["ElectricLoad"]["loads_kw"][6] / input_data["ElectricLoad"]["loads_kw"][4]) < 0.001
+
+            # Check consistency with simulated_load function
+            d_sim_load = Dict([("latitude", input_data["Site"]["latitude"]),
+                ("longitude", input_data["Site"]["longitude"]),
+                ("load_type", "electric"),
+                ("normalize_and_scale_load_profile_input", true),
+                ("load_profile", input_data["ElectricLoad"]["loads_kw"]),
+                ("monthly_totals_kwh", input_data["ElectricLoad"]["monthly_totals_kwh"])
+                ])
+
+            sim_load_response = simulated_load(d_sim_load)
+
+            @test abs(sim_load_response["annual_kwh"] - sum(input_data["ElectricLoad"]["monthly_totals_kwh"])) < 1.0
+            @test sum(s.electric_load.loads_kw .- sim_load_response["loads_kw"]) < 10.0  
+        end      
     end
 end
