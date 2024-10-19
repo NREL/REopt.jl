@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-10-11
+### Added
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+  
 ## Develop degradation-cleanup
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
