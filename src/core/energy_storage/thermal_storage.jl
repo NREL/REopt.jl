@@ -22,8 +22,8 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
-    min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 100000.0
+    #min_duration_hours::Real = 0.0
+    #max_duration_hours::Real = 100000.0
 ```
 """
 Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
@@ -42,8 +42,8 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
-    min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 100000.0
+    #min_duration_hours::Real = 0.0
+    #max_duration_hours::Real = 100000.0
 end
 
 
@@ -69,8 +69,8 @@ end
     can_serve_dhw::Bool = true
     can_serve_space_heating:Bool = true
     can_serve_process_heat::Bool = false
-    min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 100000.0
+    #min_duration_hours::Real = 0.0
+    #max_duration_hours::Real = 100000.0
 ```
 """
 Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
@@ -92,8 +92,8 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
-    min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 100000.0
+    #min_duration_hours::Real = 0.0
+    #max_duration_hours::Real = 100000.0
 end
 
 
@@ -127,8 +127,8 @@ struct ColdThermalStorage <: AbstractThermalStorage
     discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
-    min_duration_hours::Real
-    max_duration_hours::Real
+    #min_duration_hours::Real
+    #max_duration_hours::Real
 
     function ColdThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
@@ -177,9 +177,9 @@ struct ColdThermalStorage <: AbstractThermalStorage
             charge_efficiency,
             discharge_efficiency,
             net_present_cost_per_kwh,
-            om_cost_per_kwh,
-            s.min_duration_hours,
-            s.max_duration_hours
+            om_cost_per_kwh
+            #s.min_duration_hours,
+            #s.max_duration_hours
         )
     end
 end
@@ -217,8 +217,8 @@ struct HotThermalStorage <: AbstractThermalStorage
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
-    min_duration_hours::Real
-    max_duration_hours::Real
+    #min_duration_hours::Real
+    #max_duration_hours::Real
     
 
     function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
@@ -272,8 +272,8 @@ struct HotThermalStorage <: AbstractThermalStorage
             s.can_serve_dhw,
             s.can_serve_space_heating,
             s.can_serve_process_heat,
-            s.min_duration_hours,
-            s.max_duration_hours
+            #s.min_duration_hours,
+            #s.max_duration_hours
         )
     end
 end
