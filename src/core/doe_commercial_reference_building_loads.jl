@@ -124,8 +124,8 @@ function built_in_load(
     year::Int, 
     annual_energy::Real, 
     monthly_energies::AbstractArray{<:Real,1},
+    boiler_efficiency_input::Union{Real,Nothing}=nothing,
     normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[],
-    boiler_efficiency_input::Union{Real,Nothing}=nothing
     )
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]

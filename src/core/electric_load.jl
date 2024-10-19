@@ -530,5 +530,5 @@ function BuiltInElectricLoad(
         end
     end
 
-    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, normalized_profile)
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile)
 end
