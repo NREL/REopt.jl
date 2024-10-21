@@ -40,8 +40,6 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario},
 
             @constraint(m, [t in p.time_steps], m[Symbol("TotalExport_"*p.s.settings.facilitymeter_node)][t] == 0)
 
-            print("\n the p.time_steps are:")
-            print(p.time_steps)
         end
     end
 end
