@@ -107,6 +107,11 @@ function normalize_response(thermal_power_produced,case_data)
         else
             rated_power = case_data["CST"]["SSC_Inputs"]["specified_solar_multiple"] * heat_sink
         end
+    elseif model=="mst"
+        heat_sink = case_data["CST"]["SSC_Inputs"]["q_pb_design"]
+        rated_power = 3.0 * heat_sink
+    else
+        rated_power = 1.0 #not actually normalization
     end
     thermal_power_produced_norm = thermal_power_produced ./ (rated_power) 
     thermal_power_produced_norm[thermal_power_produced_norm .< 0] .= 0  # remove negative values
