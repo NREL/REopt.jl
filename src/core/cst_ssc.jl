@@ -167,8 +167,8 @@ function run_ssc(case_data::Dict)
 
         ### Import defaults
         # defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
-        defaults = JSON.parsefile(defaults_file)
+        # defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
+        # defaults = JSON.parsefile(defaults_file)
         set_ssc_data_from_dict(defaults,model,data)
 
         ### Get weather data
