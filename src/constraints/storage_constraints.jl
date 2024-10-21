@@ -178,7 +178,7 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 	@constraint(m, ColdTESInventoryCon[ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling) -
-            m[Symbol("dvDischargeFromStorage"*_n)][b,ts]/p.s.storage.attr[b].discharge_efficiency -
+            m[Symbol("dvDischargeFromStorage"*_n)][b,ts]/p.s.storage.attr[b].discharge_efficiency
         )
         - (p.s.storage.attr[b].soc_based_per_ts_thermal_decay_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts])
         - (p.s.storage.attr[b].capacity_based_per_ts_thermal_decay_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
