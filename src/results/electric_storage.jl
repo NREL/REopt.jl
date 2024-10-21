@@ -46,10 +46,11 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
             r["state_of_health"] = value.(m[:SOH]).data / value.(m[:dvStorageEnergy])[b];
             r["maintenance_cost"] = value(m[:degr_cost])
             if p.s.storage.attr[b].degradation.maintenance_strategy == "replacement"
-                r["replacement_month"] = Int(value(
-                    sum(mth * m[:bmth][mth] for mth in 1:p.s.financial.analysis_years*12)
+                r["replacement_month"] = round(Int, value(
+                    sum(mth * m[:binSOHIndicatorChange][mth] for mth in 1:p.s.financial.analysis_years*12)
                 ))
             end
+            r["residual_value"] = value(m[:residual_value])
          end
          # report the exported electricity from the battery:
          r["storage_to_grid_series_kw"] = round.(value.(m[Symbol("dvStorageToGrid"*_n)][b, ts] for ts in p.time_steps), digits = 3)

@@ -484,6 +484,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive # this warning should be tied to IF condition where SOC incentive is added
+				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
+			end
+		end
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -530,6 +539,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	# Add Health costs (NOx, SO2, PM2.5)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
+	end
+
+	has_degr = false
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			has_degr = true
+			add_to_expression!(Costs, m[:degr_cost] - m[:residual_value]) # maximize residual value
+		end
 	end
 	
 	## Modify objective with incentives that are not part of the LCC

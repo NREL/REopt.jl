@@ -77,13 +77,13 @@ else  # run HiGHS tests
             latitude, longitude = 32.775212075983646, -96.78105623767185
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset == "nsrdb"
 
             # 2. Merefa, Ukraine 
             latitude, longitude = 49.80670544975866, 36.05418033509974
             radius = 0
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "nsrdb"
+            @test dataset == "nsrdb"
 
             # 3. Oulu, Findland
             latitude, longitude = 65.0102196310875, 25.465387094897675
@@ -96,7 +96,7 @@ else  # run HiGHS tests
             latitude, longitude = 64.84112047064114, -147.71570239058084 
             radius = 20
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "tmy3"  
+            @test dataset == "tmy3"  
         end
 
         @testset "ASHP min allowable size and COP, CF Profiles" begin
@@ -133,8 +133,8 @@ else  # run HiGHS tests
             # min allowable size
             heating_load = Array{Real}([10.0,10.0,10.0,10.0])
             cooling_load = Array{Real}([10.0,10.0,10.0,10.0])
-            space_heating_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
-            wh_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf)
+            space_heating_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf, 0.5)
+            wh_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], 0.5)
             @test space_heating_min_allowable_size ≈ 9.166666666666666 atol=1e-8
             @test wh_min_allowable_size ≈ 5.0 atol=1e-8
         end
@@ -671,7 +671,7 @@ else  # run HiGHS tests
             end
         end
 
-        @testset "Electric Storage O&M and Self-Discharge" begin
+        @testset "Electric Storage O&M" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             data = JSON.parsefile("./scenarios/storage_om.json")
 
@@ -694,13 +694,41 @@ else  # run HiGHS tests
             @test results2["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 800 atol=1
             @test results2["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 12543 atol=1 
             @test results2["Financial"]["lcc"] ≈ results1["Financial"]["lcc"] + 12543 - 6272 atol=1
-            
-            data["ElectricStorage"]["self_discharge_fraction_per_timestep"] = 0.0025/24
+        end
+
+        @testset "Electric Storage Self-Discharge" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            inputs = REoptInputs(data)
-            results3 = run_reopt(model, inputs)
-            @test sum(results2["ElectricStorage"]["storage_to_load_series_kw"]) - 
-                sum(results3["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
+            data = JSON.parsefile("./scenarios/storage_om.json")
+
+            data["ElectricStorage"]["soc_init_fraction"] = 1.0
+            data["ElectricStorage"]["soc_min_fraction"] = 0.0
+            data["ElectricStorage"]["soc_based_per_ts_self_discharge_fraction"] = 0.0025/24
+
+            s = Scenario(data)
+            inputs = REoptInputs(s)
+            results_soc_based_self_discharge = run_reopt(model, inputs)
+
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data["ElectricStorage"]["soc_based_per_ts_self_discharge_fraction"] = 0.0
+
+            s = Scenario(data)
+            inputs = REoptInputs(s)
+            results_no_self_discharge = run_reopt(model, inputs)
+
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data["ElectricStorage"]["capacity_based_per_ts_self_discharge_fraction"] = 0.0025/24
+
+            s = Scenario(data)
+            inputs = REoptInputs(s)
+            results_capacity_based_self_discharge = run_reopt(model, inputs)
+
+            @test results_soc_based_self_discharge["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 0 atol=0.01
+            @test results_soc_based_self_discharge["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 0 atol=0.01 
+            @test sum(results_no_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) - 
+                sum(results_soc_based_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
+
+            calculated_output = round((80 - (80 * 0.0025/24 * 8760)) * sqrt(0.975) * 0.96, digits = 3)
+            @test sum(results_capacity_based_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) ≈ calculated_output atol=0.01 
         end
         
         @testset "Heating loads and addressable load fraction" begin
@@ -1070,6 +1098,56 @@ else  # run HiGHS tests
                     if results["PV"]["electric_to_grid_series_kw"][i] > 0)
         end
 
+        #=
+        Battery degradation replacement strategy test can be validated against solvers like Xpress.
+        Commented out of this testset due to solve time constraints using open-source solvers.
+        This test has been validated via local testing.
+        =#
+        @testset "Battery degradation replacement strategy" begin
+            # Replacement
+            nothing
+            # d = JSON.parsefile("scenarios/batt_degradation.json");
+
+            # d["ElectricStorage"]["macrs_option_years"] = 0
+            # d["ElectricStorage"]["macrs_bonus_fraction"] = 0.0
+            # d["ElectricStorage"]["macrs_itc_reduction"] = 0.0
+            # d["ElectricStorage"]["total_itc_fraction"] = 0.0
+            # d["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
+            # d["ElectricStorage"]["replace_cost_per_kw"] = 0.0
+            # d["Financial"] = Dict(
+            #     "offtaker_tax_rate_fraction" => 0.0,
+            #     "owner_tax_rate_fraction" => 0.0
+            # )
+            # d["ElectricStorage"]["degradation"]["installed_cost_per_kwh_declination_rate"] = 0.2
+
+            # d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+
+            # s = Scenario(d)
+            # p = REoptInputs(s)
+            # for t in 1:4380
+            #     p.s.electric_tariff.energy_rates[2*t-1] = 0
+            #     p.s.electric_tariff.energy_rates[2*t] = 10.0
+            # end
+            # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            # results = run_reopt(m, p)
+
+            # @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
+            # @test results["ElectricStorage"]["size_kwh"] ≈ 14.07 atol=0.05
+            # @test results["ElectricStorage"]["replacement_month"] == 8
+            # @test results["ElectricStorage"]["maintenance_cost"] ≈ 32820.9 atol=1
+            # @test results["ElectricStorage"]["state_of_health"][8760] ≈ -6.8239 atol=0.001
+            # @test results["ElectricStorage"]["residual_value"] ≈ 2.61 atol=0.1
+            # @test sum(results["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 43800 atol=1.0 #battery should serve all load, every other period
+
+
+            # # Validate model decision variables make sense.
+            # replace_month = Int(value.(m[:months_to_first_replacement]))+1
+            # @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
+            # @test sum(value.(m[:binSOHIndicator])[replace_month:end]) ≈ 0.0
+            # @test sum(value.(m[:binSOHIndicatorChange])) ≈ value.(m[:binSOHIndicatorChange])[replace_month] ≈ 1.0
+            # @test value.(m[:binSOHIndicator])[end] ≈ 0.0
+        end
+
         @testset "Solar and ElectricStorage w/BAU and degradation" begin
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -1090,33 +1168,34 @@ else  # run HiGHS tests
             # compare avg soc with and without degradation, 
             # using default augmentation battery maintenance strategy
             avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
+
+            d = JSON.parsefile("scenarios/pv_storage.json");
             d["ElectricStorage"]["model_degradation"] = true
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r_degr = run_reopt(m, d)
             avg_soc_degr = sum(r_degr["ElectricStorage"]["soc_series_fraction"]) / 8760
             @test avg_soc_no_degr > avg_soc_degr
 
-            # test the replacement strategy
-            d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            set_optimizer_attribute(m, "mip_rel_gap", 0.01)
-            r = run_reopt(m, d)
-            @test occursin("are not supported by the solver", string(r["Messages"]["errors"])) || occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
+            # test the replacement strategy ## Cannot test with open source solvers.
+            # d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
+            # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            # set_optimizer_attribute(m, "mip_rel_gap", 0.01)
+            # r = run_reopt(m, d)
+            # @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
             # #optimal SOH at end of horizon is 80\% to prevent any replacement
-            # @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
+            # @test sum(value.(m[:dvSOHChangeTimesEnergy])) ≈ 68.48 atol=0.01
             # # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
             # # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
             # @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-            # @test last(value.(m[:SOH])) ≈ 66.633  rtol=0.01
-            # @test r["ElectricStorage"]["size_kwh"] ≈ 83.29  rtol=0.01
+            # @test last(value.(m[:SOH])) ≈ 42.95 rtol=0.01
+            # @test r["ElectricStorage"]["size_kwh"] ≈ 68.48 rtol=0.01
 
             # test minimum_avg_soc_fraction
             d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
-            @test occursin("are not supported by the solver", string(r["Messages"]["errors"])) || occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
-            # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
+            @test round(sum(r["ElectricStorage"]["soc_series_fraction"])/8760, digits=2) >= 0.72
         end
 
         @testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
