@@ -118,7 +118,7 @@ function run_ssc(case_data::Dict)
     model = case_data["CST"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
-        "mst" => "tcsmolten_salt",
+        "mst" => "mspt_iph",
         "swh_flatplate" => "swh",
         "swh_evactube" => "swh",
         "lf" => "linear_fresnel_dsg_iph",
