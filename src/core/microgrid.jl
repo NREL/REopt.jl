@@ -262,7 +262,8 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
         results, LineInfo_PMD, data_math_mn, REoptInputs_Combined, m = Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Settings, data_math_mn)
 
         REopt_Results, PMD_Results, DataDictionaryForEachNode = Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInputs_Combined, Microgrid_Settings)
-            
+        model = m
+        
         if Microgrid_Settings.RunOutageSimulator == true
             OutageLengths = Microgrid_Settings.LengthOfOutages_timesteps 
             TimeStepsPerHour = Microgrid_Settings.TimeStepsPerHour 
@@ -396,7 +397,7 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
                                 ])
     end
 
-    if Microgrid_Settings.Generate_Results_Plots == true
+    if Microgrid_Settings.Generate_Results_Plots == true && Microgrid_Settings.Model_Type == "BasicLinear"
         # Note: PlotlyJS is required to run these functions, and PlotlyJS must be in the local development environment.
         CreateResultsMap(CompiledResults, Microgrid_Settings, TimeStamp)
         Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Settings)
@@ -410,17 +411,12 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs)
     # Load in the data from the OpenDSS inputs file; data is stored to the data_eng variable
     print("\n Parsing the network input file")
     data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.FolderLocation.*"/"*Microgrid_Inputs.PMD_network_input)
+    
     # Generate a list of the REopt nodes
     REopt_nodes = REopt.GenerateREoptNodesList(Microgrid_Inputs)
     
-    # General notes about PMD: 
-        # data_eng stores all of the inputs for the PMD model
-        # Within data_eng, there are lots of other inputs that can be adjust and modified, such as the sbase of the model
-        # Two data models in PMD: "Engineering" and "Mathematical" - Engineering uses SI units, Mathematical uses per unit units
-        # TODO: what are the "conductor_ids" refering to in the data_eng dictionary?
-        # To view the variables in the model, type:  pm.var[:it][:pmd][:nw][1]  # This shows the variables in time step 1
-    
-    #PMD.reduce_lines!(data_eng) # use this to reduce the network to get a similar and "sometimes equivalent" result "when linecharging is negligible" - I think this function combines some lines together to make the optimization problem smaller, but these concepts are unfamiliar to me and I'm confused by this explanation in the PMD documentation
+    # TODO: enable the use of reduce_lines! so that it doesn't interfere with the linkage between REopt and PMD
+    # PMD.reduce_lines!(data_eng) 
     
     print("\n Defining several settings in the data_eng dictionary:")
     
@@ -430,11 +426,6 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs)
     data_eng["voltage_source"]["source"]["bus"] = "sourcebus" # Define the location of the source bus in the network
     data_eng["settings"]["name"] = "test_case" # Define other parameters too:
     
-    # From PMD extension tutorial: "We require that in per unit, the phase voltage magnitude and neutral magnitude should obey:" 
-        # neutral voltage magnitude <= 1
-        #  0.9 <= phase voltage magnitude <= 1.1
-        # Add these constraints using:
-    
     print("\n Adding per unit voltage bounds to the buses")
     PMD.add_bus_absolute_vbounds!(
         data_eng,
@@ -443,12 +434,9 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs)
         neutral_ub_pu=0.1
     )
     
-    # First, apply a timeseries load profile to the PMD model
-        # see line 272 in the PMD extension tutorial code
-        # Note: unclear if this needs to be done because loads will be modeled separately from PMD
-    
+    # Apply a timeseries load profile to the PMD model
     print("\n Defining a time series load profile")
-    TotalPMDTimeSteps = 4000
+    TotalPMDTimeSteps = 24
     begin
         data_eng["time_series"] = Dict{String,Any}()
         data_eng["time_series"]["normalized_load_profile"] = Dict{String,Any}(
@@ -466,54 +454,50 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs)
         end
     end
     
-    # From the PMD extension tutorial: "need to add a generator for each EV, and specify the connection settings. In the test case we imported, LVTestCase, each load represents a household with a single-phase connection. We now associate each EV with a household, and give it the same bus and phase connection." 
-        # In summary: the OpenDSS inputs file should indicate the location of the loads
-    
     # Add generators to the model as a generic interface with the REopt model:
     print("\n Adding a generic PMD generator for each of the REopt nodes, in order to be able to connect the REopt and PMD models")
     begin
-        # I think this needs to be adjust for three phase loads (mainly in the "connections" field and/or "configuration" field)
+        # TODO: This needs to be adjusted for three phase loads that are on phases other than just phase 1 (mainly in the "connections" field and/or "configuration" field)
         data_eng["generator"] = Dict{String, Any}()
         for e in REopt_nodes
             if string(e) != Microgrid_Inputs.FacilityMeter_Node # Don't assign a generator interface to the facility meter
             data_eng["generator"]["REopt_gen_$e"] = Dict{String,Any}(
-                        "status" => ENABLED,
-                        "bus" => data_eng["load"]["load$(e)"]["bus"],   # previously was: bus_e[e], 
-                        "connections" => [data_eng["load"]["load$(e)"]["connections"][1], 4], # [phase_e[e], 4],  # Note: From PMD tutorial: "create a generator with the same connection setting."
+                        "status" => PMD.ENABLED,
+                        "bus" => data_eng["load"]["load$(e)"]["bus"],   
+                        "connections" => [data_eng["load"]["load$(e)"]["connections"][1], 4], # Note: From PMD tutorial: "create a generator with the same connection setting."
                         "configuration" => WYE,
             )
             end
         end
     end
     
-    begin 
-    # From PMD extension tutorial: "Transform the 'engineering' data model to a 'mathematical' model, and don't forget the 'multinetwork=true' flag."
-        # I think the multinetwork setting is for time series optimizations
-    print("\n Transforming the engineering model to a mathematical model in PMD \n")    
-    data_math_mn = transform_data_model(data_eng, multinetwork=true)
-    
-    print("\n Initializing the voltage variables")
-    # From PMD extension tutorial: Before solving the problem, it is important to add initialization values for the voltage variables. Failing to do so will almost always result in solver issues." 
-    Start_vrvi = now()
-    add_start_vrvi!(data_math_mn)
-    End_vrvi = now()
-    
-    PMD_vrvi_time = End_vrvi - Start_vrvi
-    PMD_vrvi_time_minutes = round(PMD_vrvi_time/Millisecond(60000), digits=2)
-    print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes")
-    
-    # Build the optimization model:
-        # Note: Based on the PMD documentation, instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
-    print("\n Instantiating the PMD model (this may take a few minutes for large models)")
-    Start_instantiate = now()
-    pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf)  # the second input is the optimization class; the third I think is the method. mn_mc_opf is for multinetwork optimal power flow
-    End_instantiate = now()
-    print("\n Completed instantiation of the PMD model")
-    
-    PMD_instantiate_time = End_instantiate - Start_instantiate
-    PMD_instantiate_time_minutes = round(PMD_instantiate_time/Millisecond(60000), digits=2)
-    print("\n The PMD_instantiate_time was: $(PMD_instantiate_time_minutes) minutes")
-    
+    begin
+        print("\n Transforming the engineering model to a mathematical model in PMD \n")    
+        data_math_mn = transform_data_model(data_eng, multinetwork=true)
+        
+        print("\n Initializing the voltage variables")
+        # Initialize voltage variable values. 
+        Start_vrvi = now()
+        add_start_vrvi!(data_math_mn)
+        End_vrvi = now()
+        
+        # Measure and report the time for initializing the voltage variable values
+        PMD_vrvi_time = End_vrvi - Start_vrvi
+        PMD_vrvi_time_minutes = round(PMD_vrvi_time/Millisecond(60000), digits=2)
+        print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes")
+        
+        # Build the optimization model:
+            # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
+        print("\n Instantiating the PMD model (this may take a few minutes for large models)")
+        Start_instantiate = now()
+        pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf) 
+        End_instantiate = now()
+        print("\n Completed instantiation of the PMD model")
+        
+        # Measure and report the time for instantiating the PMD model
+        PMD_instantiate_time = End_instantiate - Start_instantiate
+        PMD_instantiate_time_minutes = round(PMD_instantiate_time/Millisecond(60000), digits=2)
+        print("\n The PMD_instantiate_time was: $(PMD_instantiate_time_minutes) minutes")
     end 
     
     # Extract the JuMP model
@@ -546,14 +530,11 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
         push!(REoptInputs_Combined, REoptInputs_dictionary[i])
     end
     
-    # The next step is to make the connection between the REopt model and the PMD model
-    # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) to REopt
+    # Passing the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     print("\n Building the REopt model\n")
     REopt.build_reopt!(m, REoptInputs_Combined)
     
-    # Connect the PMD and REopt models
-        # Note: the expression  REoptInputs_Combined[1].s.site.node  yields 2
-    
+    # Create Total Export variables for each REopt node, except for the facility meter node    
     for p in REoptInputs_Combined
         _n = string("_", p.s.site.node)
         if string(p.s.site.node) != p.s.settings.facilitymeter_node
@@ -563,22 +544,20 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
                     m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
                     for t in p.techs.elec, u in p.export_bins_by_tech[t]
                 )
-                + sum(m[Symbol("dvStorageToGrid"*_n)][b,ts] for b in p.s.storage.types.all )# added this line to include battery export in the total export
+                + sum(m[Symbol("dvStorageToGrid"*_n)][b,ts] for b in p.s.storage.types.all ) # This line includes battery export in the total export
             )
         else
-            # set the total node export to 0 for the facility meter grid, because that node has no techs
-            # also, for that node, the dvProductionToGrid is used for the grid export benefits and set to the powerflow of the substation line when flow on that line is negative
             print("\n Not creating a total export variable for node $(p.s.site.node) because this node is the facility meter node.")
         end
     end
     
-    # Connect the PMD and REopt variables through constraints
+    # Link the PMD and REopt variables through constraints
     
     gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"]);
     
     REopt_gen_ind_e = [gen_name2ind["REopt_gen_$e"] for e in REopt_nodes];
     
-    TotalPMDTimeSteps = 4000
+    TotalPMDTimeSteps = 24
     TimeSteps = 1:TotalPMDTimeSteps
     begin 
         PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in TimeSteps ] # Previously was: PMD_Pg_ek = [PMD.var(pm, k, :pg, REopt_gen_ind_e[e]).data[1] for e in REopt_nodes, k in TimeSteps ]
@@ -588,7 +567,7 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
     buses = REopt_nodes
     
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
-        JuMP.@constraint(m, [k in TimeSteps],  # Previously was: [e in REopt_gen_ind_e, k in TimeSteps], and before that was [e in REopt_nodes, k in TimeSteps],
+        JuMP.@constraint(m, [k in TimeSteps],  
                             PMD_Pg_ek[e,k] == m[Symbol("TotalExport_"*string(buses[e]))][k]  - m[Symbol("dvGridPurchase_"*string(buses[e]))][k]   # negative power "generation" is a load
         )
         # TODO: add reactive power to the REopt nodes
@@ -601,12 +580,11 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
         # Notes:
             # PMD gives all of the lines a new ID, which is just an integer.
             # The line below lists off the parameters stored for line ID 2
-            #data_lineID2 = PMD.ref(pm, 1, :branch, 2) # This shows the f_bus and t_bus, which, along with the line ID (2), is used as an index in the :p decision variable 
-    
-            #PMD.ref(pm, 1, :branch, 2)["name"]  # This correlates with the name provided in the OpenDSS inputs files
-            #PMD.ref(pm, 1, :branch, 2)["t_bus"]
-            #PMD.ref(pm, 1, :branch, 2)["f_bus"]
-                # note, there is a "rate_a" field which may be able to be used to model line upgrades
+            # data_lineID2 = PMD.ref(pm, 1, :branch, 2) # This shows the f_bus and t_bus, which, along with the line ID (2), is used as an index in the :p decision variable 
+            # PMD.ref(pm, 1, :branch, 2)["name"]  # This correlates with the name provided in the OpenDSS inputs files
+            # PMD.ref(pm, 1, :branch, 2)["t_bus"]
+            # PMD.ref(pm, 1, :branch, 2)["f_bus"]
+            # There is also a "rate_a" field, which may be able to be used to model line upgrades
     
     # Create a dictionary with the line names and corresponding indeces for the :p decision variable
     LineInfo = Dict([])
@@ -645,11 +623,6 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
     
     # Open switches if defined by the user
         # Note: the switch capability in PMD is not used currently in this model, but the switch openings are modeling with these constraints
-            # For reference, this is an example input into the REopt_Inputs dictionary's "Switch_Open_Timesteps" field
-            #Switch_Open_Timesteps = Dict([
-            #    ("15-11", collect(2500:2900)) # the time steps that the switch is open
-            #])
-    
     if Microgrid_Inputs.Switch_Open_Timesteps != ""
         print("\n Switches modeled:")
         for i in keys(Microgrid_Inputs.Switch_Open_Timesteps)
@@ -659,7 +632,6 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
     end
     
     # Link export through the substation to the utility tariff on the facility meter node
-    
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
             @info "Setting facility-level grid purchase and export (if applicable) to the power flow on line "*string(Microgrid_Inputs.SubstationLine)*", using the variable: "*string(" dvGridPurchase_", p.s.settings.facilitymeter_node)
@@ -667,18 +639,18 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
             
             i = LineInfo[Microgrid_Inputs.SubstationLine]["index"]
             # Based off of code in line 470 of PMD's src>core>constraint_template
-            timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-            branch = ref(pm, timestep, :branch, i)
-            f_bus = branch["f_bus"]
-            t_bus = branch["t_bus"]
-            f_connections = branch["f_connections"]
-            t_connections = branch["t_connections"]
-            f_idx = (i, f_bus, t_bus)
-            t_idx = (i, t_bus, f_bus)
+                timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
+                branch = ref(pm, timestep, :branch, i)
+                f_bus = branch["f_bus"]
+                t_bus = branch["t_bus"]
+                f_connections = branch["f_connections"]
+                t_connections = branch["t_connections"]
+                f_idx = (i, f_bus, t_bus)
+                t_idx = (i, t_bus, f_bus)
     
             @variable(m, binSubstationPositivePowerFlow[ts in p.time_steps], Bin)
             for t in collect(length(TimeSteps):length(p.time_steps))
-                @constraint(m, m[:binSubstationPositivePowerFlow][t] == 1) # Temporary constraint; delete this when use 8760 data with PMD
+                @constraint(m, m[:binSubstationPositivePowerFlow][t] == 1) # TODO: This is a temporary constraint; delete this when use 8760 data with PMD
             end
     
             for timestep in TimeSteps
@@ -692,7 +664,7 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
                 if Microgrid_Inputs.AllowExportBeyondSubstation == true
                     #@info "Allowing export from the facility meter, which is limited to the defined export limit"
                 
-                    @constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] >= 0 } )  # TODO: make this compatible with three phase (right now it's only consider 1-phase I think)
+                    @constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] >= 0 } )  # TODO: make this compatible with phase 2 and 3 of three phase (right now it's only consider 1-phase I think)
                     @constraint(m, !m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] <= 0 } )
                 
                     # Set the power flowing through the line from the substation to be the grid purchase minus the dvProductionToGrid for node 15
@@ -725,9 +697,10 @@ function Build_REopt_and_Link_To_PMD(m, pm, Microgrid_Inputs, data_math_mn)
     
     @objective(m, Min, m[:Costs]);
     
-    # The optimize_model! function is a wrapper from PMD and it includes some organization of the results
-        # unclear if it is compatible with the REopt results
-    set_optimizer(m, Xpress.Optimizer)
+    # Run the optimization
+        # The optimize_model! function is a wrapper from PMD and it includes some organization of the results
+    
+    set_optimizer(m, Xpress.Optimizer) # TODO: set the optimizer type as an input into the Microgrid_Inputs dictionary
     set_optimizer_attribute(m, "MIPRELSTOP", 0.05)
     
     print("\n The optimization is starting\n")
@@ -751,22 +724,22 @@ function RestrictLinePowerFlow(pm, m, line, timesteps, LineInfo; Single_Outage=f
         
     i = LineInfo[line]["index"]
     # Based off of code in line 470 of PMD's src>core>constraint_template
-    timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-    branch = ref(pm, timestep, :branch, i)
-    f_bus = branch["f_bus"]
-    t_bus = branch["t_bus"]
-    f_connections = branch["f_connections"]
-    t_connections = branch["t_connections"]
-    f_idx = (i, f_bus, t_bus)
-    t_idx = (i, t_bus, f_bus)
+        timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
+        branch = ref(pm, timestep, :branch, i)
+        f_bus = branch["f_bus"]
+        t_bus = branch["t_bus"]
+        f_connections = branch["f_connections"]
+        t_connections = branch["t_connections"]
+        f_idx = (i, f_bus, t_bus)
+        t_idx = (i, t_bus, f_bus)
 
     for timestep in timesteps
         # Based off of code in line 274 of PMD's src>core>constraints
-        p_fr = [PMD.var(pm, timestep, :p, f_idx)[c] for c in f_connections]
-        p_to = [PMD.var(pm, timestep, :p, t_idx)[c] for c in t_connections]
+            p_fr = [PMD.var(pm, timestep, :p, f_idx)[c] for c in f_connections]
+            p_to = [PMD.var(pm, timestep, :p, t_idx)[c] for c in t_connections]
 
-        q_fr = [PMD.var(pm, timestep, :q, f_idx)[c] for c in f_connections]
-        q_to = [PMD.var(pm, timestep, :q, t_idx)[c] for c in t_connections]
+            q_fr = [PMD.var(pm, timestep, :q, f_idx)[c] for c in f_connections]
+            q_to = [PMD.var(pm, timestep, :q, t_idx)[c] for c in t_connections]
         
         if Prevent_Export == true
             @info("Preventing all export to the grid")
@@ -816,7 +789,7 @@ end
 function Check_REopt_PMD_Alignment()
     # Compare the REopt and PMD results to ensure the models are linked
         # Note the calculations below are only valid if there are not any REopt nodes or PMD loads downstream of the node being evaluated
-
+    # TODO: automatically determine which node, line, and phase to check
     Node = 2 # This is for the REopt data
     Line = "line1_2" # This is for the PMD data
     Phase = 1  # This data is for the PMD data
@@ -829,19 +802,17 @@ function Check_REopt_PMD_Alignment()
 
     REopt_power_injection = TotalImport - TotalExport
 
-    # Save the power injection data from PMD into a vector for line12_1
-        # Note, when using the expression: TimeStep1_line = sol_eng["nw"]["1"]["line"][Line] # There are qf, qt, pt, and pf entries in this dictionary
-
+    # Save the power injection data from PMD into a vector for the line
     PowerFlow_line = []
     for i in 1:length(sol_eng["nw"])
         push!(PowerFlow_line, sol_eng["nw"][string(i)]["line"][Line]["pf"][Phase])
     end
 
-    # This calculation compares the power flow through line 12_1 (From PMD), to the power injection into node 1 (From REopt). If the PMD and REopt models are connected, this should be zero or very close to zero.
-    Mismatch_in_expected_powerflow = PowerFlow_line - REopt_power_injection[1:4000].data   # This is only valid for the model with only one REopt load on node 1
+    # This calculation compares the power flow through the Line (From PMD), to the power injection into the Node (From REopt). If the PMD and REopt models are connected, this should be zero or very close to zero.
+    Mismatch_in_expected_powerflow = PowerFlow_line - REopt_power_injection[1:24].data   # This is only valid for the model with only one REopt load on node 1
 
     # Visualize the mismatch to ensure the results are zero for each time step
-    Plots.plot(collect(1:4000), Mismatch_in_expected_powerflow)
+    Plots.plot(collect(1:24), Mismatch_in_expected_powerflow)
     Plots.xlabel!("Timestep")
     Plots.ylabel!("Mismatch between REopt and PMD (kW)")
     display(Plots.title!("REopt and PMD Mismatch: Node $(Node), Phase $(Phase)"))
@@ -1291,7 +1262,7 @@ if Microgrid_Inputs.Generate_Results_Plots == true
         Plots.plot!([OutageStart_Line, OutageStart_Line],[0,maximum(TotalLoad_series)], label= "Outage Start")
         Plots.plot!([OutageStop_Line, OutageStop_Line],[0,maximum(TotalLoad_series)], label= "Outage End")
     else
-        Plots.xlims!(4000/(24* (length(TimeSteps)/8760)),4100/(24* (length(TimeSteps)/8760)))
+        Plots.xlims!(24/(24* (length(TimeSteps)/8760)),4100/(24* (length(TimeSteps)/8760)))
     end
     display(Plots.title!("System Wide Power Demand and Generation"))
     Plots.savefig(Microgrid_Inputs.FolderLocation*"/results_"*TimeStamp*"/SystemWidePowerUse")

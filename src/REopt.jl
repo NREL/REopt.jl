@@ -48,11 +48,12 @@ using CSV
 using DataFrames
 using Plots
 import Plots
+using PowerModelsDistribution
+using Xpress
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
     @require PlotlyJS="f0f68f2c-4968-5e81-91da-67840de0976a" println("Using the PlotlyJS package")
-    @require PowerModelsDistribution="d7431456-977f-11e9-2de3-97ff7677985e" println("Using PowerModelsDistribution package")
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
