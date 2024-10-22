@@ -381,6 +381,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_energy_tier_constraints(m, p)
 	end
 
+	if length(p.s.electric_tariff.block_demand_tier_limits) > 1
+		@info "adding flexible constraints"
+		add_flexible_index_energy_tier_constraints(m, p)
+	end
+
     if p.s.electric_tariff.demand_lookback_percent > 0
         add_demand_lookback_constraints(m, p)
     end

@@ -293,7 +293,7 @@ Only necessary if n_energy_tiers > 1
 function add_energy_tier_constraints(m, p; _n="")
     @warn "Adding binary variables to model energy cost tiers."
     ntiers = p.s.electric_tariff.n_energy_tiers
-    dv = "binEnergyTier" * _n
+    dv = "binKwhEnergyTier" * _n
     m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, base_name = dv)
     b = m[Symbol(dv)]
     ##Constraint (10a): Usage limits by pricing tier, by month
@@ -325,27 +325,20 @@ If market based flexible index energy rates are being used, energy cost varies b
 
 """
 function add_flexible_index_energy_tier_constraints(m, p; _n="")
-    @warn "**test** Adding binary variables to model energy cost tiers."
+    @warn "Adding binary variables to model kw based energy cost tiers."
     ntiers = p.s.electric_tariff.n_energy_tiers
-    dv = "binFlexIndEnergyTier" * _n
-    m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, base_name = dv)
+    dv = "binKwEnergyTier" * _n
+    m[Symbol(dv)] = @variable(m, [p.time_steps, 1:ntiers], binary = true, base_name = dv)
     b = m[Symbol(dv)]
     
     ##Constraint (10a): Usage limits by pricing tier, by timestep
-    @constraint(m, [ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers, mth in p.months],
-        m[Symbol("dvGridPurchase"*_n)][ts, tier] <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier]
+    @constraint(m, [ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers],
+        m[Symbol("dvGridPurchase"*_n)][ts, tier] .- b[ts, tier] * p.s.electric_tariff.block_demand_tier_limits[ts, tier] <= 0
     )
     
     ##Constraint (10b): Ordering of pricing tiers
     @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
         b[mth, tier] - b[mth, tier-1] <= 0
-    )
-
-    ## Constraint (10c): One tier must be full before any usage in next tier
-    @constraint(m, [ts in p.time_steps, mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
-        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier-1] - 
-        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier-1]) 
-        <= 0
     )
     # TODO implement NewMaxUsageInTier
 end

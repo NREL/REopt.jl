@@ -35,6 +35,9 @@ struct ElectricTariff
     coincident_peak_load_active_time_steps::AbstractVector{AbstractVector{Int64}}
     coincident_peak_load_charge_per_kw::AbstractVector{Float64}
     coincpeak_periods::AbstractVector{Int64}
+
+    block_demand_tier_limits::AbstractArray{Float64, 2}
+    block_tiered_energy_rates::AbstractArray{Float64, 2}
 end
 
 
@@ -110,7 +113,9 @@ function ElectricTariff(;
     demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
-    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[],
+    block_demand_tier_limits::Union{Matrix{Float64}, Nothing}=nothing,
+    block_tiered_energy_rates::Union{Matrix{Float64}, Nothing}=nothing
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 
@@ -129,6 +134,7 @@ function ElectricTariff(;
     time_steps_monthly = get_monthly_time_steps(year, time_steps_per_hour=time_steps_per_hour)
 
     u = nothing
+    model_block_index_rates = false
     if !isempty(urdb_response)
 
         u = URDBrate(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
@@ -220,7 +226,7 @@ function ElectricTariff(;
     elseif demand_lookback_range == 0 && length(demand_lookback_months) == 12
         demand_lookback_months = collect(1:12)[demand_lookback_months .== 1]
     end
-
+    @warn typeof(u)
     if !isnothing(u)  # use URDBrate
         if NEM
             t = get_tier_with_lowest_energy_rate(u)
@@ -276,6 +282,15 @@ function ElectricTariff(;
         energy_rates = reshape(energy_rates, :, 1)
         monthly_demand_rates = reshape(monthly_demand_rates, :, 1)
         tou_demand_rates = reshape(tou_demand_rates, :, 1)
+    end
+
+    # Are we modeling indexed energy rates?
+    if !isnothing(block_tiered_energy_rates) && !isnothing(block_demand_tier_limits)
+        # Are the inputs valid?
+        # Can we safely assign block rates to energy rates?
+        # energy_rates .+= block_tiered_energy_rates
+        model_block_index_rates = true
+        @info "setting energy rates as block tiered energy rates."
     end
 
     #= export_rates
@@ -349,7 +364,9 @@ function ElectricTariff(;
         export_bins,
         coincident_peak_load_active_time_steps,
         coincident_peak_load_charge_per_kw,
-        coincpeak_periods
+        coincpeak_periods,
+        block_demand_tier_limits,
+        block_tiered_energy_rates
     )
 end
 
