@@ -374,7 +374,7 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.capacity_based_per_ts_self_discharge_fraction,
-            s.soc_based_per_ts_self_discharge_fraction.
+            s.soc_based_per_ts_self_discharge_fraction,
             s.fixed_duration,
             s.optimize_soc_init_fraction,
             s.name
