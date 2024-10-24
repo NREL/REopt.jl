@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop fix-nonhourly-fuel-cost
+### Fixed
+- Modified the fuel cost calculation to correctly account for the time step duration when using non-hourly data.
+
 ## Develop degradation-cleanup
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
