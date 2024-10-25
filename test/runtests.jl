@@ -2953,7 +2953,54 @@ else  # run HiGHS tests
             sim_load_response = simulated_load(d_sim_load)
 
             @test abs(sim_load_response["annual_kwh"] - sum(input_data["ElectricLoad"]["monthly_totals_kwh"])) < 1.0
-            @test sum(s.electric_load.loads_kw .- sim_load_response["loads_kw"]) < 10.0  
+            @test sum(s.electric_load.loads_kw .- sim_load_response["loads_kw"]) < 10.0
+
+            # Check space heating load normization and scaling
+            input_data = JSON.parsefile("./scenarios/norm_scale_load.json")
+            input_data["ElectricLoad"]["doe_reference_name"] = "LargeOffice"
+            # Focus on SpaceHeating for heating norm and scale
+            input_data["SpaceHeatingLoad"] = Dict()
+            input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = fill(10.0, 8760)
+            input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][5:28] .= 20.0
+            input_data["SpaceHeatingLoad"]["year"] = 2020  # Test leap year which for norm_and_scale expects the last day to be cut off instead of the leap day
+            # input_data["SpaceHeatingLoad"]["annual_mmbtu"] = 87600.0
+            
+            input_data["SpaceHeatingLoad"]["monthly_mmbtu"] = fill(87600.0/12, 12)
+            input_data["SpaceHeatingLoad"]["monthly_mmbtu"][2] *= 2
+            input_data["SpaceHeatingLoad"]["normalize_and_scale_load_profile_input"] = true
+            
+            input_data["SpaceHeatingLoad"]["addressable_load_fraction"] = 0.9
+            address_frac = input_data["SpaceHeatingLoad"]["addressable_load_fraction"]
+            
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            
+            # Check that monthly energy input is preserved when normalizing and scaling the hourly profile
+            @test abs(sum(s.space_heating_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU) - sum(input_data["SpaceHeatingLoad"]["monthly_mmbtu"]) * address_frac) < 1.0
+            
+            # This get_monthly_energy function is only equivalent for non-leap years with loads_kw normalization and scaling because it removes the leap day from the processing of monthly hours/energy
+            monthly_kwht = REopt.get_monthly_energy(s.space_heating_load.loads_kw; year=2017) 
+            monthly_mmbtu = monthly_kwht/ s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU
+            # Check that each month matches
+            @test sum(monthly_mmbtu .- input_data["SpaceHeatingLoad"]["monthly_mmbtu"] * address_frac) < 1.0
+            
+            # Check that the load ratio within a month is proportional to the loads_kw ratio
+            @test abs(s.space_heating_load.loads_kw[6] / s.space_heating_load.loads_kw[4] - input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
+            
+            # Check consistency with simulated_load function
+            d_sim_load = Dict([("latitude", input_data["Site"]["latitude"]),
+                ("longitude", input_data["Site"]["longitude"]),
+                ("load_type", "space_heating"),
+                ("normalize_and_scale_load_profile_input", true),
+                ("load_profile", input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"]),
+                ("monthly_mmbtu", input_data["SpaceHeatingLoad"]["monthly_mmbtu"]),
+                ("addressable_load_fraction", address_frac)
+                ])
+            
+            sim_load_response = simulated_load(d_sim_load)
+            
+            @test abs(sim_load_response["annual_mmbtu"] - sum(input_data["SpaceHeatingLoad"]["monthly_mmbtu"]) * address_frac) < 1.0
+            @test sum(s.space_heating_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU .- sim_load_response["loads_mmbtu_per_hour"]) < 10.0              
         end      
     end
 end
