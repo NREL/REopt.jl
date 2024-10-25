@@ -42,7 +42,6 @@ Classify the change according to the following categories:
 - Added missing outputs **lifecycle_export_benefit_before_tax** and **year_one_export_benefit_after_tax** to `ElectricTariff`
 - Add missing output **year_one_om_cost_before_tax** to `PV`
 
-## v0.48.2
 ## Develop degradation-cleanup
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
