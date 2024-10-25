@@ -3,6 +3,7 @@
 `ElectricLoad` is a required REopt input with the following keys and default values:
 ```julia
     loads_kw::Array{<:Real,1} = Real[],
+    normalize_and_scale_load_profile_input::Bool = false,  # Takes loads_kw and normalizes and scales it to annual or monthly energy
     path_to_csv::String = "", # for csv containing loads_kw
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
@@ -136,6 +137,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         elseif length(loads_kw) > 0 && normalize_and_scale_load_profile_input
             if !isempty(doe_reference_name)
                 @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and building type inputs, and only using the year and annual or monthly energy inputs with the load profile"
+            end
+            if isnothing(annual_kwh) && isempty(monthly_kwh)
+                throw(@error("Provided loads_kw with normalize_and_scale_load_profile_input=true, but no annual_kwh or monthly_totals_kwh was provided"))
             end
             # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
             normalized_profile = loads_kw ./ sum(loads_kw)
