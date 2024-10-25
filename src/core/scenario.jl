@@ -221,14 +221,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+        dhw_load = HeatingLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+                                        load_type = "dhw",
                                         latitude=site.latitude, longitude=site.longitude, 
                                         time_steps_per_hour=settings.time_steps_per_hour,
                                         existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        dhw_load = DomesticHotWaterLoad(; 
+        dhw_load = HeatingLoad(;
+            load_type = "dhw", 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
@@ -239,7 +241,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         year = get(d["SpaceHeatingLoad"], "year", electric_load.year)
-        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+        space_heating_load = HeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+                                            load_type = "space_heating",
                                             latitude=site.latitude, longitude=site.longitude, 
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             existing_boiler_efficiency = existing_boiler_efficiency,
@@ -247,7 +250,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             )
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
-        space_heating_load = SpaceHeatingLoad(; 
+        space_heating_load = HeatingLoad(; 
+            load_type = "space_heating",        
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY

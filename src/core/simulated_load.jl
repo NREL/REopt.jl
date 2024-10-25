@@ -292,12 +292,14 @@ function simulated_load(d::Dict)
         # Split up the single heating fuel input for space + dhw annual_mmbtu or monthly_mmbtu into CRB profile split
         boiler_efficiency = get(d, "boiler_efficiency", EXISTING_BOILER_EFFICIENCY)
         
-        default_space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
+        default_space_heating_load = HeatingLoad(; heating_load_inputs...,
+                                                        load_type="space_heating",
                                                         latitude=latitude, 
                                                         longitude=longitude,
                                                         existing_boiler_efficiency=boiler_efficiency
                                                     )
-        default_dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
+        default_dhw_load = HotWaterLoad(; heating_load_inputs...,
+                                                    load_type="dhw",
                                                     latitude=latitude, 
                                                     longitude=longitude,
                                                     existing_boiler_efficiency=boiler_efficiency
@@ -337,14 +339,16 @@ function simulated_load(d::Dict)
             dhw_annual_mmbtu           =   annual_mmbtu * dhw_fraction
         end
     
-        space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
+        space_heating_load = HeatingLoad(; heating_load_inputs...,
+                                                load_type="space_heating",
                                                 latitude=latitude, 
                                                 longitude=longitude,
                                                 annual_mmbtu=space_heating_annual_mmbtu,
                                                 monthly_mmbtu=space_heating_monthly_mmbtu,
                                                 existing_boiler_efficiency=boiler_efficiency
                                             )
-        dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
+        dhw_load = HeatingLoad(; heating_load_inputs...,
+                                            load_type="dhw",
                                             latitude=latitude, 
                                             longitude=longitude,
                                             annual_mmbtu=dhw_annual_mmbtu,
@@ -459,16 +463,9 @@ function simulated_load(d::Dict)
         if addressable_load_fraction != 1.0
             heating_load_inputs[:addressable_load_fraction] = addressable_load_fraction
         end
-      
-        if load_type == "space_heating"
-            constructor = SpaceHeatingLoad
-        elseif load_type == "dhw"
-            constructor = DomesticHotWaterLoad
-        elseif load_type == "process_heat"
-            constructor = ProcessHeatLoad
-        end
 
-        heating_load = constructor(; heating_load_inputs...,
+        heating_load = HeatingLoad(; heating_load_inputs...,
+                                    load_type = load_type,
                                     latitude=latitude, 
                                     longitude=longitude,
                                     annual_mmbtu=annual_mmbtu,
@@ -480,6 +477,7 @@ function simulated_load(d::Dict)
         heating_monthly_energy = get_monthly_energy(load_series)
     
         response = Dict([
+            ("load_type", load_type),
             ("loads_mmbtu_per_hour", round.(load_series, digits=3)),
             ("annual_mmbtu", round(sum(load_series), digits=3)),
             ("monthly_mmbtu", round.(heating_monthly_energy, digits=3)),

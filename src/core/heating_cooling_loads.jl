@@ -1,113 +1,13 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
-`DomesticHotWaterLoad` is an optional REopt input with the following keys and default values:
+# `HeatingLoad` is a base function for the types of heating load inputs with the following keys and default values:
 ```julia
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
-    annual_mmbtu::Union{Real, Nothing} = nothing,
-    monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
-    existing_boiler_efficiency::Real = NaN
-```
-
-There are many ways in which a DomesticHotWaterLoad can be defined:
-1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "DomesticHotWaterLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `DomesticHotWaterLoad`.
-2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
-3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
-
-!!! note "Hot water loads"
-    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
-    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
-    demand.
-
-"""
-struct DomesticHotWaterLoad
-    loads_kw::Array{Real, 1}
-    annual_mmbtu::Real
-    unaddressable_annual_fuel_mmbtu::Real
-
-    function DomesticHotWaterLoad(;
-        doe_reference_name::String = "",
-        city::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        annual_mmbtu::Union{Real, Nothing} = nothing,
-        monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Any = 1.0,
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-        latitude::Real = 0.0,
-        longitude::Real = 0.0,
-        existing_boiler_efficiency::Real = NaN
-    )
-
-        if length(addressable_load_fraction) > 1
-            if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
-            end
-            if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
-            end
-            addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
-        elseif typeof(addressable_load_fraction) <: Vector{}
-            addressable_load_fraction = convert(Real, addressable_load_fraction[1])            
-        else
-            addressable_load_fraction = convert(Real, addressable_load_fraction)
-        end
-    
-        if length(fuel_loads_mmbtu_per_hour) > 0
-
-            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` does not match the time_steps_per_hour."))
-            end
-
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
-            unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction)) / time_steps_per_hour
-
-            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
-                @warn "DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
-            end
-
-        elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
-            if length(blended_doe_reference_names) > 0
-                @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
-            end
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
-        elseif length(blended_doe_reference_names) > 0 && 
-            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
-                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
-                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
-                                                    existing_boiler_efficiency)
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
-        else
-            throw(@error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
-        end
-
-        if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @warn "Repeating domestic hot water loads in each hour to match the time_steps_per_hour."
-        end
-
-        new(
-            loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
-            unaddressable_annual_fuel_mmbtu
-        )
-    end
-end
-
-
-"""
-`SpaceHeatingLoad` is an optional REopt input with the following keys and default values:
-```julia
-    doe_reference_name::String = "",
-    blended_doe_reference_names::Array{String, 1} = String[],
-    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    industrial_reference_name::String = "",
+    blended_industrial_reference_names::Array{String, 1} = String[],
+    blended_industrial_reference_percents::Array{<:Real,1} = Real[],
     addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
@@ -116,10 +16,11 @@ end
     existing_boiler_efficiency::Real = NaN
 ```
 
-There are many ways to define a `SpaceHeatingLoad`:
-1. a time-series via the `fuel_loads_mmbtu_per_hour`,
-2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_mmbtu` or `monthly_mmbtu` values;
-3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+There are different ways to define a heating load:
+1. A time-series via the `fuel_loads_mmbtu_per_hour`,
+2. Scaling a DOE Commercial Reference Building (CRB) or industrial reference profile or a blend of profiles to either the `annual_mmbtu` or `monthly_mmbtu` values;
+3. Using the same `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+4. A time-series via the `fuel_loads_mmbtu_per_hour` along with `annual_mmbtu` or `monthly_mmbtu` with `normalize_and_scale_load_profile_input`=true
 
 When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
 one only needs to provide an empty Dict in the scenario JSON to add a `SpaceHeatingLoad` to a 
@@ -131,102 +32,129 @@ one only needs to provide an empty Dict in the scenario JSON to add a `SpaceHeat
 ...
 ```
 In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
-`blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
+`blended_doe_reference_percents` are copied from the `ElectricLoad` to the the particular `HeatingLoad` type.
 
-!!! note "Space heating loads"
-    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
-    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
-    emand.
+!!! note for all heating loads
+    Hot water, space heating, and process heat "load" inputs are in terms of energy input required (boiler fuel), 
+    not the actual end use thermal energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
+    demand.
 """
+function HeatingLoad(;
+    load_type::String = "",
+    doe_reference_name::String = "",
+    city::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    industrial_reference_name::String = "",
+    blended_industrial_reference_names::Array{String, 1} = String[],
+    blended_industrial_reference_percents::Array{<:Real,1} = Real[],    
+    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles must use 2017. If providing load profile, specify year of data.
+    annual_mmbtu::Union{Real, Nothing} = nothing,
+    monthly_mmbtu::Array{<:Real,1} = Real[],
+    addressable_load_fraction::Any = 1.0,
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+    normalize_and_scale_load_profile_input::Bool = false,
+    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+    latitude::Real = 0.0,
+    longitude::Real = 0.0,
+    existing_boiler_efficiency::Real = NaN
+    )
+
+    # Determine which type of heating load to build
+    if load_type == "space_heating"
+        load = :SpaceHeatingLoad
+        constructor = BuiltInSpaceHeatingLoad
+        struct_type = SpaceHeatingLoad
+    elseif load_type == "dhw"
+        load = :DomesticHotWaterLoad
+        constructor = BuiltInDomesticHotWaterLoad
+        struct_type = DomesticHotWaterLoad
+    elseif load_type == "process_heat"  # Hookup ProcessHeatLoad after Space and DHW
+        load = :ProcessHeatLoad
+        constructor = BuiltInProcessHeatLoad
+        struct_type = ProcessHeatLoad        
+    else
+        throw(@error("load_type must be 'space_heating', 'dhw', or 'process_heat'"))
+    end
+
+    if length(addressable_load_fraction) > 1
+        if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+            throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
+        end
+        if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
+            throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
+        end
+        addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
+    elseif typeof(addressable_load_fraction) <: Vector{}
+        addressable_load_fraction = convert(Real, addressable_load_fraction[1])  
+    else
+        addressable_load_fraction = convert(Real, addressable_load_fraction)            
+    end
+
+    if length(fuel_loads_mmbtu_per_hour) > 0 && !normalize_and_scale_load_profile_input
+
+        if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
+            throw(@error("Provided $load load does not match the time_steps_per_hour."))
+        end
+
+        loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
+        unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction))  / time_steps_per_hour
+
+        if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
+            @warn "$load fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+        end
+
+    elseif length(fuel_loads_mmbtu_per_hour) > 0 && normalize_and_scale_load_profile_input
+        if !isempty(doe_reference_name)
+            @warn "fuel_loads_mmbtu_per_hour provided with normalize_and_scale_load_profile_input = true, so ignoring location and building type inputs, and only using the year and annual or monthly energy inputs with the load profile"
+        end
+        if isnothing(annual_mmbtu) && isempty(monthly_mmbtu)
+            throw(@error("Provided fuel_loads_mmbtu_per_hour with normalize_and_scale_load_profile_input=true, but no annual_mmbtu or monthly_mmbtu was provided"))
+        end
+        # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
+        normalized_profile = fuel_loads_mmbtu_per_hour ./ sum(fuel_loads_mmbtu_per_hour)
+        loads_kw = constructor("Chicago", "LargeOffice", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
+        unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
+    elseif !isempty(doe_reference_name)
+        loads_kw = constructor(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
+        if length(blended_doe_reference_names) > 0
+            @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
+        end
+        unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)           
+    elseif length(blended_doe_reference_names) > 0 && 
+        length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+        loads_kw = blend_and_scale_doe_profiles(constructor, latitude, longitude, 2017, 
+                                                blended_doe_reference_names, blended_doe_reference_percents, city, 
+                                                annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
+                                                existing_boiler_efficiency)
+        unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)                                                   
+    else
+        throw(@error("Cannot construct $constructor. You must provide either [fuel_loads_mmbtu_per_hour], 
+            [doe_reference_name, latitude, longitude], or [blended_doe_reference_names, blended_doe_reference_percents, latitude, longitude]."))
+    end
+
+    if length(loads_kw) < 8760*time_steps_per_hour
+        loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
+        @warn "Repeating $load in each hour to match the time_steps_per_hour."
+    end
+
+    struct_type(
+        loads_kw,
+        (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
+        unaddressable_annual_fuel_mmbtu
+    )
+end
+
+struct DomesticHotWaterLoad
+    loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
+    unaddressable_annual_fuel_mmbtu::Real
+end
+
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
     annual_mmbtu::Real
     unaddressable_annual_fuel_mmbtu::Real
-
-    function SpaceHeatingLoad(;
-        doe_reference_name::String = "",
-        city::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles must use 2017. If providing load profile, specify year of data.
-        annual_mmbtu::Union{Real, Nothing} = nothing,
-        monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Any = 1.0,
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        normalize_and_scale_load_profile_input::Bool = false,
-        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-        latitude::Real = 0.0,
-        longitude::Real = 0.0,
-        existing_boiler_efficiency::Real = NaN
-    )
-
-        if length(addressable_load_fraction) > 1
-            if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
-            end
-            if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
-            end
-            addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
-        elseif typeof(addressable_load_fraction) <: Vector{}
-            addressable_load_fraction = convert(Real, addressable_load_fraction[1])  
-        else
-            addressable_load_fraction = convert(Real, addressable_load_fraction)            
-        end
-
-        if length(fuel_loads_mmbtu_per_hour) > 0 && !normalize_and_scale_load_profile_input
-
-            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided space heating load does not match the time_steps_per_hour."))
-            end
-
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
-            unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction))  / time_steps_per_hour
-
-            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
-                @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
-            end
-
-        elseif length(fuel_loads_mmbtu_per_hour) > 0 && normalize_and_scale_load_profile_input
-            if !isempty(doe_reference_name)
-                @warn "fuel_loads_mmbtu_per_hour provided with normalize_and_scale_load_profile_input = true, so ignoring location and building type inputs, and only using the year and annual or monthly energy inputs with the load profile"
-            end
-            if isnothing(annual_mmbtu) && isempty(monthly_mmbtu)
-                throw(@error("Provided fuel_loads_mmbtu_per_hour with normalize_and_scale_load_profile_input=true, but no annual_mmbtu or monthly_mmbtu was provided"))
-            end
-            # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
-            normalized_profile = fuel_loads_mmbtu_per_hour ./ sum(fuel_loads_mmbtu_per_hour)
-            loads_kw = BuiltInSpaceHeatingLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
-        elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
-            if length(blended_doe_reference_names) > 0
-                @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
-            end
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)           
-        elseif length(blended_doe_reference_names) > 0 && 
-            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
-                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
-                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
-                                                    existing_boiler_efficiency)
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)                                                   
-        else
-            throw(@error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
-        end
-
-        if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @warn "Repeating space heating loads in each hour to match the time_steps_per_hour."
-        end
-
-        new(
-            loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
-            unaddressable_annual_fuel_mmbtu
-        )
-    end
 end
 
 """
