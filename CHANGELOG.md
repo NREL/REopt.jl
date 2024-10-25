@@ -27,10 +27,6 @@ Classify the change according to the following categories:
 
 ## Develop LDES
 ### Added
-- Added inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
-- Added outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
-- Added new input **soc_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling SOC-based battery self-discharge
-- Added new input **capacity_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling capacity-based battery self-discharge
 - Added input option **can_export_to_grid** (defaults to _false_) to `ElectricStorage` and decision variable **dvStorageToGrid**
 - Added input **fixed_duration** to `ElectricStorage`, which fixes the ratio between **size_kw** and **size_kwh** in the optimized solution if provided
 - Added input option **optimize_soc_init_fraction** (defaults to _false_) to `ElectricStorage`, which makes the optimization choose the inital SOC (equal to final SOC) instead of using **soc_init_fraction**. The initial SOC is also constrained to equal the final SOC, which eliminates the "free energy" issue. We currently do not fix SOC when **soc_init_fraction** is used because this has caused infeasibility. 
@@ -41,6 +37,13 @@ Classify the change according to the following categories:
 ### Fixed
 - Added missing outputs **lifecycle_export_benefit_before_tax** and **year_one_export_benefit_after_tax** to `ElectricTariff`
 - Add missing output **year_one_om_cost_before_tax** to `PV`
+
+## Develop battery_om
+### Added
+- Added inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
+- Added outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
+- Added input **soc_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling SOC-based battery self-discharge
+- Added input **capacity_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling capacity-based battery self-discharge
 
 ## Develop degradation-cleanup
 ### Added
