@@ -86,10 +86,13 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	# Constraint (4h): prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
     # (4h)-1: with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+        m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + 
+        p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
         )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
 	)
 	# (4h)-2: no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
