@@ -25,7 +25,7 @@ function simulated_load(d::Dict)
     doe_reference_name_input = get(d, "doe_reference_name", nothing)
     percent_share_input = get(d, "percent_share", Real[])
 
-    # Input which then expects a custom load_profile along with annual or monthly energy values
+    # Input which then expects a custom load_profile along with annual or monthly energy values; this could be electric, heating, or cooling profiles
     normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
     load_profile = get(d, "load_profile", Real[])
     if normalize_and_scale_load_profile_input
@@ -235,8 +235,10 @@ function simulated_load(d::Dict)
         if !isempty(error_list)
             throw(@error("Invalid key(s) $error_list for load_type=heating"))
         end
-        if isnothing(doe_reference_name)
+        if isnothing(doe_reference_name) && !normalize_and_scale_load_profile_input
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."))
+        elseif normalize_and_scale_load_profile_input
+            throw(@error("For normalizing and scaling a heating load profile, use one of load_type=['space_heating', 'dhw', 'process_heat']"))
         end
         # Annual loads (default is nothing)
         annual_mmbtu = get(d, "annual_mmbtu", nothing)
@@ -275,6 +277,7 @@ function simulated_load(d::Dict)
             throw(@error("addressable_load_fraction must be between 0.0 and 1.0"))
         end
 
+        # Build dependent inputs for heating load
         heating_load_inputs = Dict{Symbol, Any}()
         if length(doe_reference_name) > 1
             heating_load_inputs[:blended_doe_reference_names] = doe_reference_name
@@ -388,7 +391,7 @@ function simulated_load(d::Dict)
         if !isempty(error_list)
             throw(@error("Invalid key(s) $error_list for load_type=[space_heating, dhw, or process_heat"))
         end
-        if isnothing(doe_reference_name)
+        if isnothing(doe_reference_name) && !normalize_and_scale_load_profile_input
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."))
         end
         # Annual loads (default is nothing)
@@ -430,22 +433,29 @@ function simulated_load(d::Dict)
 
         boiler_efficiency = get(d, "boiler_efficiency", EXISTING_BOILER_EFFICIENCY)
         
+        # Build dependent inputs for Heating load
         heating_load_inputs = Dict{Symbol, Any}()
-        if load_type == "process_heat"
-            if length(doe_reference_name) > 1
-                heating_load_inputs[:blended_industry_reference_names] = doe_reference_name
-                heating_load_inputs[:blended_industry_reference_percents] = percent_share_list
+        if !normalize_and_scale_load_profile_input
+            if load_type == "process_heat"
+                if length(doe_reference_name) > 1
+                    heating_load_inputs[:blended_industry_reference_names] = doe_reference_name
+                    heating_load_inputs[:blended_industry_reference_percents] = percent_share_list
+                else
+                    heating_load_inputs[:industry_reference_name] = doe_reference_name[1]
+                end
             else
-                heating_load_inputs[:industry_reference_name] = doe_reference_name[1]
+                if length(doe_reference_name) > 1
+                    heating_load_inputs[:blended_doe_reference_names] = doe_reference_name
+                    heating_load_inputs[:blended_doe_reference_percents] = percent_share_list                        
+                else
+                    heating_load_inputs[:doe_reference_name] = doe_reference_name[1]
+                end
             end
         else
-            if length(doe_reference_name) > 1
-                heating_load_inputs[:blended_doe_reference_names] = doe_reference_name
-                heating_load_inputs[:blended_doe_reference_percents] = percent_share_list                        
-            else
-                heating_load_inputs[:doe_reference_name] = doe_reference_name[1]
-            end
+            heating_load_inputs[:normalize_and_scale_load_profile_input] = normalize_and_scale_load_profile_input
+            heating_load_inputs[:fuel_loads_mmbtu_per_hour] = load_profile
         end
+
         if addressable_load_fraction != 1.0
             heating_load_inputs[:addressable_load_fraction] = addressable_load_fraction
         end
