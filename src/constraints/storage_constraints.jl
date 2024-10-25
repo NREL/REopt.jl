@@ -21,6 +21,19 @@ function add_storage_size_constraints(m, p, b; _n="")
 	@constraint(m,
         m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage.attr[b].max_kw
     )
+
+	# Constraint (4c)-3: Limit on ElectricStorage Energy Capacity based on Duration Hours
+    if p.s.storage.attr[b] isa ElectricStorage
+        @constraint(m,
+            m[Symbol("dvStorageEnergy"*_n)][b] <= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].max_duration_hours
+        )
+
+        @constraint(m,
+            m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].min_duration_hours
+        )
+    end    
+
+
 end
 
 

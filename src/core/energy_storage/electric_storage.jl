@@ -190,10 +190,11 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on the rated kWh capacity of the sized storage system. 
     soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
-    fixed_duration::Union{Real, Nothing} = nothing
     optimize_soc_init_fraction::Bool = false
     name::String = "ElectricStorage"
-``` 
+    min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
+    max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+```
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
@@ -231,9 +232,10 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0
     soc_based_per_ts_self_discharge_fraction::Float64 = 0.0
-    fixed_duration::Union{Real, Nothing} = nothing
     optimize_soc_init_fraction::Bool = false
     name::String = "ElectricStorage"
+    min_duration_hours::Real = 0.0
+    max_duration_hours::Real = 100000.0
 end
 
 
@@ -280,9 +282,10 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     capacity_based_per_ts_self_discharge_fraction::Float64
     soc_based_per_ts_self_discharge_fraction::Float64
-    fixed_duration::Union{Real, Nothing}
     optimize_soc_init_fraction::Bool
     name::String
+    min_duration_hours::Real
+    max_duration_hours::Real
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -304,6 +307,10 @@ struct ElectricStorage <: AbstractElectricStorage
             end
             replace_cost_per_kwh = 0.0 # Always modeled using maintenance_cost_vector in degradation model.
             # replace_cost_per_kw is unchanged here.
+        end
+
+        if s.min_duration_hours > s.max_duration_hours
+            throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
 
         net_present_cost_per_kw = effective_cost(;
@@ -375,9 +382,10 @@ struct ElectricStorage <: AbstractElectricStorage
             s.minimum_avg_soc_fraction,
             s.capacity_based_per_ts_self_discharge_fraction,
             s.soc_based_per_ts_self_discharge_fraction,
-            s.fixed_duration,
             s.optimize_soc_init_fraction,
-            s.name
+            s.name,
+            s.min_duration_hours,
+            s.max_duration_hours
         )
     end
 end

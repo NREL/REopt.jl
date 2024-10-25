@@ -28,7 +28,6 @@ Classify the change according to the following categories:
 ## Develop LDES
 ### Added
 - Added input option **can_export_to_grid** (defaults to _false_) to `ElectricStorage` and decision variable **dvStorageToGrid**
-- Added input **fixed_duration** to `ElectricStorage`, which fixes the ratio between **size_kw** and **size_kwh** in the optimized solution if provided
 - Added input option **optimize_soc_init_fraction** (defaults to _false_) to `ElectricStorage`, which makes the optimization choose the inital SOC (equal to final SOC) instead of using **soc_init_fraction**. The initial SOC is also constrained to equal the final SOC, which eliminates the "free energy" issue. We currently do not fix SOC when **soc_init_fraction** is used because this has caused infeasibility. 
 - Added output **initial_capital_cost** to all techs
 - Added input **soc_based_per_ts_thermal_decay_fraction** to both `ColdThermalStorage` and `HotThermalStorage` for modeling SOC-based thermal decay rate 
@@ -45,6 +44,10 @@ Classify the change according to the following categories:
 - Added input **soc_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling SOC-based battery self-discharge
 - Added input **capacity_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling capacity-based battery self-discharge
 
+## Develop - 2024-10-11
+### Added
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+  
 ## Develop degradation-cleanup
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
