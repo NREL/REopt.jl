@@ -152,6 +152,9 @@ function built_in_load(
             if month == 2 && isleapyear(year) && !input_normalized  # for a leap year with normalized_profile, the last day is assumed to be truncated
                 plus_hours -= 24
             end
+            if month == 12 && isleapyear(year) && input_normalized
+                plus_hours -= 24
+            end
             month_total = sum(normalized_profile[t0:t0+plus_hours-1])
             if month_total == 0.0  # avoid division by zero
                 monthly_scalers[month] = 0.0
