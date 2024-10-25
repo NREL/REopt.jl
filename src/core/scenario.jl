@@ -93,10 +93,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
             for (i, pv) in enumerate(d["PV"])
-                if !(haskey(pv, "name"))
-                    pv["name"] = string("PV", i)
+                pv = dictkeys_tosymbols(pv)
+                if !(haskey(pv, :name))
+                    pv[:name] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag, 
+                push!(pvs, PV(;pv..., off_grid_flag = settings.off_grid_flag, 
                             latitude=site.latitude))
             end
         elseif typeof(d["PV"]) <: AbstractDict
@@ -170,11 +171,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d,  "ElectricStorage")
         if typeof(d["ElectricStorage"]) <: AbstractArray
             for (i, elecstor) in enumerate(d["ElectricStorage"])
-                if !(haskey(elecstor, "name"))
-                    elecstor["name"] = string("ElectricStorage", i)
-                end
                 storage_dict = dictkeys_tosymbols(elecstor)
                 storage_dict[:off_grid_flag] = settings.off_grid_flag
+                if !(haskey(storage_dict, :name))
+                    storage_dict[:name] = string("ElectricStorage", i)
+                end
                 storage_structs[storage_dict[:name]] = ElectricStorage(storage_dict, financial)
             end
         elseif typeof(d["ElectricStorage"]) <: AbstractDict
