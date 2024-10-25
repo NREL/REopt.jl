@@ -69,30 +69,38 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # calculate Storage o+m costs, incentives, and depreciation
-    if "ElectricStorage" in keys(d) && d["ElectricStorage"]["size_kw"] > 0
-        # TODO handle other types of storage
-        storage = p.s.storage.attr["ElectricStorage"]
-        total_kw = d["ElectricStorage"]["size_kw"]
-        total_kwh = d["ElectricStorage"]["size_kwh"]
-        capital_cost = total_kw * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh
-        battery_replacement_year = storage.battery_replacement_year
-        battery_replacement_cost = -1 * ((total_kw * storage.replace_cost_per_kw) + (
-                    total_kwh * storage.replace_cost_per_kwh))
-        m.om_series += [yr != battery_replacement_year ? 0 : battery_replacement_cost for yr in 1:years]
+    if "ElectricStorage" in keys(d)
+        if typeof(d["ElectricStorage"]) <: AbstractArray && length(d["ElectricStorage"]) == 1
+            d["ElectricStorage"] = d["ElectricStorage"][1]
+        elseif !(typeof(d["ElectricStorage"]) <: AbstractDict)
+            throw(@error("Pro forma results for a REopt solution with multiple ElectricStorage is not yet supported"))
+        end
+        elec_stor_name = get(d["ElectricStorage"],"name","ElectricStorage")
+        if d["ElectricStorage"]["size_kw"] > 0
+            # TODO handle other types of storage
+            storage = p.s.storage.attr[elec_stor_name]
+            total_kw = d["ElectricStorage"]["size_kw"]
+            total_kwh = d["ElectricStorage"]["size_kwh"]
+            capital_cost = total_kw * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh
+            battery_replacement_year = storage.battery_replacement_year
+            battery_replacement_cost = -1 * ((total_kw * storage.replace_cost_per_kw) + (
+                        total_kwh * storage.replace_cost_per_kwh))
+            m.om_series += [yr != battery_replacement_year ? 0 : battery_replacement_cost for yr in 1:years]
 
-        # storage only has cbi in the API
-        cbi = total_kw * storage.total_rebate_per_kw + total_kwh * storage.total_rebate_per_kwh
-        m.total_ibi_and_cbi += cbi
+            # storage only has cbi in the API
+            cbi = total_kw * storage.total_rebate_per_kw + total_kwh * storage.total_rebate_per_kwh
+            m.total_ibi_and_cbi += cbi
 
-        # ITC
-        federal_itc_basis = capital_cost  # bug in v1 subtracted cbi from capital_cost here
-        federal_itc_amount = storage.total_itc_fraction * federal_itc_basis
-        m.federal_itc += federal_itc_amount
+            # ITC
+            federal_itc_basis = capital_cost  # bug in v1 subtracted cbi from capital_cost here
+            federal_itc_amount = storage.total_itc_fraction * federal_itc_basis
+            m.federal_itc += federal_itc_amount
 
-        # Depreciation
-        if storage.macrs_option_years in [5 ,7]
-            depreciation_schedule = get_depreciation_schedule(p, storage, federal_itc_basis)
-            m.total_depreciation += depreciation_schedule
+            # Depreciation
+            if storage.macrs_option_years in [5, 7]
+                depreciation_schedule = get_depreciation_schedule(p, storage, federal_itc_basis)
+                m.total_depreciation += depreciation_schedule
+            end
         end
     end
 
