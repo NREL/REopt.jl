@@ -238,10 +238,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
+        year = get(d["SpaceHeatingLoad"], "year", electric_load.year)
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                             latitude=site.latitude, longitude=site.longitude, 
                                             time_steps_per_hour=settings.time_steps_per_hour,
-                                            existing_boiler_efficiency = existing_boiler_efficiency
+                                            existing_boiler_efficiency = existing_boiler_efficiency,
+                                            year = year
                                             )
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else

@@ -112,6 +112,7 @@ end
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    normalize_and_scale_load_profile_input::Bool = false,  # Takes fuel_loads_mmbtu_per_hour and normalizes and scales it to annual or monthly energy
     existing_boiler_efficiency::Real = NaN
 ```
 
@@ -147,10 +148,12 @@ struct SpaceHeatingLoad
         city::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles must use 2017. If providing load profile, specify year of data.
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         addressable_load_fraction::Any = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        normalize_and_scale_load_profile_input::Bool = false,
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
         longitude::Real = 0.0,
@@ -171,7 +174,7 @@ struct SpaceHeatingLoad
             addressable_load_fraction = convert(Real, addressable_load_fraction)            
         end
 
-        if length(fuel_loads_mmbtu_per_hour) > 0
+        if length(fuel_loads_mmbtu_per_hour) > 0 && !normalize_and_scale_load_profile_input
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
                 throw(@error("Provided space heating load does not match the time_steps_per_hour."))
@@ -184,6 +187,17 @@ struct SpaceHeatingLoad
                 @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
+        elseif length(fuel_loads_mmbtu_per_hour) > 0 && normalize_and_scale_load_profile_input
+            if !isempty(doe_reference_name)
+                @warn "fuel_loads_mmbtu_per_hour provided with normalize_and_scale_load_profile_input = true, so ignoring location and building type inputs, and only using the year and annual or monthly energy inputs with the load profile"
+            end
+            if isnothing(annual_mmbtu) && isempty(monthly_mmbtu)
+                throw(@error("Provided fuel_loads_mmbtu_per_hour with normalize_and_scale_load_profile_input=true, but no annual_mmbtu or monthly_mmbtu was provided"))
+            end
+            # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
+            normalized_profile = fuel_loads_mmbtu_per_hour ./ sum(fuel_loads_mmbtu_per_hour)
+            loads_kw = BuiltInSpaceHeatingLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
+            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
             if length(blended_doe_reference_names) > 0
@@ -761,7 +775,8 @@ function BuiltInSpaceHeatingLoad(
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
     annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
-    existing_boiler_efficiency::Union{Real, Nothing}=nothing
+    existing_boiler_efficiency::Union{Real, Nothing}=nothing,
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
     )
     spaceheating_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -1089,7 +1104,7 @@ function BuiltInSpaceHeatingLoad(
         monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
-                    existing_boiler_efficiency)
+                    existing_boiler_efficiency, normalized_profile)
 end
 
 
