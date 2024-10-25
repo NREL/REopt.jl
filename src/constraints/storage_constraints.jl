@@ -27,13 +27,10 @@ function add_storage_size_constraints(m, p, b; _n="")
         @constraint(m,
             m[Symbol("dvStorageEnergy"*_n)][b] <= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].max_duration_hours
         )
-
         @constraint(m,
             m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].min_duration_hours
         )
-    end    
-
-
+    end
 end
 
 
@@ -157,10 +154,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )
-    end
-
-    if p.s.storage.attr[b] isa ElectricStorage && !isnothing(p.s.storage.attr[b].fixed_duration)
-        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].fixed_duration)
     end
 end
 
