@@ -2,12 +2,13 @@
 """
 # `HeatingLoad` is a base function for the types of heating load inputs with the following keys and default values:
 ```julia
-    doe_reference_name::String = "",
-    blended_doe_reference_names::Array{String, 1} = String[],
-    blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    industrial_reference_name::String = "",
-    blended_industrial_reference_names::Array{String, 1} = String[],
-    blended_industrial_reference_percents::Array{<:Real,1} = Real[],
+    load_type::String = "",  # Valid options are space_heating for SpaceHeatingLoad, domestic_hot_water for DomesticHotWaterLoad, and process_heat for ProcessHeatLoad
+    doe_reference_name::String = "",  # For SpaceHeatingLoad and DomesticHotWaterLoad
+    blended_doe_reference_names::Array{String, 1} = String[],  # For SpaceHeatingLoad and DomesticHotWaterLoad
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],  # For SpaceHeatingLoad and DomesticHotWaterLoad
+    industrial_reference_name::String = "",  # For ProcessHeatLoad
+    blended_industrial_reference_names::Array{String, 1} = String[],  # For ProcessHeatLoad
+    blended_industrial_reference_percents::Array{<:Real,1} = Real[],  # For ProcessHeatLoad
     addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
@@ -42,12 +43,12 @@ In this case the values provided for `doe_reference_name`, or  `blended_doe_refe
 function HeatingLoad(;
     load_type::String = "",
     doe_reference_name::String = "",
-    city::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     industrial_reference_name::String = "",
     blended_industrial_reference_names::Array{String, 1} = String[],
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],    
+    city::String = "",
     year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles must use 2017. If providing load profile, specify year of data.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
@@ -63,18 +64,19 @@ function HeatingLoad(;
     # Determine which type of heating load to build
     if load_type == "space_heating"
         load = :SpaceHeatingLoad
-        constructor = BuiltInSpaceHeatingLoad
         struct_type = SpaceHeatingLoad
-    elseif load_type == "dhw"
+    elseif load_type == "domestic_hot_water"
         load = :DomesticHotWaterLoad
-        constructor = BuiltInDomesticHotWaterLoad
         struct_type = DomesticHotWaterLoad
-    elseif load_type == "process_heat"  # Hookup ProcessHeatLoad after Space and DHW
+    elseif load_type == "process_heat"
         load = :ProcessHeatLoad
-        constructor = BuiltInProcessHeatLoad
-        struct_type = ProcessHeatLoad        
+        struct_type = ProcessHeatLoad
+        city = "Industrial"
+        doe_reference_name = industrial_reference_name
+        blended_doe_reference_names = blended_industrial_reference_names
+        blended_doe_reference_percents = blended_industrial_reference_percents     
     else
-        throw(@error("load_type must be 'space_heating', 'dhw', or 'process_heat'"))
+        throw(@error("load_type must be 'space_heating', 'domestic_hot_water', or 'process_heat'"))
     end
 
     if length(addressable_load_fraction) > 1
@@ -113,23 +115,23 @@ function HeatingLoad(;
         end
         # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
         normalized_profile = fuel_loads_mmbtu_per_hour ./ sum(fuel_loads_mmbtu_per_hour)
-        loads_kw = constructor("Chicago", "LargeOffice", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
+        loads_kw = BuiltInHeatingLoad(load_type, "Chicago", "LargeOffice", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
         unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
     elseif !isempty(doe_reference_name)
-        loads_kw = constructor(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
+        loads_kw = BuiltInHeatingLoad(load_type, city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
         if length(blended_doe_reference_names) > 0
             @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
         end
         unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)           
     elseif length(blended_doe_reference_names) > 0 && 
         length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-        loads_kw = blend_and_scale_doe_profiles(constructor, latitude, longitude, 2017, 
+        loads_kw = blend_and_scale_doe_profiles(BuiltInHeatingLoad, latitude, longitude, 2017, 
                                                 blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                 annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
-                                                existing_boiler_efficiency)
+                                                existing_boiler_efficiency, load_type)
         unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)                                                   
     else
-        throw(@error("Cannot construct $constructor. You must provide either [fuel_loads_mmbtu_per_hour], 
+        throw(@error("Cannot construct $load. You must provide either [fuel_loads_mmbtu_per_hour], 
             [doe_reference_name, latitude, longitude], or [blended_doe_reference_names, blended_doe_reference_percents, latitude, longitude]."))
     end
 
@@ -157,34 +159,91 @@ struct SpaceHeatingLoad
     unaddressable_annual_fuel_mmbtu::Real
 end
 
-"""
-function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, 
-                                            max_load_kw=nothing, 
-                                            max_load_kw_thermal=nothing)
-This function returns the default value for ExistingChiller.cop based on:
-    1. No information about load, returns average of lower and higher cop default values (`cop_unknown_thermal`)
-    2. If the cooling electric `max_load_kw` is known, we first guess the thermal load profile using `cop_unknown_thermal`,
-        and then we use the default logic to determine the `existing_chiller_cop` based on the peak thermal load with a thermal factor multiplier.
-    3. If the cooling thermal `max_load_kw_thermal` is known, same as 2. but we don't have to guess the cop to convert electric to thermal load first.
-"""
-function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, max_load_kw=nothing, max_load_kw_thermal=nothing)
-    cop_less_than_100_ton = 4.40
-    cop_more_than_100_ton = 4.69
-    cop_unknown_thermal = (cop_less_than_100_ton + cop_more_than_100_ton) / 2.0
-    max_cooling_load_ton = nothing
-    if !isnothing(max_load_kw_thermal)
-        max_cooling_load_ton = max_load_kw_thermal / KWH_THERMAL_PER_TONHOUR
-    elseif !isnothing(max_load_kw)
-        max_cooling_load_ton = max_load_kw / KWH_THERMAL_PER_TONHOUR * cop_unknown_thermal
-    end
-    if isnothing(max_cooling_load_ton) || isnothing(existing_chiller_max_thermal_factor_on_peak_load)
-        return cop_unknown_thermal
-    elseif max_cooling_load_ton * existing_chiller_max_thermal_factor_on_peak_load < 100.0
-        return cop_less_than_100_ton
-    else
-        return cop_more_than_100_ton
-    end
+struct ProcessHeatLoad
+    loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
+    unaddressable_annual_fuel_mmbtu::Real
 end
+
+function BuiltInHeatingLoad(
+    load_type::String,
+    city::String,
+    buildingtype::String,
+    latitude::Real,
+    longitude::Real,
+    year::Int,
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
+    annual_mmbtu::Union{Real, Nothing}=nothing,
+    monthly_mmbtu::Vector{<:Real}=Real[],
+    existing_boiler_efficiency::Union{Real, Nothing}=nothing,
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
+    )
+
+    # Load the appropriate default annual energy data based on load_type
+    if load_type == "space_heating"
+        default_annual_mmbtu = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "space_heating_annual_mmbtu.json"))
+    elseif load_type == "domestic_hot_water"
+        default_annual_mmbtu = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "domestic_hot_water_annual_mmbtu.json"))
+    elseif load_type == "process_heat"
+        default_annual_mmbtu = Dict(
+            "Industrial" => Dict(
+                "Chemical" => 15000.0,  # mid-sized chemical processes
+                "FlatLoad" => 10000,  #  continuous operations throughout the year
+                "Warehouse" => 7000
+            )
+        )
+        city = "Industrial"
+    else
+        throw(@error("For BuiltInHeatingLoad, load_type must be 'space_heating', 'domestic_hot_water', or 'process_heat'"))
+    end
+
+    if isempty(city)
+        city = find_ashrae_zone_city(latitude, longitude)
+    end
+    if (load_type in ["space_heating", "domestic_hot_water"]) && !(buildingtype in default_buildings)
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
+    end
+    if (load_type == "process_heat") && !(buildingtype in default_process_types)
+        throw(@error("buildingtype $(buildingtype) not in $(default_process_types)."))
+    end
+
+    if isnothing(annual_mmbtu)
+        # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
+        if occursin("FlatLoad", buildingtype)
+            annual_mmbtu = default_annual_mmbtu[city]["FlatLoad"]
+        else
+            annual_mmbtu = default_annual_mmbtu[city][buildingtype]
+        end
+    else
+        annual_mmbtu *= addressable_load_fraction
+    end
+    if length(monthly_mmbtu) == 12
+        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
+    end
+    built_in_load(load_type, city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
+                    existing_boiler_efficiency, normalized_profile)
+end
+
+"""
+    get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
+    
+Get unaddressable fuel load, for reporting
+    :addressable_load_fraction is the fraction of the input fuel load that is addressable to supply by energy technologies, like CHP
+    :annual_mmbtu and :monthly_mmbtu is assumed to be fuel, not thermal, in this function
+    :loads_kw is assumed to be thermal in this function, with units of kw_thermal, so needs to be converted to fuel mmbtu
+"""
+function get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
+    # Get unaddressable fuel load, for reporting
+    if !isempty(monthly_mmbtu)
+        unaddressable_annual_fuel_mmbtu = sum(monthly_mmbtu .* (1 .- addressable_load_fraction))
+    elseif !isnothing(annual_mmbtu)
+        unaddressable_annual_fuel_mmbtu = annual_mmbtu * (1 - addressable_load_fraction)
+    else # using the default CRB annual_mmbtu, so rely on loads_kw (thermal) assuming single addressable_load_fraction
+        unaddressable_annual_fuel_mmbtu = sum(loads_kw) / (KWH_PER_MMBTU * existing_boiler_efficiency)                
+    end
+    return unaddressable_annual_fuel_mmbtu
+end
+
 
 """
 `CoolingLoad` is an optional REopt input with the following keys and default values:
@@ -352,83 +411,34 @@ function get_default_fraction_of_total_electric(city, doe_reference_name, latitu
     return default_fraction_of_total_electric_profile
 end
 
-
-function BuiltInDomesticHotWaterLoad(
-    city::String,
-    buildingtype::String,
-    latitude::Real,
-    longitude::Real,
-    year::Int,
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
-    annual_mmbtu::Union{Real, Nothing}=nothing,
-    monthly_mmbtu::Vector{<:Real}=Real[],
-    existing_boiler_efficiency::Union{Real, Nothing}=nothing
-    )
-
-    dhw_annual_mmbtu = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "dhw_annual_mmbtu.json"))
-    
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
+"""
+function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, 
+                                            max_load_kw=nothing, 
+                                            max_load_kw_thermal=nothing)
+This function returns the default value for ExistingChiller.cop based on:
+    1. No information about load, returns average of lower and higher cop default values (`cop_unknown_thermal`)
+    2. If the cooling electric `max_load_kw` is known, we first guess the thermal load profile using `cop_unknown_thermal`,
+        and then we use the default logic to determine the `existing_chiller_cop` based on the peak thermal load with a thermal factor multiplier.
+    3. If the cooling thermal `max_load_kw_thermal` is known, same as 2. but we don't have to guess the cop to convert electric to thermal load first.
+"""
+function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, max_load_kw=nothing, max_load_kw_thermal=nothing)
+    cop_less_than_100_ton = 4.40
+    cop_more_than_100_ton = 4.69
+    cop_unknown_thermal = (cop_less_than_100_ton + cop_more_than_100_ton) / 2.0
+    max_cooling_load_ton = nothing
+    if !isnothing(max_load_kw_thermal)
+        max_cooling_load_ton = max_load_kw_thermal / KWH_THERMAL_PER_TONHOUR
+    elseif !isnothing(max_load_kw)
+        max_cooling_load_ton = max_load_kw / KWH_THERMAL_PER_TONHOUR * cop_unknown_thermal
     end
-    if !(buildingtype in default_buildings)
-        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
-    end
-    if isnothing(annual_mmbtu)
-        # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
-        if occursin("FlatLoad", buildingtype)
-            annual_mmbtu = dhw_annual_mmbtu[city]["FlatLoad"]
-        else        
-            annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
-        end
+    if isnothing(max_cooling_load_ton) || isnothing(existing_chiller_max_thermal_factor_on_peak_load)
+        return cop_unknown_thermal
+    elseif max_cooling_load_ton * existing_chiller_max_thermal_factor_on_peak_load < 100.0
+        return cop_less_than_100_ton
     else
-        annual_mmbtu *= addressable_load_fraction
+        return cop_more_than_100_ton
     end
-    if length(monthly_mmbtu) == 12
-        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
-    end
-    built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
-                    existing_boiler_efficiency)
 end
-
-
-function BuiltInSpaceHeatingLoad(
-    city::String,
-    buildingtype::String,
-    latitude::Real,
-    longitude::Real,
-    year::Int,
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
-    annual_mmbtu::Union{Real, Nothing}=nothing,
-    monthly_mmbtu::Vector{<:Real}=Real[],
-    existing_boiler_efficiency::Union{Real, Nothing}=nothing,
-    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
-    )
-
-    space_heating_annual_mmbtu = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "space_heating_annual_mmbtu.json"))
-
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
-    if !(buildingtype in default_buildings)
-        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
-    end
-    if isnothing(annual_mmbtu)
-        # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
-        if occursin("FlatLoad", buildingtype)
-            annual_mmbtu = space_heating_annual_mmbtu[city]["FlatLoad"]
-        else
-            annual_mmbtu = space_heating_annual_mmbtu[city][buildingtype]
-        end
-    else
-        annual_mmbtu *= addressable_load_fraction
-    end
-    if length(monthly_mmbtu) == 12
-        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
-    end
-    built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
-                    existing_boiler_efficiency, normalized_profile)
-end
-
 
 function BuiltInCoolingLoad(
     city::String,
@@ -468,184 +478,4 @@ function BuiltInCoolingLoad(
         monthly_kwh = monthly_tonhour * KWH_THERMAL_PER_TONHOUR / existing_chiller_cop
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
-end
-"""
-`ProcessHeatLoad` is an optional REopt input with the following keys and default values:
-```julia
-    industry_reference_name::String = "",
-    sector::String = "",
-    blended_industry_reference_names::Array{String, 1} = String[],
-    blended_industry_reference_percents::Array{<:Real, 1} = Real[],
-    annual_mmbtu::Union{Real, Nothing} = nothing,
-    monthly_mmbtu::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Any = 1.0,
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-    latitude::Real = 0.0,
-    longitude::Real = 0.0,
-    existing_boiler_efficiency::Real = NaN
-```
-
-There are many ways in which a ProcessHeatLoad can be defined:
-1. When using either `industry_reference_name` or `blended_industry_reference_names`
-2. One can provide the `industry_reference_name` or `blended_industry_reference_names` directly in the `ProcessHeatLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the industry reference profile(s).
-3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `ProcessHeatLoad` key within the `Scenario`.
-
-!!! note "Process heat loads"
-    Process heat "load" inputs are in terms of fuel energy input required (boiler fuel), not the actual thermal demand.
-    The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy demand.
-
-"""
-function BuiltInProcessHeatLoad(
-    sector::String,
-    process_type::String,
-    latitude::Real,
-    longitude::Real,
-    year::Int,
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
-    annual_mmbtu::Union{Real, Nothing}=nothing,
-    monthly_mmbtu::Vector{<:Real}=Real[],
-    existing_boiler_efficiency::Union{Real, Nothing}=nothing
-    )
-    # Override the city with 'Industrial'
-    sector  = "Industrial"
-    city    = sector
-    buildingtype = process_type
-
-    process_heat_annual_mmbtu = Dict(
-        "Industrial" => Dict(
-            "Chemical" => 15000.0,  # mid-sized chemical processes
-            "FlatLoad" => 10000,  #  continuous operations throughout the year
-            "Warehouse" => 7000
-        )
-    )
-    if isempty(city)
-        city = "Industrial"
-    end        
-    if !(process_type in default_process_types)
-        throw(@error("process_type $(process_type) is not recognized for process heating."))
-    end
-    if isnothing(annual_mmbtu)
-        # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
-        if occursin("FlatLoad", buildingtype)
-            annual_mmbtu = process_heat_annual_mmbtu[city]["FlatLoad"]
-        else
-            annual_mmbtu = process_heat_annual_mmbtu[city][buildingtype]
-        end
-    else
-        annual_mmbtu *= addressable_load_fraction
-    end
-    if length(monthly_mmbtu) == 12
-        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
-        monthly_mmbtu = Real[monthly_mmbtu...]
-    end
-
-    built_in_load("process_heat", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
-end
-
-struct ProcessHeatLoad
-    loads_kw::Array{Real, 1}
-    annual_mmbtu::Real
-    unaddressable_annual_fuel_mmbtu::Real
-
-    function ProcessHeatLoad(;
-        industry_reference_name::String = "",
-        sector::String = "",
-        blended_industry_reference_names::Array{String, 1} = String[],
-        blended_industry_reference_percents::Array{<:Real, 1} = Real[],
-        annual_mmbtu::Union{Real, Nothing} = nothing,
-        monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Any = 1.0,
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-        latitude::Real = 0.0,
-        longitude::Real = 0.0,
-        existing_boiler_efficiency::Real = NaN
-        )
-        
-        sector = "Industrial"
-        doe_reference_name = industry_reference_name
-        city = sector
-        blended_doe_reference_names = blended_industry_reference_names
-        blended_doe_reference_percents = blended_industry_reference_percents
-
-
-        if length(addressable_load_fraction) > 1
-            if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
-            end
-            if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
-            end
-            addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
-        elseif typeof(addressable_load_fraction) <: Vector{}
-            addressable_load_fraction = convert(Real, addressable_load_fraction[1])  
-        else
-            addressable_load_fraction = convert(Real, addressable_load_fraction)            
-        end
-
-        if length(fuel_loads_mmbtu_per_hour) > 0
-
-            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided process heat load does not match the time_steps_per_hour."))
-            end
-
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
-            unaddressable_annual_fuel_mmbtu = sum(fuel_loads_mmbtu_per_hour .* (1 .- addressable_load_fraction))  / time_steps_per_hour       
-
-            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
-                @warn "ProcessHeatLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
-            end
-
-        elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInProcessHeatLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
-            if length(blended_doe_reference_names) > 0
-                @warn "ProcessHeatLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
-            end
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)          
-        elseif length(blended_doe_reference_names) > 0 && 
-            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInProcessHeatLoad, latitude, longitude, 2017, 
-                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
-                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
-                                                    existing_boiler_efficiency)
-            
-            unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
-        else
-            throw(@error("Cannot construct BuiltInProcessHeatLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [industry_reference_name, city], or [blended_industry_reference_names, blended_industry_reference_percents, city]."))
-        end
-
-        if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @warn "Repeating space heating loads in each hour to match the time_steps_per_hour."
-        end
-
-        new(
-            loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU,
-            unaddressable_annual_fuel_mmbtu
-
-        )
-    end
-end
-
-"""
-    get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
-    
-Get unaddressable fuel load, for reporting
-    :addressable_load_fraction is the fraction of the input fuel load that is addressable to supply by energy technologies, like CHP
-    :annual_mmbtu and :monthly_mmbtu is assumed to be fuel, not thermal, in this function
-    :loads_kw is assumed to be thermal in this function, with units of kw_thermal, so needs to be converted to fuel mmbtu
-"""
-function get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
-    # Get unaddressable fuel load, for reporting
-    if !isempty(monthly_mmbtu)
-        unaddressable_annual_fuel_mmbtu = sum(monthly_mmbtu .* (1 .- addressable_load_fraction))
-    elseif !isnothing(annual_mmbtu)
-        unaddressable_annual_fuel_mmbtu = annual_mmbtu * (1 - addressable_load_fraction)
-    else # using the default CRB annual_mmbtu, so rely on loads_kw (thermal) assuming single addressable_load_fraction
-        unaddressable_annual_fuel_mmbtu = sum(loads_kw) / (KWH_PER_MMBTU * existing_boiler_efficiency)                
-    end
-    return unaddressable_annual_fuel_mmbtu
 end

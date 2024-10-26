@@ -346,8 +346,8 @@ else  # run HiGHS tests
                                             ("annual_mmbtu", sim_load_response_heating["dhw_annual_mmbtu"])
                                         ])
             
-            input_data["ProcessHeatLoad"] = Dict([("blended_industry_reference_names", doe_reference_name_heating),
-                                            ("blended_industry_reference_percents", percent_share_heating),
+            input_data["ProcessHeatLoad"] = Dict([("blended_industrial_reference_names", doe_reference_name_heating),
+                                            ("blended_industrial_reference_percents", percent_share_heating),
                                             ("annual_mmbtu", annual_mmbtu_process)
                                         ])                            
                             
@@ -2383,10 +2383,10 @@ else  # run HiGHS tests
             input_data["DomesticHotWaterLoad"]["doe_reference_name"] = building
             elec_load = REopt.ElectricLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
             input_data["ElectricLoad"]["annual_kwh"] = elec_load_multiplier * sum(elec_load.loads_kw)
-            space_load = REopt.SpaceHeatingLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
+            space_load = REopt.HeatingLoad(load_type="space_heating", latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
             input_data["SpaceHeatingLoad"]["annual_mmbtu"] = heat_load_multiplier * space_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
-            dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
-            input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
+            dhw_load = REopt.HeatingLoad(load_type="domestic_hot_water", latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
+            input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
             s = Scenario(input_data)
             inputs = REoptInputs(s)
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))

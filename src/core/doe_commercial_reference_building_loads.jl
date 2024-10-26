@@ -203,10 +203,8 @@ end
 Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the `constructor` function to load in DoE 
     CRB profiles and create a single profile, where `constructor` is one of:
     - BuiltInElectricLoad
-    - BuiltInDomesticHotWaterLoad
-    - BuiltInSpaceHeatingLoad
+    - BuiltInHeatingLoad
     - BuiltInCoolingLoad
-    - BuiltInProcessHeatLoad
 """
 
 function blend_and_scale_doe_profiles(
@@ -220,7 +218,8 @@ function blend_and_scale_doe_profiles(
     annual_energy::Union{Real, Nothing} = nothing,
     monthly_energies::Array{<:Real,1} = Real[],
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,
-    boiler_efficiency_input::Union{Real,Nothing}=nothing
+    boiler_efficiency_input::Union{Real,Nothing}=nothing,
+    heating_load_type::String=""
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
@@ -230,7 +229,7 @@ function blend_and_scale_doe_profiles(
     year = 2017
     
     if isempty(city)
-        if constructor === BuiltInProcessHeatLoad
+        if heating_load_type === "process_heat"
             city = "Industrial"
         else
             city = find_ashrae_zone_city(latitude, longitude)
@@ -238,9 +237,9 @@ function blend_and_scale_doe_profiles(
     end
 
     profiles = Array[]  # collect the built in profiles
-    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad, BuiltInProcessHeatLoad]
+    if constructor == BuiltInHeatingLoad
         for name in blended_doe_reference_names
-            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
+            push!(profiles, constructor(heating_load_type, city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
         end
     else
         for name in blended_doe_reference_names

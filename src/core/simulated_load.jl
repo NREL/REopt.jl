@@ -106,7 +106,7 @@ function simulated_load(d::Dict)
         throw(@error("longitude $longitude is out of acceptable range (-180 <= longitude <= 180)"))
     end
 
-    if !(load_type in ["electric","heating","cooling","space_heating","dhw","process_heat"])
+    if !(load_type in ["electric","heating","cooling","space_heating","domestic_hot_water","process_heat"])
         throw(@error("load_type parameter must be one of the following: 'electric', 'heating', or 'cooling'. If load_type is not specified, 'electric' is assumed."))
     end
 
@@ -238,7 +238,7 @@ function simulated_load(d::Dict)
         if isnothing(doe_reference_name) && !normalize_and_scale_load_profile_input
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."))
         elseif normalize_and_scale_load_profile_input
-            throw(@error("For normalizing and scaling a heating load profile, use one of load_type=['space_heating', 'dhw', 'process_heat']"))
+            throw(@error("For normalizing and scaling a heating load profile, use one of load_type=['space_heating', 'domestic_hot_water', 'process_heat']"))
         end
         # Annual loads (default is nothing)
         annual_mmbtu = get(d, "annual_mmbtu", nothing)
@@ -298,8 +298,8 @@ function simulated_load(d::Dict)
                                                         longitude=longitude,
                                                         existing_boiler_efficiency=boiler_efficiency
                                                     )
-        default_dhw_load = HotWaterLoad(; heating_load_inputs...,
-                                                    load_type="dhw",
+        default_dhw_load = HeatingLoad(; heating_load_inputs...,
+                                                    load_type="domestic_hot_water",
                                                     latitude=latitude, 
                                                     longitude=longitude,
                                                     existing_boiler_efficiency=boiler_efficiency
@@ -348,7 +348,7 @@ function simulated_load(d::Dict)
                                                 existing_boiler_efficiency=boiler_efficiency
                                             )
         dhw_load = HeatingLoad(; heating_load_inputs...,
-                                            load_type="dhw",
+                                            load_type="domestic_hot_water",
                                             latitude=latitude, 
                                             longitude=longitude,
                                             annual_mmbtu=dhw_annual_mmbtu,
@@ -385,7 +385,7 @@ function simulated_load(d::Dict)
         return response
     end
 
-    if load_type in ["space_heating", "dhw", "process_heat"]
+    if load_type in ["space_heating", "domestic_hot_water", "process_heat"]
         error_list = []
         for key in keys(d)
             if occursin("_kw", key) || occursin("_ton", key)
@@ -393,7 +393,7 @@ function simulated_load(d::Dict)
             end
         end
         if !isempty(error_list)
-            throw(@error("Invalid key(s) $error_list for load_type=[space_heating, dhw, or process_heat"))
+            throw(@error("Invalid key(s) $error_list for load_type=[space_heating, domestic_hot_water, or process_heat"))
         end
         if isnothing(doe_reference_name) && !normalize_and_scale_load_profile_input
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."))
@@ -442,10 +442,10 @@ function simulated_load(d::Dict)
         if !normalize_and_scale_load_profile_input
             if load_type == "process_heat"
                 if length(doe_reference_name) > 1
-                    heating_load_inputs[:blended_industry_reference_names] = doe_reference_name
-                    heating_load_inputs[:blended_industry_reference_percents] = percent_share_list
+                    heating_load_inputs[:blended_industrial_reference_names] = doe_reference_name
+                    heating_load_inputs[:blended_industrial_reference_percents] = percent_share_list
                 else
-                    heating_load_inputs[:industry_reference_name] = doe_reference_name[1]
+                    heating_load_inputs[:industrial_reference_name] = doe_reference_name[1]
                 end
             else
                 if length(doe_reference_name) > 1
