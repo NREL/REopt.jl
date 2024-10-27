@@ -221,11 +221,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
+        year = get(d["DomesticHotWaterLoad"], "year", electric_load.year)
         dhw_load = HeatingLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                         load_type = "domestic_hot_water",
                                         latitude=site.latitude, longitude=site.longitude, 
                                         time_steps_per_hour=settings.time_steps_per_hour,
-                                        existing_boiler_efficiency = existing_boiler_efficiency
+                                        existing_boiler_efficiency = existing_boiler_efficiency,
+                                        year = year
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
@@ -260,11 +262,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     if haskey(d, "ProcessHeatLoad") && !haskey(d, "FlexibleHVAC")
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
+        year = get(d["ProcessHeatLoad"], "year", electric_load.year)        
         process_heat_load = HeatingLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
                                             load_type = "process_heat",
                                             latitude = site.latitude, longitude = site.longitude, 
                                             time_steps_per_hour = settings.time_steps_per_hour,
-                                            existing_boiler_efficiency = existing_boiler_efficiency
+                                            existing_boiler_efficiency = existing_boiler_efficiency,
+                                            year = year                                            
                                             )
                                     
         max_heat_demand_kw = maximum(process_heat_load.loads_kw .+ max_heat_demand_kw)

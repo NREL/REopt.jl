@@ -14,19 +14,32 @@ One particular aspect of this function specifically for the webtool/UI is the he
 
 """
 function simulated_load(d::Dict)
+    normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
     latitude = get(d, "latitude", nothing)
     longitude = get(d, "longitude", nothing)
-    if isnothing(latitude) || isnothing(longitude)
+    if (isnothing(latitude) || isnothing(longitude)) && !normalize_and_scale_load_profile_input
         throw(@error("latitude and longitude must be provided"))
     end
     load_type = get(d, "load_type", nothing)
+
+    # Check for valid reference building name
+    valid_names = default_buildings
+    if load_type == "process_heat"
+        valid_names = default_process_types
+    end
+    if !isnothing(doe_reference_name)
+        for drn in doe_reference_name
+            if !(drn in valid_names)
+                throw(@error("Invalid doe_reference_name - $doe_reference_name. Select from the following: $valid_names"))
+            end
+        end
+    end
 
     # Check consistency between type/length of doe_reference_name and percent_share (for blended/hybrid buildings)
     doe_reference_name_input = get(d, "doe_reference_name", nothing)
     percent_share_input = get(d, "percent_share", Real[])
 
     # Input which then expects a custom load_profile along with annual or monthly energy values; this could be electric, heating, or cooling profiles
-    normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
     load_profile = get(d, "load_profile", Real[])
     if normalize_and_scale_load_profile_input
         if isempty(load_profile)
@@ -34,12 +47,7 @@ function simulated_load(d::Dict)
         end
     end
     
-    # Determine which set of valid names to use based on the origin of the input
-    valid_names = default_buildings
-    if load_type == "process_heat"
-        valid_names = default_process_types
-    end
-    
+    # Validate consistency between reference name and optionally the percent_share for blended building types
     if !isnothing(doe_reference_name_input) && !(typeof(doe_reference_name_input) <: Vector{})
         doe_reference_name = [doe_reference_name_input]
     elseif !isnothing(doe_reference_name_input) && !isempty(percent_share_input)
@@ -84,14 +92,6 @@ function simulated_load(d::Dict)
     if isnothing(doe_reference_name) && !isnothing(cooling_doe_ref_name)
         doe_reference_name = cooling_doe_ref_name
         percent_share_list = cooling_pct_share_list
-    end
-
-    if !isnothing(doe_reference_name)
-        for drn in doe_reference_name
-            if !(drn in valid_names)
-                throw(@error("Invalid doe_reference_name - $doe_reference_name. Select from the following: $default_buildings"))
-            end
-        end
     end
 
     if isnothing(load_type)
