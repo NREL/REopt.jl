@@ -21,23 +21,21 @@ function simulated_load(d::Dict)
         throw(@error("latitude and longitude must be provided"))
     end
     load_type = get(d, "load_type", nothing)
+    doe_reference_name_input = get(d, "doe_reference_name", nothing)
+    percent_share_input = get(d, "percent_share", Real[])
 
     # Check for valid reference building name
     valid_names = default_buildings
     if load_type == "process_heat"
         valid_names = default_process_types
     end
-    if !isnothing(doe_reference_name)
-        for drn in doe_reference_name
+    if !isnothing(doe_reference_name_input)
+        for drn in doe_reference_name_input
             if !(drn in valid_names)
-                throw(@error("Invalid doe_reference_name - $doe_reference_name. Select from the following: $valid_names"))
+                throw(@error("Invalid doe_reference_name - $drn. Select from the following: $valid_names"))
             end
         end
     end
-
-    # Check consistency between type/length of doe_reference_name and percent_share (for blended/hybrid buildings)
-    doe_reference_name_input = get(d, "doe_reference_name", nothing)
-    percent_share_input = get(d, "percent_share", Real[])
 
     # Input which then expects a custom load_profile along with annual or monthly energy values; this could be electric, heating, or cooling profiles
     load_profile = get(d, "load_profile", Real[])
