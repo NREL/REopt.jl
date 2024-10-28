@@ -14,17 +14,30 @@ One particular aspect of this function specifically for the webtool/UI is the he
 
 """
 function simulated_load(d::Dict)
+    # Latitude and longitude are required if not normalizing and scaling load profile input
     normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
     latitude = get(d, "latitude", nothing)
     longitude = get(d, "longitude", nothing)
     if (isnothing(latitude) || isnothing(longitude)) && !normalize_and_scale_load_profile_input
         throw(@error("latitude and longitude must be provided"))
+    elseif !normalize_and_scale_load_profile_input
+        if latitude > 90 || latitude < -90
+            throw(@error("latitude $latitude is out of acceptable range (-90 <= latitude <= 90)"))
+        end
+        if longitude > 180 || longitude < -180
+            throw(@error("longitude $longitude is out of acceptable range (-180 <= longitude <= 180)"))
+        end
     end
-    load_type = get(d, "load_type", nothing)
-    doe_reference_name_input = get(d, "doe_reference_name", nothing)
-    percent_share_input = get(d, "percent_share", Real[])
+
+    # Load type validation
+    load_type = get(d, "load_type", "electric")
+    if !(load_type in ["electric", "heating", "cooling", "space_heating", "domestic_hot_water", "process_heat"])
+        throw(@error("load_type parameter must be one of the following: 'electric', 'heating', 'cooling', 'space_heating', 'domestic_hot_water', 'process_heat'. If load_type is not specified, 'electric' is assumed."))
+    end
 
     # Check for valid reference building name
+    doe_reference_name_input = get(d, "doe_reference_name", nothing)
+    percent_share_input = get(d, "percent_share", Real[])
     valid_names = default_buildings
     if load_type == "process_heat"
         valid_names = default_process_types
@@ -90,22 +103,6 @@ function simulated_load(d::Dict)
     if isnothing(doe_reference_name) && !isnothing(cooling_doe_ref_name)
         doe_reference_name = cooling_doe_ref_name
         percent_share_list = cooling_pct_share_list
-    end
-
-    if isnothing(load_type)
-        load_type = "electric"
-    end
-
-    if latitude > 90 || latitude < -90
-        throw(@error("latitude $latitude is out of acceptable range (-90 <= latitude <= 90)"))
-    end
-
-    if longitude > 180 || longitude < -180
-        throw(@error("longitude $longitude is out of acceptable range (-180 <= longitude <= 180)"))
-    end
-
-    if !(load_type in ["electric","heating","cooling","space_heating","domestic_hot_water","process_heat"])
-        throw(@error("load_type parameter must be one of the following: 'electric', 'heating', or 'cooling'. If load_type is not specified, 'electric' is assumed."))
     end
 
     # The following is possibly used in both load_type == "electric" and "cooling", so have to bring it out of those if-statements
