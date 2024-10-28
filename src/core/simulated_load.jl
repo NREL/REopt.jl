@@ -16,8 +16,8 @@ One particular aspect of this function specifically for the webtool/UI is the he
 function simulated_load(d::Dict)
     # Latitude and longitude are required if not normalizing and scaling load profile input
     normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
-    latitude = get(d, "latitude", nothing)
-    longitude = get(d, "longitude", nothing)
+    latitude = get(d, "latitude", 0.0)
+    longitude = get(d, "longitude", 0.0)
     if (isnothing(latitude) || isnothing(longitude)) && !normalize_and_scale_load_profile_input
         throw(@error("latitude and longitude must be provided"))
     elseif !normalize_and_scale_load_profile_input

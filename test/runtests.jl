@@ -2942,8 +2942,7 @@ else  # run HiGHS tests
             @test abs(s.electric_load.loads_kw[6] / s.electric_load.loads_kw[4] - input_data["ElectricLoad"]["loads_kw"][6] / input_data["ElectricLoad"]["loads_kw"][4]) < 0.001
 
             # Check consistency with simulated_load function
-            d_sim_load = Dict([("latitude", input_data["Site"]["latitude"]),
-                ("longitude", input_data["Site"]["longitude"]),
+            d_sim_load = Dict([
                 ("load_type", "electric"),
                 ("normalize_and_scale_load_profile_input", true),
                 ("load_profile", input_data["ElectricLoad"]["loads_kw"]),
@@ -2988,8 +2987,7 @@ else  # run HiGHS tests
             @test abs(s.space_heating_load.loads_kw[6] / s.space_heating_load.loads_kw[4] - input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
             
             # Check consistency with simulated_load function
-            d_sim_load = Dict([("latitude", input_data["Site"]["latitude"]),
-                ("longitude", input_data["Site"]["longitude"]),
+            d_sim_load = Dict([
                 ("load_type", "space_heating"),
                 ("normalize_and_scale_load_profile_input", true),
                 ("load_profile", input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"]),
