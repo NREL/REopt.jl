@@ -42,13 +42,6 @@ function simulated_load(d::Dict)
     if load_type == "process_heat"
         valid_names = default_process_types
     end
-    if !isnothing(doe_reference_name_input)
-        for drn in doe_reference_name_input
-            if !(drn in valid_names)
-                throw(@error("Invalid doe_reference_name - $drn. Select from the following: $valid_names"))
-            end
-        end
-    end
 
     # Input which then expects a custom load_profile along with annual or monthly energy values; this could be electric, heating, or cooling profiles
     load_profile = get(d, "load_profile", Real[])
@@ -103,6 +96,14 @@ function simulated_load(d::Dict)
     if isnothing(doe_reference_name) && !isnothing(cooling_doe_ref_name)
         doe_reference_name = cooling_doe_ref_name
         percent_share_list = cooling_pct_share_list
+    end
+
+    if !isnothing(doe_reference_name)
+        for drn in doe_reference_name
+            if !(drn in valid_names)
+                throw(@error("Invalid doe_reference_name - $drn. Select from the following: $valid_names"))
+            end
+        end
     end
 
     # The following is possibly used in both load_type == "electric" and "cooling", so have to bring it out of those if-statements
