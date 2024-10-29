@@ -115,7 +115,7 @@ function HeatingLoad(;
         end
         # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
         normalized_profile = fuel_loads_mmbtu_per_hour ./ sum(fuel_loads_mmbtu_per_hour)
-        loads_kw = BuiltInHeatingLoad(load_type, "Chicago", "LargeOffice", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
+        loads_kw = BuiltInHeatingLoad(load_type, "Chicago", "FlatLoad", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
         unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
     elseif !isempty(doe_reference_name)
         loads_kw = BuiltInHeatingLoad(load_type, city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
