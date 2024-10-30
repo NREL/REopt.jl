@@ -26,7 +26,21 @@ Classify the change according to the following categories:
     ### Removed
 
 
+## Develop fix-warning-threshold-for-wholesale
+### Fixed 
+- Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
+  
 ## Develop
+### Added
+- Battery residual value if choosing replacement strategy for degradation
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+### Changed
+- Revised the battery degradation model, refactoring some methods to increase model-building efficiency and reformulating indicator constraints as big-M constraints with smaller big-M's to reduce solve time.
+- Edited several documentation entries and docstrings for clarity.
+### Removed
+- 80% scaling of battery maintenance costs when using augmentation strategy
+
+## v0.48.1
 ### Changed
 - Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
 - Rename function `add_storage_sum_constraints` to `add_storage_sum_grid_constraints` for clarity
@@ -43,7 +57,6 @@ Classify the change according to the following categories:
 - Handle edge case where the values of **outage_start_time_steps** and **outage_durations** makes an outage extend beyond the end of the year. The outage will now wrap around to the beginning of the year.
 - Enforce minimum allowable sizes for ASHP technologies by introducing improved big-M values for segmented size constraints.
 - Removed default values from ASHP functions that calculate minimum allowable size and performance.
-- Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
 
 ## v0.48.0
 ### Added
