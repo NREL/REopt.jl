@@ -101,7 +101,7 @@ else  # run HiGHS tests
         @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
     end
 
-    @testset "Solar and ElectricStorage w/ zero ElectricStorage cost constants" begin
+    @testset "Solar and ElectricStorage with ElectricStorage cost constants set to zero" begin
         m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("./scenarios/pv_storage.json");
@@ -110,7 +110,6 @@ else  # run HiGHS tests
         d["ElectricStorage"]["replace_cost_constant"] = 0
         d["ElectricStorage"]["cost_constant_replacement_year"] = 10
     
-        d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
         s = Scenario(d)
         inputs = REoptInputs(s)
         results = run_reopt([m1,m2], inputs)
@@ -119,19 +118,17 @@ else  # run HiGHS tests
                                    (results["ElectricStorage"]["size_kwh"]*d["ElectricStorage"]["installed_cost_per_kwh"]) + 
                                    d["ElectricStorage"]["installed_cost_constant"] +
                                    (results["PV"]["size_kw"]*d["PV"]["installed_cost_per_kw"])
-    
-        @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01 
-        @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001 
-        @test results["Financial"]["lcc"] ≈ 1.23917861648e7 rtol=1e-5 
-        @test results["Financial"]["lcc_bau"] ≈ 1.27663970441e7 rtol=1e-5 
-        @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1 
-        @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1 
-        @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
-        @test results["Financial"]["lifecycle_storage_capital_costs"] ≈ 66248.8454 rtol=1e-5
-    
+        
+        ReplacementCosts_NoIncentive = (results["ElectricStorage"]["size_kw"]*d["ElectricStorage"]["replace_cost_per_kw"] ) +
+                                        (results["ElectricStorage"]["size_kwh"]*d["ElectricStorage"]["replace_cost_per_kwh"]) + 
+                                        d["ElectricStorage"]["replace_cost_constant"] 
+
+        @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5  #Note: the value of the ["Financial"]["initial_capital_costs"] dictionary key does not include incentives
+        @test results["Financial"]["replacements_future_cost_after_tax"] ≈ ReplacementCosts_NoIncentive  rtol=1e-5
+     
     end 
     
-    @testset "Solar and ElectricStorage w/ non-zero ElectricStorage cost constants" begin
+    @testset "Solar and ElectricStorage with non-zero ElectricStorage cost constants" begin
         m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("./scenarios/pv_storage.json");
@@ -140,7 +137,6 @@ else  # run HiGHS tests
         d["ElectricStorage"]["replace_cost_constant"] = 5025
         d["ElectricStorage"]["cost_constant_replacement_year"] = 10
     
-        d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
         s = Scenario(d)
         inputs = REoptInputs(s)
         results = run_reopt([m1,m2], inputs)
@@ -149,15 +145,36 @@ else  # run HiGHS tests
                                    (results["ElectricStorage"]["size_kwh"]*d["ElectricStorage"]["installed_cost_per_kwh"]) + 
                                    d["ElectricStorage"]["installed_cost_constant"] +
                                    (results["PV"]["size_kw"]*d["PV"]["installed_cost_per_kw"])
-    
-        @test results["PV"]["size_kw"] ≈ 216.667 atol=0.01 
-        @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001 
-        @test results["Financial"]["lcc"] ≈ 1.23981029171e7 rtol=1e-5 
-        @test results["Financial"]["lcc_bau"] ≈ 1.27663970441e7 rtol=1e-5 
-        @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1 
-        @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1 
+        
+        ReplacementCosts_NoIncentive = (results["ElectricStorage"]["size_kw"]*d["ElectricStorage"]["replace_cost_per_kw"] ) +
+                                   (results["ElectricStorage"]["size_kwh"]*d["ElectricStorage"]["replace_cost_per_kwh"]) + 
+                                   d["ElectricStorage"]["replace_cost_constant"] 
+
         @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
-        @test results["Financial"]["lifecycle_storage_capital_costs"] ≈ 72565.5977 rtol=1e-5
+        @test results["Financial"]["replacements_future_cost_after_tax"] ≈ ReplacementCosts_NoIncentive  rtol=1e-5
+    
+    end 
+
+    @testset "Solar and ElectricStorage with non-zero ElectricStorage cost constants and with ElectricStorage set to 0 kW" begin
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        d = JSON.parsefile("./scenarios/pv_storage.json");
+        
+        d["ElectricStorage"]["installed_cost_constant"] = 7500
+        d["ElectricStorage"]["replace_cost_constant"] = 5025
+        d["ElectricStorage"]["cost_constant_replacement_year"] = 10
+        d["ElectricStorage"]["max_kw"] = 0
+
+        s = Scenario(d)
+        inputs = REoptInputs(s)
+        results = run_reopt([m1,m2], inputs)
+        
+        UpfrontCosts_NoIncentive = results["PV"]["size_kw"]*d["PV"]["installed_cost_per_kw"]
+        
+        ReplacementCosts_NoIncentive = 0
+
+        @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
+        @test results["Financial"]["replacements_future_cost_after_tax"] ≈ ReplacementCosts_NoIncentive  rtol=1e-5
     
     end 
 

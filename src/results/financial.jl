@@ -242,7 +242,7 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
         if p.s.storage.attr[b].cost_constant_replacement_year >= p.s.financial.analysis_years
             future_cost_cost_constant = 0
         else
-            future_cost_cost_constant = p.s.storage.attr[b].replace_cost_constant * value.(m[Symbol("dvBatteryIncluded"*_n)])[b]
+            future_cost_cost_constant = p.s.storage.attr[b].replace_cost_constant * value.(m[Symbol("binIncludeStorageCostConstant"*_n)])[b]
         end
 
         future_cost += future_cost_inverter + future_cost_storage + future_cost_cost_constant

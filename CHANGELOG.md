@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-11-03
+### Added
+- In `src/core/energy_storage/electric_storage.jl` struct, added fields **installed_cost_constant**, **replace_cost_constant**, and **cost_constant_replacement_year**. All three of the added fields default to zero.
+- Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
+
 ## Develop - 2024-06-05
 ### Fixed
 - Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
