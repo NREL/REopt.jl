@@ -1,4 +1,9 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+function time_step_wrap_around(time_step::Int; time_steps_per_hour::Int=1)::Int
+    time_steps_per_year = 8760 * time_steps_per_hour
+    ((time_step - 1) % time_steps_per_year) + 1
+end
+
 function solver_is_compatible_with_indicator_constraints(solver_name::String)::Bool
     return any(lowercase.(INDICATOR_COMPATIBLE_SOLVERS) .== lowercase(solver_name))
 end
@@ -159,6 +164,12 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
+            "heating_cop_reference",
+            "heating_cf_reference",
+            "heating_reference_temps_degF",
+            "cooling_cop_reference",
+            "cooling_cf_reference",
+            "cooling_reference_temps_degF",
             #for ERP
             "pv_production_factor_series", "wind_production_factor_series",
             "battery_starting_soc_series_fraction",
@@ -461,7 +472,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
 
     try
         @info "Querying PVWatts for production factor and ambient air temperature... "
-        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        r = HTTP.get(url, ["User-Agent" => "REopt.jl"]; keepalive=true, readtimeout=10)
         response = JSON.parse(String(r.body))
         if r.status != 200
             throw(@error("Bad response from PVWatts: $(response["errors"])"))

@@ -68,7 +68,7 @@ Solve the model using a `Scenario` or `BAUScenario`.
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 	
 	try
-		if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
+		if (!isnothing(s.site.CO2_emissions_reduction_min_fraction) && s.site.CO2_emissions_reduction_min_fraction > 0.0) || (!isnothing(s.site.CO2_emissions_reduction_max_fraction) && s.site.CO2_emissions_reduction_max_fraction < 1.0)
 			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
 		end
 		run_reopt(m, REoptInputs(s))
@@ -249,7 +249,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
+		add_storage_sum_grid_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
@@ -265,11 +265,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:GHPCapCosts] = 0.0
     m[:GHPOMCosts] = 0.0
 	m[:AvoidedCapexByGHP] = 0.0
+	m[:AvoidedCapexByASHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
-	if !isempty(p.techs.all)
-		add_tech_size_constraints(m, p)
+	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
+		if !isempty(p.techs.all)
+			add_tech_size_constraints(m, p)
+		end
         
         if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
@@ -298,13 +301,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_heating_tech_constraints(m, p)
         end
 
-        # Zero out ExistingBoiler production if retire_in_optimal; new_heating_techs avoids zeroing for BAU 
-        new_heating_techs = ["CHP", "Boiler", "ElectricHeater", "SteamTurbine"]
-        if !isempty(intersect(new_heating_techs, p.techs.all))
-            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
-                no_existing_boiler_production(m, p)
-            end
+        # Zero out ExistingBoiler production if retire_in_optimal
+		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal && !isempty(setdiff(union(p.techs.chp,p.techs.heating), ["ExistingBoiler"]))
+			no_existing_boiler_production(m, p)
         end
+		
 
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
@@ -315,6 +316,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.techs.cooling)
             add_cooling_tech_constraints(m, p)
         end
+
+		# Zero out ExistingChiller production if retire_in_optimal; setdiff avoids zeroing for BAU 
+		if !isnothing(p.s.existing_chiller) && p.s.existing_chiller.retire_in_optimal && !isempty(setdiff(p.techs.cooling, ["ExistingChiller"]))
+			no_existing_chiller_production(m, p)
+		end
+
+        if !isempty(setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp))
+            add_heating_cooling_constraints(m, p)
+        end
+
+		if !isempty(p.techs.ashp)
+			add_ashp_force_in_constraints(m, p)
+		end
+
+		if !isempty(p.avoided_capex_by_ashp_present_value) && !isempty(p.techs.ashp)
+			avoided_capex_by_ashp(m, p)
+		end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
@@ -453,6 +471,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive # this warning should be tied to IF condition where SOC incentive is added
+				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
+			end
+		end
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -483,7 +510,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] -
 
 		# Subtract capital expenditures avoided by inclusion of GHP and residual present value of GHX.
-		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost]
+		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost] - 
+
+		# Subtract capital expenditures avoided by inclusion of ASHP
+		m[:AvoidedCapexByASHP]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
@@ -496,6 +526,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	# Add Health costs (NOx, SO2, PM2.5)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
+	end
+
+	has_degr = false
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			has_degr = true
+			add_to_expression!(Costs, m[:degr_cost] - m[:residual_value]) # maximize residual value
+		end
 	end
 	
 	## Modify objective with incentives that are not part of the LCC
@@ -515,15 +553,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	# Set model objective 
 	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
-
-	for b in p.s.storage.types.elec
-		if p.s.storage.attr[b].model_degradation
-			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive
-				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
-			end
-		end
-	end
     
 	nothing
 end
