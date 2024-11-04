@@ -8,7 +8,7 @@
     
     # Single Outage Modeling Inputs (Outage Modeling Option 1)
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
+    outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
         
     # Multiple Outage Modeling Inputs (Outage Modeling Option 2): minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
@@ -124,7 +124,7 @@ struct ElectricUtility
     emissions_factor_SO2_decrease_fraction::Real
     emissions_factor_PM25_decrease_fraction::Real
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int  # ... utiltity production_factor = 0 during the outage
+    outage_end_time_step::Int  # ... utility production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
     # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
@@ -157,7 +157,7 @@ struct ElectricUtility
         net_metering_limit_kw::Real = 0, # Upper limit on the total capacity of technologies that can participate in net metering agreement.
         interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
-        outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
+        outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
         include_grid_clean_energy_in_re::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the renewable electricity calculations
         # next 5 variables below used for minimax the expected outage cost,
