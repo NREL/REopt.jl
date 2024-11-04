@@ -27,7 +27,7 @@ Classify the change according to the following categories:
 
 ## Develop - 2024-11-03
 ### Added
-- In `src/core/energy_storage/electric_storage.jl` struct, added fields **installed_cost_constant**, **replace_cost_constant**, and **cost_constant_replacement_year**. All three of the added fields default to zero.
+- Add new **ElectricStorage** input fields **installed_cost_constant**, **replace_cost_constant** (both default to 0), and **cost_constant_replacement_year** (defaults to year 10).
 - Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
 
 
