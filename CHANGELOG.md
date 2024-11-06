@@ -24,11 +24,6 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
-
-
-## Develop fix-warning-threshold-for-wholesale
-### Fixed 
-- Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
   
 ## Develop
 ### Added
@@ -39,6 +34,8 @@ Classify the change according to the following categories:
 - Edited several documentation entries and docstrings for clarity.
 ### Removed
 - 80% scaling of battery maintenance costs when using augmentation strategy
+### Fixed 
+- Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
 
 ## v0.48.1
 ### Changed
