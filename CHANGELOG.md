@@ -24,7 +24,8 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
-  
+
+
 ## Develop
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
@@ -36,6 +37,7 @@ Classify the change according to the following categories:
 - 80% scaling of battery maintenance costs when using augmentation strategy
 ### Fixed 
 - Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
+- When setting **thermal_production_series_mmbtu_per_hour** output in **ExistingBoiler**, sum over heating loads instead of time steps
 
 ## v0.48.1
 ### Changed
