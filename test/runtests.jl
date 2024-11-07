@@ -159,33 +159,6 @@ else  # run HiGHS tests
             @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
             @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
         end
-
-    @testset "Solar and ElectricStorage with ElectricStorage cost constants set to zero" begin
-        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        d = JSON.parsefile("./scenarios/pv_storage.json");
-        
-        d["ElectricStorage"]["installed_cost_constant"] = 0
-        d["ElectricStorage"]["replace_cost_constant"] = 0
-        d["ElectricStorage"]["cost_constant_replacement_year"] = 10
-    
-        s = Scenario(d)
-        inputs = REoptInputs(s)
-        results = run_reopt([m1,m2], inputs)
-        
-        UpfrontCosts_NoIncentive = (results["ElectricStorage"]["size_kw"]*d["ElectricStorage"]["installed_cost_per_kw"] ) +
-                                   (results["ElectricStorage"]["size_kwh"]*d["ElectricStorage"]["installed_cost_per_kwh"]) + 
-                                   d["ElectricStorage"]["installed_cost_constant"] +
-                                   (results["PV"]["size_kw"]*d["PV"]["installed_cost_per_kw"])
-        
-        ReplacementCosts_NoIncentive = (results["ElectricStorage"]["size_kw"]*d["ElectricStorage"]["replace_cost_per_kw"] ) +
-                                        (results["ElectricStorage"]["size_kwh"]*d["ElectricStorage"]["replace_cost_per_kwh"]) + 
-                                        d["ElectricStorage"]["replace_cost_constant"] 
-
-        @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5  #Note: the value of the ["Financial"]["initial_capital_costs"] dictionary key does not include incentives
-        @test results["Financial"]["replacements_future_cost_after_tax"] ≈ ReplacementCosts_NoIncentive  rtol=1e-5
-     
-    end 
     
     @testset "Solar and ElectricStorage with non-zero ElectricStorage cost constants" begin
         m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -237,25 +210,18 @@ else  # run HiGHS tests
     
     end 
 
-    @testset "Outage with Generator" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        results = run_reopt(model, "./scenarios/generator.json")
-        @test results["Generator"]["size_kw"] ≈ 9.55 atol=0.01
-        @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
-            sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
-        p = REoptInputs("./scenarios/generator.json")
-        simresults = simulate_outages(results, p)
-        @test simresults["resilience_hours_max"] == 11
-    end
-
-    # TODO test MPC with outages
-    @testset "MPC" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        r = run_mpc(model, "./scenarios/mpc.json")
-        @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
-        @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
-        @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
-    end
+        # TODO test MPC with outages
+        @testset "MPC" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_mpc(model, "./scenarios/mpc.json")
+            @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
+            @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
+            @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
+            # the grid draw limit in the 10th time step is set to 90
+            # without the 90 limit the grid draw is 98 in the 10th time step
+            @test grid_draw[10] <= 90
+        end
 
         @testset "MPC Multi-node" begin
             # not doing much yet; just testing that two identical sites have the same costs

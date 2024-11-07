@@ -143,6 +143,15 @@ The following shows how one would use the degradation model in REopt via the [Sc
 }
 ```
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
+
+
+    ElectricStorage Cost Constant
+
+The ElectricStorage cost constant is considered in the model if the `ElectricStorage.installed_cost_constant` or `ElectricStorage.replace_cost_constant` are non-zero.
+The REopt model includes the cost constant in the installation costs only if the ElectricStorage size is non-zero. 
+The REopt model includes the cost constant in the replacement costs only if the ElectricStorage size is non-zero and the replacement year is less than the number of analysis years.
+The ElectricStorage cost constant is not considered when modeling electric storage degradation.
+
 """
 
 Base.@kwdef mutable struct Degradation
