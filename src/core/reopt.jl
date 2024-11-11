@@ -68,7 +68,7 @@ Solve the model using a `Scenario` or `BAUScenario`.
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 	
 	try
-		if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
+		if (!isnothing(s.site.CO2_emissions_reduction_min_fraction) && s.site.CO2_emissions_reduction_min_fraction > 0.0) || (!isnothing(s.site.CO2_emissions_reduction_max_fraction) && s.site.CO2_emissions_reduction_max_fraction < 1.0)
 			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
 		end
 		run_reopt(m, REoptInputs(s))
@@ -247,7 +247,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
+		add_storage_sum_grid_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
@@ -468,6 +468,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive # this warning should be tied to IF condition where SOC incentive is added
+				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
+			end
+		end
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -515,6 +524,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
+
+	has_degr = false
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			has_degr = true
+			add_to_expression!(Costs, m[:degr_cost] - m[:residual_value]) # maximize residual value
+		end
+	end
 	
 	## Modify objective with incentives that are not part of the LCC
 	# 1. Comfort limit violation costs
@@ -533,15 +550,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	# Set model objective 
 	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
-
-	for b in p.s.storage.types.elec
-		if p.s.storage.attr[b].model_degradation
-			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive
-				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
-			end
-		end
-	end
     
 	nothing
 end

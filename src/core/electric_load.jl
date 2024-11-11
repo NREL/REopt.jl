@@ -105,9 +105,15 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
         )
         
-        if off_grid_flag  && !(critical_load_fraction == 1.0)
-            @warn "ElectricLoad critical_load_fraction must be 1.0 (100%) for off-grid scenarios. Any other value will be overriden when `off_grid_flag` is true. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_fraction."
-            critical_load_fraction = 1.0
+        if off_grid_flag
+            if !isnothing(critical_loads_kw)
+                @warn "ElectricLoad critical_loads_kw will be ignored because `off_grid_flag` is true. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_fraction."
+                critical_loads_kw = nothing
+            end
+            if critical_load_fraction != 1.0
+                @warn "ElectricLoad critical_load_fraction must be 1.0 (100%) for off-grid scenarios. Any other value will be overriden when `off_grid_flag` is true. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_fraction."
+                critical_load_fraction = 1.0
+            end
         end
 
         if !(off_grid_flag)

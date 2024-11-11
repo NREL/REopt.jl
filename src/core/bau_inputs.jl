@@ -287,7 +287,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
         bau_grid_to_load = [max(i,0) for i in bau_grid_to_load]
     end
 
-    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
+    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) * p.hours_per_time_step
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
     ## Generator emissions (during outages)

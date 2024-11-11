@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Guidelines
-- When making a Pull Request into `develop` start a new double-hash header for "Develop - YYYY-MM-DD"
+- When working in feature branch, start a new double-hash header with the name of the branch and record changes under that
+- When merging `develop` into a feature branch, keep the feature branch section and the "Develop" section separate to simplify merge conflicts
+- When making a Pull Request into `develop`, merge the feature branch section into the "Develop" section (if it exists), else rename the feature branch header to "Develop"
 - When making a Pull Request into `master` change "Develop" to the next version number
 
 ### Formatting
@@ -22,6 +24,33 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+
+## Develop degradation-cleanup
+### Added
+- Battery residual value if choosing replacement strategy for degradation
+### Changed
+- Revised the battery degradation model, refactoring some methods to increase model-building efficiency and reformulating indicator constraints as big-M constraints with smaller big-M's to reduce solve time.
+- Edited several documentation entries and docstrings for clarity.
+### Removed
+- 80% scaling of battery maintenance costs when using augmentation strategy
+
+## v0.48.1
+### Changed
+- Replace all `1/p.s.settings.time_steps_per_hour` with `p.hours_per_time_step` for simplicity/consistency
+- Rename function `add_storage_sum_constraints` to `add_storage_sum_grid_constraints` for clarity
+### Added
+- Constraints to prevent simultaneous charge/discharge of storage
+- Specify in docstrings that **PV** **max_kw** and **size_kw** are kW-DC
+- Add the Logging package to `test/Project.toml` because it is used in `runtests.jl`
+### Fixed
+- Force **ElectricLoad** **critical_load_kw** to be _nothing_ when **off_grid_flag** is _true_ (**critical_load_fraction** was already being forced to 1, but the user was still able to get around this by providing **critical_load_kw**)
+- Removed looping over storage name in functions `add_hot_thermal_storage_dispatch_constraints` and `add_cold_thermal_storage_dispatch_constraints` because this loop is already done when calling these functions and storage name is passed in as argument `b`
+- Remove extraneous line of code in `results/wind.jl`
+- Change type of **value_of_lost_load** in **FinancialInputs** struct to fix convert error when user provides an _Int_
+- Change international location in "Solar Dataset" test set from Cameroon to Oulu because the locations in the NSRDB have been expanded significantly so there is now an NSRDB point at Cameroon
+- Handle edge case where the values of **outage_start_time_steps** and **outage_durations** makes an outage extend beyond the end of the year. The outage will now wrap around to the beginning of the year.
+- Enforce minimum allowable sizes for ASHP technologies by introducing improved big-M values for segmented size constraints.
+- Removed default values from ASHP functions that calculate minimum allowable size and performance.
 
 ## v0.48.0
 ### Added

@@ -1,4 +1,9 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+function time_step_wrap_around(time_step::Int; time_steps_per_hour::Int=1)::Int
+    time_steps_per_year = 8760 * time_steps_per_hour
+    ((time_step - 1) % time_steps_per_year) + 1
+end
+
 function solver_is_compatible_with_indicator_constraints(solver_name::String)::Bool
     return any(lowercase.(INDICATOR_COMPATIBLE_SOLVERS) .== lowercase(solver_name))
 end
