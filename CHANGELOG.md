@@ -26,6 +26,11 @@ Classify the change according to the following categories:
     ### Removed
 
 
+## gridRE-dev
+### Changed
+- Changed name of ElectricUtility input **cambium_metric_col** to **cambium_co2_metric**, to distinguish between the CO2 and clean energy fraction metrics
+- Changed name of ElectricUtility **cambium_emissions_region** to **cambium_region** 
+
 ## Develop
 ### Added
 - Battery residual value if choosing replacement strategy for degradation

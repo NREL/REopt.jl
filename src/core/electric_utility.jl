@@ -16,19 +16,17 @@
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
     
-    ### Grid Climate Emissions Inputs ### 
-    # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
+    ### Cambium Emissions and Clean Energy Inputs ###
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
         ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
-    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
-    cambium_co2_metric::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
-    cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
-    cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period.
+    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
+    cambium_start_year::Int = 2024, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+    cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
-    ### Grid Clean Energy Fraction Inputs ###
-    cambium_cef_col::String = "cef_load", Options = ["cef_load", "cef_gen"] # Cef_load refers to the proportion of electricity consumed (load) that in a region that comes from clean energy sources; cef_gen refers to the proportion of electricity generated in a region that comes from clean energy sources.
-    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
+    ### Grid Climate Emissions Inputs ### 
+    # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
+    cambium_co2_metric::String = "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
 
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
@@ -52,6 +50,11 @@
     emissions_factor_NOx_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["NOx"], 
     emissions_factor_SO2_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["SO2"],
     emissions_factor_PM25_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["PM25"]
+
+    ### Grid Clean Energy Fraction Inputs ###
+    cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
+    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
+    include_grid_clean_energy_in_re::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the site's renewable electricity calculations
 ```
 
 !!! note "Outage modeling"
@@ -83,38 +86,39 @@
     This constructor is intended to be used with latitude/longitude arguments provided for
     the non-MPC case and without latitude/longitude arguments provided for the MPC case.
 
-!!! note "Climate and Health Emissions Modeling" 
+!!! note "Climate and Health Emissions and Grid Clean Energy Modeling" 
     Climate and health-related emissions from grid electricity come from two different data sources and have different REopt inputs as described below. 
 
-    **Grid Clean Energy Fraction**
-    - For sites in the contiguous United States: 
-        - Default clean energy fraction data comes from NREL's Cambium database (Current version: 2022)
-            - By default, REopt uses *clean energy fraction* for the region in which the site is located.
-
     **Climate Emissions**
-    - For sites in the contiguous United States: 
+    - For sites in the contiguous United States (CONUS): 
         - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
             - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent (CO2e) emissions* for the region in which the site is located. 
                 By default, the emissions rates are levelized over the analysis period (e.g., from 2024 through 2048 for a 25-year analysis)
             - The inputs to the Cambium API request can be modified by the user based on emissions accounting needs (e.g., can change "lifetime" to 1 to analyze a single year's emissions)
             - Note for analysis periods extending beyond 2050: Values beyond 2050 are estimated with the 2050 values. Analysts are advised to use caution when selecting values that place significant weight on 2050 (e.g., greater than 50%)
         - Users can alternatively choose to use emissions factors from the EPA's AVERT by setting `co2_from_avert` to `true`
-    - For Alaska and HI: Grid CO2e emissions rates for AK and HI come from the eGRID database. These are single values repeated throughout the year. The default annual emissions_factor_CO2_decrease_fraction will be applied to this rate to account for future greening of the grid.   
-    - For sites outside of the United States: We currently do not have default grid emissions rates for sites outside of the U.S. For these sites, users must supply custom emissions factor series (e.g., emissions_factor_series_lb_CO2_per_kwh) and projected emissions decreases (e.g., emissions_factor_CO2_decrease_fraction). 
+    - For Alaska and HI: Grid CO2e emissions rates come from the eGRID database. These are single values repeated throughout the year. The default annual `emissions_factor_CO2_decrease_fraction` will be applied to this rate to account for future greening of the grid.   
+    - For sites outside of the United States: REopt does not have default grid emissions rates for sites outside of the U.S. For these sites, users must supply custom emissions factor series (`emissions_factor_series_lb_CO2_per_kwh`) and projected emissions decreases (`emissions_factor_CO2_decrease_fraction`). 
 
     **Health Emissions**
-    - For sites in the contiguous United States: health-related emissions factors (PM2.5, SO2, and NOx) come from the EPA's AVERT database. 
+    - For sites in CONUS: health-related emissions factors (PM2.5, SO2, and NOx) come from the EPA's AVERT database.
+    - For Alaska and HI: Grid health emissions rates come from the eGRID database. These are single values repeated throughout the year. The default annual `emissions_factor_XXX_decrease_fraction` will be applied to this rate to account for future greening of the grid. 
     - The default `avert_emissions_region` input is determined by the site's latitude and longitude. 
     Alternatively, you may input the desired AVERT `avert_emissions_region`, which must be one of: 
-    ["California", "Central", "Florida", "Mid-Atlantic", "Midwest", "Carolinas", "New England",
-     "Northwest", "New York", "Rocky Mountains", "Southeast", "Southwest", "Tennessee", "Texas",
-     "Alaska", "Hawaii (except Oahu)", "Hawaii (Oahu)"]
+    ["California", "Central", "Florida", "Mid-Atlantic", "Midwest", "Carolinas", "New England","Northwest", "New York", "Rocky Mountains", "Southeast", "Southwest", "Tennessee", "Texas", "Alaska", "Hawaii (except Oahu)", "Hawaii (Oahu)"]
+    - For sites outside of the United States: REopt does not have default grid emissions rates for sites outside of the U.S. For these sites, users must supply custom emissions factor series (e.g., `emissions_factor_series_lb_NOx_per_kwh`) and projected emissions decreases (e.g., `emissions_factor_NOx_decrease_fraction`). 
+
+    **Grid Clean Energy Fraction**
+    - For sites in CONUS: 
+        - Default clean energy fraction data comes from NREL's Cambium database (Current version: 2022)
+            - By default, REopt uses *clean energy fraction* for the region in which the site is located.
+    - For sites outside of CONUS: REopt does not have default grid clean energy fraction data. Users must supply a custom `clean_energy_fraction_series`
 
 """
 struct ElectricUtility
     avert_emissions_region::String # AVERT emissions region
     distance_to_avert_emissions_region_meters::Real
-    cambium_emissions_region::String # Determined by location (lat long) and cambium_location_type
+    cambium_region::String # Determined by location (lat long) and cambium_location_type
     emissions_factor_series_lb_CO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
@@ -135,7 +139,7 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    clean_energy_fraction_series::Array{<:Real,1} # Utilities renewable energy fraction.
+    clean_energy_fraction_series::Array{<:Real,1} # Utility renewable energy fraction.
     include_grid_clean_energy_in_re::Bool 
 
     function ElectricUtility(;
@@ -156,10 +160,11 @@ struct ElectricUtility
         # Inputs for ElectricUtility
         net_metering_limit_kw::Real = 0, # Upper limit on the total capacity of technologies that can participate in net metering agreement.
         interconnection_limit_kw::Real = 1.0e9,
+        allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
+
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
-        allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
-        include_grid_clean_energy_in_re::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the renewable electricity calculations
+        
         # next 5 variables below used for minimax the expected outage cost,
         # with max taken over outage start time, expectation taken over outage duration
         outage_start_time_steps::Array{Int,1}=Int[],  # we include in the minimization the maximum outage cost over outage start times
@@ -168,47 +173,36 @@ struct ElectricUtility
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
 
-        ### Grid Renewable Energy Fraction Inputs ###
-        # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
-        clean_energy_fraction_series::Union{Real, Array{<:Real, 1}} = Float64[],
-        cambium_cef_col::String = "cef_load",  # Column name for clean energy fraction in Cambium database
-        
+        ### Cambium Emissions and Clean Energy Inputs ###
+        cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
+        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
+        cambium_start_year::Int = 2024, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+        cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
+        cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
+
         ### Grid Climate Emissions Inputs ### 
-        # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
-        cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
-            ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natrual gas prices", "High natrual gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
-        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
-        cambium_co2_metric::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
-        cambium_start_year::Int = 2024, # First year of operation of system. # Options: any year now through 2050.
-        cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. 
-        cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating station connects to grid; enduse refers to point of consumption (includes distribution loss rate)
-
-        # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
+        cambium_co2_metric::String = "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
-
-        # Climate Option 3: Provide your own custom emissions factors for CO2 and specify annual percent decrease  
-        emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
-
-        # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
+        emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
         emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? EMISSIONS_DECREASE_DEFAULTS["CO2e"] : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
 
         ### Grid Health Emissions Inputs ###
-        # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
         avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
-
-        # Health Option 2: Provide your own custom emissions factors for health emissions and specify annual percent decrease:
-        emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom NOx emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
-        emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom SO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
-        emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
-
-        # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
+        emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom NOx emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+        emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom SO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+        emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
         emissions_factor_NOx_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["NOx"], 
         emissions_factor_SO2_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["SO2"],
         emissions_factor_PM25_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["PM25"],
+
+        ### Grid Clean Energy Fraction Inputs ###
+        cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
+        clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
+        include_grid_clean_energy_in_re::Bool=true  # if true, the clean energy fraction of the grid electricity is included in the site's renewable electricity calculations
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
-        cambium_emissions_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
+        cambium_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
         
         if !is_MPC
             # Initialize clean energy fraction series
@@ -252,14 +246,14 @@ struct ElectricUtility
                         longitude = longitude,
                         start_year = cambium_start_year,
                         lifetime = cambium_levelization_years,
-                        metric_col = cambium_cef_col,
+                        metric_col = cambium_cef_metric,
                         grid_level = cambium_grid_level,
                         time_steps_per_hour = time_steps_per_hour,
                         load_year = load_year,
                         emissions_year = 2017  # Cambium data starts on a Sunday
                     )
                     clean_energy_series_dict["cef"] = clean_energy_response_dict["clean_energy_fraction_series"]
-                    cambium_emissions_region = clean_energy_response_dict["location"]
+                    cambium_region = clean_energy_response_dict["location"]
                 catch
                     @warn("Could not look up Cambium renewable energy fraction profile from point ($(latitude), $(longitude)).
                     Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting clean energy fraction to zero.")
@@ -339,7 +333,7 @@ struct ElectricUtility
                                     grid_level = cambium_grid_level
                             )
                             emissions_series_dict[ekey] = cambium_response_dict["emissions_factor_series_lb_CO2_per_kwh"]
-                            cambium_emissions_region = cambium_response_dict["location"]
+                            cambium_region = cambium_response_dict["location"]
                         catch
                             @warn("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
                             Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting CO2 emissions to zero.")
@@ -409,7 +403,7 @@ struct ElectricUtility
         new(
             is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
-            cambium_emissions_region,
+            cambium_region,
             is_MPC ? Float64[] : emissions_series_dict["CO2"],
             is_MPC ? Float64[] : emissions_series_dict["NOx"],
             is_MPC ? Float64[] : emissions_series_dict["SO2"],
