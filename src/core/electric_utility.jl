@@ -21,7 +21,7 @@
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
         ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
     cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
-    cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
+    cambium_co2_metric::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
     cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
@@ -178,7 +178,7 @@ struct ElectricUtility
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
             ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natrual gas prices", "High natrual gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
         cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
-        cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
+        cambium_co2_metric::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         cambium_start_year::Int = 2024, # First year of operation of system. # Options: any year now through 2050.
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. 
         cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating station connects to grid; enduse refers to point of consumption (includes distribution loss rate)
@@ -332,7 +332,7 @@ struct ElectricUtility
                                     longitude = longitude,
                                     start_year = cambium_start_year,
                                     lifetime = cambium_levelization_years,
-                                    metric_col = cambium_metric_col,
+                                    metric_col = cambium_co2_metric,
                                     time_steps_per_hour = time_steps_per_hour,
                                     load_year = load_year,
                                     emissions_year = 2017, # because Cambium data always starts on a Sunday
