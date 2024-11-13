@@ -536,7 +536,7 @@ function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real
         # Find col index for region. Row 1 does not contain AVERT data so skip that.
         emissions_profile_unadjusted = round.(avert_df[2:end,findfirst(x -> x == avert_region_abbr, avert_df[1,:])], digits=6)
         # Adjust for day of week alignment with load
-        ef_profile_adjusted = align_profile_with_load_year(load_year=load_year, profile_year=avert_data_year, emissions_profile=emissions_profile_unadjusted) 
+        ef_profile_adjusted = align_profile_with_load_year(load_year=load_year, profile_year=avert_data_year, profile_data=emissions_profile_unadjusted) 
         # Adjust for non-hourly timesteps 
         if time_steps_per_hour > 1
             ef_profile_adjusted = repeat(ef_profile_adjusted,inner=time_steps_per_hour)
@@ -608,7 +608,7 @@ function cambium_profile(; scenario::String,
         data_series = occursin("co2", metric_col) ? output["values"] ./ 1000 : output["values"]
     
         # Align day of week of emissions or clean energy and load profiles (Cambium data starts on Sundays so assuming profile_year=2017)
-        data_series = align_profile_with_load_year(load_year=load_year, profile_year=profile_year, emissions_profile=data_series)
+        data_series = align_profile_with_load_year(load_year=load_year, profile_year=profile_year, profile_data=data_series)
         
         if time_steps_per_hour > 1
             data_series = repeat(data_series, inner=time_steps_per_hour)
@@ -630,19 +630,19 @@ function cambium_profile(; scenario::String,
     end
 end
 
-function align_profile_with_load_year(; load_year::Int, profile_year::Int, emissions_profile::Array{<:Real,1})
+function align_profile_with_load_year(; load_year::Int, profile_year::Int, profile_data::Array{<:Real,1})
     
     ef_start_day = dayofweek(Date(profile_year,1,1)) # Monday = 1; Sunday = 7
     load_start_day = dayofweek(Date(load_year,1,1)) 
     
     if ef_start_day == load_start_day
-        emissions_profile_adj = emissions_profile
+        profile_data_adj = profile_data
     else
         # Example: Emissions year = 2017; ef_start_day = 7 (Sunday). Load year = 2021; load_start_day = 5 (Fri)
         cut_days = 7+(load_start_day-ef_start_day) # Ex: = 7+(5-7) = 5 --> cut Sun, Mon, Tues, Wed, Thurs
-        wrap_ts = emissions_profile[25:24+24*cut_days] # Ex: = emissions_profile[25:144] wrap Mon-Fri to end
-        emissions_profile_adj = append!(emissions_profile[24*cut_days+1:end],wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
+        wrap_ts = profile_data[25:24+24*cut_days] # Ex: = profile_data[25:144] wrap Mon-Fri to end
+        profile_data_adj = append!(emissions_profile[24*cut_days+1:end],wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
     end
 
-    return emissions_profile_adj
+    return profile_data_adj
 end
