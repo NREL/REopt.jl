@@ -54,7 +54,7 @@
     ### Grid Clean Energy Fraction Inputs ###
     cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
     clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
-    include_grid_clean_energy_in_re::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the site's renewable electricity calculations
+    include_grid_clean_energy_in_total::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the site's total renewable electricity calculations
 ```
 
 !!! note "Outage modeling"
@@ -140,7 +140,7 @@ struct ElectricUtility
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
     clean_energy_fraction_series::Array{<:Real,1} # Utility renewable energy fraction.
-    include_grid_clean_energy_in_re::Bool 
+    include_grid_clean_energy_in_total::Bool 
 
     function ElectricUtility(;
 
@@ -198,7 +198,7 @@ struct ElectricUtility
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
         clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
-        include_grid_clean_energy_in_re::Bool=true  # if true, the clean energy fraction of the grid electricity is included in the site's renewable electricity calculations
+        include_grid_clean_energy_in_total::Bool=true  # if true, the clean energy fraction of the grid electricity is included in the site's renewable electricity calculations
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -371,7 +371,7 @@ struct ElectricUtility
             net_metering_limit_kw,
             interconnection_limit_kw,
             is_MPC ? Float64[] : emissions_and_cef_series_dict["clean_energy_fraction_series"],
-            include_grid_clean_energy_in_re 
+            include_grid_clean_energy_in_total 
         )
     end
 end
@@ -559,11 +559,11 @@ end
                                 profile_year::Int=2017,
                                 grid_level::String)
 
-This function constructs an API request to the Cambium database to retrieve either emissions data or clean energy fraction data depending on the `metric_col` provided.                                 
-This function gets levelized grid CO2 or CO2e emission rate profiles (1-year time series) from the Cambium dataset.
+This function constructs an API request to the Cambium database to retrieve either emissions data or clean energy fraction data depending on the `metric_col` provided.
+The data will be averaged on an hourly basis over the "lifetime" provided.
 The returned profiles are adjusted for day of week alignment with the provided "load_year" (Cambium profiles always start on a Sunday.)
     
-This function is also used for the /cambium_profile endpoint in the REopt API, in particular for the webtool to display grid emissions defaults before running REopt.
+This function is also used for the /cambium_profile endpoint in the REopt API, in particular for the webtool to display grid emissions data.
 
 """
 function cambium_profile(; scenario::String, 
