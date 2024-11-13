@@ -137,7 +137,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             off_grid_flag=settings.off_grid_flag,
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             analysis_years=financial.analysis_years,
-                                            load_year=electric_load.year,
+                                            load_year=electric_load.year
                                         )
     elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
@@ -148,7 +148,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             off_grid_flag=settings.off_grid_flag,
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             analysis_years=financial.analysis_years,
-                                            load_year=electric_load.year,
+                                            load_year=electric_load.year
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
