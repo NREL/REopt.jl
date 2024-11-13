@@ -20,7 +20,7 @@
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
         ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
     cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
-    cambium_start_year::Int = 2024, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+    cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050. # TODO: update options with Cambium 2023
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
@@ -176,7 +176,7 @@ struct ElectricUtility
         ### Cambium Emissions and Clean Energy Inputs ###
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
         cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
-        cambium_start_year::Int = 2024, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+        cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
         cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
@@ -202,69 +202,17 @@ struct ElectricUtility
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
-        cambium_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
+        cambium_region = "NA - Cambium data not used" # will be overwritten if Cambium is used
         
         if !is_MPC
-            # Initialize clean energy fraction series
-            clean_energy_series_dict = Dict{String, Union{Nothing, Array{<:Real, 1}}}()
-            if typeof(clean_energy_fraction_series) <: Real  # user provided scalar value
-                if clean_energy_fraction_series < 0 || clean_energy_fraction_series > 1
-                    throw(@error("The provided ElectricUtility clean energy fraction value must be between 0 and 1."))
-                end
-                clean_energy_series_dict["cef"] = repeat([clean_energy_fraction_series], 8760*time_steps_per_hour)
-            elseif length(clean_energy_fraction_series) == 1  # user provided array of one value
-                if clean_energy_fraction_series[1] < 0 || clean_energy_fraction_series[1] > 1
-                    throw(@error("The provided ElectricUtility clean energy fraction value must be between 0 and 1."))
-                end
-                clean_energy_series_dict["cef"] = repeat(clean_energy_fraction_series, 8760*time_steps_per_hour)
-            elseif length(clean_energy_fraction_series) / time_steps_per_hour ≈ 8760  # user provided array with correct length
-                if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
-                    throw(@error("All values in the provided ElectricUtility clean energy fraction series must be between 0 and 1."))
-                end
-                clean_energy_series_dict["cef"] = clean_energy_fraction_series
-            elseif length(clean_energy_fraction_series) > 1 && !(length(clean_energy_fraction_series) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
-                if length(clean_energy_fraction_series) == 8760
-                    if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
-                        throw(@error("All values in the provided ElectricUtility clean energy fraction series must be between 0 and 1."))
-                    end
-                    clean_energy_series_dict["cef"] = repeat(clean_energy_fraction_series, inner=time_steps_per_hour)
-                    @warn("Clean energy fraction series has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
-                else
-                    throw(@error("The provided ElectricUtility clean energy fraction series does not match the time_steps_per_hour."))
-                end
-            else
-                # Retrieve clean energy fraction data if not user-provided
-                if cambium_start_year < 2023 || cambium_start_year > 2050
-                    @warn("The cambium_start_year must be between 2023 and 2050. Setting cambium_start_year to 2024.")
-                    cambium_start_year = 2024 # Must update annually 
-                end
-                try
-                    clean_energy_response_dict = cambium_clean_energy_fraction_profile(
-                        scenario = cambium_scenario, 
-                        location_type = cambium_location_type, 
-                        latitude = latitude, 
-                        longitude = longitude,
-                        start_year = cambium_start_year,
-                        lifetime = cambium_levelization_years,
-                        metric_col = cambium_cef_metric,
-                        grid_level = cambium_grid_level,
-                        time_steps_per_hour = time_steps_per_hour,
-                        load_year = load_year,
-                        emissions_year = 2017  # Cambium data starts on a Sunday
-                    )
-                    clean_energy_series_dict["cef"] = clean_energy_response_dict["clean_energy_fraction_series"]
-                    cambium_region = clean_energy_response_dict["location"]
-                catch
-                    @warn("Could not look up Cambium renewable energy fraction profile from point ($(latitude), $(longitude)).
-                    Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting clean energy fraction to zero.")
-                    clean_energy_series_dict["cef"] = zeros(Float64, 8760*time_steps_per_hour)
-                end
+            # Check some inputs 
+            if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
+                throw(@error("All values in the provided ElectricUtility clean_energy_fraction_series must be between 0 and 1."))
             end
-
-            # save clean_energy_series_dict["cef"] as csv
-            # clean_energy_df = DataFrame(cef = clean_energy_series_dict["cef"])
-            # CSV.write("clean_energy_fraction_series.csv", clean_energy_df)
-           
+            if cambium_start_year < 2023 || cambium_start_year > 2050 # TODO: update?
+                cambium_start_year = 2025 # Must update annually 
+                @warn("The cambium_start_year must be between 2023 and 2050. Setting cambium_start_year to $(cambium_start_year).")
+            end
 
             # Get AVERT emissions region
             if avert_emissions_region == ""
@@ -289,60 +237,61 @@ struct ElectricUtility
                 emissions_factor_CO2_decrease_fraction = 0.0 # For Cambium data and if not user-provided
             end
 
-            # Get all grid emissions series
-            emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
+            # Get all grid emissions series and clean energy fraction series
+            emissions_and_cef_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
             for (eseries, ekey) in [
                 (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
                 (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
                 (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
-                (emissions_factor_series_lb_PM25_per_kwh, "PM25")
+                (emissions_factor_series_lb_PM25_per_kwh, "PM25"),
+                (clean_energy_fraction_series, "clean_energy_fraction_series")
             ]
                 if off_grid_flag # no grid emissions for off-grid
-                    emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour)
+                    emissions_and_cef_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour)
                 elseif typeof(eseries) <: Real  # user provided scalar value
-                    emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
+                    emissions_and_cef_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
                 elseif length(eseries) == 1  # user provided array of one value
-                    emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
+                    emissions_and_cef_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
                 elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
-                    emissions_series_dict[ekey] = eseries
+                    emissions_and_cef_series_dict[ekey] = eseries
                 elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                     if length(eseries) == 8760
-                        emissions_series_dict[ekey] = repeat(eseries,inner=time_steps_per_hour)
-                        @warn("Emissions series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
+                        emissions_and_cef_series_dict[ekey] = repeat(eseries,inner=time_steps_per_hour)
+                        @warn("The ElectricUtility emissions or clean enery fraction series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
                     else
-                        throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
+                        throw(@error("The provided ElectricUtility emissions or clean enery fraction series for $(ekey) does not match the time_steps_per_hour."))
                     end
-                else # if not user-provided, get emissions factors from AVERT and/or Cambium
-                    if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2 
-                        if cambium_start_year < 2023 || cambium_start_year > 2050
-                            @warn("The cambium_start_year must be between 2023 and 2050. Setting to cambium_start_year to 2024.")
-                            cambium_start_year = 2024 # Must update annually 
-                        end
+                else # if not user-provided, get emissions or cef factors from Cambium and/or AVERT
+                    if ekey == "CO2" && co2_from_avert == false || ekey == "clean_energy_fraction_series" # Use Cambium for CO2 or clean energy factors
                         try
-                            cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load and time_steps_per_hour
+                            cambium_response_dict = cambium_profile( # Adjusted for day of week alignment with load and time_steps_per_hour
                                     scenario = cambium_scenario, 
                                     location_type = cambium_location_type, 
                                     latitude = latitude, 
                                     longitude = longitude,
                                     start_year = cambium_start_year,
                                     lifetime = cambium_levelization_years,
-                                    metric_col = cambium_co2_metric,
+                                    metric_col = ekey == "CO2" ? cambium_co2_metric : cambium_cef_metric,
                                     time_steps_per_hour = time_steps_per_hour,
                                     load_year = load_year,
-                                    emissions_year = 2017, # because Cambium data always starts on a Sunday
+                                    profile_year = 2017, # because Cambium data always starts on a Sunday
                                     grid_level = cambium_grid_level
                             )
-                            emissions_series_dict[ekey] = cambium_response_dict["emissions_factor_series_lb_CO2_per_kwh"]
+                            emissions_and_cef_series_dict[ekey] = cambium_response_dict["data_series"]
                             cambium_region = cambium_response_dict["location"]
+
+                            # save clean_energy_series_dict["cef"] as csv
+                            # clean_energy_df = DataFrame(cef = clean_energy_series_dict["cef"])
+                            # CSV.write("clean_energy_fraction_series.csv", clean_energy_df)
                         catch
-                            @warn("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
-                            Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting CO2 emissions to zero.")
-                            emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) 
+                            @warn("Could not look up Cambium $(ekey) profile for location ($(latitude), $(longitude)).
+                            Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting ElectricUtility $(ekey) factors to zero.")
+                            emissions_and_cef_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) 
                         end
                     else # otherwise use AVERT
                         if !isnothing(region_abbr)
                             avert_data_year = 2022 # Must update when AVERT data are updated
-                            emissions_series_dict[ekey] = avert_emissions_profiles(
+                            emissions_and_cef_series_dict[ekey] = avert_emissions_profiles(
                                                             avert_region_abbr = region_abbr,
                                                             latitude = latitude,
                                                             longitude = longitude,
@@ -351,13 +300,12 @@ struct ElectricUtility
                                                             avert_data_year = avert_data_year
                                                             )["emissions_factor_series_lb_"*ekey*"_per_kwh"]
                         else
-                            emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) # Warnings will happen in avert_emissions_profiles
+                            emissions_and_cef_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) # Warnings will happen in avert_emissions_profiles
                         end
                     end
-
                     # Handle missing emissions inputs (due to failed lookup and not provided by user)
-                    if isnothing(emissions_series_dict[ekey])
-                        @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
+                    if isnothing(emissions_and_cef_series_dict[ekey])
+                        @warn "Cannot find hourly ElectricUtility $(ekey) series for region $(region_abbr). Setting this input to zero."
                         if ekey == "CO2" && 
                                         (!isnothing(CO2_emissions_reduction_min_fraction) || 
                                         !isnothing(CO2_emissions_reduction_max_fraction) || 
@@ -368,7 +316,7 @@ struct ElectricUtility
                             throw(@error("To include health costs in the objective function, you must either enter custom health 
                                 grid emissions factors or a site location within the contiguous U.S."))
                         end
-                        emissions_series_dict[ekey] = zeros(8760*time_steps_per_hour)
+                        emissions_and_cef_series_dict[ekey] = zeros(8760*time_steps_per_hour)
                     end
                 end
             end
@@ -404,10 +352,10 @@ struct ElectricUtility
             is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
             cambium_region,
-            is_MPC ? Float64[] : emissions_series_dict["CO2"],
-            is_MPC ? Float64[] : emissions_series_dict["NOx"],
-            is_MPC ? Float64[] : emissions_series_dict["SO2"],
-            is_MPC ? Float64[] : emissions_series_dict["PM25"],
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["CO2"],
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["NOx"],
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["SO2"],
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["PM25"],
             emissions_factor_CO2_decrease_fraction,
             emissions_factor_NOx_decrease_fraction,
             emissions_factor_SO2_decrease_fraction,
@@ -422,7 +370,7 @@ struct ElectricUtility
             scenarios,
             net_metering_limit_kw,
             interconnection_limit_kw,
-            is_MPC ? Float64[] : clean_energy_series_dict["cef"],
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["clean_energy_fraction_series"],
             include_grid_clean_energy_in_re 
         )
     end
@@ -588,7 +536,7 @@ function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real
         # Find col index for region. Row 1 does not contain AVERT data so skip that.
         emissions_profile_unadjusted = round.(avert_df[2:end,findfirst(x -> x == avert_region_abbr, avert_df[1,:])], digits=6)
         # Adjust for day of week alignment with load
-        ef_profile_adjusted = align_emission_with_load_year(load_year=load_year, emissions_year=avert_data_year, emissions_profile=emissions_profile_unadjusted) 
+        ef_profile_adjusted = align_profile_with_load_year(load_year=load_year, profile_year=avert_data_year, emissions_profile=emissions_profile_unadjusted) 
         # Adjust for non-hourly timesteps 
         if time_steps_per_hour > 1
             ef_profile_adjusted = repeat(ef_profile_adjusted,inner=time_steps_per_hour)
@@ -599,7 +547,7 @@ function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real
 end
 
 """
-    cambium_emissions_profiles(; scenario::String, 
+    cambium_profile(; scenario::String, 
                                 location_type::String, 
                                 latitude::Real, 
                                 longitude::Real,
@@ -608,14 +556,14 @@ end
                                 metric_col::String,
                                 time_steps_per_hour::Int=1,
                                 load_year::Int=2017,
-                                emissions_year::Int=2017,
+                                profile_year::Int=2017,
                                 grid_level::String)
 
 This function constructs an API request to the Cambium database to retrieve either emissions data or clean energy fraction data depending on the `metric_col` provided.                                 
 This function gets levelized grid CO2 or CO2e emission rate profiles (1-year time series) from the Cambium dataset.
 The returned profiles are adjusted for day of week alignment with the provided "load_year" (Cambium profiles always start on a Sunday.)
     
-This function is also used for the /cambium_emissions_profile endpoint in the REopt API, in particular for the webtool to display grid emissions defaults before running REopt.
+This function is also used for the /cambium_profile endpoint in the REopt API, in particular for the webtool to display grid emissions defaults before running REopt.
 
 """
 function cambium_profile(; scenario::String, 
@@ -628,7 +576,7 @@ function cambium_profile(; scenario::String,
                         grid_level::String,
                         time_steps_per_hour::Int=1,
                         load_year::Int=2017,
-                        emissions_year::Int=2017
+                        profile_year::Int=2017
                         )
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
@@ -656,30 +604,19 @@ function cambium_profile(; scenario::String,
         r = HTTP.get(url; query=payload) 
         response = JSON.parse(String(r.body)) # contains response["status"]
         output = response["message"]
-        data_series = output["values"]
-        # co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
-
         # Convert from [lb/MWh] to [lb/kWh] if the metric is emissions-related
-        if metric_col == "lrmer_co2e"
-            data_series = data_series ./ 1000
-        end
-
-        # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
-        data_series = align_emission_with_load_year(load_year=load_year, emissions_year=emissions_year, emissions_profile=data_series)
+        data_series = occursin("co2", metric_col) ? output["values"] ./ 1000 : output["values"]
+    
+        # Align day of week of emissions or clean energy and load profiles (Cambium data starts on Sundays so assuming profile_year=2017)
+        data_series = align_profile_with_load_year(load_year=load_year, profile_year=profile_year, emissions_profile=data_series)
         
         if time_steps_per_hour > 1
             data_series = repeat(data_series, inner=time_steps_per_hour)
         end
-
-        description, units = if metric_col == "lrmer_co2e"
-            ("Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type, adjusted to align with load year $(load_year).", "Pounds emissions per kWh")
-        else
-            ("Hourly clean energy fraction for applicable Cambium location and location_type, adjusted to align with load year $(load_year).", "Fraction of clean energy")
-        end
         
         response_dict = Dict{String, Any}(
-            "description" => description,
-            "units" => units,
+            "description" => "Hourly CO2 (or CO2e) grid emissions factors or clean energy fraction for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
+            "units" => occursin("co2", metric_col) ? "Pounds emissions per kWh" : "Fraction of clean energy",
             "location" => output["location"],
             "metric_col" => output["metric_col"], 
             "data_series" => data_series 
@@ -693,9 +630,9 @@ function cambium_profile(; scenario::String,
     end
 end
 
-function align_emission_with_load_year(; load_year::Int, emissions_year::Int, emissions_profile::Array{<:Real,1})
+function align_profile_with_load_year(; load_year::Int, profile_year::Int, emissions_profile::Array{<:Real,1})
     
-    ef_start_day = dayofweek(Date(emissions_year,1,1)) # Monday = 1; Sunday = 7
+    ef_start_day = dayofweek(Date(profile_year,1,1)) # Monday = 1; Sunday = 7
     load_start_day = dayofweek(Date(load_year,1,1)) 
     
     if ef_start_day == load_start_day
