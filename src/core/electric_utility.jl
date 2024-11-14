@@ -53,7 +53,7 @@
 
     ### Grid Clean Energy Fraction Inputs ###
     cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
+    renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
 ```
 
 !!! note "Outage modeling"
@@ -111,7 +111,7 @@
     - For sites in CONUS: 
         - Default clean energy fraction data comes from NREL's Cambium database (Current version: 2022)
             - By default, REopt uses *clean energy fraction* for the region in which the site is located.
-    - For sites outside of CONUS: REopt does not have default grid clean energy fraction data. Users must supply a custom `clean_energy_fraction_series`
+    - For sites outside of CONUS: REopt does not have default grid clean energy fraction data. Users must supply a custom `renewable_energy_fraction_series`
 
 """
 struct ElectricUtility
@@ -138,7 +138,7 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    clean_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
+    renewable_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
 
     function ElectricUtility(;
 
@@ -195,7 +195,7 @@ struct ElectricUtility
 
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-        clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
+        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -203,8 +203,8 @@ struct ElectricUtility
         
         if !is_MPC
             # Check some inputs 
-            if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
-                throw(@error("All values in the provided ElectricUtility clean_energy_fraction_series must be between 0 and 1."))
+            if any(x -> x < 0 || x > 1, renewable_energy_fraction_series)
+                throw(@error("All values in the provided ElectricUtility renewable_energy_fraction_series must be between 0 and 1."))
             end
             if cambium_start_year < 2023 || cambium_start_year > 2050 # TODO: update?
                 cambium_start_year = 2025 # Must update annually 
@@ -241,7 +241,7 @@ struct ElectricUtility
                 (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
                 (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
                 (emissions_factor_series_lb_PM25_per_kwh, "PM25"),
-                (clean_energy_fraction_series, "clean_energy_fraction_series")
+                (renewable_energy_fraction_series, "renewable_energy_fraction_series")
             ]
                 if off_grid_flag # no grid emissions for off-grid
                     emissions_and_cef_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour)
@@ -259,7 +259,7 @@ struct ElectricUtility
                         throw(@error("The provided ElectricUtility emissions or clean enery fraction series for $(ekey) does not match the time_steps_per_hour."))
                     end
                 else # if not user-provided, get emissions or cef factors from Cambium and/or AVERT
-                    if ekey == "CO2" && co2_from_avert == false || ekey == "clean_energy_fraction_series" # Use Cambium for CO2 or clean energy factors
+                    if ekey == "CO2" && co2_from_avert == false || ekey == "renewable_energy_fraction_series" # Use Cambium for CO2 or clean energy factors
                         try
                             cambium_response_dict = cambium_profile( # Adjusted for day of week alignment with load and time_steps_per_hour
                                     scenario = cambium_scenario, 
@@ -279,7 +279,7 @@ struct ElectricUtility
 
                             # save clean_energy_series_dict["cef"] as csv
                             # clean_energy_df = DataFrame(cef = clean_energy_series_dict["cef"])
-                            # CSV.write("clean_energy_fraction_series.csv", clean_energy_df)
+                            # CSV.write("renewable_energy_fraction_series.csv", clean_energy_df)
                         catch
                             @warn("Could not look up Cambium $(ekey) profile for location ($(latitude), $(longitude)).
                             Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting ElectricUtility $(ekey) factors to zero.")
@@ -367,7 +367,7 @@ struct ElectricUtility
             scenarios,
             net_metering_limit_kw,
             interconnection_limit_kw,
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["clean_energy_fraction_series"]
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["renewable_energy_fraction_series"]
         )
     end
 end

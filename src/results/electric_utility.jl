@@ -4,6 +4,7 @@
 - `annual_energy_supplied_kwh` # Total energy supplied from the grid in an average year.
 - `electric_to_load_series_kw` # Vector of power drawn from the grid to serve load.
 - `electric_to_storage_series_kw` # Vector of power drawn from the grid to charge the battery.
+- `annual_renewable_electricity_supplied_kwh` # Total renewable electricity supplied from the grid in an average year.
 - `annual_emissions_tonnes_CO2` # Average annual total tons of CO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_NOx` # Average annual total tons of NOx emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_SO2` # Average annual total tons of SO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
@@ -36,7 +37,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     if :WHL in p.s.electric_tariff.export_bins
         if abs(sum(value.(m[Symbol("WHL_benefit"*_n)])) - 10*sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])]) / value(m[Symbol("WHL_benefit"*_n)]))  <= 1e-3
             @warn """Wholesale benefit is at the maximum allowable by the model; the problem is likely unbounded without this 
-            limit in place.  Check the inputs to ensure that there are practical limits for max system sizes and that 
+            limit in place. Check the inputs to ensure that there are practical limits for max system sizes and that 
             the wholesale and retail electricity rates are accurate."""
         end
     end
@@ -45,11 +46,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
         for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
     r["annual_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
-    calc_clean_grid_kWh(m, p)
-
-    r["clean_grid_to_load_series_kw"] = round.(value.([m[:grid_clean_energy_series_kw][ts] for ts in p.time_steps]), digits=3)
-    #sum to find the annual clean grid to load kWh
-    r["annual_clean_grid_to_load_kwh"] = round(sum(r["clean_grid_to_load_series_kw"]), digits=2)
+    r["annual_renewable_electricity_supplied_kwh"] = round(value(m[:AnnualGridREEleckWh]), digits=2)
 
     if !isempty(p.s.storage.types.elec)
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
