@@ -41,7 +41,6 @@ mutable struct Site
     include_grid_renewable_electricity_in_min_max_constraints
     include_exported_elec_emissions_in_total
     include_exported_renewable_electricity_in_total
-    include_grid_renewable_electricity_in_total
     outdoor_air_temperature_degF
     node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
     function Site(;
@@ -60,7 +59,6 @@ mutable struct Site
         include_grid_renewable_electricity_in_min_max_constraints::Bool = false,
         include_exported_elec_emissions_in_total::Bool = true,
         include_exported_renewable_electricity_in_total::Bool = true,
-        include_grid_renewable_electricity_in_total::Bool = false,
         outdoor_air_temperature_degF::Union{Nothing, Array{<:Real,1}} = nothing,
         node::Int = 1, 
         )
