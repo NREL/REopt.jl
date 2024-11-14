@@ -119,7 +119,6 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_ashp_wh_results(m, p, d; _n)
     end
     
-    d["model"] = m
 
     return d
 end
