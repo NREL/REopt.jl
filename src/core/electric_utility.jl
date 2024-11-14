@@ -637,7 +637,7 @@ function align_profile_with_load_year(; load_year::Int, profile_year::Int, profi
         # Example: Emissions year = 2017; ef_start_day = 7 (Sunday). Load year = 2021; load_start_day = 5 (Fri)
         cut_days = 7+(load_start_day-ef_start_day) # Ex: = 7+(5-7) = 5 --> cut Sun, Mon, Tues, Wed, Thurs
         wrap_ts = profile_data[25:24+24*cut_days] # Ex: = profile_data[25:144] wrap Mon-Fri to end
-        profile_data_adj = append!(emissions_profile[24*cut_days+1:end],wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
+        profile_data_adj = append!(profile_data[24*cut_days+1:end],wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
     end
 
     return profile_data_adj
