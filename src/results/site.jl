@@ -42,8 +42,8 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r = Dict{String, Any}()
 
 	# renewable elec
-	r["annual_renewable_electricity_kwh"] = round(value(m[:AnnualREEleckWh]), digits=2)
-	r["renewable_electricity_fraction"] = round(value(m[:AnnualREEleckWh])/value(m[:AnnualEleckWh]), digits=6)
+	r["annual_renewable_electricity_kwh"] = round(value(m[:AnnualOnsiteREEleckWh]), digits=2)
+	r["renewable_electricity_fraction"] = round(value(m[:AnnualOnsiteREEleckWh])/value(m[:AnnualEleckWh]), digits=6)
 
 	# total renewable energy
 	add_re_tot_calcs(m,p)
@@ -138,7 +138,7 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 			# - AnnualSteamToSteamTurbine # minus steam going to SteamTurbine; already adjusted by p.hours_per_time_step
 		)
 	end 
-	m[:AnnualRETotkWh] = @expression(m, m[:AnnualREEleckWh] + AnnualREHeatkWh)
+	m[:AnnualRETotkWh] = @expression(m, m[:AnnualOnsiteREEleckWh] + AnnualREHeatkWh)
 	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + AnnualHeatkWh)
 	nothing
 end

@@ -27,9 +27,15 @@ Classify the change according to the following categories:
 
 
 ## gridRE-dev
+### Added 
+- Added ElectricUtility inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
+  - **cambium_cef_metric** to utilize clean energy data from NREL's Cambium database
+  - **clean_energy_fraction_series** to supply a custom grid clean energy scalar or series
+- Added Site input to allow user to choose whether to include grid RE in min max constraints: **include_grid_renewable_electricity_in_min_max_constraints** 
 ### Changed
 - Changed name of ElectricUtility input **cambium_metric_col** to **cambium_co2_metric**, to distinguish between the CO2 and clean energy fraction metrics
-- Changed name of ElectricUtility **cambium_emissions_region** to **cambium_region** 
+- Changed name of ElectricUtility **cambium_emissions_region** to **cambium_region**
+- Changed name of function (also available as endpoint through REopt API) from **cambium_emissions_profile** to **cambium_profile**
 
 ## Develop
 ### Added

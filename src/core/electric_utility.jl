@@ -53,8 +53,7 @@
 
     ### Grid Clean Energy Fraction Inputs ###
     cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
-    include_grid_clean_energy_in_total::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the site's total renewable electricity calculations
+    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
 ```
 
 !!! note "Outage modeling"
@@ -139,8 +138,7 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    clean_energy_fraction_series::Array{<:Real,1} # Utility renewable energy fraction.
-    include_grid_clean_energy_in_total::Bool 
+    clean_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
 
     function ElectricUtility(;
 
@@ -197,8 +195,7 @@ struct ElectricUtility
 
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-        clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
-        include_grid_clean_energy_in_total::Bool=true  # if true, the clean energy fraction of the grid electricity is included in the site's renewable electricity calculations
+        clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -370,8 +367,7 @@ struct ElectricUtility
             scenarios,
             net_metering_limit_kw,
             interconnection_limit_kw,
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["clean_energy_fraction_series"],
-            include_grid_clean_energy_in_total 
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["clean_energy_fraction_series"]
         )
     end
 end
