@@ -5,9 +5,11 @@
 Adds the Site results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
 
 Site results:
-- `annual_onsite_renewable_electricity_kwh`
+- `annual_onsite_renewable_electricity_kwh` # renewable electricity from on-site renewable electricity-generating technologies (including fuel-burning technologies)
 - `onsite_renewable_electricity_fraction_of_elec_load`
 - `onsite_renewable_energy_fraction_of_elec_and_thermal_load`
+- `onsite_and_grid_renewable_electricity_fraction_of_elec_load`
+- `onsite_and_grid_renewable_energy_fraction_of_elec_and_thermal_load`
 - `annual_emissions_tonnes_CO2` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
 - `annual_emissions_tonnes_NOx` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
 - `annual_emissions_tonnes_SO2` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
@@ -43,11 +45,13 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
 	# renewable elec
 	r["annual_onsite_renewable_electricity_kwh"] = round(value(m[:AnnualOnsiteREEleckWh]), digits=2)
-	r["onsite_renewable_electricity_fraction_of_elec_load"] = round(value(m[:AnnualOnsiteREEleckWh])/value(m[:AnnualEleckWh]), digits=6)
+	r["onsite_renewable_electricity_fraction_of_elec_load"] = round(value(m[:AnnualOnsiteREEleckWh])/value(m[:AnnualEleckWh]), digits=4)
+	r["onsite_and_grid_renewable_electricity_fraction_of_elec_load"] = round((value(m[:AnnualOnsiteREEleckWh]) + value(m[:AnnualGridREEleckWh])) /value(m[:AnnualEleckWh]), digits=4)
 
 	# total renewable energy
 	add_re_tot_calcs(m,p)
-	r["onsite_renewable_energy_fraction_of_elec_and_thermal_load"] = round(value(m[:AnnualOnsiteRETotkWh])/value(m[:AnnualTotkWh]), digits=6)
+	r["onsite_renewable_energy_fraction_of_elec_and_thermal_load"] = round(value(m[:AnnualOnsiteRETotkWh])/value(m[:AnnualTotkWh]), digits=4)
+	r["onsite_and_grid_renewable_energy_fraction_of_elec_and_thermal_load"] = round((value(m[:AnnualOnsiteRETotkWh]) + value(m[:AnnualGridREEleckWh]))/value(m[:AnnualTotkWh]), digits=4)
 
 	# Lifecycle emissions results at Site level
 	if !isnothing(p.s.site.bau_emissions_lb_CO2_per_year)
