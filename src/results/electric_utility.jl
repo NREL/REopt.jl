@@ -46,9 +46,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
         for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
     r["annual_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
-    r["annual_renewable_electricity_supplied_kwh"] = round(value(m[:AnnualGridREEleckWh]), digits=2)
-
-    if !isempty(p.s.storage.types.elec)
+        if !isempty(p.s.storage.types.elec)
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                   for ts in p.time_steps)
@@ -63,7 +61,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["electric_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
     r["electric_to_storage_series_kw"] = round.(value.(GridToBatt), digits=3)
 
-    if _n=="" #only output emissions results if not a multinode model
+    if _n=="" #only output emissions and RE results if not a multinode model
         r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB*p.pwf_grid_emissions["CO2"]), digits=2)
         r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB*p.pwf_grid_emissions["NOx"]), digits=2)
         r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
@@ -76,6 +74,8 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
         r["avert_emissions_region"] = p.s.electric_utility.avert_emissions_region
         r["distance_to_avert_emissions_region_meters"] = p.s.electric_utility.distance_to_avert_emissions_region_meters
         r["cambium_region"] = p.s.electric_utility.cambium_region
+
+        r["annual_renewable_electricity_supplied_kwh"] = round(value(m[:AnnualGridREEleckWh]), digits=2)
     end
 
     d["ElectricUtility"] = r
