@@ -2364,6 +2364,21 @@ else  # run HiGHS tests
             end
         end
 
+        @testset "Renewable Energy from Grid" begin
+            inputs = JSON.parsefile("./scenarios/re_emissions_elec_only.json") # PV, Generator, ElectricStorage
+            
+            s = Scenario(inputs)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+
+            bessloss = 0.96*0.975^0.5*0.96*0.975^0.5
+            grid2load = results["ElectricUtility"]["electric_to_load_series_kw"]
+            grid2bess = results["ElectricUtility"]["electric_to_storage_series_kw"]
+            gridRE = sum(grid2load + grid2bess - (grid2bess*(1-bessloss)) .* s.electric_utility.renewable_energy_fraction_series)
+            
+            @test results["ElectricUtility"]["annual_renewable_electricity_supplied_kwh"] ≈ gridRE atol=1e-2
+        end
+
         @testset "Back pressure steam turbine" begin
             """
             Validation to ensure that:
