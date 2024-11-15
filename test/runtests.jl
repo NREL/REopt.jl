@@ -2197,7 +2197,7 @@ else  # run HiGHS tests
         
             @test scen.electric_utility.avert_emissions_region == "Alaska"
             @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
-            @test scen.electric_utility.cambium_region == "NA - Cambium data not used for climate emissions"
+            @test scen.electric_utility.cambium_region == "NA - Cambium data not used"
             @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.29199999 rtol=1e-3 # check that data from eGRID (AVERT data file) is used
             @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["CO2e"] # should get updated to this value
             @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
@@ -2212,7 +2212,7 @@ else  # run HiGHS tests
             
             @test scen.electric_utility.avert_emissions_region == ""
             @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 5.521032136418236e6 atol=1.0
-            @test scen.electric_utility.cambium_region == "NA - Cambium data not used for climate emissions"
+            @test scen.electric_utility.cambium_region == "NA - Cambium data not used"
             @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0 
             @test sum(scen.electric_utility.emissions_factor_series_lb_NOx_per_kwh) ≈ 0 
             @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) ≈ 0 
