@@ -550,10 +550,11 @@ end
                                 start_year::Int,
                                 lifetime::Int,
                                 metric_col::String,
+                                grid_level::String,
                                 time_steps_per_hour::Int=1,
                                 load_year::Int=2017,
                                 profile_year::Int=2017,
-                                grid_level::String)
+                                )
 
 This function constructs an API request to the Cambium database to retrieve either emissions data or clean energy fraction data depending on the `metric_col` provided.
 The data will be averaged on an hourly basis over the "lifetime" provided.
@@ -601,8 +602,7 @@ function cambium_profile(; scenario::String,
         response = JSON.parse(String(r.body)) # contains response["status"]
         output = response["message"]
         # Convert from [lb/MWh] to [lb/kWh] if the metric is emissions-related
-        data_series = occursin("co2", metric_col) ? output["values"] ./ 1000 : output["values"]
-    
+        data_series = occursin("co2", metric_col) ? output["values"] ./ 1000 : convert(Array{Float64,1}, output["values"])
         # Align day of week of emissions or clean energy and load profiles (Cambium data starts on Sundays so assuming profile_year=2017)
         data_series = align_profile_with_load_year(load_year=load_year, profile_year=profile_year, profile_data=data_series)
         

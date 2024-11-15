@@ -74,12 +74,13 @@ function add_re_elec_calcs(m,p)
 	# Note: calculations currently do not ascribe any renewable energy attribute to grid-purchased electricity
 
 	m[:AnnualGridREEleckWh] = @expression(m, p.hours_per_time_step * (
-			sum(m[:dvGridPurchase][ts, tier] - m[:dvGridToStorage][b, ts] * 
-				(1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency) *
-				p.s.electric_utility.renewable_energy_fraction_series[ts]
-				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers, b in p.s.storage.types.elec
-			) # clean energy from grid, minus battery efficiency losses
-		)
+			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
+				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 
+			- sum(m[:dvGridToStorage][b, ts] * p.s.electric_utility.renewable_energy_fraction_series[ts] *
+				(1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency)
+				for ts in p.time_steps, b in p.s.storage.types.elec
+			) # minus battery efficiency losses from grid charging storage (assumes all that is charged is discharged)
+		) 
 	)
 
 	m[:AnnualEleckWh] = @expression(m,p.hours_per_time_step * (
