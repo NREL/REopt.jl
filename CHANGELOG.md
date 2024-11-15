@@ -28,14 +28,24 @@ Classify the change according to the following categories:
 
 ## gridRE-dev
 ### Added 
-- Added ElectricUtility inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
-  - **cambium_cef_metric** to utilize clean energy data from NREL's Cambium database
-  - **clean_energy_fraction_series** to supply a custom grid clean energy scalar or series
-- Added Site input to allow user to choose whether to include grid RE in min max constraints: **include_grid_renewable_electricity_in_min_max_constraints** 
+- Added the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
+  - ElectricUtility **cambium_cef_metric** to utilize clean energy data from NREL's Cambium database
+  - **renewable_energy_fraction_series** to supply a custom grid clean or renewable energy scalar or series
+  - Site **include_grid_renewable_electricity_in_min_max_constraints** - to allow user to choose whether to include grid RE in min max constraints
+- Added the following outputs: 
+  - ElectricUtility **annual_renewable_electricity_supplied_kwh**
+  - Site **onsite_and_grid_renewable_electricity_fraction_of_elec_load**
+  - Site **onsite_and_grid_renewable_energy_fraction_of_elec_and_thermal_load**
 ### Changed
-- Changed name of ElectricUtility input **cambium_metric_col** to **cambium_co2_metric**, to distinguish between the CO2 and clean energy fraction metrics
-- Changed name of ElectricUtility **cambium_emissions_region** to **cambium_region**
+- Changed name of the following inputs: 
+  - ElectricUtility input **cambium_metric_col** changed to **cambium_co2_metric**
+- Changed name of the following outputs:
+  - ElectricUtility **cambium_emissions_region** changed to **cambium_region**
+  - Site **annual_renewable_electricity_kwh** changed to **annual_onsite_renewable_electricity_kwh**
+  - Site **renewable_electricity_fraction** changed to **onsite_renewable_electricity_fraction_of_elec_load** 
+  - Site **total_renewable_energy_fraction** changed to **onsite_renewable_energy_fraction_of_elec_and_thermal_load**
 - Changed name of function (also available as endpoint through REopt API) from **cambium_emissions_profile** to **cambium_profile**
+
 
 ## Develop
 ### Added
