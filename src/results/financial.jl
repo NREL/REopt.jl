@@ -356,7 +356,7 @@ function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,Abst
 
     federal_itc_fraction = 0.0
     try 
-        federal_itc_fraction = tech.federal_itc_fraction
+        federal_itc_fraction = tech.federal_itc_fraction # TODO: also check for total_itc_fraction as storage does not use federal_itc_fraction?
     catch
         @warn "Did not find $(tech).federal_itc_fraction so using 0.0 in calculation of depreciation_schedule."
     end
