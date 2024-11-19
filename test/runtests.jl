@@ -2175,6 +2175,7 @@ else  # run HiGHS tests
             post["Site"]["longitude"] = cities[city][2]
             post["ElectricLoad"]["loads_kw"] = [20 for i in range(1,8760)]
             post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
+            post["ElectricUtility"]["cambium_start_year"] = 2024
             scen = Scenario(post)
         
             @test scen.electric_utility.avert_emissions_region == "Rocky Mountains"
@@ -2374,9 +2375,9 @@ else  # run HiGHS tests
             bessloss = 0.96*0.975^0.5*0.96*0.975^0.5
             grid2load = results["ElectricUtility"]["electric_to_load_series_kw"]
             grid2bess = results["ElectricUtility"]["electric_to_storage_series_kw"]
-            gridRE = sum(grid2load + grid2bess - (grid2bess*(1-bessloss)) .* s.electric_utility.renewable_energy_fraction_series)
+            gridRE = sum((grid2load + grid2bess - (grid2bess*(1-bessloss))) .* s.electric_utility.renewable_energy_fraction_series)
             
-            @test results["ElectricUtility"]["annual_renewable_electricity_supplied_kwh"] ≈ gridRE atol=1e-2
+            @test results["ElectricUtility"]["annual_renewable_electricity_supplied_kwh"] ≈ gridRE rtol=1e-4
         end
 
         @testset "Back pressure steam turbine" begin

@@ -13,12 +13,12 @@ Includes renewable energy from grid if specified by user.
 function add_re_elec_constraints(m,p)
 	if !isnothing(p.s.site.renewable_electricity_min_fraction)
 		@constraint(m, MinREElecCon, m[:AnnualOnsiteREEleckWh] + 
-			include_grid_renewable_electricity_in_min_max_constraints * m[:AnnualGridREEleckWh]
+			p.s.site.include_grid_renewable_electricity_in_min_max_constraints * m[:AnnualGridREEleckWh]
 			>= p.s.site.renewable_electricity_min_fraction*m[:AnnualEleckWh])
 	end
 	if !isnothing(p.s.site.renewable_electricity_max_fraction)
 		@constraint(m, MaxREElecCon, m[:AnnualOnsiteREEleckWh] + 
-			include_grid_renewable_electricity_in_min_max_constraints * m[:AnnualGridREEleckWh]
+			p.s.site.include_grid_renewable_electricity_in_min_max_constraints * m[:AnnualGridREEleckWh]
 			<= p.s.site.renewable_electricity_max_fraction*m[:AnnualEleckWh])
 	end
 end
