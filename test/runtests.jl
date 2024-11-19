@@ -2369,7 +2369,7 @@ else  # run HiGHS tests
             
             s = Scenario(inputs)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(m, p)
+            results = run_reopt(m, inputs)
 
             bessloss = 0.96*0.975^0.5*0.96*0.975^0.5
             grid2load = results["ElectricUtility"]["electric_to_load_series_kw"]
