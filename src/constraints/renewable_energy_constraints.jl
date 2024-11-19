@@ -88,9 +88,9 @@ function add_re_elec_calcs(m,p)
 			sum(p.s.electric_load.loads_kw[ts] for ts in p.time_steps_with_grid) 
 			+ sum(p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid)
 			# tech electric loads from thermal techs
-            + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp), ts in p.time_steps)
-            + sum(m[Symbol("dvHeatingProduction"*_n)][t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater, ts in p.time_steps)
-			+ sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options, ts in p.time_steps)
+            + sum(m[:dvCoolingProduction][t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp), ts in p.time_steps)
+            + sum(m[:dvHeatingProduction][t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater, ts in p.time_steps)
+			+ sum(p.ghp_electric_consumption_kw[g,ts] * m[:binGHP][g] for g in p.ghp_options, ts in p.time_steps)
 		)
 	)
 	nothing
