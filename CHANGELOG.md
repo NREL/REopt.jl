@@ -25,7 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-
+## Develop min-load-to-ashp
+### Added
+- Added new attribute `` to **ASHPSpaceHeater** and **ASHPWaterHeater** technologies.  When this is populated, this imposes a constraint on the minimum fraction of load served by the ASHP system in every period, if the system is purchased.
+ 
 ## Develop
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
