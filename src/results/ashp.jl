@@ -178,6 +178,8 @@ function add_ashp_wh_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n=
     r["heating_cop"] = p.heating_cop["ASHPSpaceHeater"]
     r["heating_cf"] = p.heating_cf["ASHPSpaceHeater"]
 
+    r["avoided_capex_by_ashp_present_value"] = Value(m[:AvoidedCapexByASHP])
+
     d["ASHPWaterHeater"] = r
 	nothing
 end
