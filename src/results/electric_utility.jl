@@ -75,7 +75,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
         r["distance_to_avert_emissions_region_meters"] = p.s.electric_utility.distance_to_avert_emissions_region_meters
         r["cambium_region"] = p.s.electric_utility.cambium_region
 
-        r["annual_renewable_electricity_supplied_kwh"] = round(value(m[:AnnualGridREEleckWh]), digits=2)
+        r["annual_renewable_electricity_supplied_kwh"] = round(value(m[:AnnualGridREEleckWh]), digits=3)
     end
 
     d["ElectricUtility"] = r
