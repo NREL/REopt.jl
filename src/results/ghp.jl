@@ -43,6 +43,7 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		    sum(p.cooling_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))
         r["cooling_thermal_load_reduction_with_ghp_ton"] = round.(value.(CoolingThermalReductionWithGHP) ./ KWH_THERMAL_PER_TONHOUR, digits=3)
         r["ghx_residual_value_present_value"] = value(m[:ResidualGHXCapCost])
+        r["avoided_capex_by_ghp_present_value"] = value(m[:AvoidedCapexByGHP])
         r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = d["HeatingLoad"]["space_heating_thermal_load_series_mmbtu_per_hour"] .- r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"]
         r["thermal_to_load_series_ton"] = d["CoolingLoad"]["load_series_ton"] .- r["cooling_thermal_load_reduction_with_ghp_ton"]
         if p.s.ghp_option_list[ghp_option_chosen].can_serve_dhw
