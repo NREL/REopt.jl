@@ -2366,6 +2366,7 @@ else  # run HiGHS tests
         end
 
         @testset "Renewable Energy from Grid" begin
+            # Test RE calc
             inputs = JSON.parsefile("./scenarios/re_emissions_elec_only.json") # PV, Generator, ElectricStorage
             
             s = Scenario(inputs)
@@ -2378,6 +2379,9 @@ else  # run HiGHS tests
             gridRE = sum((grid2load + grid2bess - (grid2bess*(1-bessloss))) .* s.electric_utility.renewable_energy_fraction_series)
             
             @test results["ElectricUtility"]["annual_renewable_electricity_supplied_kwh"] ≈ gridRE rtol=1e-4
+            @test results["Site"]["onsite_and_grid_renewable_electricity_fraction_of_elec_load"] ≈ ((onsiteRE+gridRE) / results["ElectricLoad"]["annual_calculated_kwh"]) rtol=1e-4
+
+            # TODO: Add tests with heating techs (ASHP or GHP) once AnnualEleckWh is updated
         end
 
         @testset "Back pressure steam turbine" begin
