@@ -148,9 +148,6 @@ function ASHPSpaceHeater(;
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
     end
-    if isnothing(max_ton)
-        max_ton = defaults["max_ton"]
-    end
     if isnothing(sizing_factor)
         sizing_factor = defaults["sizing_factor"]
     end
@@ -181,11 +178,6 @@ function ASHPSpaceHeater(;
     can_serve_process_heat = defaults["can_serve_process_heat"]
     
 
-    # Convert max sizes, cost factors from mmbtu_per_hour to kw
-    min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
-    max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
-    
-
     installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
@@ -209,6 +201,18 @@ function ASHPSpaceHeater(;
         cooling_cop = Float64[]
         cooling_cf = Float64[]
     end
+
+    if isnothing(max_ton)
+        max_ton = min(defaults["max_ton"], maximum(heating_load)/minimum(heating_cf))
+        if can_serve_cooling
+            max_ton += maximum(cooling_load)/minimum(cooling_cf)
+        end
+        max_ton = max(max_ton, min_ton)
+    end
+
+    # Convert max sizes, cost factors from mmbtu_per_hour to kw
+    min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
+    max_kw = max_ton * KWH_THERMAL_PER_TONHOUR    
 
     if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_capacity_fraction)
         throw(@error("at most one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
@@ -330,9 +334,6 @@ function ASHPWaterHeater(;
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
     end
-    if isnothing(max_ton)
-        max_ton = defaults["max_ton"]
-    end
     if isnothing(sizing_factor)
         sizing_factor = defaults["sizing_factor"]
     end
@@ -354,10 +355,6 @@ function ASHPWaterHeater(;
      can_serve_process_heat = defaults["can_serve_process_heat"]
      can_serve_cooling = defaults["can_serve_cooling"]
 
-    # Convert max sizes, cost factors from mmbtu_per_hour to kw
-    min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
-    max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
-
     installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
@@ -369,6 +366,15 @@ function ASHPWaterHeater(;
         )
     
     heating_cf[heating_cop .== 1] .= 1
+
+    if isnothing(max_ton)
+        max_ton = min(defaults["max_ton"], maximum(heating_load)/minimum(heating_cf))
+        max_ton = max(max_ton, min_ton)
+    end
+
+    # Convert max sizes, cost factors from mmbtu_per_hour to kw
+    min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
+    max_kw = max_ton * KWH_THERMAL_PER_TONHOUR  
 
     if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_capacity_fraction)
         throw(@error("at most one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
