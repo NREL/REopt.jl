@@ -203,9 +203,10 @@ function ASHPSpaceHeater(;
     end
 
     if isnothing(max_ton)
-        max_ton = min(defaults["max_ton"], maximum(heating_load)/minimum(heating_cf))
         if can_serve_cooling
-            max_ton += maximum(cooling_load)/minimum(cooling_cf)
+            max_ton = min(defaults["max_ton"], maximum(heating_load ./ heating_cf)+maximum(cooling_load ./ cooling_cf))
+        else
+            max_ton = min(defaults["max_ton"], maximum(heating_load ./ heating_cf))
         end
         max_ton = max(max_ton, min_ton)
     end
