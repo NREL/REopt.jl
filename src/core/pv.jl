@@ -189,7 +189,6 @@ mutable struct PV <: AbstractTech
         if any(x -> x < 0 || x > 1, production_factor_series)
             throw(@error("All values in the provided PV production_factor_series must be between 0 and 1."))
         end
-        # TODO validate additional args
         if length(invalid_args) > 0
             throw(@error("Invalid PV argument values: $(invalid_args)"))
         end

@@ -2377,6 +2377,10 @@ else  # run HiGHS tests
             grid2load = results["ElectricUtility"]["electric_to_load_series_kw"]
             grid2bess = results["ElectricUtility"]["electric_to_storage_series_kw"]
             gridRE = sum((grid2load + grid2bess - (grid2bess*(1-bessloss))) .* s.electric_utility.renewable_energy_fraction_series)
+            pv2load = sum(results["PV"]["electric_to_load_series_kw"])
+            pv2grid = sum(results["PV"]["electric_to_grid_series_kw"])
+            pv2bess = sum(results["PV"]["electric_to_storage_series_kw"])
+            onsiteRE = pv2load + pv2grid + pv2bess - (pv2bess*(1-bessloss))
             
             @test results["ElectricUtility"]["annual_renewable_electricity_supplied_kwh"] ≈ gridRE rtol=1e-4
             @test results["Site"]["onsite_and_grid_renewable_electricity_fraction_of_elec_load"] ≈ ((onsiteRE+gridRE) / results["ElectricLoad"]["annual_calculated_kwh"]) rtol=1e-4
