@@ -357,7 +357,12 @@ function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,Abst
 
     federal_itc_fraction = 0.0
     try 
-        federal_itc_fraction = tech.federal_itc_fraction
+        # TODO add Hot/ColdThermalStorage.total_itc_fraction to struct; currently only in ElectricStorage
+        if typeof(tech) <: AbstractStorage
+            federal_itc_fraction = tech.total_itc_fraction
+        else
+            federal_itc_fraction = tech.federal_itc_fraction
+        end
     catch
         @warn "Did not find $(tech).federal_itc_fraction so using 0.0 in calculation of depreciation_schedule."
     end
