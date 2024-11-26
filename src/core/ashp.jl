@@ -203,7 +203,8 @@ function ASHPSpaceHeater(;
     end
 
     if isnothing(max_ton)
-        if can_serve_cooling
+        if can_serve_cooling 
+            #these are in kW rathern than tons so will be larger as a measure of conservatism
             max_ton = min(defaults["max_ton"], maximum(heating_load ./ heating_cf)+maximum(cooling_load ./ cooling_cf))
         else
             max_ton = min(defaults["max_ton"], maximum(heating_load ./ heating_cf))
@@ -369,6 +370,7 @@ function ASHPWaterHeater(;
     heating_cf[heating_cop .== 1] .= 1
 
     if isnothing(max_ton)
+        #these are in kW rathern than tons so will be larger as a measure of conservatism
         max_ton = min(defaults["max_ton"], maximum(heating_load)/minimum(heating_cf))
         max_ton = max(max_ton, min_ton)
     end
