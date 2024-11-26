@@ -107,12 +107,44 @@ end
     
 
 function add_ashp_force_in_constraints(m, p; _n="")
-    if "ASHPSpaceHeater" in p.techs.ashp && p.s.ashp.force_into_system
-        for t in setdiff(p.techs.can_serve_space_heating, ["ASHPSpaceHeater"])
-            for ts in p.time_steps
-                fix(m[Symbol("dvHeatingProduction"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
-                fix(m[Symbol("dvProductionToWaste"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
+    if "ASHPSpaceHeater" in p.techs.ashp 
+        if p.s.ashp.force_into_system
+            for t in setdiff(p.techs.can_serve_space_heating, ["ASHPSpaceHeater"])
+                for ts in p.time_steps
+                    fix(m[Symbol("dvHeatingProduction"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
+                    fix(m[Symbol("dvProductionToWaste"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
+                end
             end
+        elseif p.s.ashp.force_dispatch
+            dv = "binASHPSHSizeExceedsHeatLoad"*_n
+            m[Symbol(dv)] = @variable(m, [p.time_steps], binary=true, base_name=dv)
+            dv = "dvASHPSHSizeTimesExcess"*_n
+            m[Symbol(dv)] = @variable(m, [p.time_steps], lower_bound=0, base_name=dv)
+            # binary variable enforcement for size >= load
+            max_sh_size = 2*p.max_sizes["ASHPSpaceHeater"]
+            println(max_sh_size, "    ",p.max_sizes["ASHPSpaceHeater"])
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("binASHPSHSizeExceedsHeatLoad"*_n)][ts] >= ((p.heating_cf["ASHPSpaceHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]) - p.heating_loads_kw["SpaceHeating"][ts]) / max_sh_size
+            )
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("binASHPSHSizeExceedsHeatLoad"*_n)][ts] <= 1 - (p.heating_loads_kw["SpaceHeating"][ts] - p.heating_cf["ASHPSpaceHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]) / max_sh_size
+            )
+            # set dvASHPSHSizeTimesExcess = binASHPSHSizeExceedsHeatLoad * dvSize
+            # big-M is min CF times heat load
+            
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvASHPSHSizeTimesExcess"*_n)][ts] >= p.heating_cf["ASHPSpaceHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"] - max_sh_size * (1-m[Symbol("binASHPSHSizeExceedsHeatLoad"*_n)][ts])  
+            )
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvASHPSHSizeTimesExcess"*_n)][ts] <= p.heating_cf["ASHPSpaceHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]
+            )
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvASHPSHSizeTimesExcess"*_n)][ts] <= max_sh_size * m[Symbol("binASHPSHSizeExceedsHeatLoad"*_n)][ts]
+            )
+            #Enforce dispatch: output = system size - (overage)
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvHeatingProduction"*_n)]["ASHPSpaceHeater","SpaceHeating",ts] >= p.heating_cf["ASHPSpaceHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"] - m[Symbol("dvASHPSHSizeTimesExcess"*_n)][ts] + p.heating_loads_kw["SpaceHeating"][ts] * m[Symbol("binASHPSHSizeExceedsHeatLoad"*_n)][ts]
+            )
         end
     end
 
