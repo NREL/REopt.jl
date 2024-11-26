@@ -184,8 +184,10 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
             if option[2].heat_pump_configuration == "WSHP"
                 initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
+                initial_capex -= value(m[:AvoidedCapexByGHP])
             elseif option[2].heat_pump_configuration == "WWHP"
                 initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+                initial_capex -= value(m[:AvoidedCapexByGHP])
             else
                 @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
@@ -194,10 +196,12 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if "ASHPSpaceHeater" in p.techs.all
         initial_capex += p.s.ashp.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPSpaceHeater"]
+        initial_capex -= p.avoided_capex_by_ashp_present_value["ASHPSpaceHeater"]
     end
 
     if "ASHPWaterHeater" in p.techs.all
         initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
+        initial_capex -= p.avoided_capex_by_ashp_present_value["ASHPWaterHeater"]
     end    
 
     return initial_capex
