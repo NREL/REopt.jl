@@ -160,7 +160,13 @@ function run_ssc(case_data::Dict)
         ### Setup SSC
         global hdl = nothing
         #libfile = "ssc_new.dll"
-        libfile = "libssc.so"
+        if Sys.isapple() 
+            libfile = "libssc.dylib"
+        elseif Sys.islinux()
+            libfile = "libssc.so"
+        elseif Sys.iswindows()
+            libfile = "ssc.dll"
+        end
         global hdl = joinpath(@__DIR__, "sam", libfile)
         ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
