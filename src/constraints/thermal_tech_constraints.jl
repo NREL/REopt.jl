@@ -189,13 +189,40 @@ function add_ashp_force_in_constraints(m, p; _n="")
         end
     end
 
-    if "ASHPWaterHeater" in p.techs.ashp && p.s.ashp_wh.force_into_system
-        for t in setdiff(p.techs.can_serve_dhw, ["ASHPWaterHeater"])
-            for ts in p.time_steps
-                fix(m[Symbol("dvHeatingProduction"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
-                fix(m[Symbol("dvProductionToWaste"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
+    if "ASHPWaterHeater" in p.techs.ashp 
+        if p.s.ashp_wh.force_into_system
+            for t in setdiff(p.techs.can_serve_dhw, ["ASHPWaterHeater"])
+                for ts in p.time_steps
+                    fix(m[Symbol("dvHeatingProduction"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
+                    fix(m[Symbol("dvProductionToWaste"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
+                end
             end
-        end
+        elseif p.s.ashp_wh.force_dispatch
+            # binary variable enforcement for size >= load
+            max_wh_size_bigM = 2*max(p.max_sizes["ASHPWaterHeater"], maximum(p.heating_loads_kw["DomesticHotWater"] ./ p.heating_cf["ASHPWaterHeater"]))
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("binASHPWHSizeExceedsThermalLoad"*_n)][ts] >= (m[Symbol("dvSize"*_n)]["ASHPWaterHeater"] - p.heating_loads_kw["DomesticHotWater"][ts] / p.heating_cf["ASHPWaterHeater"][ts]) / max_wh_size_bigM
+            )
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("binASHPWHSizeExceedsThermalLoad"*_n)][ts] <= 1 - (p.heating_loads_kw["DomesticHotWater"][ts] / p.heating_cf["ASHPWaterHeater"][ts] - m[Symbol("dvSize"*_n)]["ASHPWaterHeater"]) / max_wh_size_bigM
+            )
+            # set dvASHPWHSizeTimesExcess = binASHPWHSizeExceedsThermalLoad * dvSize
+            # big-M is min CF times heat load
+            
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvASHPWHSizeTimesExcess"*_n)][ts] >= p.heating_cf["ASHPWaterHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPWaterHeater"] - max_wh_size_bigM * (1-m[Symbol("binASHPWHSizeExceedsThermalLoad"*_n)][ts])  
+            )
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvASHPWHSizeTimesExcess"*_n)][ts] <= p.heating_cf["ASHPWaterHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPWaterHeater"]
+            )
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvASHPWHSizeTimesExcess"*_n)][ts] <= max_wh_size_bigM * m[Symbol("binASHPWHSizeExceedsThermalLoad"*_n)][ts]
+            )
+            #Enforce dispatch: output = system size - (overage)
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvHeatingProduction"*_n)]["ASHPWaterHeater","DomesticHotWater",ts] >= p.heating_cf["ASHPWaterHeater"][ts]*m[Symbol("dvSize"*_n)]["ASHPWaterHeater"] - m[Symbol("dvASHPWHSizeTimesExcess"*_n)][ts] + p.heating_loads_kw["DomesticHotWater"][ts] * m[Symbol("binASHPWHSizeExceedsThermalLoad"*_n)][ts]
+            )
+        end 
     end
 end
 
