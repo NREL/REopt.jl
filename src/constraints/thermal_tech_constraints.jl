@@ -198,6 +198,10 @@ function add_ashp_force_in_constraints(m, p; _n="")
                 end
             end
         elseif p.s.ashp_wh.force_dispatch
+            dv = "binASHPWHSizeExceedsThermalLoad"*_n
+            m[Symbol(dv)] = @variable(m, [p.time_steps], binary=true, base_name=dv)
+            dv = "dvASHPWHSizeTimesExcess"*_n
+            m[Symbol(dv)] = @variable(m, [p.time_steps], lower_bound=0, base_name=dv)
             # binary variable enforcement for size >= load
             max_wh_size_bigM = 2*max(p.max_sizes["ASHPWaterHeater"], maximum(p.heating_loads_kw["DomesticHotWater"] ./ p.heating_cf["ASHPWaterHeater"]))
             @constraint(m, [ts in p.time_steps],
