@@ -29,6 +29,8 @@ If the user does not provide their own production_factor_series for the Wind tur
 a production factor time-series using resource data and the System Advisor Model Wind module.
 If the user does not provide the resource data, the latitude and longitude are used to get the resource data from the
 Wind Toolkit.
+
+CHANGED PRODUCTION FACTOR BELOW
 """
 function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
 
