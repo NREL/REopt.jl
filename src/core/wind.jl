@@ -41,12 +41,12 @@
     If no `installed_cost_per_kw` is provided then it is determined from:
     ```julia
     size_class_to_installed_cost = Dict(
-        "Bespoke 6 MW 196" => 2000,
-        "Bespoke 6 MW 170" => 2000,
-        "GE 1.5 MW" => 3000,
-        "Vestas V-47" => 4000,
+        "Bergey Excel 15" => 5000,
         "Northern Power Systems 100" => 4400,
-        "Bergey Excel 15" => 5000
+        "Vestas V-47" => 3137.0,
+        "GE 1.5 MW" => 3000,
+        "Bespoke 6 MW 170" => 2386.0,
+        "Bespoke 6 MW 196" => 2000,
     )
     ```
     If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
@@ -137,20 +137,20 @@ struct Wind <: AbstractTech
         operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
         )
         size_class_to_hub_height = Dict(
-            "Bespoke 6 MW 196" => 140,
-            "Bespoke 6 MW 170" => 120, #supposed to be 115 but WINDToolkit has increments of 20 m
-            "GE 1.5 MW" => 80,
-            "Vestas V-47" => 60,
+            "Bergey Excel 15" => 20, #supposed to be 24 but WINDToolkit has increments of 20 m
             "Northern Power Systems 100" => 40, #supposed to be 37 but WINDToolkit has increments of 20 m
-            "Bergey Excel 15" => 20 #supposed to be 24 but WINDToolkit has increments of 20 m
+            "Vestas V-47" => 60,
+            "GE 1.5 MW" => 80,
+            "Bespoke 6 MW 170" => 120, #supposed to be 115 but WINDToolkit has increments of 20 m
+            "Bespoke 6 MW 196" => 140
         )
         size_class_to_installed_cost = Dict(
-            "Bespoke 6 MW 196" => 2000,
-            "Bespoke 6 MW 170" => 2000,
-            "GE 1.5 MW" => 3000,
-            "Vestas V-47" => 4000,
+            "Bergey Excel 15" => 5000,
             "Northern Power Systems 100" => 4400,
-            "Bergey Excel 15" => 5000
+            "Vestas V-47" => 3137.0,
+            "GE 1.5 MW" => 3000,
+            "Bespoke 6 MW 170" => 2386.0,
+            "Bespoke 6 MW 196" => 2000,
         )
         
         if size_class == ""
