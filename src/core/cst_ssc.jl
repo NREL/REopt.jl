@@ -120,7 +120,7 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    println("updated version as of 12/2 4:21pm")
+    println("updated version as of 12/2 4:28pm")
     model = case_data["CST"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
@@ -229,7 +229,7 @@ function run_ssc(case_data::Dict)
         # electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
         thermal_production = []
         # elec_consumption = []
-        return
+        # return
         for i in 1:8760
             push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
             # push!(thermal_production,1.0) #for pass through
