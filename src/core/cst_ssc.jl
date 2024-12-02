@@ -155,6 +155,8 @@ function run_ssc(case_data::Dict)
     end
     if model == "ptc"
         user_defined_inputs["h_tank_in"] = defaults["h_tank"]
+        user_defined_inputs["f_htfmin"] = 0.0
+        user_defined_inputs["f_htfmax"] = 1.0
     end
     R = Dict()
     error = ""
