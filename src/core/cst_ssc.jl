@@ -163,7 +163,7 @@ function run_ssc(case_data::Dict)
         if Sys.isapple() 
             libfile = "libssc.dylib"
         elseif Sys.islinux()
-            libfile = "libssc.so"
+            libfile = "ssc.so"
         elseif Sys.iswindows()
             libfile = "ssc_new.dll"
         end
