@@ -227,6 +227,7 @@ function run_ssc(case_data::Dict)
         # electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
         thermal_production = []
         # elec_consumption = []
+        return
         for i in 1:8760
             push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
             # push!(thermal_production,1.0) #for pass through
