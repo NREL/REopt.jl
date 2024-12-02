@@ -1,5 +1,5 @@
 {
-	"file_name" : "C:/SAM/2023.12.17/solar_resource/tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv",
+	"file_name" : "/home/jgifford/step1-rapidanalysis/defaults/tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv",
     "q_pb_design" : 5.1900000000000004,
     "nHCEt" : 4,
     "nColt" : 4,
