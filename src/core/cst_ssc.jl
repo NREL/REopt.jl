@@ -143,6 +143,7 @@ function run_ssc(case_data::Dict)
     )
     # First set user defined inputs to default just in case
     defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
+    println("loaded defaults")
     defaults = JSON.parsefile(defaults_file)
     for i in user_defined_inputs_list[model]
         if (i == "tilt") || (i == "lat")
@@ -151,6 +152,9 @@ function run_ssc(case_data::Dict)
     end
     for i in keys(case_data["CST"]["SSC_Inputs"])
         user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
+    end
+    if model == "ptc"
+        user_defined_inputs["h_tank_in"] = defaults["h_tank"]
     end
     R = Dict()
     error = ""
