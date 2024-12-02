@@ -120,7 +120,7 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    println("updated version as of 12/2 4:28pm")
+    println("updated version as of 12/2 4:46pm")
     model = case_data["CST"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
