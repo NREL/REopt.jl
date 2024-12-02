@@ -126,14 +126,14 @@ function add_ashp_force_in_constraints(m, p; _n="")
                 @constraint(m, [ts in p.time_steps],
                     m[Symbol("binASHPSHSizeExceedsThermalLoad"*_n)][ts] >= (
                         m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]
-                        - (p.heating_loads_kw["SpaceHeating"][ts] / p.heating_cf["ASHPSpaceHeater"]) 
-                        - (p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cf["ASHPSpaceHeater"])  
+                        - (p.heating_loads_kw["SpaceHeating"][ts] / p.heating_cf["ASHPSpaceHeater"][ts]) 
+                        - (p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cf["ASHPSpaceHeater"][ts])  
                         ) / max_sh_size_bigM
                 )
                 @constraint(m, [ts in p.time_steps],
                     m[Symbol("binASHPSHSizeExceedsThermalLoad"*_n)][ts] <= 1 - (
-                        (p.heating_loads_kw["SpaceHeating"][ts] / p.heating_cf["ASHPSpaceHeater"]) 
-                        + (p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cf["ASHPSpaceHeater"]) 
+                        (p.heating_loads_kw["SpaceHeating"][ts] / p.heating_cf["ASHPSpaceHeater"][ts]) 
+                        + (p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cf["ASHPSpaceHeater"][ts]) 
                         - m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]
                         ) / max_sh_size_bigM
                 )
