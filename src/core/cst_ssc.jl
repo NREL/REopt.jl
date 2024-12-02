@@ -186,11 +186,11 @@ function run_ssc(case_data::Dict)
 
         ### Set inputs
         set_ssc_data_from_dict(user_defined_inputs,model,data)
-
+        println("inputs set")
         ### Execute simulation
         test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
-        print(test)
-        
+        println(test)
+        println("execution completed")
         ### Retrieve results
         ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
