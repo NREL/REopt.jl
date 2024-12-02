@@ -140,7 +140,7 @@ Base.@kwdef struct HotSensibleTesDefaults <: AbstractThermalStorageDefaults
     can_serve_space_heating::Bool = false
     can_serve_process_heat::Bool = false
     supply_turbine_only::Bool = true
-    one_direction_flow::Bool = true
+    one_direction_flow::Bool = false
 end
 
 
