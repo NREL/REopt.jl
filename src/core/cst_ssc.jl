@@ -228,8 +228,8 @@ function run_ssc(case_data::Dict)
         thermal_production = []
         # elec_consumption = []
         for i in 1:8760
-            # push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
-            push!(thermal_production,1.0) #for pass through
+            push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
+            # push!(thermal_production,1.0) #for pass through
             # push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
         end
         # if typeof(outputs[3]) == String
