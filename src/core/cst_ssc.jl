@@ -120,7 +120,7 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    println("updated version as of 12/2 12:13pm")
+    println("updated version as of 12/2 12:30pm")
     model = case_data["CST"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
@@ -183,15 +183,15 @@ function run_ssc(case_data::Dict)
         # defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
         # defaults = JSON.parsefile(defaults_file)
         set_ssc_data_from_dict(defaults,model,data)
-
+        println("set defaults")
         ### Get weather data
         print_weatherdata = false # True = write a weather data csv file that can be read in the SAM UI # false = skip writing
         weatherdata = get_weatherdata(lat,lon,print_weatherdata)
         user_defined_inputs["solar_resource_data"] = weatherdata
-
+        println("got weather data")
         ### Set inputs
         set_ssc_data_from_dict(user_defined_inputs,model,data)
-        println("inputs set")
+        println("set inputs")
         ### Execute simulation
         test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
         println(test)
@@ -228,7 +228,8 @@ function run_ssc(case_data::Dict)
         thermal_production = []
         # elec_consumption = []
         for i in 1:8760
-            push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
+            # push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
+            push!(thermal_production,1.0) #for pass through
             # push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
         end
         # if typeof(outputs[3]) == String
