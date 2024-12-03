@@ -180,10 +180,8 @@ function run_ssc(case_data::Dict)
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall hdl.ssc_module_exec_set_print(1::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
 
-        ### Import defaults
-        # defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
-        # defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json")
-        # defaults = JSON.parsefile(defaults_file)
+        ### Set defaults
+        defaults["
         set_ssc_data_from_dict(defaults,model,data)
         println("set defaults")
         ### Get weather data
