@@ -121,7 +121,6 @@ function add_ashp_force_in_constraints(m, p; _n="")
             dv = "dvASHPSHSizeTimesExcess"*_n
             m[Symbol(dv)] = @variable(m, [p.time_steps], lower_bound=0, base_name=dv)
             if p.s.ashp.can_serve_cooling
-                m[Symbol(dv)] = @variable(m, [p.time_steps], lower_bound=0, base_name=dv)
                 max_sh_size_bigM = 2*max(p.max_sizes["ASHPSpaceHeater"], maximum(p.heating_loads_kw["SpaceHeating"] ./ p.heating_cf["ASHPSpaceHeater"])+maximum(p.s.cooling_load.loads_kw_thermal ./ p.cooling_cf["ASHPSpaceHeater"]))
                 @constraint(m, [ts in p.time_steps],
                     m[Symbol("binASHPSHSizeExceedsThermalLoad"*_n)][ts] >= (
@@ -150,7 +149,7 @@ function add_ashp_force_in_constraints(m, p; _n="")
                 )
                 #Enforce dispatch: output = system size - (overage)
                 @constraint(m, [ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)]["ASHPSpaceHeater","SpaceHeating",ts] / p.heating_cf["ASHPSpaceHeater"][ts] + m[Symbol("dvCoolingProduction"*_n)]["ASHPSpaceHeater",ts] / p.cooling_cf["ASHPSpaceHeater"][ts] >= m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"] - m[Symbol("dvASHPSHSizeTimesExcess"*_n)][ts] + (p.heating_loads_kw["SpaceHeating"][ts] / p.heating_cf["ASHPSpaceHeater"][ts] + p.s.cooling_load.loads_kw_thermal[ts]  ) * m[Symbol("binASHPSHSizeExceedsThermalLoad"*_n)][ts]
+                    m[Symbol("dvHeatingProduction"*_n)]["ASHPSpaceHeater","SpaceHeating",ts] / p.heating_cf["ASHPSpaceHeater"][ts] + m[Symbol("dvCoolingProduction"*_n)]["ASHPSpaceHeater",ts] / p.cooling_cf["ASHPSpaceHeater"][ts] >= m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"] - m[Symbol("dvASHPSHSizeTimesExcess"*_n)][ts] + (p.heating_loads_kw["SpaceHeating"][ts] / p.heating_cf["ASHPSpaceHeater"][ts] + p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cf["ASHPSpaceHeater"][ts] ) * m[Symbol("binASHPSHSizeExceedsThermalLoad"*_n)][ts]
                 )
             else
                 # binary variable enforcement for size >= load
