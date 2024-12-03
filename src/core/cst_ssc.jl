@@ -145,6 +145,7 @@ function run_ssc(case_data::Dict)
     defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
     println("loaded defaults")
     defaults = JSON.parsefile(defaults_file)
+    defaults["file_name"] = joinpath(@__DIR__,"defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv")
     for i in user_defined_inputs_list[model]
         if (i == "tilt") || (i == "lat")
             user_defined_inputs[i] = lat
