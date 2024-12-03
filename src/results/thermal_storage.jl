@@ -170,7 +170,7 @@ function add_hot_sensible_storage_results(m::JuMP.AbstractModel, p::REoptInputs,
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
     r["size_kwh"] = size_kwh
-    r["size_gal"] = round(size_kwh / kwh_per_gal, digits=0)
+    r["size_gal"] = round(size_kwh / 1.0, digits=0) #what this should be: round(size_kwh / kwh_per_gal, digits=0), but got "UndefVarError: 'kwh_per_gal' not defined" error
 
     if size_kwh != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
