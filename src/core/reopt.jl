@@ -573,6 +573,8 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 		@info "Solving took $(opt_time) seconds."
 
 		tstart = time()
+		println("Completed solve")
+		println(status)
 		results = reopt_results(m, p)
 		time_elapsed = time() - tstart
 		@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
