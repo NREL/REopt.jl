@@ -21,7 +21,7 @@
         "max_kw": 250,
         "federal_itc_fraction": 0,
         "macrs_option_years": 0,
-        "size_class": "commercial",
+        "size_class": "Vestas V-47",
         "operating_reserve_required_fraction": 0.05
     },
     "Generator": {
