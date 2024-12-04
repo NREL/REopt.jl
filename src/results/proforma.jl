@@ -34,7 +34,7 @@ return Dict(
     "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
     "developer_annual_free_cashflows" => Float64[],
     "initial_capital_costs_after_incentives_without_macrs" => 0.0 # Initial capital costs after ibi, cbi, and ITC incentives
-    "initial_capital_costs_after_incentives_no_discounting" => 0.0 # Initial capital costs after ibi, cbi, ITC, and MACRS incentives but without discounting out-year ITC and MACRS
+    "capital_costs_after_non_discounted_incentives" => 0.0 # Initial capital costs after ibi, cbi, ITC, and MACRS incentives but without discounting out-year ITC and MACRS
 )
 """
 function proforma_results(p::REoptInputs, d::Dict)
@@ -49,7 +49,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
         "developer_annual_free_cashflows" => Float64[],
         "initial_capital_costs_after_incentives_without_macrs" => 0.0,
-        "initial_capital_costs_after_incentives_no_discounting" => 0.0
+        "capital_costs_after_non_discounted_incentives" => 0.0
     )
     years = p.s.financial.analysis_years
     escalate_elec(val) = [-1 * val * (1 + p.s.financial.elec_cost_escalation_rate_fraction)^yr for yr in 1:years]
@@ -71,6 +71,8 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # calculate Storage o+m costs, incentives, and depreciation
+    battery_replacement_cost = 0.0
+    battery_replacement_year = 0.0
     if "ElectricStorage" in keys(d) && d["ElectricStorage"]["size_kw"] > 0
         # TODO handle other types of storage
         storage = p.s.storage.attr["ElectricStorage"]
@@ -253,7 +255,8 @@ function proforma_results(p::REoptInputs, d::Dict)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
     r["initial_capital_costs_after_incentives_without_macrs"] = d["Financial"]["initial_capital_costs"] - m.total_ibi_and_cbi - m.federal_itc
-    r["initial_capital_costs_after_incentives_no_discounting"] = r["initial_capital_costs_after_incentives_without_macrs"] - sum(m.total_depreciation * tax_rate_fraction)
+    battery_replacement_net_present_cost = -1*battery_replacement_cost * (1 - tax_rate_fraction) / (1 + p.s.financial.offtaker_discount_rate_fraction) ^ battery_replacement_year  # battery_replacement_cost is negative, from above
+    r["capital_costs_after_non_discounted_incentives"] = r["initial_capital_costs_after_incentives_without_macrs"] - sum(m.total_depreciation * tax_rate_fraction) + battery_replacement_net_present_cost
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
     # At this point the logic branches based on third-party ownership or not - see comments    
