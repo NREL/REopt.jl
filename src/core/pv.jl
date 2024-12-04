@@ -1,3 +1,5 @@
+
+
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `PV` is an optional REopt input with the following keys and default values:
@@ -97,11 +99,12 @@ mutable struct PV <: AbstractTech
     can_export_beyond_nem_limit
     can_curtail
     operating_reserve_required_fraction
+    size_class
 
     function PV(;
         off_grid_flag::Bool = false,
         latitude::Real,
-        array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
+        array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : Ground Mount 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
         tilt::Real = (array_type == 0 || array_type == 1) ? 20 : 0, # tilt = 20 for fixed rooftop arrays (1) or ground-mount (2) ; tilt = 0 for everything else (3 and 4)
         module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
         losses::Real=0.14,
@@ -143,21 +146,25 @@ mutable struct PV <: AbstractTech
         can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
         can_curtail::Bool = true,
         operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
+        avg_electric_load_kw::Real = 0.0,
+        size_class::Union{Int, Nothing} = nothing # Optional size_class
         )
-
-        if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
-            @warn "PV operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
+        @info "Constructing PV with avg_electric_load_kw=$(avg_electric_load_kw), size_class=$(size_class)"
+        
+        # Adjust operating_reserve_required_fraction based on off_grid_flag
+        if !off_grid_flag && !(operating_reserve_required_fraction == 0.0)
+            @warn "PV operating_reserve_required_fraction applies only when off_grid_flag is true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
             operating_reserve_required_fraction = 0.0
         end
-
+    
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
             @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
         end
-
-        # validate inputs
+    
+        # Validate inputs
         invalid_args = String[]
         if !(0 <= azimuth < 360)
             push!(invalid_args, "azimuth must satisfy 0 <= azimuth < 360, got $(azimuth)")
@@ -186,11 +193,79 @@ mutable struct PV <: AbstractTech
         if !(0.0 <= dc_ac_ratio <= 2.0)
             push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
-        # TODO validate additional args
+        # TODO: Validate additional args as needed
+    
         if length(invalid_args) > 0
-            throw(@error("Invalid PV argument values: $(invalid_args)"))
+            throw(ErrorException("Invalid PV argument values: $(invalid_args)"))
         end
-
+    
+        # Load PV defaults
+        @info "Loading PV defaults from pv_defaults.json"
+        pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
+        if !isfile(pv_defaults_path)
+            throw(ErrorException("pv_defaults.json not found at path: $pv_defaults_path"))
+        end
+        pv_defaults_all = JSON.parsefile(pv_defaults_path)
+        @info "PV defaults loaded: $(keys(pv_defaults_all))"
+    
+        # Determine array_category based on array_type
+        if array_type in [0, 2, 3, 4]
+            array_category = "pv_groundmount"
+        elseif array_type == 1
+            array_category = "pv_rooftop"
+        else
+            throw(ErrorException("Invalid 'array_type': $array_type. Must be one of [0, 1, 2, 3, 4]."))
+        end
+        @info "Determined array_category='$array_category' based on array_type=$array_type"
+    
+        # Extract tech_sizes_for_cost_curve from pv_defaults_all and ensure correct typing
+        if haskey(pv_defaults_all[array_category], "tech_sizes_for_cost_curve")
+            raw_tech_sizes = pv_defaults_all[array_category]["tech_sizes_for_cost_curve"]
+            # Convert each sub-array to Vector{Float64}
+            tech_sizes_for_cost_curve = [Float64.(size_range) for size_range in raw_tech_sizes]
+            @info "Extracted and converted tech_sizes_for_cost_curve: $(tech_sizes_for_cost_curve)"
+        else
+            throw(ErrorException("Missing 'tech_sizes_for_cost_curve' for array_category '$array_category' in pv_defaults.json"))
+        end
+    
+        # Determine size_class
+        if isnothing(size_class)
+            size_class = get_pv_size_class(avg_electric_load_kw, tech_sizes_for_cost_curve)
+            @info "Determined size_class=$size_class based on avg_electric_load_kw=$avg_electric_load_kw"
+        else
+            # Validate provided size_class
+            num_size_classes = length(pv_defaults_all[array_category]["installed_cost_per_kw"])
+            if size_class < 0 || size_class >= num_size_classes
+                throw(ErrorException("Invalid size_class: $size_class. Must be between 0 and $(num_size_classes - 1)."))
+            end
+            @info "Using provided size_class=$size_class"
+        end
+    
+        # Extract and convert installed_cost_per_kw and om_cost_per_kw
+        if haskey(pv_defaults_all[array_category], "installed_cost_per_kw")
+            raw_installed_cost = pv_defaults_all[array_category]["installed_cost_per_kw"]
+            # Convert each sub-array to Vector{Float64}
+            installed_cost_list = [Float64.(entry) for entry in raw_installed_cost]
+            @info "Extracted and converted installed_cost_per_kw: $(installed_cost_list)"
+        else
+            throw(ErrorException("Missing 'installed_cost_per_kw' for array_category '$array_category' in pv_defaults.json"))
+        end
+    
+        if haskey(pv_defaults_all[array_category], "om_cost_per_kw")
+            raw_om_cost = pv_defaults_all[array_category]["om_cost_per_kw"]
+            # Convert to Vector{Float64}
+            om_cost_list = Float64.(raw_om_cost)
+            @info "Extracted and converted om_cost_per_kw: $(om_cost_list)"
+        else
+            throw(ErrorException("Missing 'om_cost_per_kw' for array_category '$array_category' in pv_defaults.json"))
+        end
+    
+        # Apply size_class-specific defaults
+        installed_cost_per_kw = get_installed_cost_per_kw(installed_cost_list, size_class)
+        om_cost_per_kw = get_om_cost_per_kw(om_cost_list, size_class)
+        @info "Set installed_cost_per_kw=$installed_cost_per_kw and om_cost_per_kw=$om_cost_per_kw based on size_class=$size_class"
+    
+        # Instantiate the PV struct
         new(
             tilt,
             array_type,
@@ -205,7 +280,7 @@ mutable struct PV <: AbstractTech
             min_kw,
             max_kw,
             installed_cost_per_kw,
-            om_cost_per_kw,
+            om_cost_per_kw, 
             degradation_fraction,
             macrs_option_years,
             macrs_bonus_fraction,
@@ -233,12 +308,61 @@ mutable struct PV <: AbstractTech
             can_wholesale,
             can_export_beyond_nem_limit,
             can_curtail,
-            operating_reserve_required_fraction
+            operating_reserve_required_fraction,
+            size_class 
         )
     end
 end
 
-
 function get_pv_by_name(name::String, pvs::AbstractArray{PV, 1})
     pvs[findfirst(pv -> pv.name == name, pvs)]
+end
+
+# Helper Function: get_pv_size_class
+"""
+    get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::Vector{Vector{Float64}})
+
+Determines the size_class based on average electric load and the technology size curve.
+"""
+function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::Vector{Vector{Float64}})
+    size_class = 0
+    for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
+        lower_bound, upper_bound = size_range
+        if avg_electric_load_kw >= lower_bound && avg_electric_load_kw < upper_bound
+            size_class = i - 1  # Zero-indexed
+            break
+        end
+    end
+    # If above all defined ranges, assign to the highest size_class
+    if avg_electric_load_kw >= tech_sizes_for_cost_curve[end][2]
+        size_class = length(tech_sizes_for_cost_curve)
+    end
+    return size_class
+end
+
+# Helper Function: get_installed_cost_per_kw
+"""
+    get_installed_cost_per_kw(installed_cost_list::Vector{Vector{Float64}}, size_class::Int)
+
+Retrieves the installed cost per kW based on the size_class using the installed_cost_per_kw list from pv_defaults.json.
+"""
+function get_installed_cost_per_kw(installed_cost_list::Vector{Vector{Float64}}, size_class::Int)
+    if size_class < 0 || size_class >= length(installed_cost_list)
+        throw(ErrorException("Size class $size_class is out of bounds for installed_cost_per_kw."))
+    end
+    # Assuming the list is ordered by size_class, and each entry is [size, cost]
+    return installed_cost_list[size_class + 1][2]
+end
+
+# Helper Function: get_om_cost_per_kw
+"""
+    get_om_cost_per_kw(om_cost_list::Vector{Float64}, size_class::Int)
+
+Retrieves the O&M cost per kW based on the size_class using the om_cost_per_kw list from pv_defaults.json.
+"""
+function get_om_cost_per_kw(om_cost_list::Vector{Float64}, size_class::Int)
+    if size_class < 0 || size_class >= length(om_cost_list)
+        throw(ErrorException("Size class $size_class is out of bounds for om_cost_per_kw."))
+    end
+    return om_cost_list[size_class + 1]
 end

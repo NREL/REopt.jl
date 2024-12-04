@@ -88,7 +88,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
+
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
+    latitude=site.latitude, longitude=site.longitude, 
+    time_steps_per_hour=settings.time_steps_per_hour,
+    off_grid_flag = settings.off_grid_flag
+    )
     
+    # Extract average electric load per time step
+    avg_electric_load_kw = sum(electric_load.loads_kw) / length(electric_load.loads_kw)
+
     pvs = PV[]
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
@@ -96,12 +105,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag, 
-                            latitude=site.latitude))
+                push!(pvs, PV(
+                    ; dictkeys_tosymbols(pv)...,
+                    off_grid_flag = settings.off_grid_flag, 
+                    latitude = site.latitude,
+                    avg_electric_load_kw = avg_electric_load_kw  # Pass the avg_electric_load_kw
+                ))
             end
         elseif typeof(d["PV"]) <: AbstractDict
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
-                        latitude=site.latitude))
+            push!(pvs, PV(
+                ; dictkeys_tosymbols(d["PV"])..., 
+                off_grid_flag = settings.off_grid_flag, 
+                latitude = site.latitude,
+                avg_electric_load_kw = avg_electric_load_kw  # Pass the avg_electric_load_kw
+            ))
         else
             throw(@error("PV input must be Dict or Dict[]."))
         end
@@ -120,11 +137,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             )
     end
 
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                    latitude=site.latitude, longitude=site.longitude, 
-                                    time_steps_per_hour=settings.time_steps_per_hour,
-                                    off_grid_flag = settings.off_grid_flag
-                                )
+
 
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
