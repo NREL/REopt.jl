@@ -37,6 +37,15 @@ return Dict(
 )
 """
 function proforma_results(p::REoptInputs, d::Dict)
+    if "ElectricStorage" in keys(d)
+        if typeof(d["ElectricStorage"]) <: AbstractArray && length(d["ElectricStorage"]) == 1
+            d["ElectricStorage"] = d["ElectricStorage"][1]
+        elseif !(typeof(d["ElectricStorage"]) <: AbstractDict)
+            warn_msg = "Pro forma results for a REopt solution with multiple ElectricStorage is not yet supported"
+            @warn(warn_msg)
+            return Dict("warning" => warn_msg)
+        end
+    end
     r = Dict(
         "simple_payback_years" => 0.0,
         "internal_rate_of_return" => 0.0,
@@ -70,11 +79,6 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     # calculate Storage o+m costs, incentives, and depreciation
     if "ElectricStorage" in keys(d)
-        if typeof(d["ElectricStorage"]) <: AbstractArray && length(d["ElectricStorage"]) == 1
-            d["ElectricStorage"] = d["ElectricStorage"][1]
-        elseif !(typeof(d["ElectricStorage"]) <: AbstractDict)
-            throw(@error("Pro forma results for a REopt solution with multiple ElectricStorage is not yet supported"))
-        end
         elec_stor_name = get(d["ElectricStorage"],"name","ElectricStorage")
         if d["ElectricStorage"]["size_kw"] > 0
             # TODO handle other types of storage
