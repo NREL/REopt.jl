@@ -268,8 +268,8 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
 
         results, TerminationStatus = Run_REopt_PMD_Model(pm)
         
-        REopt_Results, PMD_Results, DataDictionaryForEachNode = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Microgrid_Settings)
-        #model = pm.model
+        REopt_Results, PMD_Results, DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series_output, DataFrame_LineFlow_output = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Microgrid_Settings)
+        model = pm.model
         
         if Microgrid_Settings.RunOutageSimulator == true
             OutageLengths = Microgrid_Settings.LengthOfOutages_timesteps 
@@ -306,8 +306,8 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
         ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
 
         #Results Compilation function
-        DataFrame_LineFlow_Summary = "TBD"
-        Dictionary_LineFlow_Power_Series = "TBD"
+        DataFrame_LineFlow_Summary = DataFrame_LineFlow_output
+        Dictionary_LineFlow_Power_Series = Dictionary_LineFlow_Power_Series_output
         system_results = REopt.Results_Compilation(REopt_Results, Outage_Results, Microgrid_Settings, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel)
 
             
@@ -410,7 +410,7 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
         if Microgrid_Settings.Model_Type == "BasicLinear"
             CreateResultsMap(CompiledResults, Microgrid_Settings, TimeStamp)
         end
-        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Settings)
+        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Settings, REoptInputs_Combined, model)
     end
 
     return CompiledResults, model  
@@ -887,9 +887,44 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     REopt_results = reopt_results(m, REoptInputs_Combined)
 
     DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Microgrid_Settings, REopt_results)
-    return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator
-end 
 
+    # Compute values for each line and store line power flows in a dataframe and dictionary 
+    DataLineFlow = zeros(7)
+    DataFrame_LineFlow = DataFrame(fill(Any[],7), [:LineCode, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR ])
+    Dictionary_LineFlow_Power_Series = Dict([])
+
+    for line in keys(sol_eng["nw"]["1"]["line"]) # read all of the line names from the first time step
+        
+        #Phase = 1
+        ActivePowerFlow_line_temp = []
+        ReactivePowerFlow_line_temp = []
+        for i in 1:length(sol_eng["nw"])
+            push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line]["pf"][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line]["pf"])) )
+            push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line]["qf"][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line]["qf"])) )
+        end
+
+        DataLineFlow[1] = round(minimum(ActivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[2] = round(maximum(ActivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[3] = round(mean(ActivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[4] = round(minimum(ReactivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[5] = round(maximum(ReactivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[6] = round(mean(ReactivePowerFlow_line_temp[:]), digits = 5)
+
+        DataFrame_LineFlow_temp = DataFrame([("Line "*string(line)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:LineCode, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR])
+        DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
+        
+        # Also create a dictionary of the line power flows
+        Dictionary_LineFlow_Power_Series_temp = Dict([(line, Dict([
+                                                            ("ActiveLineFlow", ActivePowerFlow_line_temp),
+                                                            ("ReactiveLineFlow", ReactivePowerFlow_line_temp)
+                                                        ]))
+                                                        ])
+        merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
+
+    end
+    
+    return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow
+end
 
 function Check_REopt_PMD_Alignment()
     # Compare the REopt and PMD results to ensure the models are linked
@@ -2147,7 +2182,6 @@ end
 function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; line_upgrade_results = "", transformer_upgrade_results = "")
 
     InputsList = Microgrid_Settings.REoptInputsList
-    LineFromSubstationToFacilityMeter = Microgrid_Settings.Substation_Node * "-" * Microgrid_Settings.FacilityMeter_Node
 
     # Compute system-level outputs
     system_results = Dict{String, Float64}()
@@ -2204,13 +2238,28 @@ function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFr
         Data = []
         
         if Microgrid_Settings.Model_Type == "PowerModelsDistribution"
-            MaximumPowerOnSubstationLine = "TBD"
-            MinimumPowerOnSubstationLine = "TBD"
-            AveragePowerOnSubstationLine = "TBD"
+            LineFromSubstationToFacilityMeter = "line"*Microgrid_Settings.Substation_Node * "_" * Microgrid_Settings.FacilityMeter_Node
+
+            MaximumPowerOnSubstationLine_ActivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
+            MinimumPowerOnSubstationLine_ActivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
+            AveragePowerOnSubstationLine_ActivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
+
+            MaximumPowerOnSubstationLine_ReactivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
+            MinimumPowerOnSubstationLine_ReactivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
+            AveragePowerOnSubstationLine_ReactivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
+
         elseif Microgrid_Settings.Model_Type == "BasicLinear"
-            MaximumPowerOnSubstationLine = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
-            MinimumPowerOnSubstationLine = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
-            AveragePowerOnSubstationLine = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
+            LineFromSubstationToFacilityMeter = Microgrid_Settings.Substation_Node * "-" * Microgrid_Settings.FacilityMeter_Node
+
+            MaximumPowerOnSubstationLine_ActivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
+            MinimumPowerOnSubstationLine_ActivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
+            AveragePowerOnSubstationLine_ActivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
+            
+            # Temporarily not recording the reactive power through the lines:
+            MaximumPowerOnSubstationLine_ReactivePower = zeros(8760)
+            MinimumPowerOnSubstationLine_ReactivePower = zeros(8760)
+            AveragePowerOnSubstationLine_ReactivePower = zeros(8760)
+        
         end
 
         # Add system-level results
@@ -2242,13 +2291,20 @@ function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFr
         push!(DataLabels,"  Total generator size kw")
         push!(Data, round(system_results["total_generator_size_kw"],digits=0))
 
-        push!(DataLabels,"  Maximum power flow on substation line")
-        push!(Data, MaximumPowerOnSubstationLine)
-        push!(DataLabels,"  Minimum power flow on substation line")
-        push!(Data, MinimumPowerOnSubstationLine)
-        push!(DataLabels,"  Average power flow on substation line")
-        push!(Data, AveragePowerOnSubstationLine)
+        push!(DataLabels,"  Maximum power flow on substation line, Active Power kW")
+        push!(Data, MaximumPowerOnSubstationLine_ActivePower)
+        push!(DataLabels,"  Minimum power flow on substation line, Active Power kW")
+        push!(Data, MinimumPowerOnSubstationLine_ActivePower)
+        push!(DataLabels,"  Average power flow on substation line, Active Power kW")
+        push!(Data, AveragePowerOnSubstationLine_ActivePower)
 
+        push!(DataLabels,"  Maximum power flow on substation line, Reactive Power kVAR")
+        push!(Data, MaximumPowerOnSubstationLine_ReactivePower)
+        push!(DataLabels,"  Minimum power flow on substation line, Reactive Power kVAR")
+        push!(Data, MinimumPowerOnSubstationLine_ReactivePower)
+        push!(DataLabels,"  Average power flow on substation line, Reactive Power kVAR")
+        push!(Data, AveragePowerOnSubstationLine_ReactivePower)
+        
         # Add the microgrid outage results to the dataframe
         push!(DataLabels, "----Microgrid Outage Results----")
         push!(Data, "")
@@ -2350,8 +2406,8 @@ function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFr
         dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
         CSV.write(Microgrid_Settings.FolderLocation*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
         
-        # Save the Line Flow summary for each line to a different csv
-        #CSV.write(Microgrid_Settings.FolderLocation*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
+        # Save the Line Flow summary to a different csv
+        CSV.write(Microgrid_Settings.FolderLocation*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
         
         # Save line upgrade results to a csv 
         if Microgrid_Settings.Model_Line_Upgrades
@@ -2374,10 +2430,14 @@ function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFr
         display(DataFrame_LineFlow_Summary)
     
         print("\nSubstation data: ")
-        print("\n   Maximum power flow from substation: "*string(MaximumPowerOnSubstationLine))
-        print("\n   Minimum power flow from substation: "*string(MinimumPowerOnSubstationLine))
-        print("\n   Average power flow from substation: "*string(AveragePowerOnSubstationLine))
+        print("\n   Maximum active power flow from substation, kW: "*string(MaximumPowerOnSubstationLine_ActivePower))
+        print("\n   Minimum active power flow from substation, kW: "*string(MinimumPowerOnSubstationLine_ActivePower))
+        print("\n   Average active power flow from substation, kW: "*string(AveragePowerOnSubstationLine_ActivePower))
     
+        print("\n   Maximum reactive power flow from substation, kVAR: "*string(MaximumPowerOnSubstationLine_ReactivePower))
+        print("\n   Minimum reactive power flow from substation, kVAR: "*string(MinimumPowerOnSubstationLine_ReactivePower))
+        print("\n   Average reactive power flow from substation, kVAR: "*string(AveragePowerOnSubstationLine_ReactivePower))
+
         # Print results for each node:
         for n in InputsList 
             NodeNumberTempB = n["Site"]["node"]
@@ -2550,7 +2610,7 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
 end
 
 # Function to create additional plots using PlotlyJS
-function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs)
+function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptInputs_Combined, model)
     # Additonal plotting using PlotlyJS
 
         OutageStartTimeStep = Microgrid_Inputs.SingleOutageStartTimeStep
@@ -2578,9 +2638,8 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs)
         end
         print("\n The nodes with PV are: ")
         print(NodesWithPV)
-        
-        # TODO: account for the situation where one node might be exporting PV and then another node might use that power to charge a battery
 
+        # TODO: account for the situation where one node might be exporting PV and then another node might use that power to charge a battery
         PVOutput = zeros(8760)
         for NodeNumberTemp in NodesWithPV
             PVOutput = PVOutput + results["REopt_results"][NodeNumberTemp]["PV"]["electric_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["PV"]["electric_to_grid_series_kw"]
@@ -2604,14 +2663,36 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs)
         NodesWithGenerator = []
         for i in keys(results["REopt_results"])
             if "Generator" in keys(results["REopt_results"][i])
-                push!(NodesWithBattery, i)
+                push!(NodesWithGenerator, i)
             end
         end
         GeneratorOutput = zeros(8760)
         for NodeNumberTemp in NodesWithGenerator
-            GeneratorOutput = GeneratorOutput + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_grid_series_kw"] + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_storage_series_kw"] 
+            GeneratorOutput = GeneratorOutput + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_load_series_kw"].data + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_grid_series_kw"].data  # + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_storage_series_kw"].data 
         end
-    
+        
+        #print("\n The generator output is: ")
+        #print(GeneratorOutput)
+        # Save the REopt Inputs for the site not to a variable
+        print("\n The facility meter node REopt inputs are being recorded")
+        FacilityMeterNode_REoptInputs = ""
+        for p in REoptInputs_Combined
+            if string(p.s.site.node) == p.s.settings.facilitymeter_node
+                FacilityMeterNode_REoptInputs = p        
+            end
+        end
+        print("\n The facility meter node REopt inputs have been recorded")
+        
+        # Save power input from the grid to a variable for plotting
+        PowerFromGrid = zeros(8760)
+        if Microgrid_Inputs.Model_Type == "PowerModelsDistribution"
+            for t in collect(1:8760)
+                PowerFromGrid[t] = -( (sum(value.(model[Symbol("dvGridPurchase_"*FacilityMeterNode_REoptInputs.s.settings.facilitymeter_node)]).data[t, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers)) - (sum(value.(model[Symbol("dvProductionToGrid_"*FacilityMeterNode_REoptInputs.s.settings.facilitymeter_node)])["PV", u, t] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]))) 
+            end
+        elseif Microgrid_Inputs.Model_Type == "BasicLinear"
+            PowerFromGrid = results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"]
+        end 
+
         #Plot the network-wide power use 
 
         # Static plot
@@ -2620,7 +2701,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs)
         Plots.plot!(days, PVOutput, label="Combined PV Output")
         Plots.plot!(days, BatteryOutput, label = "Combined Battery Output")
         Plots.plot!(days, GeneratorOutput, label = "Combined Generator Output")
-        #Plots.plot!(days, results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"])
+        Plots.plot!(days, PowerFromGrid, label = "Grid Power")
         if (OutageStopTimeStep - OutageStartTimeStep) > 0
             OutageStart_Line = OutageStartTimeStep/24
             OutageStop_Line = OutageStopTimeStep/24
@@ -2653,10 +2734,10 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs)
             x = days,
             y = GeneratorOutput
         ))    
-        #push!(traces, PlotlyJS.scatter(name = "Power from Substation", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
-        #    x = days,
-        #    y = results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"]
-        #))  
+        push!(traces, PlotlyJS.scatter(name = "Power from Substation", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            x = days,
+            y = PowerFromGrid
+        ))  
         
         if (OutageStopTimeStep - OutageStartTimeStep) > 0
             OutageStart_Line = OutageStartTimeStep/24
