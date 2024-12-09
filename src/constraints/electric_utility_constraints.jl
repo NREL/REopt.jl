@@ -3,7 +3,7 @@ function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export and curtailment no greater than production
     if string(p.s.site.node) != p.s.settings.facilitymeter_node
-        print("\n Updated***24 timesteps,  Adding constraint 8e to node $(p.s.site.node)")
+        print("\n Adding constraint 8e to node $(p.s.site.node)")
         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
             p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
             >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) +
@@ -11,9 +11,9 @@ function add_export_constraints(m, p; _n="")
         )
     else
         print("\n Not adding constraint 8e to the facility meter node, node $(p.s.site.node)")
-        TempVector = collect(25:8760) # implemented only for initial testing; TODO: remove this after testing
+        #TempVector = collect(25:8760) # implemented only for initial testing; TODO: remove this after testing
         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid], m[Symbol("dvRatedProduction"*_n)][t,ts] == 0)
-        @constraint(m, [t in p.techs.elec, ts in TempVector], sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) == 0)
+        #@constraint(m, [t in p.techs.elec, ts in TempVector], sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) == 0)
         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],  m[Symbol("dvCurtail"*_n)][t, ts] == 0)
     end
 

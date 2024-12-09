@@ -124,13 +124,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		end	
 
 		if !isempty(p.s.electric_tariff.export_bins)
-			#if string(p.s.site.node) != p.s.settings.facilitymeter_node
-				print("\n Updated, adding export constraints to node $(p.s.site.node)")
         		add_export_constraints(m, p; _n=_n)
-			#else
-			#	@info "Not applying the add_export_constraints to the facility meter node"
-			#end
-        end
+		end
 
 		add_elec_utility_expressions(m, p; _n=_n)
 	
