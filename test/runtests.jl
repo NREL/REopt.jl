@@ -2708,6 +2708,62 @@ else  # run HiGHS tests
                 @test results["ASHPSpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
                 @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4
             end
+
+            @testset "ASHP Forced Dispatch ot Load or Max Capacity" begin
+                d = JSON.parsefile("./scenarios/ashp.json")
+                d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+                d["DomesticHotWaterLoad"] = Dict{String,Any}("annual_mmbtu" => 0.5 * 8760, "doe_reference_name" => "FlatLoad")
+                d["CoolingLoad"] = Dict{String,Any}("thermal_loads_ton" => ones(8760)*0.1)
+                d["ExistingChiller"] = Dict{String,Any}("retire_in_optimal" => false, "cop" => 100)
+                d["ExistingBoiler"]["retire_in_optimal"] = false
+                d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 0.001
+                d["ASHPSpaceHeater"]["can_serve_cooling"] = true
+                d["ASHPSpaceHeater"]["force_dispatch"] = true
+                d["ASHPSpaceHeater"]["min_ton"] = 1000
+                d["ASHPSpaceHeater"]["max_ton"] = 1000      
+                
+                s = Scenario(d)
+                p = REoptInputs(s)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                results = run_reopt(m, p)
+            
+                #Case 1: ASHP systems run to meet full site load as they are oversized and dispatch is forced
+                @test results["ASHPSpaceHeater"]["annual_electric_consumption_kwh"] ≈ sum(0.4 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHPSpaceHeater"][ts] + 0.1 * REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHPSpaceHeater"][ts] for ts in p.time_steps) rtol=1e-4
+                @test results["ASHPSpaceHeater"]["annual_thermal_production_tonhour"] ≈ 0.1 * 8760 rtol=1e-4
+                @test results["ASHPSpaceHeater"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4            
+                
+                d["ASHPSpaceHeater"]["can_serve_cooling"] = false
+                d["ASHPSpaceHeater"]["min_ton"] = 10
+                d["ASHPSpaceHeater"]["max_ton"] = 10
+                d["ASHPSpaceHeater"]["min_allowable_ton"] = 0
+                d["ASHPWaterHeater"] = Dict{String,Any}("force_dispatch" => true, "min_allowable_ton" => 0.0, "min_ton" => 10, "max_ton" => 10)
+            
+                s = Scenario(d)
+                p = REoptInputs(s)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                results = run_reopt(m, p)
+            
+                #Case 2: ASHP systems run to meet at capacity as they are undersized and dispatch is forced, Space Heater is heat only
+                @test results["ASHPSpaceHeater"]["annual_electric_consumption_kwh"] ≈ sum(10 * REopt.KWH_THERMAL_PER_TONHOUR * p.heating_cf["ASHPSpaceHeater"][ts] / p.heating_cop["ASHPSpaceHeater"][ts] for ts in p.time_steps) rtol=1e-4
+                @test results["ASHPSpaceHeater"]["annual_thermal_production_mmbtu"] ≈ sum(10 * (REopt.KWH_THERMAL_PER_TONHOUR/REopt.KWH_PER_MMBTU) * p.heating_cf["ASHPSpaceHeater"][ts] for ts in p.time_steps) rtol=1e-4
+                @test results["ASHPWaterHeater"]["annual_electric_consumption_kwh"] ≈ sum(10 * REopt.KWH_THERMAL_PER_TONHOUR * p.heating_cf["ASHPWaterHeater"][ts] / p.heating_cop["ASHPWaterHeater"][ts] for ts in p.time_steps) rtol=1e-4
+                @test results["ASHPWaterHeater"]["annual_thermal_production_mmbtu"] ≈ sum(10 * (REopt.KWH_THERMAL_PER_TONHOUR/REopt.KWH_PER_MMBTU) * p.heating_cf["ASHPWaterHeater"][ts] for ts in p.time_steps) rtol=1e-4
+            
+                d["ASHPSpaceHeater"]["force_dispatch"] = false
+                d["ASHPWaterHeater"]["force_dispatch"] = false
+            
+                s = Scenario(d)
+                p = REoptInputs(s)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                results = run_reopt(m, p)
+            
+                #Case 3: ASHP present but does not run because dispatch is not forced and boiler fuel is cheap
+                @test results["ASHPSpaceHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=1e-4
+                @test results["ASHPSpaceHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=1e-4
+                @test results["ASHPWaterHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=1e-4
+                @test results["ASHPWaterHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=1e-4
+            
+            end
         
         end
 
