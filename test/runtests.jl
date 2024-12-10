@@ -333,6 +333,8 @@ else  # run HiGHS tests
             
             d_sim_load_process = copy(d_sim_load_heating)
             d_sim_load_process["load_type"] = "process_heat"
+            delete!(d_sim_load_process, "doe_reference_name")
+            d_sim_load_process["industrial_reference_name"] = doe_reference_name_heating            
             d_sim_load_process["annual_mmbtu"] = annual_mmbtu_process
             sim_load_response_process = simulated_load(d_sim_load_process)
             
