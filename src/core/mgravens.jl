@@ -16,9 +16,11 @@
 
 # Notes for REopt
 # Expecting a specific name for DesignAlgorithmProperties called DesignAlgorithmProperties_1 to get Financial.analysis_years
-# Only looking at the first entry in ProposedSiteLocations for the site location
-# Only using the first entry of LoadGroup.EnergyConsumers, but not really using EnergyConsumer for anything other than indexing on the LoadForecase
+# Only looking at the first ProposedAssetOption that is indexed for ProposedSiteLocation
+# Summing up the load profiles of the list of LoadGroup.EnergyConsumers to get the total load profile
 # Only using value1 for real power entries in the EnergyConsumerSchedule.RegularTimePoints list of dictionaries for load profile
+
+# TODO the Location.670a_residential2_Loc has it's own Lat/Long and in this case it's different from the ProposedSiteLocation, even though I'm not using the Location key/dict for anything
 
 function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     reopt_inputs = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "mgravens_fields_defaults.json"))
@@ -28,7 +30,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     # TODO if there are duplicative DER types or incompatible DER types, throw an error
 
     # Analysis period
-    lifetime_str = get(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"]["DesignAlgorithmProperties_1"], "DesignAlgorithmProperties.analysisPeriod", nothing)
+    design_algorithm_properties_key = first(keys(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"]))
+    lifetime_str = get(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"][design_algorithm_properties_key], "DesignAlgorithmProperties.analysisPeriod", nothing)
     if !isnothing(lifetime_str)
         reopt_inputs["Financial"]["analysis_years"] = parse(Int64, split(split(lifetime_str, "P")[2], "Y")[1])
     end
@@ -218,7 +221,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         end
 
         # Technology specific input parameters
-        if tech_data["Ravens.CimObjectType"] == "ProposedPhotovoltaicUnitOption"
+        if tech_data["Ravens.cimObjectType"] == "ProposedPhotovoltaicUnitOption"
             # PV inputs
             append!(techs_to_include, ["PV"])
             # Optional inputs for PV; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
@@ -245,7 +248,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                     reopt_inputs["PV"]["production_factor_series"][i] = data["CurveData.y1value"]
                 end
             end
-        elseif tech_data["Ravens.CimObjectType"] == "ProposedBatteryUnitOption"
+        elseif tech_data["Ravens.cimObjectType"] == "ProposedBatteryUnitOption"
             append!(techs_to_include, ["ElectricStorage"])
             # Optional inputs for ElectricStorage; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
             if !isnothing(get(tech_data, "ProposedBatteryUnitOption.energyCapacityFixed", nothing))
@@ -320,28 +323,28 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
     mgravens["Message"] =  [
         Dict(
           "IdentifiedObject.mRID" => string(uuid4()),
-          "Ravens.CimObjectType" => "Warning",
+          "Ravens.cimObjectType" => "Warning",
           "Message.message" => string(reopt_results["Messages"]["warnings"]),
           "Message.Application" => Dict("Application.applicationName" => "REopt")
         ),
         Dict(
             "IdentifiedObject.mRID" => string(uuid4()),
-            "Ravens.CimObjectType" => "Error",
-            "Message.message" => string(reopt_results["Messages"]["errors"]),
+            "Ravens.cimObjectType" => "Error",
+            "Message.message" => string(isempty(reopt_results["Messages"]["errors"]) ? "" : reopt_results["Messages"]["errors"]),
             "Message.Application" => Dict("Application.applicationName" => "REopt")
           ),
     ]
 
     # Start by adding the output/results Dicts, if needed
-    if !("EstimatedAssetCosts" in keys(mgravens))
-        mgravens["EstimatedAssetCosts"] = Dict{String, Any}()
+    if !("EstimatedCost" in keys(mgravens))
+        mgravens["EstimatedCost"] = Dict{String, Any}()
     end
 
     if !("ProposedAssetSet" in keys(mgravens["Group"]))
         mgravens["Group"]["ProposedAssetSet"] = Dict{String, Any}()
     end
 
-    # Create Group.ProposedAssetSet and Group.EstimatedAssetCosts for BAU and Optimal
+    # Create Group.ProposedAssetSet and Group.EstimatedCosts for BAU and Optimal
     scenario_names = ["BusinessAsUsual", "Optimal"]
 
     # ProposedAssetSet will also get populated with the list of ProposedAssetSet.ProposedAssets depending on which technologies were included
@@ -350,10 +353,10 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
         mgravens["Group"]["ProposedAssetSet"][scenario_name] = Dict{String, Any}(
             "IdentifiedObject.name"=> scenario_name,
             "IdentifiedObject.mRID"=> proposed_asset_set_uuid,
-            "Ravens.CimObjectType"=> "ProposedAssetSet",
+            "Ravens.cimObjectType"=> "ProposedAssetSet",
             "ProposedAssetSet.ProposedAssets"=> [],
             "ProposedAssetSet.Application" => "Application::'REopt'",
-            "ProposedAssetSet.EstimatedCosts" => "EstimatedEnergyProducerAssetCosts::'$scenario_name'"
+            "ProposedAssetSet.EstimatedCosts" => "EstimatedCost::'$scenario_name'"
         )
 
         # Scenario total lifecycle costs
@@ -368,15 +371,15 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
         end
             
         estimated_asset_costs_uuid = string(uuid4())
-        mgravens["EstimatedAssetCosts"][scenario_name] = Dict{String, Any}(
+        mgravens["EstimatedCost"][scenario_name] = Dict{String, Any}(
             "IdentifiedObject.name" => scenario_name,
             "IdentifiedObject.mRID" => estimated_asset_costs_uuid,
-            "Ravens.CimObjectType" => "EstimatedEnergyProducerAssetCosts",
-            "EstimatedEnergyProducerAssetCosts.lifecycleCapacityCost" => reopt_results["ElectricTariff"]["lifecycle_demand_cost_after_tax"*bau_suffix],
-            "EstimatedEnergyProducerAssetCosts.lifecycleEnergyCost" => reopt_results["ElectricTariff"]["lifecycle_energy_cost_after_tax"*bau_suffix],
-            "EstimatedEnergyProducerAssetCosts.lifecycleCapitalCost" => lcc_capital_costs,
-            "EstimatedEnergyProducerAssetCosts.lifecycleCost" => reopt_results["Financial"]["lcc"*bau_suffix],
-            "EstimatedEnergyProducerAssetCosts.netPresentValue" => npv
+            "Ravens.cimObjectType" => "EstimatedCost",
+            "EstimatedCost.lifecycleCapacityCost" => reopt_results["ElectricTariff"]["lifecycle_demand_cost_after_tax"*bau_suffix],
+            "EstimatedCost.lifecycleEnergyCost" => reopt_results["ElectricTariff"]["lifecycle_energy_cost_after_tax"*bau_suffix],
+            "EstimatedCost.lifecycleCapitalCost" => lcc_capital_costs,
+            "EstimatedCost.lifecycleCost" => reopt_results["Financial"]["lcc"*bau_suffix],
+            "EstimatedCost.netPresentValue" => npv
         )
     end
 
@@ -396,14 +399,14 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
     tech_name_map = Dict(map[1] => "" for map in possible_techs)
     for tech in ravens_tech_names
         tech_data = mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][tech]
-        if tech_data["Ravens.CimObjectType"] == "ProposedPhotovoltaicUnitOption"
+        if tech_data["Ravens.cimObjectType"] == "ProposedPhotovoltaicUnitOption"
             tech_name_map["PV"] = tech
-        elseif tech_data["Ravens.CimObjectType"] == "ProposedBatteryUnitOption"
+        elseif tech_data["Ravens.cimObjectType"] == "ProposedBatteryUnitOption"
             tech_name_map["ElectricStorage"] = tech
         end
     end
 
-    # This loop is associating all technologies with the Optimal scenario only, as indicated by "ProposedAsset.EstimatedCosts": "EstimatedEnergyProducerAssetCosts::"*scenario_name[2]
+    # This loop is associating all technologies with the Optimal scenario only, as indicated by "ProposedAsset.EstimatedCosts": "EstimatedCost::"*scenario_name[2]
     for (i, name) in enumerate(tech_names)
 
         if !("ProposedAsset" in keys(mgravens))
@@ -415,21 +418,25 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
         proposed_asset_template = Dict{String, Any}(
             "IdentifiedObject.name" => name,
             "IdentifiedObject.mRID" => proposed_asset_uuid,
-            "Ravens.CimObjectType" => "",  # To be filled in depending on which technology type
+            "Ravens.cimObjectType" => "",  # To be filled in depending on which technology type
             "ProposedAsset.ProposedAssetOption" => "",
-            "ProposedAsset.EstimatedCosts" => "EstimatedEnergyProducerAssetCosts::'"*scenario_names[2]*"'",
+            "ProposedAsset.EstimatedCosts" => "EstimatedCost::'"*scenario_names[2]*"'",
         )
 
         if occursin("PV", name)
             # Add PV stuff
             append!(mgravens["Group"]["ProposedAssetSet"][scenario_names[2]]["ProposedAssetSet.ProposedAssets"], ["ProposedEnergyProducerAsset::'$name'"])
-            proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = reopt_results["PV"]["size_kw"]
-            proposed_asset_template["Ravens.CimObjectType"] = "ProposedEnergyProducerAsset"
+            proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = Dict(
+                "value" => reopt_results["PV"]["size_kw"],
+                "unit" => "W",
+                "multiplier" => "k"
+            )
+            proposed_asset_template["Ravens.cimObjectType"] = "ProposedEnergyProducerAsset"
             proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedPhotovoltaicUnitOption::'"*tech_name_map["PV"]*"'"
             proposed_asset_template["ProposedEnergyProducerAsset.PowerDispatchCurve"] = Dict{String, Any}(
                 "IdentifiedObject.name" => "PVProfile",
                 "IdentifiedObject.mRID" => string(uuid4()),
-                "Ravens.CimObjectType" => "DispatchCurve",
+                "Ravens.cimObjectType" => "DispatchCurve",
                 "Curve.xUnit" => "h",
                 "Curve.CurveDatas" => []
                 )
@@ -440,10 +447,18 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
         elseif occursin("ESS", name)
             # Add Battery stuff
             append!(mgravens["Group"]["ProposedAssetSet"][scenario_names[2]]["ProposedAssetSet.ProposedAssets"], ["ProposedBatteryUnit::'$name'"])
-            proposed_asset_template["Ravens.CimObjectType"] = "ProposedBatteryUnit"
+            proposed_asset_template["Ravens.cimObjectType"] = "ProposedBatteryUnit"
             proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedBatteryUnitOption::'"*tech_name_map["ElectricStorage"]*"'"
-            proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = reopt_results["ElectricStorage"]["size_kw"]
-            proposed_asset_template["ProposedBatteryUnit.energyCapacity"] = reopt_results["ElectricStorage"]["size_kwh"]
+            proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = Dict(
+                "value" => reopt_results["ElectricStorage"]["size_kw"],
+                "unit" => "W",
+                "multiplier" => "k"
+            )
+            proposed_asset_template["ProposedBatteryUnit.energyCapacity"] = Dict(
+                "value" => reopt_results["ElectricStorage"]["size_kwh"],
+                "unit" => "Wh",
+                "multiplier" => "k"
+            )
 
             # TODO add dispatch for Battery, even if used as a target/reference set point
         end
