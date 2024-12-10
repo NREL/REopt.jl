@@ -105,7 +105,6 @@ function add_export_constraints(m, p; _n="")
                 @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
                     m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] <= binNEM * sum(p.s.electric_load.loads_kw)
                 )
-                p.s.electric_load.loads_kw
             end
 
             EXC_benefit = 0
