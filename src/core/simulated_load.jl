@@ -36,7 +36,11 @@ function simulated_load(d::Dict)
     end
 
     # Check for valid reference building name
-    doe_reference_name_input = get(d, "doe_reference_name", nothing)
+    if load_type == "process_heat"
+        doe_reference_name_input = get(d, "industrial_reference_name", nothing)
+    else
+        doe_reference_name_input = get(d, "doe_reference_name", nothing)
+    end
     percent_share_input = get(d, "percent_share", Real[])
     valid_names = default_buildings
     if load_type == "process_heat"
@@ -392,7 +396,7 @@ function simulated_load(d::Dict)
             throw(@error("Invalid key(s) $error_list for load_type=[space_heating, domestic_hot_water, or process_heat"))
         end
         if isnothing(doe_reference_name) && !normalize_and_scale_load_profile_input
-            throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."))
+            throw(@error("Please supply a doe_reference_name or industrial_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."))
         end
         # Annual loads (default is nothing)
         annual_mmbtu = get(d, "annual_mmbtu", nothing)
