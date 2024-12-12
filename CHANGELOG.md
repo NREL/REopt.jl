@@ -26,7 +26,7 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## Develop
+## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
