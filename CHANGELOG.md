@@ -29,6 +29,7 @@ Classify the change according to the following categories:
 ### Changed
 - Updated AVERT emissions data to v4.3, which uses Regional Data Files for year 2023 for CONUS. For Alaska and Hawaii (regions AKGD, HIMS, HIOA), updated eGRID data to eGRID2022 datafile, adjusted to CO2e values. Emissions profiles are saved in `data/emissions/AVERT_Data`. 
 - Updated Cambium API call for CO2e emissions within CONUS to Cambium 2023 dataset.
+- Updated EMISSIONS_DECREASE_DEFAULTS from 0.02163 to 0.0459 based on Cambium 2023 data
 
 ## Develop
 ### Added
