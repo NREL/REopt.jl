@@ -20,7 +20,7 @@
     # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
         ## Options: ["Mid-case", "Low renewable energy cost",   "High renewable energy cost", "High demand growth",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
-    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions"] 
+    cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions 2023"] 
     cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
     cambium_start_year::Int = 2025, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period.
@@ -160,7 +160,7 @@ struct ElectricUtility
         ### Grid Climate Emissions Inputs ### 
         # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
-        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
+        cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions 2023"] 
         cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         cambium_start_year::Int = 2025, # First year of operation of system. # Options: any year now through 2050.
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. 
@@ -573,7 +573,7 @@ function cambium_emissions_profile(; scenario::String,
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col, # lrmer_co2e
             "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries). "rolling" best with TMY data; "none" best if 2012 weather data used.
-            "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
+            "gwp" => [1, 29.8, 273.0], # TODO update back to "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => grid_level, # enduse or busbar 
             "ems_mass_units" => "lb" # lb or kg
     )

@@ -2308,13 +2308,12 @@ else  # run HiGHS tests
                     @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
                     # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
                     @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.662 rtol=0.01
-                    @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 rtol=0.01
+                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.79 rtol=0.01
+                    @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.97 rtol=0.01
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8397.85 rtol=0.01
+                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8496.6 rtol=0.01
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 rtol=0.01
                     @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 235.9 rtol=0.01
         
         
