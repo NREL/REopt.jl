@@ -3,7 +3,7 @@
 	add_re_elec_constraints(m,p)
 
 Function to add minimum and/or maximum renewable electricity (as percentage of load) constraints, if specified by user.
-Includes renewable energy from grid if specified by user.
+Includes renewable energy from grid if specified by user using Site input include_grid_renewable_fraction_in_RE_constraints.
 
 !!! note
     When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
