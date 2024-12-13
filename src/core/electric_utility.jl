@@ -619,7 +619,7 @@ function cambium_profile(; scenario::String,
         return response_dict
     catch
         return Dict{String, Any}(
-            "error" => "Could not look up Cambium profile from point ($(latitude), $(longitude)). 
+            "error" => "Could not look up Cambium $(metric_col) profile from point ($(latitude), $(longitude)). 
              Location is likely outside contiguous US or something went wrong with the Cambium API request."
         )
     end
