@@ -7,8 +7,8 @@ Adds the Site results to the dictionary passed back from `run_reopt` using the s
 Site results:
 - `annual_onsite_renewable_electricity_kwh` # renewable electricity from on-site renewable electricity-generating technologies (including fuel-burning technologies)
 - `onsite_renewable_electricity_fraction_of_elec_load`
-- `onsite_renewable_energy_fraction_of_total_load`
 - `onsite_and_grid_renewable_electricity_fraction_of_elec_load`
+- `onsite_renewable_energy_fraction_of_total_load`
 - `onsite_and_grid_renewable_energy_fraction_of_total_load`
 - `annual_emissions_tonnes_CO2` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
 - `annual_emissions_tonnes_NOx` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
@@ -138,6 +138,6 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		)
 	end 
 	m[:AnnualOnsiteRETotkWh] = @expression(m, m[:AnnualOnsiteREEleckWh] + AnnualREHeatkWh)
-	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + AnnualHeatkWh) # TODO: ensure no double counting once AnnaulEleckWh accounts for electric heating and cooling loads
+	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + AnnualHeatkWh) # TODO: ensure no double counting once AnnualEleckWh accounts for electric heating and cooling loads
 	nothing
 end

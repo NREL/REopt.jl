@@ -48,7 +48,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
-        # TODO: constrain final soc to equal initial soc  
+        # TODO: constrain final soc to equal initial soc even when not optimized (ran into feasibility issues)
         # @constraint(m,
         #     m[Symbol("dvStoredEnergy"*_n)][b, maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         # )
