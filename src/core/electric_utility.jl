@@ -126,6 +126,7 @@ struct ElectricUtility
     emissions_factor_NOx_decrease_fraction::Real
     emissions_factor_SO2_decrease_fraction::Real
     emissions_factor_PM25_decrease_fraction::Real
+    renewable_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int  # ... utility production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
@@ -138,7 +139,6 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    renewable_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
 
     function ElectricUtility(;
 
@@ -357,6 +357,7 @@ struct ElectricUtility
             emissions_factor_NOx_decrease_fraction,
             emissions_factor_SO2_decrease_fraction,
             emissions_factor_PM25_decrease_fraction,
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["renewable_energy_fraction_series"],
             outage_start_time_step,
             outage_end_time_step,
             allow_simultaneous_export_import,
@@ -366,8 +367,7 @@ struct ElectricUtility
             outage_time_steps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw,
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["renewable_energy_fraction_series"]
+            interconnection_limit_kw
         )
     end
 end
