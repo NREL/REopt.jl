@@ -254,7 +254,7 @@ struct ElectricUtility
                 elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                     if length(eseries) == 8760
                         emissions_and_cef_series_dict[ekey] = repeat(eseries,inner=time_steps_per_hour)
-                        @warn("The ElectricUtility emissions or clean enery fraction series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
+                        @warn("The ElectricUtility emissions or clean energy fraction series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
                     else
                         throw(@error("The provided ElectricUtility emissions or clean enery fraction series for $(ekey) does not match the time_steps_per_hour."))
                     end
@@ -583,7 +583,6 @@ function cambium_profile(; scenario::String,
             "project_uuid" => project_uuid,
             "scenario" => scenario,
             "location_type" => location_type,  # Nations, States, GEA Regions (Default: GEA Regions)
-            # "location" => "Colorado", # e.g., Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
             "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036) # The 2023 release has five-year time steps from 2025 through 2050
