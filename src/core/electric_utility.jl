@@ -203,9 +203,7 @@ struct ElectricUtility
         
         if !is_MPC
             # Check some inputs 
-            if any(x -> x < 0 || x > 1, renewable_energy_fraction_series)
-                throw(@error("All values in the provided ElectricUtility renewable_energy_fraction_series must be between 0 and 1."))
-            end
+            error_if_series_vals_not_0_to_1(renewable_energy_fraction_series, "ElectricUtility", "renewable_energy_fraction_series")
             if cambium_start_year < 2023 || cambium_start_year > 2050 # TODO: update?
                 cambium_start_year = 2025 # Must update annually 
                 @warn("The cambium_start_year must be between 2023 and 2050. Setting cambium_start_year to $(cambium_start_year).")

@@ -186,8 +186,8 @@ mutable struct PV <: AbstractTech
         if !(0.0 <= dc_ac_ratio <= 2.0)
             push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
-        if !isnothing(production_factor_series) && any(x -> x < 0 || x > 1, production_factor_series)
-            throw(@error("All values in the provided PV production_factor_series must be between 0 and 1."))
+        if !isnothing(production_factor_series)
+            error_if_series_vals_not_0_to_1(production_factor_series, "PV", "production_factor_series")
         end
         if length(invalid_args) > 0
             throw(@error("Invalid PV argument values: $(invalid_args)"))

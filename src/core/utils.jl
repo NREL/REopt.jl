@@ -597,3 +597,9 @@ function check_api_key()
                     See https://nrel.github.io/REopt.jl/dev/ for more information."))
     end
 end
+
+function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
+    if any(x -> x < 0 || x > 1, series)
+        throw(@error("All values in the provided $(input_struct_name) $(input_name) must be between 0 and 1."))
+    end
+end
