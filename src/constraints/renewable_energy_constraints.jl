@@ -54,6 +54,8 @@ function add_re_elec_calcs(m,p)
 	# 	))
 	# end
 
+	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
+	# 		onsite is counted so battery doesn't become a back door for RE to grid.
 	m[:AnnualOnsiteREEleckWh] = @expression(m, p.hours_per_time_step * (
 			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
 				p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps
@@ -70,9 +72,9 @@ function add_re_elec_calcs(m,p)
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
 	)		
-    # Note: if battery ends up being allowed to discharge to grid, need to make sure only RE that is being consumed onsite is counted so battery doesn't become a back door for RE to grid.
-	# Note: calculations currently do not ascribe any renewable energy attribute to grid-purchased electricity
 
+	# Note: when we add capability for battery to discharge to grid, need to subtract out *grid RE* discharged from battery 
+	# 		back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
 	m[:AnnualGridREEleckWh] = @expression(m, p.hours_per_time_step * (
 			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
 				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 
