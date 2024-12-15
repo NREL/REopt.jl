@@ -198,6 +198,7 @@ include("outagesim/outage_simulator.jl")
 include("outagesim/backup_reliability.jl")
 
 include("lindistflow/power_flow.jl")
+include("lindistflow/basic_linear_model_microgrid.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")
