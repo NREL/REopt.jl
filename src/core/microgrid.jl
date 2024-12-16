@@ -2089,7 +2089,10 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         layout = PlotlyJS.Layout(title_text = "System Wide Power Demand and Generation", xaxis_title_text = "Day", yaxis_title_text = "Power (kW)")
         
         if Microgrid_Inputs.Model_Type == "PowerModelsDistribution"
-        
+            
+            max = 1.1 * maximum([maximum(TotalLoad_series), maximum(PVOutput), maximum(BatteryOutput), maximum(GeneratorOutput), maximum(PowerFromGrid)])
+            min = 1.1 * minimum([minimum(TotalLoad_series), minimum(PVOutput), minimum(BatteryOutput), minimum(GeneratorOutput), minimum(PowerFromGrid)])
+
             start_values = []
             end_values = []
         
@@ -2111,8 +2114,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
             for i in collect(1:length(start_values))
                 start_temp = start_values[i] / (24* Microgrid_Inputs.TimeStepsPerHour)
                 end_temp = end_values[i] / (24* Microgrid_Inputs.TimeStepsPerHour)
-                min = -100
-                max = 100
+                
                 if i == 1
                     legend = true
                 else
@@ -2124,28 +2126,28 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
                     mode = "lines",
                     line = PlotlyJS.attr(width=0),
                     fillcolor = "gray",
-                    opacity = 0.7
+                    opacity = 0.35
                 ))
             end  
         end
 
-        push!(traces, PlotlyJS.scatter(name = "Total load", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+        push!(traces, PlotlyJS.scatter(name = "Total load", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="black", dash="dot"),
             x = days,
             y = TotalLoad_series
         ))
-        push!(traces, PlotlyJS.scatter(name = "Combined PV Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+        push!(traces, PlotlyJS.scatter(name = "Combined PV Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="green"),
             x = days,
             y = PVOutput
         ))
-        push!(traces, PlotlyJS.scatter(name = "Combined Battery Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+        push!(traces, PlotlyJS.scatter(name = "Combined Battery Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="blue"),
             x = days,
             y = BatteryOutput
         ))
-        push!(traces, PlotlyJS.scatter(name = "Combined Generator Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+        push!(traces, PlotlyJS.scatter(name = "Combined Generator Output", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="gray"),
             x = days,
             y = GeneratorOutput
         ))    
-        push!(traces, PlotlyJS.scatter(name = "Power from Substation", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+        push!(traces, PlotlyJS.scatter(name = "Power from Substation", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="orange"),
             x = days,
             y = PowerFromGrid
         ))  
@@ -2153,11 +2155,11 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         if (OutageStopTimeStep - OutageStartTimeStep) > 0
             OutageStart_Line = OutageStartTimeStep/24
             OutageStop_Line = OutageStopTimeStep/24
-            push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="red", dash="dot"),
                 x = [OutageStart_Line, OutageStart_Line],
                 y = [0,maximum(TotalLoad_series)]
             ))  
-            push!(traces, PlotlyJS.scatter(name = "Outage End", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
+            push!(traces, PlotlyJS.scatter(name = "Outage End", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="red", dash="dot"),
                 x = [OutageStop_Line, OutageStop_Line],
                 y = [0,maximum(TotalLoad_series)]
             ))  
