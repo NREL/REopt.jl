@@ -661,22 +661,27 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
                 f_idx = (i, f_bus, t_bus)
                 t_idx = (i, t_bus, f_bus)
     
-            @variable(m, binSubstationPositivePowerFlow[ts in p.time_steps], Bin)
+            @variable(m, binSubstationPositivePowerFlow[ts in REoptTimeSteps], Bin)
             #for t in collect(length(TimeSteps):length(p.time_steps))
             #    @constraint(m, m[:binSubstationPositivePowerFlow][t] == 1) # TODO: This is a temporary constraint; delete this when use 8760 data with PMD
             #end
-    
+
+            @variable(m, dvSubstationPowerFlow[ts in REoptTimeSteps])
+
+            #for t in 1:(TimeSteps-1)
+            #    @constraint(m_outagesimulator, m_outagesimulator[Symbol("BatteryCharge_"*n)][t+1] ==  m_outagesimulator[Symbol("BatteryCharge_"*n)][t] - 
+            #                                                                                            (((m_outagesimulator[Symbol("SumOfBatFlows_"*n)][t]))/TimeStepsPerHour) )
+            #end 
+            for t in REoptTimeSteps
+                @constraint(m, dvSubstationPowerFlow[t] == (sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][t, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
+                                                            sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, t] for u in p.export_bins_by_tech["PV"]))) 
+            end
+
             for timestep in REoptTimeSteps
                 # Based off of code in line 274 of PMD's src>core>constraints
-                if timestep in PMDTimeSteps_InREoptTimes
-                    PMD_time_step = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
-
-                    p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-                    p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
-            
-                    q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-                    q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
-                end
+                #if timestep in PMDTimeSteps_InREoptTimes
+ 
+                #end
 
                 if Microgrid_Inputs.AllowExportBeyondSubstation == true
                     
@@ -685,21 +690,30 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
                     #TODO: make this compatible with three phase power- I believe p_fr[1] only refers to the first phase: might be able to say:  p_fr .>= 0   with the period
                     
                     if timestep in PMDTimeSteps_InREoptTimes
+                        PMD_time_step = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
+
+                        p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+                        p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+                
+                        q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+                        q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+
                         @constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] >= 0 } )  # TODO: make this compatible with phase 2 and 3 of three phase (right now it's only consider 1-phase I think)
                         @constraint(m, !m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] <= 0 } )
                     
-                        @constraint(m, 
-                            (p_fr[1] == 
-                            sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
-                            sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]))) 
+                        @constraint(m, p_fr[1] == dvSubstationPowerFlow[timestep])
+                            #sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
+                            #sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]))) 
+
                     else
                     # Instead of using the line flow from PMD, consider the total system inflow/outflow to be based on a lumped-element model, which sums all power inflows and outflows for each node
-                        @constraint(m,
-                            (sum(m[Symbol("TotalExport_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e)  - 
-                            sum(m[Symbol("dvGridPurchase_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e)) == 
-                            (sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
-                            sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]))) 
-                        
+                        @constraint(m, dvSubstationPowerFlow[timestep] ==
+                            (-sum(m[Symbol("TotalExport_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e) + 
+                            sum(m[Symbol("dvGridPurchase_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e))) 
+                            
+
+                            #(sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
+                            #sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]))) 
                     end
 
                     @constraint(m,
@@ -707,7 +721,13 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
                     
                     @constraint(m,
                         sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]) <= Microgrid_Inputs.SubstationExportLimit * (1 - binSubstationPositivePowerFlow[timestep]))
-                            
+                    
+                    @constraint(m,
+                        sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 0)
+                    
+                    @constraint(m,
+                        sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]) >= 0)
+                                    
                 else
                     @info "Not allowing export from the facility meter"
                     
@@ -2030,16 +2050,21 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         # Save power input from the grid to a variable for plotting
         PowerFromGrid = zeros(8760)
         if Microgrid_Inputs.Model_Type == "PowerModelsDistribution"
-            for t in collect(1:8760)
-                PowerFromGrid[t] = -( (sum(value.(model[Symbol("dvGridPurchase_"*FacilityMeterNode_REoptInputs.s.settings.facilitymeter_node)]).data[t, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers)) - (sum(value.(model[Symbol("dvProductionToGrid_"*FacilityMeterNode_REoptInputs.s.settings.facilitymeter_node)])["PV", u, t] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]))) 
-            end
+            #for t in collect(1:8760)
+                PowerFromGrid = value.(model[Symbol("dvSubstationPowerFlow")]).data #value.(model["dvSubstationPowerFlow"]).data[t] # -( (sum(value.(model[Symbol("dvGridPurchase_"*FacilityMeterNode_REoptInputs.s.settings.facilitymeter_node)]).data[t, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers)) - (sum(value.(model[Symbol("dvProductionToGrid_"*FacilityMeterNode_REoptInputs.s.settings.facilitymeter_node)])["PV", u, t] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]))) 
+            #end
         elseif Microgrid_Inputs.Model_Type == "BasicLinear"
             PowerFromGrid = results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"]
         end 
         print("\n The grid power has been recorded")
-
+        
+        #PowerFromGrid = zeros(8760)
+        #for t in collect(1:8760)
+        #    PowerFromGrid[t] =  (sum(value.(model[Symbol("dvGridPurchase_15")]).data[t, tier] for tier in 1:1)) - (sum(value.(model[Symbol("dvProductionToGrid_15")])["PV", u, t] for u in [:NEM, :WHL])) 
+        #end
         #Plot the network-wide power use 
-
+        print("\n Making the static plot")
+        
         # Static plot
         days = collect(1:8760)/24
         Plots.plot(days, TotalLoad_series, label="Total Load")
@@ -2063,6 +2088,40 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         traces = PlotlyJS.GenericTrace[]
         layout = PlotlyJS.Layout(title_text = "System Wide Power Demand and Generation", xaxis_title_text = "Day", yaxis_title_text = "Power (kW)")
         
+        if Microgrid_Inputs.Model_Type == "PowerModelsDistribution"
+        
+            start_values = []
+            end_values = []
+        
+            PMD_TimeSteps_inREoptTime =  Microgrid_Inputs.PowerModelsDistribution_TimeSteps
+
+            for i in collect(1:length(PMD_TimeSteps_inREoptTime))
+                if i == 1
+                    push!(start_values, PMD_TimeSteps_inREoptTime[i])
+                elseif i == length(PMD_TimeSteps_inREoptTime)
+                    push!(end_values, PMD_TimeSteps_inREoptTime[i])
+                elseif PMD_TimeSteps_inREoptTime[i+1] - PMD_TimeSteps_inREoptTime[i] > 1
+                    push!(start_values, PMD_TimeSteps_inREoptTime[i+1])
+                    push!(end_values, PMD_TimeSteps_inREoptTime[i])
+                else
+                    # Do nothing
+                end
+            end
+
+            for i in collect(1:length(start_values))
+                start_temp = start_values[i] / (24* Microgrid_Inputs.TimeStepsPerHour)
+                end_temp = end_values[i] / (24* Microgrid_Inputs.TimeStepsPerHour)
+                min = -100
+                max = 100
+                push!(traces, PlotlyJS.scatter(name = "PMD Timesteps", showlegend = true, fill = "toself", 
+                    x = [start_temp,start_temp,end_temp,end_temp,start_temp],
+                    y = [min,max,max,min,min],
+                    line = PlotlyJS.attr(width=0),
+                    fillcolor = "gray"
+                ))
+            end  
+        end
+
         push!(traces, PlotlyJS.scatter(name = "Total load", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3),
             x = days,
             y = TotalLoad_series
