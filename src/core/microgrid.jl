@@ -2113,11 +2113,18 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
                 end_temp = end_values[i] / (24* Microgrid_Inputs.TimeStepsPerHour)
                 min = -100
                 max = 100
-                push!(traces, PlotlyJS.scatter(name = "PMD Timesteps", showlegend = true, fill = "toself", 
+                if i == 1
+                    legend = true
+                else
+                   legend = false
+                end
+                push!(traces, PlotlyJS.scatter(name = "PMD Timesteps", showlegend = legend, fill = "toself", 
                     x = [start_temp,start_temp,end_temp,end_temp,start_temp],
                     y = [min,max,max,min,min],
+                    mode = "lines",
                     line = PlotlyJS.attr(width=0),
-                    fillcolor = "gray"
+                    fillcolor = "gray",
+                    opacity = 0.7
                 ))
             end  
         end
