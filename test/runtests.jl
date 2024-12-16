@@ -2178,14 +2178,20 @@ else  # run HiGHS tests
             post["ElectricLoad"]["loads_kw"] = [20 for i in range(1,8760)]
             post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
             scen = Scenario(post)
-            avert_year = 2023 # Update when AVERT/eGRID data are updated
-        
+            
             @test scen.electric_utility.avert_emissions_region == "Rocky Mountains"
             @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
-            @test scen.electric_utility.cambium_emissions_region == "RMPAc"
-            @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ sum(CSV.read("../data/emissions/AVERT_Data/AVERT_$(avert_year)_SO2_lb_per_kwh.csv", DataFrame)[!,"RM"])/8760 rtol=1e-5 # check avg from AVERT data for RM region
+            @test scen.electric_utility.cambium_emissions_region == "West Connect North"
+            # Test that correct data is used, and adjusted to start on a Fri to align with load year of 2021
+            avert_year = 2023 # Update when AVERT/eGRID data are updated
+            ef_start_day = 7 # Sun. Update when AVERT/eGRID data are updated
+            load_start_day = 5 # Fri
+            cut_days = 7+(load_start_day-ef_start_day) # Ex: = 7+(5-7) = 5 --> cut Sun, Mon, Tues, Wed, Thurs
+            so2_data = CSV.read("../data/emissions/AVERT_Data/AVERT_$(avert_year)_SO2_lb_per_kwh.csv", DataFrame)[!,"RM"]
+            @test scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh[1] ≈ so2_data[24*cut_days+1] # EF data should start on Fri
+
             @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
-            @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
+            @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] 
             @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
             @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]
 
