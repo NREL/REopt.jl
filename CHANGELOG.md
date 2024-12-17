@@ -46,6 +46,8 @@ Classify the change according to the following categories:
   - **Site** **renewable_electricity_fraction** changed to **onsite_renewable_electricity_fraction_of_elec_load** 
   - **Site** **total_renewable_energy_fraction** changed to **onsite_renewable_energy_fraction_of_total_load**
 - Changed name of function (also available as endpoint through REopt API) from **cambium_emissions_profile** to **cambium_profile**
+### Fixed
+- Make **ElectricTariff** **export_rate_beyond_net_metering_limit** and **wholesale_rate** with sub-hour time step work
 
 ## v0.48.2
 ### Added
