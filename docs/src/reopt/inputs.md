@@ -139,17 +139,17 @@ REopt.ColdThermalStorageDefaults
 
 ## DomesticHotWaterLoad
 ```@docs
-REopt.DomesticHotWaterLoad
+REopt.HotWaterLoad
 ```
 
 ## SpaceHeatingLoad
 ```@docs
-REopt.SpaceHeatingLoad
+REopt.HeatingLoad
 ```
 
 ## ProcessHeatLoad
 ```@docs
-REopt.ProcessHeatLoad
+REopt.HeatingLoad
 ```
 
 ## FlexibleHVAC
@@ -175,4 +175,9 @@ REopt.SteamTurbine
 ## ElectricHeater
 ```@docs
 REopt.ElectricHeater
+```
+
+## ASHP
+```@docs
+REopt.ASHP
 ```

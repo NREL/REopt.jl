@@ -161,34 +161,21 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if "CHP" in p.techs.all
-        # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
-        cost_list = p.s.chp.installed_cost_per_kw
-        size_list = p.s.chp.tech_sizes_for_cost_curve
-        chp_size = value.(m[Symbol("dvPurchaseSize"*_n)])["CHP"]
-        if typeof(cost_list) == Vector{Float64}
-            if chp_size <= size_list[1]
-                initial_capex += chp_size * cost_list[1]  # Currently not handling non-zero cost ($) for 0 kW size input
-            elseif chp_size > size_list[end]
-                initial_capex += chp_size * cost_list[end]
-            else
-                for s in 2:length(size_list)
-                    if (chp_size > size_list[s-1]) && (chp_size <= size_list[s])
-                        slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
-                                (size_list[s] - size_list[s-1])
-                        initial_capex += cost_list[s-1] * size_list[s-1] + (chp_size - size_list[s-1]) * slope
-                    end
-                end
-            end
-        else
-            initial_capex += cost_list * chp_size
-        #Add supplementary firing capital cost
-        # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
-        # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
-        # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
-        end
+        chp_size_kw = value.(m[Symbol("dvPurchaseSize"*_n)])["CHP"]
+        initial_capex += get_chp_initial_capex(p, chp_size_kw)
     end
 
-    # TODO thermal tech costs
+    if "SteamTurbine" in p.techs.all
+        initial_capex += p.s.steam_turbine.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["SteamTurbine"]
+    end
+
+    if "Boiler" in p.techs.all
+        initial_capex += p.s.boiler.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Boiler"]
+    end
+
+    if "AbsorptionChiller" in p.techs.all
+        initial_capex += p.s.absorption_chiller.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["AbsorptionChiller"]
+    end
 
     if !isempty(p.s.ghp_option_list)
 
@@ -203,6 +190,14 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
             end
         end
     end
+
+    if "ASHPSpaceHeater" in p.techs.all
+        initial_capex += p.s.ashp.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPSpaceHeater"]
+    end
+
+    if "ASHPWaterHeater" in p.techs.all
+        initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
+    end    
 
     # ExistingBoiler and ExistingChiller costs are never discounted by incentives or tax deductions
     if "ExistingBoiler" in p.techs.all
@@ -295,10 +290,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
     capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
 
-    annual_om = new_kw * tech.om_cost_per_kw # NPV of O&M charges escalated over financial life
+    annual_om = new_kw * tech.om_cost_per_kw 
 
     om_series = [annual_om * (1+p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
-    npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)])
+    npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)]) # NPV of O&M charges escalated over financial life
 
     #Incentives as calculated in the spreadsheet, note utility incentives are applied before state incentives
     utility_ibi = min(capital_costs * tech.utility_ibi_fraction, tech.utility_ibi_max)
@@ -334,21 +329,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
     npv_federal_itc = federal_itc_amount * (1.0/(1.0+discount_rate_fraction))
 
-    depreciation_schedule = zeros(years)
-    if tech.macrs_option_years in [5,7]
-        if tech.macrs_option_years == 5
-            schedule = p.s.financial.macrs_five_year
-        elseif tech.macrs_option_years == 7
-            schedule = p.s.financial.macrs_seven_year
-        end
-        macrs_bonus_basis = federal_itc_basis - (federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction)
-        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
-        for (i,r) in enumerate(schedule)
-            if i-1 < length(depreciation_schedule)
-                depreciation_schedule[i] = macrs_basis * r
-            end
-        end
-        depreciation_schedule[1] += tech.macrs_bonus_fraction * macrs_bonus_basis
+    if tech.macrs_option_years in [5 ,7]
+        depreciation_schedule = get_depreciation_schedule(p, tech, federal_itc_basis)
+    else
+        depreciation_schedule = zeros(years)
     end
 
     tax_deductions = (om_series + depreciation_schedule) * federal_tax_rate_fraction
@@ -363,4 +347,76 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     lcoe = (capital_costs + npv_om - npv_pbi - cbi - ibi - npv_federal_itc - npv_tax_deductions ) / npv_annual_energy
 
     return round(lcoe, digits=4)
+end
+
+"""
+    get_depreciation_schedule(p::REoptInputs, tech::AbstractTech, federal_itc_basis::Float64=0.0)
+
+Get the depreciation schedule for MACRS. First check if tech.macrs_option_years in [5 ,7], then call function to return depreciation schedule
+Used in results/financial.jl and results/proformal.jl multiple times
+"""
+function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,AbstractStorage}, federal_itc_basis::Float64=0.0)
+    schedule = []
+    if tech.macrs_option_years == 5
+        schedule = p.s.financial.macrs_five_year
+    elseif tech.macrs_option_years == 7
+        schedule = p.s.financial.macrs_seven_year
+    end
+
+    federal_itc_fraction = 0.0
+    try 
+        federal_itc_fraction = tech.federal_itc_fraction
+    catch
+        @warn "Did not find $(tech).federal_itc_fraction so using 0.0 in calculation of depreciation_schedule."
+    end
+    
+    macrs_bonus_basis = federal_itc_basis - federal_itc_basis * federal_itc_fraction * tech.macrs_itc_reduction
+    macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
+
+    depreciation_schedule = zeros(p.s.financial.analysis_years)
+    for (i, r) in enumerate(schedule)
+        if i < length(depreciation_schedule)
+            depreciation_schedule[i] = macrs_basis * r
+        end
+    end
+    depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
+
+    return depreciation_schedule
+end
+
+
+""" 
+    get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
+
+CHP has a cost-curve input option, so calculating the initial CapEx requires more logic than typical tech CapEx calcs
+"""
+function get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
+    # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
+    cost_list = p.s.chp.installed_cost_per_kw
+    size_list = p.s.chp.tech_sizes_for_cost_curve
+    chp_size = size_kw
+    initial_capex = 0.0
+    if typeof(cost_list) == Vector{Float64}
+        if chp_size <= size_list[1]
+            initial_capex = chp_size * cost_list[1]  # Currently not handling non-zero cost ($) for 0 kW size input
+        elseif chp_size > size_list[end]
+            initial_capex = chp_size * cost_list[end]
+        else
+            for s in 2:length(size_list)
+                if (chp_size > size_list[s-1]) && (chp_size <= size_list[s])
+                    slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                            (size_list[s] - size_list[s-1])
+                    initial_capex = cost_list[s-1] * size_list[s-1] + (chp_size - size_list[s-1]) * slope
+                end
+            end
+        end
+    else
+        initial_capex = cost_list * chp_size
+    #Add supplementary firing capital cost
+    # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
+    # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
+    # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
+    end
+
+    return initial_capex
 end

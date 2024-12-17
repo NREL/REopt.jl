@@ -7,6 +7,7 @@
     max_thermal_factor_on_peak_load::Real=1.25
     installed_cost_per_kw::Real = 0.0, # This is set to zero because we use absolute cost below, but still need this at zero to avoid double counting
     installed_cost_dollars::Real = 0.0  # Represents needed CapEx in BAU, assuming net present cost basis
+    retire_in_optimal::Bool = false  # Do NOT use in the optimal case (still used in BAU)
 ```
 
 !!! note "Max ExistingChiller size" 
@@ -22,6 +23,7 @@ struct ExistingChiller <: AbstractThermalTech
     max_thermal_factor_on_peak_load::Real
     installed_cost_per_kw::Real
     installed_cost_dollars::Real
+    retire_in_optimal::Bool
 end
 
 
@@ -30,7 +32,8 @@ function ExistingChiller(;
         cop::Union{Real, Nothing} = nothing,
         max_thermal_factor_on_peak_load::Real=1.25,
         installed_cost_per_ton::Real = 0.0,
-        installed_cost_dollars::Real = NaN
+        installed_cost_dollars::Real = NaN,
+        retire_in_optimal::Bool = false
     )
     max_kw = maximum(loads_kw_thermal) * max_thermal_factor_on_peak_load  # This is really the **actual** size in BAU
     
@@ -47,7 +50,8 @@ function ExistingChiller(;
         cop,
         max_thermal_factor_on_peak_load,
         installed_cost_per_kw,
-        installed_cost_dollars
+        installed_cost_dollars,
+        retire_in_optimal
     )
 end
 

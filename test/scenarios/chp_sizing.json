@@ -17,7 +17,8 @@
         "doe_reference_name": "Hospital"
     },
     "ElectricTariff": {
-        "urdb_label": "5e1676e95457a3f87673e3b0"
+        "blended_annual_energy_rate": 0.12,
+        "blended_annual_demand_rate": 10.0
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "Hospital"

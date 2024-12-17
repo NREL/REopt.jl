@@ -1,29 +1,21 @@
 {
     "Site": {
-    "latitude": 37.78,
-    "longitude": -122.45
+        "latitude": 37.78,
+        "longitude": -122.45
     },
     "ExistingBoiler": {
         "production_type": "steam",
         "efficiency": 0.8,
         "fuel_type": "natural_gas",
-        "fuel_cost_per_mmbtu": 10,
-        "can_serve_dhw": true, 
-        "can_serve_space_heating": true,
-        "can_serve_process_heat": true
+        "fuel_cost_per_mmbtu": 5
     },
-    "ElectricHeater": {
-        "min_mmbtu_per_hour": 0.0,
-        "max_mmbtu_per_hour": 100000,
-        "cop": 1.0,
-        "installed_cost_per_mmbtu_per_hour": 115686,
-        "om_cost_per_mmbtu_per_hour": 0.0,
-        "macrs_option_years": 0,
-        "macrs_bonus_fraction": 0.0,
-        "can_supply_steam_turbine": false,
-        "can_serve_dhw": true,
-        "can_serve_space_heating": true,
-        "can_serve_process_heat": false
+    "ASHPWaterHeater": {
+        "min_ton": 0.0,
+        "max_ton": 100000,
+        "installed_cost_per_ton": 4050,
+        "om_cost_per_ton": 0.0,
+		"macrs_option_years": 0,
+		"macrs_bonus_fraction": 0.0
     },
     "Financial": {
         "om_cost_escalation_rate_fraction": 0.025,
@@ -41,9 +33,6 @@
         "doe_reference_name": "FlatLoad",
         "annual_kwh": 87600.0
     },
-    "ProcessHeatLoad": {
-        "industrial_reference_name": "FlatLoad"
-    },
     "SpaceHeatingLoad": {
         "doe_reference_name": "FlatLoad"
     },
@@ -52,8 +41,5 @@
     },    
     "ElectricTariff": {
         "monthly_energy_rates": [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]
-    },
-    "HotThermalStorage":{
-        "max_gal":2500
     }
-}
+  }
