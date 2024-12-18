@@ -3027,5 +3027,19 @@ else  # run HiGHS tests
             @test sum(s.process_heat_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU .- sim_load_response["loads_mmbtu_per_hour"]) < 10.0              
         
         end      
+        
+        @testset "Storage Duration" begin
+            ## Battery storage
+            d = JSON.parsefile("scenarios/pv_storage.json")
+            d["ElectricStorage"]["min_duration_hours"] = 8
+            d["ElectricStorage"]["max_duration_hours"] = 8
+            s = Scenario(d)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(m, inputs)
+            # Test battery size_kwh = size_hw * duration
+            @test r["ElectricStorage"]["size_kw"]*8 - r["ElectricStorage"]["size_kwh"] ≈ 0.0 atol = 0.1
+
+        end
     end
 end
