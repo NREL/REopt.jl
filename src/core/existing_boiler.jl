@@ -31,8 +31,8 @@ end
     max_heat_demand_kw::Real=0, # Auto-populated based on SpaceHeatingLoad and DomesticHotWaterLoad inputs
     production_type::String = "hot_water", # Can be "steam" or "hot_water"
     max_thermal_factor_on_peak_load::Real = 1.25,
-    installed_cost_per_mmbtu_per_hour::Real = 0.0, # Represents needed CapEx in BAU, assuming present value basis   
-    installed_cost_dollars::Real = 0.0  # Represents needed CapEx in BAU, assuming net present cost basis
+    installed_cost_per_mmbtu_per_hour::Real = 0.0  # Represents needed CapEx in BAU, assuming net present value basis based on current size; also incurred in Optimal case if still using at all
+    installed_cost_dollars::Real = 0.0  # Represents needed CapEx in BAU, assuming net present cost basis; also incurred in Optimal case if still using at all
     efficiency::Real = NaN, # Existing boiler system efficiency - conversion of fuel to usable heating thermal energy. See note below.
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
