@@ -137,17 +137,7 @@ REopt.HotThermalStorageDefaults
 REopt.ColdThermalStorageDefaults
 ```
 
-## DomesticHotWaterLoad
-```@docs
-REopt.HotWaterLoad
-```
-
-## SpaceHeatingLoad
-```@docs
-REopt.HeatingLoad
-```
-
-## ProcessHeatLoad
+## HeatingLoad
 ```@docs
 REopt.HeatingLoad
 ```
