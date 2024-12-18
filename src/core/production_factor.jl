@@ -1,4 +1,10 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+using PyCall
+np = pyimport("numpy")
+pd = pyimport("pandas")
+NSRDBX = pyimport("rex").NSRDBX
+SAMResource = pyimport("rex").sam_resource.SAMResource
+@info "All Python packages loaded successfully!"
 
 function get_production_factor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
     time_steps_per_hour::Int=1)
@@ -112,12 +118,12 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
     
     # Corresponding rotor diameter in meters for generic reference turbines sizes
     rotor_diameter_lookup = Dict(
-        "Bespoke 6 MW 196" => 196*2,
-        "Bespoke 6 MW 170" => 170*2,
-        "GE 1.5 MW" => 77*2,
-        "Vestas V-47" => 47*2,
-        "Northern Power Systems 100" => 20.7*2,
-        "Bergey Excel 15" => 9.6*2
+        "Bespoke 6 MW 196" => 98*2,
+        "Bespoke 6 MW 170" => 85*85,
+        "GE 1.5 MW" => 38.5*2,
+        "Vestas V-47" => 23.5*2,
+        "Northern Power Systems 100" => 10.35*2,
+        "Bergey Excel 15" => 4.8*2
     )
     wind_turbine_powercurve_lookup = Dict(
         "Bespoke 6 MW 196" => [0, 0, 0, 0, 500.803, 1092.967, 1873.987, 3007.460, 4378.227,

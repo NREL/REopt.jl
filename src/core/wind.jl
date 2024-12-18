@@ -137,11 +137,11 @@ struct Wind <: AbstractTech
         operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
         )
         size_class_to_hub_height = Dict(
-            "Bergey Excel 15" => 20, #supposed to be 24 but WINDToolkit has increments of 20 m
-            "Northern Power Systems 100" => 40, #supposed to be 37 but WINDToolkit has increments of 20 m
+            "Bergey Excel 15" => 24, #supposed to be 24 but WINDToolkit has increments of 20 m
+            "Northern Power Systems 100" => 37, #supposed to be 37 but WINDToolkit has increments of 20 m
             "Vestas V-47" => 60,
             "GE 1.5 MW" => 80,
-            "Bespoke 6 MW 170" => 120, #supposed to be 115 but WINDToolkit has increments of 20 m
+            "Bespoke 6 MW 170" => 115, #supposed to be 115 but WINDToolkit has increments of 20 m
             "Bespoke 6 MW 196" => 140
         )
         size_class_to_installed_cost = Dict(
