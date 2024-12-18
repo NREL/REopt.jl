@@ -38,14 +38,12 @@ function simulated_load(d::Dict)
     # Check for valid reference building name
     if load_type == "process_heat"
         doe_reference_name_input = get(d, "industrial_reference_name", nothing)
+        valid_names = default_process_types
     else
         doe_reference_name_input = get(d, "doe_reference_name", nothing)
+        valid_names = default_buildings
     end
     percent_share_input = get(d, "percent_share", Real[])
-    valid_names = default_buildings
-    if load_type == "process_heat"
-        valid_names = default_process_types
-    end
 
     # Input which then expects a custom load_profile along with annual or monthly energy values; this could be electric, heating, or cooling profiles
     load_profile = get(d, "load_profile", Real[])
