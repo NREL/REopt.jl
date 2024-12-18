@@ -31,7 +31,7 @@ Classify the change according to the following categories:
 - Updated Cambium API call for CO2e emissions within CONUS to Cambium 2023 dataset.
 - Updated EMISSIONS_DECREASE_DEFAULTS from 0.02163 to 0.0459 based on Cambium 2023 data
 
-## Develop
+## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
