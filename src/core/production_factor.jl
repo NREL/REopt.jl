@@ -1,11 +1,14 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+"""
+I am proposing to use PyCall in order to access wind resource from the hpc. Still under construction.
+
 using PyCall
 np = pyimport("numpy")
 pd = pyimport("pandas")
 NSRDBX = pyimport("rex").NSRDBX
 SAMResource = pyimport("rex").sam_resource.SAMResource
 @info "All Python packages loaded successfully!"
-
+"""
 function get_production_factor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
     time_steps_per_hour::Int=1)
 
