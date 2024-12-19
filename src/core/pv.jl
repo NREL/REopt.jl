@@ -1,5 +1,3 @@
-
-
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `PV` is an optional REopt input with the following keys and default values:
@@ -216,7 +214,7 @@ mutable struct PV <: AbstractTech
         else
             throw(ErrorException("Invalid 'array_type': $array_type. Must be one of [0, 1, 2, 3, 4]."))
         end
-        @info "Determined array_category='$array_category' based on array_type=$array_type"
+        # @info "Determined array_category='$array_category' based on array_type=$array_type"
     
         # Extract tech_sizes_for_cost_curve from pv_defaults_all and ensure correct typing
         if haskey(pv_defaults_all[array_category], "tech_sizes_for_cost_curve")
