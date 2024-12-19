@@ -3018,7 +3018,7 @@ else  # run HiGHS tests
                 ("load_type", "process_heat"),
                 ("normalize_and_scale_load_profile_input", true),
                 ("load_profile", input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]),
-                ("anunal_mmbtu", input_data["ProcessHeatLoad"]["anunal_mmbtu"])
+                ("anunal_mmbtu", input_data["ProcessHeatLoad"]["annual_mmbtu"])
                 ])
             
             sim_load_response = simulated_load(d_sim_load)
