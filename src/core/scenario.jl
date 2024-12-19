@@ -222,6 +222,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         year = get(d["DomesticHotWaterLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "DomesticHotWaterLoad")
         dhw_load = HeatingLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                         load_type = "domestic_hot_water",
                                         latitude=site.latitude, longitude=site.longitude, 
@@ -243,6 +244,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         year = get(d["SpaceHeatingLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "SpaceHeatingLoad")
         space_heating_load = HeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                             load_type = "space_heating",
                                             latitude=site.latitude, longitude=site.longitude, 
@@ -262,7 +264,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     if haskey(d, "ProcessHeatLoad") && !haskey(d, "FlexibleHVAC")
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        year = get(d["ProcessHeatLoad"], "year", electric_load.year)        
+        year = get(d["ProcessHeatLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "ProcessHeatLoad")
         process_heat_load = HeatingLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
                                             load_type = "process_heat",
                                             latitude = site.latitude, longitude = site.longitude, 
@@ -819,4 +822,10 @@ function get_existing_boiler_efficiency(d)
     end  
 
     return existing_boiler_efficiency
+end
+
+function validate_load_year_consistency(electric_load_year, year, load_type)
+    if electric_load_year != year
+        throw(@error("Inconsistent load years: ElectricLoad year ($electric_load_year) does not match the provided year ($year) for $load_type."))
+    end
 end
