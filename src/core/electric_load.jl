@@ -213,8 +213,8 @@ function BuiltInElectricLoad(
     
     electric_annual_kwh = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "total_electric_annual_kwh.json"))
 
-    if !(buildingtype in default_buildings)
-        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
+    if !(buildingtype in DEFAULT_BUILDINGS)
+        throw(@error("buildingtype $(buildingtype) not in $(DEFAULT_BUILDINGS)."))
     end
 
     if isempty(city)

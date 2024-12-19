@@ -1,5 +1,5 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-const default_buildings = [
+const DEFAULT_BUILDINGS = [
     "FastFoodRest",
     "FullServiceRest",
     "Hospital",
@@ -24,7 +24,7 @@ const default_buildings = [
     "FlatLoad_8_5"    
 ]
 
-const default_process_types = [
+const DEFAULT_PROCESS_TYPES = [
     "Chemical", 
     "Warehouse",
     "FlatLoad", 

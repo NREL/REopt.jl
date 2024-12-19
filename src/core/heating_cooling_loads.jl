@@ -200,11 +200,11 @@ function BuiltInHeatingLoad(
     if isempty(city)
         city = find_ashrae_zone_city(latitude, longitude)
     end
-    if (load_type in ["space_heating", "domestic_hot_water"]) && !(buildingtype in default_buildings)
-        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
+    if (load_type in ["space_heating", "domestic_hot_water"]) && !(buildingtype in DEFAULT_BUILDINGS)
+        throw(@error("buildingtype $(buildingtype) not in $(DEFAULT_BUILDINGS)."))
     end
-    if (load_type == "process_heat") && !(buildingtype in default_process_types)
-        throw(@error("buildingtype $(buildingtype) not in $(default_process_types)."))
+    if (load_type == "process_heat") && !(buildingtype in DEFAULT_PROCESS_TYPES)
+        throw(@error("buildingtype $(buildingtype) not in $(DEFAULT_PROCESS_TYPES)."))
     end
 
     if isnothing(annual_mmbtu)
@@ -456,8 +456,8 @@ function BuiltInCoolingLoad(
     if isempty(city)
         city = find_ashrae_zone_city(latitude, longitude)
     end
-    if !(buildingtype in default_buildings)
-        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
+    if !(buildingtype in DEFAULT_BUILDINGS)
+        throw(@error("buildingtype $(buildingtype) not in $(DEFAULT_BUILDINGS)."))
     end
     # Set initial existing_chiller_cop to "cop_unknown_thermal" if not passed in; we will update existing_chiller_cop once the load profile is determined
     if isnothing(existing_chiller_cop)

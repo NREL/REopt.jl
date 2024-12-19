@@ -38,10 +38,10 @@ function simulated_load(d::Dict)
     # Check for valid reference building name
     if load_type == "process_heat"
         doe_reference_name_input = get(d, "industrial_reference_name", nothing)
-        valid_names = default_process_types
+        valid_names = DEFAULT_PROCESS_TYPES
     else
         doe_reference_name_input = get(d, "doe_reference_name", nothing)
-        valid_names = default_buildings
+        valid_names = DEFAULT_BUILDINGS
     end
     percent_share_input = get(d, "percent_share", Real[])
 
