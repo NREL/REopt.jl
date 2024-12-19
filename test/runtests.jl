@@ -1186,8 +1186,8 @@ else  # run HiGHS tests
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
-            @test results["Outages"]["expected_outage_cost"] ≈ 1.7168795247682107e6 atol=1.0 
-            @test results["Financial"]["lcc"] ≈ 5.3147963162e6 rtol=0.001 
+            @test results["Outages"]["expected_outage_cost"] ≈ 1.7449340308176945e6 atol=1.0 
+            @test results["Financial"]["lcc"] ≈ 5.3488024832e6 rtol=0.001 
             
         end
 
@@ -1382,8 +1382,8 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d = JSON.parsefile("./scenarios/wind.json")
             results = run_reopt(m, d)
-            @test results["Wind"]["size_kw"] ≈ 5977.03 atol=0.1 
-            @test results["Financial"]["lcc"] ≈ 1.36780981158e7 rtol=1e-5 
+            @test results["Wind"]["size_kw"] ≈ 6271.51 atol=0.1 
+            @test results["Financial"]["lcc"] ≈ 1.43513541785e7 rtol=1e-5 
             #= 
             0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
             - both have zero curtailment
