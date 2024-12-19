@@ -2997,7 +2997,7 @@ else  # run HiGHS tests
             
             # Check that the load ratio within a month is proportional to the loads_kw ratio
             @test abs(s.space_heating_load.loads_kw[6] / s.space_heating_load.loads_kw[4] - input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
-            @test abs(s.process_heat_load.loads_kw[6] / s.process_heat_load.loads_kw[4] - input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
+            @test abs(s.process_heat_load.loads_kw[6] / s.process_heat_load.loads_kw[4] - input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
             
             # Check space heating consistency with simulated_load function
             d_sim_load = Dict([
