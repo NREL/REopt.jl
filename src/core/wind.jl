@@ -36,7 +36,7 @@
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
 ```
 !!! note "Default assumptions" 
-    `size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.
+    `size_class` must be one of ["Bergey Excel 15", "Northern Power Systems 100", "Vestas V-47", "GE 1.5 MW", "Bespoke 6 MW 170", "Bespoke 6 MW 196"]. If `size_class` is not provided then it is determined based on the average electric load.
 
     If no `installed_cost_per_kw` is provided then it is determined from:
     ```julia
@@ -168,6 +168,7 @@ struct Wind <: AbstractTech
                 size_class = "Bespoke 6 MW 196"
             end
         elseif !(size_class in keys(size_class_to_hub_height))
+            throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
             throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
         end
 
