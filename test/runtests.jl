@@ -652,7 +652,15 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, d)
                 @test results["PV"]["size_kw"] ≈ 7440.0 atol=1e-3  #max benefit provides the upper bound
-        
+
+                #case 3: net metering limit is exceeded, no WHL, and min RE % 
+                d["ElectricTariff"]["wholesale_rate"] = 0
+                d["PV"]["min_kw"] = 50
+                d["Site"]["renewable_electricity_min_fraction"] = 0.35
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(m, d)
+                @test sum(results["PV"]["electric_to_grid_series_kw"]) ≈ 0.0 atol=1e-3
+                @test results["ElectricTariff"]["lifecycle_export_benefit_after_tax"] ≈ 0.0 atol=1e-3        
             end
         end
 
@@ -2945,6 +2953,20 @@ else  # run HiGHS tests
             @test "warnings" ∈ keys(r["Messages"])
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
+        end
+
+        @testset "Storage Duration" begin
+            ## Battery storage
+            d = JSON.parsefile("scenarios/pv_storage.json")
+            d["ElectricStorage"]["min_duration_hours"] = 8
+            d["ElectricStorage"]["max_duration_hours"] = 8
+            s = Scenario(d)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(m, inputs)
+            # Test battery size_kwh = size_hw * duration
+            @test r["ElectricStorage"]["size_kw"]*8 - r["ElectricStorage"]["size_kwh"] ≈ 0.0 atol = 0.1
+
         end
     end
 end
