@@ -215,7 +215,11 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     #   the initial slope is based on the heat pump size (e.g. $/ton) of the cost curve for
     #   building a rebate-based cost curve if there are less-than big_number maximum incentives
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
-
+    
+    if haskey(d["GHP"],"max_ton")
+        ghp.heatpump_capacity_sizing_factor_on_peak_load = 1.0
+    end
+    
     if ghp.heat_pump_configuration == "WSHP"
         # Use this with the cost curve to determine absolute cost
         ghp.heatpump_capacity_ton = heatpump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load

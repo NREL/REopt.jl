@@ -612,8 +612,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     # When user specifies undersized GHP, calculate the ratio of the udersized GHP size and peak load
                     peak_ratio = d["GHP"]["max_ton"]/ghpghx_results["peak_combined_heatpump_thermal_ton"]
                     # Scale down the total load profile by the peak ratio and use this scaled down load to rerun GhpGhx.jl
-                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*peak_ratio
-                    @info "Resolving GhpGhx.jl with user specified undersized GHP"
+                    if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
+                        ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*peak_ratio
+                    end
+                    if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                        ghpghx_inputs["cooling_thermal_load_ton"] = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*peak_ratio
+                    end
+                    @info "Restarting GhpGhx.jl with user specified undersized GHP"
                     # Call GhpGhx.jl to size GHP and GHX
                     results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                     # Create a dictionary of the results data needed for REopt
