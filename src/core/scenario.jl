@@ -603,7 +603,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                 # Create a dictionary of the results data needed for REopt
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
-                @info "GhpGhx.jl model solved" #with status $(results["status"])."
+                # Return results from GhpGhx.jl if user does not provide GHP size or if user entered GHP size is greater than GHP size output
+                if (!haskey(d["GHP"],"max_ton")) || (haskey(d["GHP"],"max_ton") & ghpghx_results["peak_combined_heatpump_thermal_ton"] <= d["GHP"]["max_ton"]) 
+                    @info "GhpGhx.jl model solved" #with status $(results["status"])."
+                # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup, and resolve GhpGhx.jl
+                elseif haskey(d["GHP"],"max_ton") && ghpghx_results["peak_combined_heatpump_thermal_ton"] > d["GHP"]["max_ton"]
+                    @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
+                    # When user specifies undersized GHP, calculate the ratio of the udersized GHP size and peak load
+                    peak_ratio = d["GHP"]["max_ton"]/ghpghx_results["peak_combined_heatpump_thermal_ton"]
+                    # Scale down the total load profile by the peak ratio and use this scaled down load to rerun GhpGhx.jl
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*peak_ratio
+                    @info "Resolving GhpGhx.jl with user specified undersized GHP"
+                    # Call GhpGhx.jl to size GHP and GHX
+                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                    # Create a dictionary of the results data needed for REopt
+                    ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+                end
             catch e
                 @info e
                 throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
