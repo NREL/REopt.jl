@@ -604,7 +604,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # Create a dictionary of the results data needed for REopt
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
                 # Return results from GhpGhx.jl if user does not provide GHP size or if user entered GHP size is greater than GHP size output
-                if (!haskey(d["GHP"],"max_ton")) || (haskey(d["GHP"],"max_ton") & ghpghx_results["peak_combined_heatpump_thermal_ton"] <= d["GHP"]["max_ton"]) 
+                if (!haskey(d["GHP"],"max_ton")) || (haskey(d["GHP"],"max_ton") && ghpghx_results["peak_combined_heatpump_thermal_ton"] <= d["GHP"]["max_ton"]) 
                     @info "GhpGhx.jl model solved" #with status $(results["status"])."
                 # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup, and resolve GhpGhx.jl
                 elseif haskey(d["GHP"],"max_ton") && ghpghx_results["peak_combined_heatpump_thermal_ton"] > d["GHP"]["max_ton"]
