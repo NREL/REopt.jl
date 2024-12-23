@@ -652,7 +652,15 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, d)
                 @test results["PV"]["size_kw"] ≈ 7440.0 atol=1e-3  #max benefit provides the upper bound
-        
+
+                #case 3: net metering limit is exceeded, no WHL, and min RE % 
+                d["ElectricTariff"]["wholesale_rate"] = 0
+                d["PV"]["min_kw"] = 50
+                d["Site"]["renewable_electricity_min_fraction"] = 0.35
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(m, d)
+                @test sum(results["PV"]["electric_to_grid_series_kw"]) ≈ 0.0 atol=1e-3
+                @test results["ElectricTariff"]["lifecycle_export_benefit_after_tax"] ≈ 0.0 atol=1e-3        
             end
         end
 

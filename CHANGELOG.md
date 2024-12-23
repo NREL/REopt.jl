@@ -26,6 +26,10 @@ Classify the change according to the following categories:
     ### Removed
 
 
+## Develop
+### Fixed
+- Constrained export to grid in the NEM bin (`dvProductionToGrid"*_n)][t, :NEM, ts`) to be 0 when system is sized over NEM limit (i.e., when binNEM =0)
+
 ## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
