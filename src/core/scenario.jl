@@ -602,8 +602,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
                 # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
-                heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
-                heating_load_ton = heating_load_mmbtu*1000000/12000
+                heating_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
                 thermal_load_ton = heating_load_ton
                 if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
@@ -615,12 +614,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     # When user specifies undersized GHP, calculate the ratio of the udersized GHP size and peak load
                     peak_ratio = d["GHP"]["max_ton"]/peak_thermal_load
                     # Scale down the total load profile by the peak ratio and use this scaled down load to rerun GhpGhx.jl
-                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu*peak_ratio
-                    remaining_heating_thermal_load_mmbtu_per_hr = heating_load_mmbtu*(1-peak_ratio)                
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*peak_ratio
+                    #remaining_heating_thermal_load_mmbtu_per_hr = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*(1-peak_ratio)                
                     if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                         ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton*peak_ratio
-                        remaining_cooling_thermal_load_ton = cooling_load_ton*(1-peak_ratio)
-                        #cooling_thermal_load_reduction_with_ghp_kw = cooling_load.ghpghx_inputs["cooling_thermal_load_ton"] * KWH_THERMAL_PER_TONHOUR
+                        #remaining_cooling_thermal_load_ton = cooling_load_ton*(1-peak_ratio)
                     end
                 end
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
