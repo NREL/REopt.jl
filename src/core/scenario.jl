@@ -826,6 +826,6 @@ end
 
 function validate_load_year_consistency(electric_load_year, year, load_type)
     if electric_load_year != year
-        throw(@error("Inconsistent load years: ElectricLoad year ($electric_load_year) does not match the provided year ($year) for $load_type."))
+        @warn "Inconsistent load years: ElectricLoad year ($electric_load_year) does not match the provided year ($year) for $load_type."
     end
 end
