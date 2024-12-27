@@ -26,6 +26,10 @@ Classify the change according to the following categories:
     ### Removed
 
 
+## v0.49.1
+### Changed
+- Swap an error for a warning with inconsistent load-year between electric and heating; soon to 
+
 ## v0.49.0
 ### Added
 - Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
