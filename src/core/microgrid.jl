@@ -299,7 +299,7 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
                 Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
             end 
         else
-            print("\n  Not running the microgrid outage simulator in this model")
+            #print("\n  Not running the microgrid outage simulator in this model")
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
         end 
 
@@ -314,7 +314,7 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
-                                ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
+                                ("Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
                                 #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
                                 ("PMD_results", PMD_Results),
                                 ("PMD_data_eng", data_eng),
@@ -322,7 +322,8 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
                                 ("Outage_Results", Outage_Results),
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                                 ("ComputationTime_EntireModel", ComputationTime_EntireModel),
-                                ("Line_Info_PMD", LineInfo_PMD)
+                                ("Line_Info_PMD", LineInfo_PMD),
+                                ("pm", pm)
                                 #("line_upgrade_options", line_upgrade_options_output),
                                 #("transformer_upgrade_options", transformer_upgrade_options_output),
                                 #("line_upgrade_results", line_upgrade_results_output),
@@ -373,7 +374,7 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
                 Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
             end 
         else
-            print("\n  Not running the microgrid outage simulator in this model")
+            #print("\n  Not running the microgrid outage simulator in this model")
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
         end 
 
@@ -412,13 +413,13 @@ function Microgrid_Model(Microgrid_Inputs; JuMP_Model="", ldf_inputs_dictionary=
         Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Settings, REoptInputs_Combined, model)
     end
 
-    return CompiledResults, model  
+    return CompiledResults, model;  
 end
 
 
 function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_timesteps; RunningOutageSimulator = false)
     # Load in the data from the OpenDSS inputs file; data is stored to the data_eng variable
-    print("\n Parsing the network input file")
+    print("\n Parsing the network input file \n")
     data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.FolderLocation.*"/"*Microgrid_Inputs.PMD_network_input)
     
     # Generate a list of the REopt nodes
@@ -427,7 +428,7 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
     # TODO: enable the use of reduce_lines! so that it doesn't interfere with the linkage between REopt and PMD
     # PMD.reduce_lines!(data_eng) 
     
-    print("\n Defining several settings in the data_eng dictionary:")
+    #print("\n Defining several settings in the data_eng dictionary:")
     
     # From the PMD extension tutorial: "Since the optimization model is generated from the 'Mathematical' model, specify explicitly what the power base should be. Set it to 1 kW, so the unit is the same as in" the model we are pairing PMD to    
         data_eng["settings"]["sbase_default"] = 1.0*1E3/data_eng["settings"]["power_scale_factor"] # This sets the power base (sbase) equal to 1 kW:
@@ -435,7 +436,7 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
     data_eng["voltage_source"]["source"]["bus"] = "sourcebus" # Define the location of the source bus in the network
     data_eng["settings"]["name"] = "test_case" # Define other parameters too:
     
-    print("\n Adding per unit voltage bounds to the buses")
+    #print("\n Adding per unit voltage bounds to the buses")
     PMD.add_bus_absolute_vbounds!(
         data_eng,
         phase_lb_pu=0.9,
@@ -444,7 +445,7 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
     )
     
     # Apply a timeseries load profile to the PMD model
-    print("\n Defining a time series load profile")
+    #print("\n Defining a time series load profile")
     TotalPMDTimeSteps = PMD_number_of_timesteps # 8760
     
         data_eng["time_series"] = Dict{String,Any}()
@@ -462,7 +463,7 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
     end
     
     # Add generators to the model as a generic interface with the REopt model:
-    print("\n Adding a generic PMD generator for each of the REopt nodes, in order to be able to connect the REopt and PMD models")
+    #print("\n Adding a generic PMD generator for each of the REopt nodes, in order to be able to connect the REopt and PMD models")
     begin
         # TODO: This needs to be adjusted for three phase loads that are on phases other than just phase 1 (mainly in the "connections" field and/or "configuration" field)
         data_eng["generator"] = Dict{String, Any}()
@@ -477,10 +478,10 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
     end
     
     begin
-        print("\n Transforming the engineering model to a mathematical model in PMD \n")    
+        #print("\n Transforming the engineering model to a mathematical model in PMD \n")    
         data_math_mn = transform_data_model(data_eng, multinetwork=true)
         
-        print("\n Initializing the voltage variables")
+        #print("\n Initializing the voltage variables")
         # Initialize voltage variable values. 
         Start_vrvi = now()
         add_start_vrvi!(data_math_mn)
@@ -489,26 +490,26 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
         # Measure and report the time for initializing the voltage variable values
         PMD_vrvi_time = End_vrvi - Start_vrvi
         PMD_vrvi_time_minutes = round(PMD_vrvi_time/Millisecond(60000), digits=2)
-        print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes")
+        print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes \n")
         
         # Build the optimization model:
             # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
-        print("\n Instantiating the PMD model (this may take a few minutes for large models)")
+        print("\n Instantiating the PMD model (this may take a few minutes for large models)\n")
         Start_instantiate = now()
         pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf) 
         End_instantiate = now()
-        print("\n Completed instantiation of the PMD model")
+        #print("\n Completed instantiation of the PMD model")
         
         # Measure and report the time for instantiating the PMD model
         PMD_instantiate_time = End_instantiate - Start_instantiate
         PMD_instantiate_time_minutes = round(PMD_instantiate_time/Millisecond(60000), digits=2)
-        print("\n The PMD_instantiate_time was: $(PMD_instantiate_time_minutes) minutes")
+        print("\n The PMD_instantiate_time was: $(PMD_instantiate_time_minutes) minutes \n")
     end 
     
-    print("\n Summary of the PMD JuMP model: ")
-    show(pm.model)
+    #print("\n Summary of the PMD JuMP model: ")
+    #show(pm.model)
 
-    return pm, data_math_mn, data_eng
+    return pm, data_math_mn, data_eng;
 end
 
 
@@ -524,13 +525,13 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
     scenarios = Dict([])
     for i in 1:length(REoptInputsList)
         scenarios[i] = Scenario(REoptInputsList[i])
-        print("\n Creating Scenario $(i)")
+        #print("\n Creating Scenario $(i)")
     end
     
     REoptInputs_dictionary = Dict([])
     for i in 1:length(REoptInputsList)
         REoptInputs_dictionary[i] = REoptInputs(scenarios[i])
-        print("\n Creating REopt Input $(i)")
+        #print("\n Creating REopt Input $(i)")
     end
     
     REoptInputs_Combined = [REoptInputs_dictionary[1]]
@@ -546,7 +547,7 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
     for p in REoptInputs_Combined
         _n = string("_", p.s.site.node)
         if string(p.s.site.node) != p.s.settings.facilitymeter_node
-            print("\n Applying total export equation for node $(p.s.site.node)")
+            #print("\n Applying total export equation for node $(p.s.site.node)")
             m[Symbol("TotalExport"*_n)] = @expression(m, [ts in p.time_steps],
                 sum(
                     m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
@@ -638,7 +639,7 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
         if Microgrid_Inputs.Switch_Open_Timesteps != ""
             print("\n Switches modeled:")
             for i in keys(Microgrid_Inputs.Switch_Open_Timesteps)
-                print("\n   Opening the switch on line $(i) from timesteps $(minimum(Microgrid_Inputs.Switch_Open_Timesteps[i])) to $(maximum(Microgrid_Inputs.Switch_Open_Timesteps[i])) \n")
+                #print("\n   Opening the switch on line $(i) from timesteps $(minimum(Microgrid_Inputs.Switch_Open_Timesteps[i])) to $(maximum(Microgrid_Inputs.Switch_Open_Timesteps[i])) \n")
                 RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, "line"*i, Microgrid_Inputs.Switch_Open_Timesteps[i], LineInfo; Switches_Open=true)
             end
         end
@@ -647,8 +648,8 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
     # Link export through the substation to the utility tariff on the facility meter node
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
-            @info "Setting facility-level grid purchase and export (if applicable) to the power flow on line "*string(Microgrid_Inputs.SubstationLine)*", using the variable: "*string(" dvGridPurchase_", p.s.settings.facilitymeter_node)
-            @info "The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"])"
+            #@info "Setting facility-level grid purchase and export (if applicable) to the power flow on line "*string(Microgrid_Inputs.SubstationLine)*", using the variable: "*string(" dvGridPurchase_", p.s.settings.facilitymeter_node)
+            #@info "The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"])"
             
             i = LineInfo[Microgrid_Inputs.SubstationLine]["index"]
             # Based off of code in line 470 of PMD's src>core>constraint_template
@@ -752,12 +753,12 @@ function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageS
     end
     
     # Define the optimization objective
-    print("\n Adding an objective to the optimization model")
+    #print("\n Adding an objective to the optimization model")
     @expression(m, Costs, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in REoptInputs_Combined) );
     
     @objective(m, Min, m[:Costs]);
 
-    return LineInfo, data_math_mn, REoptInputs_Combined, pm
+    return LineInfo, data_math_mn, REoptInputs_Combined, pm;
 end
 
 function Run_REopt_PMD_Model(pm)
@@ -770,8 +771,8 @@ function Run_REopt_PMD_Model(pm)
     set_optimizer(m, Xpress.Optimizer) # TODO: set the optimizer type as an input into the Microgrid_Inputs dictionary
     set_optimizer_attribute(m, "MIPRELSTOP", 0.05)
     
-    print("\n Summary of the optimization model including the REopt model: ")
-    show(m)
+    #print("\n Summary of the optimization model including the REopt model: ")
+    #show(m)
 
     print("\n The optimization is starting\n")
     results = PMD.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=Xpress.Optimizer) # The default in PMD for relax_integrality is false
@@ -782,7 +783,7 @@ function Run_REopt_PMD_Model(pm)
         throw(@error("The termination status of the optimization was"*string(results["termination_status"])))
     end
         
-    return results, TerminationStatus
+    return results, TerminationStatus;
 end
 
 function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo; Single_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
@@ -792,7 +793,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
     FacilityMeterNode_REoptInputs = ""
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
-            print("\n The facility meter node REopt inputs is being recorded")
+            #print("\n The facility meter node REopt inputs is being recorded")
             FacilityMeterNode_REoptInputs = p        
         end
     end
@@ -823,8 +824,8 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
         # TODO: should p_fr be p_fr[1] for single phase?
         # Based off of code in line 274 of PMD's src>core>constraints
             PMD_time_step = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
-            print("\n The PMD_time_step is: ")
-            print(PMD_time_step)
+            #print("\n The PMD_time_step is: ")
+            #print(PMD_time_step)
             p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
             p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
 
@@ -934,7 +935,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
 
     end
     
-    return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow
+    return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow;
 end
 
 function Check_REopt_PMD_Alignment()
@@ -976,7 +977,7 @@ function GenerateREoptNodesList(Microgrid_Inputs)
             push!(REopt_nodes, i["Site"]["node"])
         end
     end
-    return REopt_nodes
+    return REopt_nodes;
 end
 
 function GenerateInputsForOutageSimulator(Microgrid_Inputs, REopt_results)
@@ -1129,7 +1130,7 @@ function GenerateInputsForOutageSimulator(Microgrid_Inputs, REopt_results)
         ]) 
         merge!(DataDictionaryForEachNode, DictionaryToAdd)
     end 
-return DataDictionaryForEachNode
+return DataDictionaryForEachNode;
 end
 
 
@@ -1540,7 +1541,7 @@ print("\n The length of outage tested is: "*string(OutageLength_TimeSteps)*" tim
 print("\n The number of outages survived is: "*string(SuccessfullySolved)*"  of  "*string(RunNumber)*" runs")
 print("\n Percent of outages survived: "*string(round(PercentOfOutagesSurvived, digits = 2))*" % \n")
 
-return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived
+return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived;
 end 
 
 function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; line_upgrade_results = "", transformer_upgrade_results = "")
@@ -1850,7 +1851,7 @@ function Results_Compilation(results, Outage_Results, Microgrid_Settings, DataFr
         print("\n----") 
     end 
 
-    return system_results    
+    return system_results;    
 end
 
 function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
@@ -2002,8 +2003,8 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
                 push!(NodesWithPV, i)
             end
         end
-        print("\n The nodes with PV are: ")
-        print(NodesWithPV)
+        #print("\n The nodes with PV are: ")
+        #print(NodesWithPV)
 
         # TODO: account for the situation where one node might be exporting PV and then another node might use that power to charge a battery
         PVOutput = zeros(8760)
