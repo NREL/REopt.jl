@@ -457,7 +457,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     eval_ghp = false
     get_ghpghx_from_input = false
-    #existing_boiler = nothing    
     if haskey(d, "GHP") && haskey(d["GHP"],"building_sqft")
         eval_ghp = true
         if haskey(d["GHP"], "ghpghx_responses") && !isempty(d["GHP"]["ghpghx_responses"])
