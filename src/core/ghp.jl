@@ -159,7 +159,7 @@ function GHP(response::Dict, d::Dict)
     end
     # incentives = IncentivesNoProdBased(**d_mod)
     
-    setup_installed_cost_curve!(ghp, response)
+    setup_installed_cost_curve!(d, ghp, response)
 
     setup_om_cost!(ghp)
 
@@ -173,10 +173,10 @@ function GHP(response::Dict, d::Dict)
 end
 
 """
-    setup_installed_cost_curve!(response::Dict, ghp::GHP)
+    setup_installed_cost_curve!(d::Dict, response::Dict, ghp::GHP)
 
 """
-function setup_installed_cost_curve!(ghp::GHP, response::Dict)
+function setup_installed_cost_curve!(d::Dict, ghp::GHP, response::Dict)
     big_number = 1.0e10
     # GHX and GHP sizing metrics for cost calculations
     total_ghx_ft = response["outputs"]["number_of_boreholes"] * response["outputs"]["length_boreholes_ft"]
@@ -216,9 +216,10 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     #   building a rebate-based cost curve if there are less-than big_number maximum incentives
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
     
-#    if haskey(ghp,"max_ton")
-#        ghp.heatpump_capacity_sizing_factor_on_peak_load = 1.0
-#    end
+    # Set sizing factor = 1 if user inputs their own GHP size
+    if haskey(d, "GHP") && haskey(d["GHP"],"max_ton")
+        ghp.heatpump_capacity_sizing_factor_on_peak_load = 1.0
+    end
 
     if ghp.heat_pump_configuration == "WSHP"
         # Use this with the cost curve to determine absolute cost
