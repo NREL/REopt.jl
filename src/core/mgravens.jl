@@ -5,13 +5,11 @@
 """     
     convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
 
-- Load in the starting-point REopt inputs .json file (not a MG-Ravens user input) which has:
-    1. All possible fields that may be extracted from the MG-Ravens .json schema into the REopt .json schema
-    2. Default values for:
-        a) Non-required but possible Ravens-input fields
-        b) REopt inputs which are not exposed in Ravens (yet), customized to be for utility-scale MG's, different than standard REopt (C&I-scale)
+- Load in the starting-point REopt inputs .json file (not a MG-Ravens user input) which has default values for:
+    1. Non-required but possible Ravens-input fields
+    2. REopt inputs which are not exposed in Ravens (yet), customized to be for utility-scale MG's, different than standard REopt (C&I-scale)
 - Build out REopt inputs by overwritting defaults or adding MG-Ravens inputs to REopt inputs
-- Return the REopt inputs Dictionary
+- Return the REopt inputs Dictionary for using with run_reopt() function
 """
 
 # Notes for REopt
@@ -20,7 +18,41 @@
 # Summing up the load profiles of the list of LoadGroup.EnergyConsumers to get the total load profile
 # Only using value1 for real power entries in the EnergyConsumerSchedule.RegularTimePoints list of dictionaries for load profile
 
-# TODO the Location.670a_residential2_Loc has it's own Lat/Long and in this case it's different from the ProposedSiteLocation, even though I'm not using the Location key/dict for anything
+# TODO ask David/Juan: the Location.670a_residential2_Loc has it's own Lat/Long and in this case it's different from the ProposedSiteLocation, even though I'm not using the Location key/dict for anything
+
+"""
+    build_timeseries_array(list_of_dict, y_value_name, timestep_sec=3600)
+
+- Create array depending on interval and length of timeseries data
+- If less than year-long data, build a year by repeating the partial load data
+- Return the populated loads_kw array
+"""
+function build_timeseries_array(list_of_dict, y_value_name, timestep_sec)
+    # Validate timestep_sec options
+    if !(timestep_sec in [900, 3600])
+        throw(@error("Valid EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast is 900 and 3600, input of $timestep_sec"))
+    end
+    # Adjust scale_factor for repeating data to fill a year-long array
+    if timestep_sec == 3600
+        scale_factor = 8760 / length(list_of_dict)
+    elseif timestep_sec == 900
+        scale_factor = 8760 * 4 / length(list_of_dict)
+    else
+        throw(@error("Invalid timestep_sec: $timestep_sec"))
+    end
+    # Build timeseries array
+    reopt_array = []
+    repeated_loads = [data[y_value_name] for data in list_of_dict]
+    for _ in 1:convert(Int, ceil(scale_factor))
+        append!(reopt_array, repeated_loads)
+        extra_ts = length(reopt_array) - (timestep_sec == 3600 ? 8760 : 8760 * 4)
+        if extra_ts > 0
+            reopt_array = reopt_array[1:end-extra_ts]
+            break
+        end
+    end
+    return reopt_array
+end
 
 function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     reopt_inputs = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "mgravens_fields_defaults.json"))
@@ -36,7 +68,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         reopt_inputs["Financial"]["analysis_years"] = parse(Int64, split(split(lifetime_str, "P")[2], "Y")[1])
     end
 
-    # Major assumptions: every ProposedEnergyProducerOption has the same SiteLocation, Region, and LoadGroup
+    # Major assumptions: every ProposedEnergyProducerOption has the same SiteLocation
     # TODO add error checking in case above is not true
     techs_to_include = []
     for (i, name) in enumerate(tech_names)
@@ -47,11 +79,13 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         load_group_names = []  # May be one or more than one, e.g. ["ResidentialGroup", "IndustrialGroup"]
         energy_consumer_names = []  # One set (1+) for each LoadGroup, e.g. ["670a_residential2", "670b_residential2"]
         load_forecast_names = []  # One-to-one with energy_consumer_names
+        length_load_input = 0
         region_name = ""
         lmp_name = ""
         capacity_prices_name = ""
+        timestep_sec = 0
         
-        # Assign site, load, and energy prices attributes, using only the first ProducerOption because they **should** all be the same
+        # Assign site, load, and energy prices attributes, using only the FIRST ProposedEnergyProducerOption because they **should** all be the same
         # TODO track all missing required inputs, and key optional inputs that rely on defaults
         if i == 1
             # Site data (lat, long, area) - lat/long is only needed if relying on PV or Wind APIs; default area is a Big Number
@@ -63,7 +97,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             position_points = mgravens["ProposedSiteLocations"][site_name]["Location.PositionPoints"][1]
             reopt_inputs["Site"]["latitude"] = get(position_points, "PositionPoint.yPosition", nothing)
             reopt_inputs["Site"]["longitude"] = get(position_points, "PositionPoint.xPosition", nothing)
-            # Also from SiteLocation, get needed references for 1) LoadGroup for load profile and 2) SubGeographicalRegion for energy prices
+            # Also from SiteLocation, get needed references for LoadGroup
             load_groups_lumped = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"]
             # Have to extract just the name we want from lumped string value, e.g. "SubGeographicalRegion::'County1'" (want just 'County1')
             # Need to assume only one/first EnergyConsumer which is tied to a LoadForecast
@@ -82,37 +116,23 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # Need timestep_sec from ONE forecast for initializing loads_kw, but we do validation of timestep_sec and length of EACH load profile in the loop below
             timestep_sec = mgravens["BasicIntervalSchedule"][load_forecast_names[1]]["EnergyConsumerSchedule.timeStep"]
             reopt_inputs["Settings"]["time_steps_per_hour"] = 3600 / timestep_sec
-            reopt_inputs["ElectricLoad"]["loads_kw"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
             # Sum up the loads in all load forecasts to aggregate into a single load profile
+            # This may only matter if relying on a URDB rate structure but this is not currently being used in REopt:
+            # "670a_residential2_shape": {
+            #     "EnergyConsumerSchedule.startDay": "Monday",
             for load_forecast_name in load_forecast_names
                 load_forecast_dict = get(mgravens["BasicIntervalSchedule"], load_forecast_name, nothing)
                 if !isnothing(load_forecast_dict)
-                    # Currently allowing 24 hour, 168 hour, and 8760 hour load profile inputs and scaling to 1-year if not the full 8760
-                    # TODO make sure it's consistent with prices by creating a "time_interval_length" variable to cross-check with all time-series input data
-                    timestep_sec = load_forecast_dict["EnergyConsumerSchedule.timeStep"]
-                    if !(timestep_sec in [900, 3600])
-                        throw(@error("Valid EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast is 900 and 3600, input of $timestep_sec"))
+                    # Currently allowing 15-min and hourly intervals with length of N timesteps and scaling to 1-year if not the full year
+                    # Note, we also do this with LMPs but we still require 12 months for capacity prices, and optional-input PV profiles
+                    timestep_sec_i = load_forecast_dict["EnergyConsumerSchedule.timeStep"]
+                    if !(timestep_sec_i == timestep_sec)
+                        throw(@error("All EnergyConsumerSchedule.timeStep for BasicIntervalSchedule LoadForecast must be the same"))
                     end
+                    # Allow for 15-minute (900 timestep_sec) or hourly (3600 timestep_sec) time intervals, and time windows of 1, 2, 7, and 365 days, and scale to year-long time window arrays (365 days)
                     load_list_of_dict = load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"]
-                    # TODO make appending shorter horizon load data to make 8760 more efficient than below which is appending many many dictionaries
-                    #   instead, make an array of e.g. length 24, and then append just the numbers to get 8760 before assigning to loads_kw
-                    # if length(load_list_of_dict) == 24
-                    #     for _ in 1:364
-                    #         append!(load_list_of_dict, load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"])
-                    #     end
-                    # elseif length(load_list_of_dict) == 168
-                    #     for _ in 1:52
-                    #         append!(load_list_of_dict, load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"])
-                    #     end
-                    #     # Have to add one more day's worth of time, so take the first 24 hours of the week again for the last 24 hours of the 8760
-                    #     append!(load_list_of_dict, load_forecast_dict["EnergyConsumerSchedule.RegularTimePoints"][1:24])           
-                    # elseif !(length(load_list_of_dict) in [8760, 35040])
-                    #     throw(@error("Valid length of load forecast data is 24, 168, or 8760"))
-                    # end
-                    for (ts, data) in enumerate(load_list_of_dict)
-                        # Ignoring value2 which is "VAr" (reactive power)
-                        reopt_inputs["ElectricLoad"]["loads_kw"][ts] += data["RegularTimePoint.value1"]
-                    end
+                    length_load_input = length(load_list_of_dict)  # Used for validating against LMP data length below
+                    reopt_inputs["ElectricLoad"]["loads_kw"] = build_timeseries_array(load_list_of_dict, "RegularTimePoint.value1", timestep_sec_i)
                 else
                     throw(@error("No $load_forecast_name load_forecast_name found in BasicIntervalSchedule"))
                 end
@@ -141,16 +161,11 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 # LMP - energy prices
                 lmp_list_of_dict = lmp_dict["LocationalMarginalPrices.LMPCurve"]["PriceCurve.CurveDatas"]
                 # Note, if 15-minute interval analysis, must supply LMPs in 15-minute interval, so they have one-to-one data
-                reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                # reopt_inputs["ElectricTariff"]["wholesale_rate"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                # TODO allow e.g. list of 24 (1-day) and 168 hour (1-week) for LMP if the load forecast is also 24/168, and just replicate e.g. 365/52 times
-                if length(lmp_list_of_dict) == length(reopt_inputs["ElectricLoad"]["loads_kw"])
-                    for (ts, data) in enumerate(lmp_list_of_dict)
-                        reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"][ts] = data["CurveData.y1value"]
-                        # reopt_inputs["ElectricTariff"]["wholesale_rate"][ts] = data["CurveData.y1value"]
-                    end                    
+                if length(lmp_list_of_dict) == length_load_input
+                    reopt_inputs["ElectricTariff"]["tou_energy_rates_per_kwh"] = build_timeseries_array(lmp_list_of_dict, "CurveData.y1value", timestep_sec)
+                    # reopt_inputs["ElectricTariff"]["wholesale_rate"] = build_timeseries_array(lmp_list_of_dict, "CurveData.y1value", timestep_sec) .- 0.001
                 else
-                    throw(@error("Interval of Load RegularIntervalSchedule.TimePoints must match the interval of LMP PriceCurve.CurveDatas"))
+                    throw(@error("LMP PriceCurve.CurveDatas must match the interval and length of the Load Profile RegularIntervalSchedule.TimePoints array"))
                 end
             else
                 throw(@error("No LMP name $lmp_name found in EnergyPrices.LocationalMarginalPrices"))
@@ -172,6 +187,23 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             else
                 throw(@error("No Capacity name $capacity_prices_name found in EnergyPrices.CapacityPrices"))
             end
+
+            # Coincident peak prices (monthly)
+            # TODO allow EnergyPrices.CoincidentPeakPrices to be optional
+            coincident_peak_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CoincidentPeakPrices"], "::")[2], "'" => "")
+            coincident_peak_dict = get(mgravens["EnergyPrices"]["CoincidentPeakPrices"], coincident_peak_prices_name, nothing)
+            if !isnothing(coincident_peak_dict)
+                coincident_peak_list_of_dict = coincident_peak_dict["CoincidentPeakPrices.CoincidentPeakPriceCurve"]["PriceCurve.CurveDatas"]
+                prices, ts_array = [], []
+                for (i, price) in enumerate(coincident_peak_list_of_dict)
+                    append!(prices, [price["CurveData.y1value"]])
+                    append!(ts_array, [price["CurveData.xvalue"]])
+                end
+                reopt_inputs["ElectricTariff"]["coincident_peak_load_charge_per_kw"] = prices
+                reopt_inputs["ElectricTariff"]["coincident_peak_load_active_time_steps"] = ts_array
+            else
+                throw(@error("No Coincident Peak name $coincident_peak_prices_name found in EnergyPrices.CoincidentPeakPrices"))
+            end            
 
             # Printing for debugging
             # println("")
@@ -320,6 +352,10 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
     #  3) ProposedAssets.[Each Technology]
 
     # Add any warning or error messages in the top-level "Message" list of dictionaries
+    if isnothing(get(reopt_results, "Messages", nothing))
+        reopt_results["Messages"] = Dict("warnings" => "", "errors" => "")
+    end
+
     mgravens["Message"] =  [
         Dict(
           "IdentifiedObject.mRID" => string(uuid4()),
@@ -369,13 +405,17 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             npv = reopt_results["Financial"]["npv"]
             lcc_capital_costs = reopt_results["Financial"]["lifecycle_capital_costs"]
         end
+
+        # Include demand charges and coincident peak charges in the capacity cost
+        capacity_cost = (reopt_results["ElectricTariff"]["lifecycle_demand_cost_after_tax"*bau_suffix] + 
+                        reopt_results["ElectricTariff"]["lifecycle_coincident_peak_cost_after_tax"*bau_suffix])
             
         estimated_asset_costs_uuid = string(uuid4())
         mgravens["EstimatedCost"][scenario_name] = Dict{String, Any}(
             "IdentifiedObject.name" => scenario_name,
             "IdentifiedObject.mRID" => estimated_asset_costs_uuid,
             "Ravens.cimObjectType" => "EstimatedCost",
-            "EstimatedCost.lifecycleCapacityCost" => reopt_results["ElectricTariff"]["lifecycle_demand_cost_after_tax"*bau_suffix],
+            "EstimatedCost.lifecycleCapacityCost" => capacity_cost,
             "EstimatedCost.lifecycleEnergyCost" => reopt_results["ElectricTariff"]["lifecycle_energy_cost_after_tax"*bau_suffix],
             "EstimatedCost.lifecycleCapitalCost" => lcc_capital_costs,
             "EstimatedCost.lifecycleCost" => reopt_results["Financial"]["lcc"*bau_suffix],
