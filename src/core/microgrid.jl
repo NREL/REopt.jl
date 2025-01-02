@@ -244,8 +244,9 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
             
             REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs = build_run_and_process_results(Microgrid_Inputs_No_Techs, PMD_number_of_timesteps)
             ComputationTime_EntireModel = "N/A"
-            system_results_BAU = REopt.Results_Compilation(REopt_Results_BAU, Outage_Results_No_Techs, Microgrid_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel)
             model_BAU = pm_No_Techs.model
+            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, Outage_Results_No_Techs, Microgrid_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel)
+            
         else
             system_results_BAU = ""
             REopt_Results_BAU = "none"
@@ -254,27 +255,27 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
 
         ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
         
-        system_results = REopt.Results_Compilation(REopt_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; system_results_BAU = system_results_BAU)
+        system_results = REopt.Results_Compilation(model, REopt_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; system_results_BAU = system_results_BAU)
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
                                 ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
                                 ("Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
-                                #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
                                 ("PMD_results", PMD_Results),
                                 ("PMD_data_eng", data_eng),
                                 ("REopt_results", REopt_Results),
                                 ("REopt_results_BAU", REopt_Results_BAU),
                                 ("Outage_Results", Outage_Results),
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
-                                ("ComputationTime_EntireModel", 0), # ComputationTime_EntireModel),
+                                ("ComputationTime_EntireModel", ComputationTime_EntireModel),
                                 ("Line_Info_PMD", LineInfo_PMD),
                                 #("pm", pm) # This can be a very large variable and it can be slow to load
                                 #("line_upgrade_options", line_upgrade_options_output),
                                 #("transformer_upgrade_options", transformer_upgrade_options_output),
                                 #("line_upgrade_results", line_upgrade_results_output),
                                 #("transformer_upgrade_results", transformer_upgrade_results_output)
+                                #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series) 
                                 ])
 
     elseif Microgrid_Inputs.model_type == "BasicLinear"
@@ -1678,7 +1679,7 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
 end 
 
 
-function Results_Compilation(results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "")
+function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "")
 
     InputsList = Microgrid_Inputs.REopt_inputs_list
 
@@ -1769,6 +1770,15 @@ function Results_Compilation(results, Outage_Results, Microgrid_Inputs, DataFram
         end
 
         # Add system-level results
+
+        push!(DataLabels, "----Optimization Parameters----")
+        push!(Data,"")
+        push!(DataLabels, "  Number of Variables")
+        push!(Data, length(all_variables(model)))
+        push!(DataLabels, "  Computation time, including the BAU model and the outage simulator if used (minutes)")
+        push!(Data, round((Dates.value(ComputationTime_EntireModel)/(1000*60)), digits=2))
+
+        
         push!(DataLabels, "----System Results----")
         push!(Data,"")
 
@@ -1800,6 +1810,7 @@ function Results_Compilation(results, Outage_Results, Microgrid_Inputs, DataFram
         push!(DataLabels,"  Total generator size kw")
         push!(Data, round(system_results["total_generator_size_kw"],digits=0))
         
+
         push!(DataLabels, "----Power Flow Model Results----")
         push!(Data, "")
         push!(DataLabels,"  Maximum power flow on substation line, Active Power kW")
