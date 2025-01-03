@@ -2709,7 +2709,7 @@ else  # run HiGHS tests
                 @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4
             end
 
-            @testset "ASHP Forced Dispatch ot Load or Max Capacity" begin
+            @testset "ASHP Forced Dispatch to Load or Max Capacity" begin
                 d = JSON.parsefile("./scenarios/ashp.json")
                 d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
                 d["DomesticHotWaterLoad"] = Dict{String,Any}("annual_mmbtu" => 0.5 * 8760, "doe_reference_name" => "FlatLoad")
@@ -2729,6 +2729,7 @@ else  # run HiGHS tests
             
                 #Case 1: ASHP systems run to meet full site load as they are oversized and dispatch is forced
                 @test results["ASHPSpaceHeater"]["annual_electric_consumption_kwh"] ≈ sum(0.4 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHPSpaceHeater"][ts] + 0.1 * REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHPSpaceHeater"][ts] for ts in p.time_steps) rtol=1e-4
+                # This confirms that ASHPSpaceHeater is forced to dispatch to cooling load because the default ExistingChiller.cop is greater than the defaul ASHP cooling COP
                 @test results["ASHPSpaceHeater"]["annual_thermal_production_tonhour"] ≈ 0.1 * 8760 rtol=1e-4
                 @test results["ASHPSpaceHeater"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4            
                 
