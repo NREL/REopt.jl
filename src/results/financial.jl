@@ -131,18 +131,32 @@ Calculate and return the up-front capital costs for all technologies, in present
 incentives.
 """
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    initial_capex = 0
+    @info "Starting initial_capex calculation"
+    initial_capex = 0.0
 
-    if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
-        initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+    if !isempty(p.techs.gen) && isempty(_n)
+        @info "Adding generator capex"
+        gen_capex = p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+        initial_capex += gen_capex
+        @info "Added generator capex: $gen_capex"
     end
 
     if !isempty(p.techs.pv)
+        @info "Processing PV capex"
         for pv in p.s.pvs
-            initial_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
+            @info "Processing PV: $(pv.name)"
+            pv_size_kw = value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
+            @info "PV size: $pv_size_kw"
+            try
+                pv_capex = get_pv_initial_capex(p, pv, pv_size_kw)
+                initial_capex += pv_capex
+                @info "Added PV capex: $pv_capex"
+            catch e
+                @error "Error calculating PV capex" PV=pv.name size=pv_size_kw exception=(e, catch_backtrace())
+                rethrow(e)
+            end
         end
     end
-
     for b in p.s.storage.types.elec
         if p.s.storage.attr[b].max_kw > 0
             initial_capex += p.s.storage.attr[b].installed_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
@@ -178,13 +192,12 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if !isempty(p.s.ghp_option_list)
-
         for option in enumerate(p.s.ghp_option_list)
-
             if option[2].heat_pump_configuration == "WSHP"
                 initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
             elseif option[2].heat_pump_configuration == "WWHP"
-                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + 
+                                option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
             else
                 @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
@@ -198,6 +211,7 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "ASHPWaterHeater" in p.techs.all
         initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
     end    
+    @info "Final initial_capex: $initial_capex"
 
     return initial_capex
 end
@@ -407,6 +421,72 @@ function get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
     # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
     # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
     # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
+    end
+
+    return initial_capex
+end
+
+
+function get_pv_initial_capex(p::REoptInputs, pv::AbstractTech, size_kw::Float64)
+    @info "Starting get_pv_initial_capex with size_kw = $(size_kw)"
+    cost_list = pv.installed_cost_per_kw
+    size_list = pv.tech_sizes_for_cost_curve
+    @info "Cost list: $(cost_list)"
+    @info "Size list: $(size_list)"
+    @info "Size list type: $(typeof(size_list))"
+    initial_capex = 0.0
+
+    if typeof(cost_list) <: AbstractArray && !isempty(size_list)
+        @info "Using array cost list logic"
+        if size_kw <= 0
+            @info "size_kw <= 0, returning 0.0"
+            return 0.0
+        end
+
+        # Normalize the size list structure
+        normalized_ranges = if eltype(size_list) <: AbstractArray
+            @info "Size list contains arrays"
+            sort(size_list, by=x->x[2])  # Sort by upper bound
+        else
+            @info "Size list contains scalar values"
+            # Convert scalar thresholds to ranges
+            [[0.0, val] for val in sort(size_list)]
+        end
+        @info "Normalized ranges: $(normalized_ranges)"
+
+        # Find applicable range
+        applicable_range_index = -1
+        for (i, range) in enumerate(normalized_ranges)
+            @info "Checking range $i: $range"
+            if size_kw <= range[2]  # Compare with upper bound
+                applicable_range_index = i
+                @info "Found applicable range index: $i"
+                break
+            end
+        end
+
+        # If no range found, use the last one
+        if applicable_range_index == -1
+            applicable_range_index = length(normalized_ranges)
+            @info "No range found, using last index: $applicable_range_index"
+        end
+
+        # Map range index to cost index
+        # If we have fewer costs than ranges, use the last available cost
+        cost_index = min(applicable_range_index, length(cost_list))
+        @info "Mapped range index $(applicable_range_index) to cost index $(cost_index)"
+        cost = cost_list[cost_index]
+        @info "Retrieved cost: $cost"
+
+        initial_capex = size_kw * cost
+        @info "Calculated initial_capex: $initial_capex"
+    else
+        @info "Using scalar cost case"
+        # Handle scalar cost case
+        cost = typeof(cost_list) <: AbstractArray ? cost_list[1] : cost_list
+        @info "Using scalar cost: $cost"
+        initial_capex = cost * size_kw
+        @info "Calculated initial_capex (scalar case): $initial_capex"
     end
 
     return initial_capex

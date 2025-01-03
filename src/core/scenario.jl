@@ -7,6 +7,7 @@ struct Scenario <: AbstractScenario
     storage::Storage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
+    avg_electric_load_kw::Float64
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
@@ -95,8 +96,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     off_grid_flag = settings.off_grid_flag
     )
     
-    # Extract average electric load per time step
-    avg_electric_load_kw = sum(electric_load.loads_kw) / length(electric_load.loads_kw)
+    # Extract average electric load per time step and apply a 20% load factor
+    avg_electric_load_kw = (sum(electric_load.loads_kw) / length(electric_load.loads_kw)) * 1.20
+    @info "Average electric load" avg_electric_load_kw
 
     pvs = PV[]
     if haskey(d, "PV")
@@ -759,7 +761,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         wind,
         storage,
         electric_tariff, 
-        electric_load, 
+        electric_load,
+        avg_electric_load_kw,
         electric_utility, 
         financial,
         generator,
