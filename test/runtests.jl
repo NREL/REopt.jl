@@ -333,6 +333,8 @@ else  # run HiGHS tests
             
             d_sim_load_process = copy(d_sim_load_heating)
             d_sim_load_process["load_type"] = "process_heat"
+            delete!(d_sim_load_process, "doe_reference_name")
+            d_sim_load_process["industrial_reference_name"] = doe_reference_name_heating            
             d_sim_load_process["annual_mmbtu"] = annual_mmbtu_process
             sim_load_response_process = simulated_load(d_sim_load_process)
             
@@ -346,8 +348,8 @@ else  # run HiGHS tests
                                             ("annual_mmbtu", sim_load_response_heating["dhw_annual_mmbtu"])
                                         ])
             
-            input_data["ProcessHeatLoad"] = Dict([("blended_industry_reference_names", doe_reference_name_heating),
-                                            ("blended_industry_reference_percents", percent_share_heating),
+            input_data["ProcessHeatLoad"] = Dict([("blended_industrial_reference_names", doe_reference_name_heating),
+                                            ("blended_industrial_reference_percents", percent_share_heating),
                                             ("annual_mmbtu", annual_mmbtu_process)
                                         ])                            
                             
@@ -2414,9 +2416,9 @@ else  # run HiGHS tests
             input_data["DomesticHotWaterLoad"]["doe_reference_name"] = building
             elec_load = REopt.ElectricLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
             input_data["ElectricLoad"]["annual_kwh"] = elec_load_multiplier * sum(elec_load.loads_kw)
-            space_load = REopt.SpaceHeatingLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
+            space_load = REopt.HeatingLoad(load_type="space_heating", latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
             input_data["SpaceHeatingLoad"]["annual_mmbtu"] = heat_load_multiplier * space_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
-            dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
+            dhw_load = REopt.HeatingLoad(load_type="domestic_hot_water", latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
             input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
             s = Scenario(input_data)
             inputs = REoptInputs(s)
@@ -2942,6 +2944,117 @@ else  # run HiGHS tests
             @test length(r["Messages"]["warnings"]) > 0
         end
 
+        @testset "Normalize and scale load profile input to annual and monthly energy" begin
+            # Normalize and scale input load profile based on annual or monthly energy uses
+            # The purpose of this is to be able to build a load profile shape, and then scale to the typical monthly energy data that users have
+
+            input_data = JSON.parsefile("./scenarios/norm_scale_load.json")
+
+            # Start with normalizing and scaling electric load only
+            input_data["ElectricLoad"]["loads_kw"] = fill(10.0, 8760)
+            input_data["ElectricLoad"]["loads_kw"][5:28] .= 20.0
+            input_data["ElectricLoad"]["year"] = 2020
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = fill(87600.0/12, 12)
+            input_data["ElectricLoad"]["monthly_totals_kwh"][2] *= 2
+            input_data["ElectricLoad"]["normalize_and_scale_load_profile_input"] = true
+
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+
+            # Check that monthly energy input is preserved when normalizing and scaling the hourly profile
+            @test abs(sum(s.electric_load.loads_kw) - sum(input_data["ElectricLoad"]["monthly_totals_kwh"])) < 1.0
+
+            # This get_monthly_energy function is only equivalent for non-leap years with loads_kw normalization and scaling because it removes the leap day from the processing of monthly hours/energy
+            monthly_totals_kwh = REopt.get_monthly_energy(s.electric_load.loads_kw; year=2017)
+
+            # Check that each month matches
+            @test sum(monthly_totals_kwh .- input_data["ElectricLoad"]["monthly_totals_kwh"]) < 1.0
+
+            # Check that the load ratio within a month is proportional to the loads_kw ratio
+            @test abs(s.electric_load.loads_kw[6] / s.electric_load.loads_kw[4] - input_data["ElectricLoad"]["loads_kw"][6] / input_data["ElectricLoad"]["loads_kw"][4]) < 0.001
+
+            # Check consistency with simulated_load function
+            d_sim_load = Dict([
+                ("load_type", "electric"),
+                ("normalize_and_scale_load_profile_input", true),
+                ("load_profile", input_data["ElectricLoad"]["loads_kw"]),
+                ("monthly_totals_kwh", input_data["ElectricLoad"]["monthly_totals_kwh"])
+                ])
+
+            sim_load_response = simulated_load(d_sim_load)
+
+            @test abs(sim_load_response["annual_kwh"] - sum(input_data["ElectricLoad"]["monthly_totals_kwh"])) < 1.0
+            @test sum(s.electric_load.loads_kw .- sim_load_response["loads_kw"]) < 10.0
+
+            # Check space heating load normalization and scaling
+            input_data = JSON.parsefile("./scenarios/norm_scale_load.json")
+            input_data["ElectricLoad"]["doe_reference_name"] = "LargeOffice"
+            # Focus on SpaceHeating for heating norm and scale
+            input_data["SpaceHeatingLoad"] = Dict()
+            input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = fill(10.0, 8760)
+            input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][5:28] .= 20.0
+            input_data["SpaceHeatingLoad"]["year"] = 2017
+
+            input_data["SpaceHeatingLoad"]["monthly_mmbtu"] = fill(87600.0/12, 12)
+            input_data["SpaceHeatingLoad"]["monthly_mmbtu"][2] *= 2
+            input_data["SpaceHeatingLoad"]["normalize_and_scale_load_profile_input"] = true
+            input_data["SpaceHeatingLoad"]["addressable_load_fraction"] = 0.9
+            address_frac = input_data["SpaceHeatingLoad"]["addressable_load_fraction"]
+
+            input_data["ProcessHeatLoad"] = Dict()
+            input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"] = fill(1.0, 8760)
+            input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][6] = 21.0
+            input_data["ProcessHeatLoad"]["year"] = 2017
+            input_data["ProcessHeatLoad"]["annual_mmbtu"] = 87800
+            input_data["ProcessHeatLoad"]["normalize_and_scale_load_profile_input"] = true
+
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+
+            # Check that monthly energy input is preserved when normalizing and scaling the hourly profile
+            @test abs(sum(s.space_heating_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU) - sum(input_data["SpaceHeatingLoad"]["monthly_mmbtu"]) * address_frac) < 1.0
+
+            # This get_monthly_energy function is only equivalent for non-leap years with loads_kw normalization and scaling because it removes the leap day from the processing of monthly hours/energy
+            monthly_kwht = REopt.get_monthly_energy(s.space_heating_load.loads_kw; year=2017) 
+            monthly_mmbtu = monthly_kwht/ s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU
+            @test abs(sum(s.process_heat_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU) - input_data["ProcessHeatLoad"]["annual_mmbtu"]) < 1.0
+
+            # Check that each month matches
+            @test sum(monthly_mmbtu .- input_data["SpaceHeatingLoad"]["monthly_mmbtu"] * address_frac) < 1.0
+
+            # Check that the load ratio within a month is proportional to the loads_kw ratio
+            @test abs(s.space_heating_load.loads_kw[6] / s.space_heating_load.loads_kw[4] - input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
+            @test abs(s.process_heat_load.loads_kw[6] / s.process_heat_load.loads_kw[4] - input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
+
+            # Check space heating consistency with simulated_load function
+            d_sim_load = Dict([
+                ("load_type", "space_heating"),
+                ("normalize_and_scale_load_profile_input", true),
+                ("load_profile", input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"]),
+                ("monthly_mmbtu", input_data["SpaceHeatingLoad"]["monthly_mmbtu"]),
+                ("addressable_load_fraction", address_frac)
+                ])
+
+            sim_load_response = simulated_load(d_sim_load)
+
+            @test abs(sim_load_response["annual_mmbtu"] - sum(input_data["SpaceHeatingLoad"]["monthly_mmbtu"]) * address_frac) < 1.0
+            @test sum(s.space_heating_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU .- sim_load_response["loads_mmbtu_per_hour"]) < 10.0              
+
+            # Check process heat consistency with simulated_load function
+            d_sim_load = Dict([
+                ("load_type", "process_heat"),
+                ("normalize_and_scale_load_profile_input", true),
+                ("load_profile", input_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]),
+                ("annual_mmbtu", input_data["ProcessHeatLoad"]["annual_mmbtu"])
+                ])
+
+            sim_load_response = simulated_load(d_sim_load)
+
+            @test abs(sim_load_response["annual_mmbtu"] - input_data["ProcessHeatLoad"]["annual_mmbtu"]) < 1.0
+            @test sum(s.process_heat_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU .- sim_load_response["loads_mmbtu_per_hour"]) < 10.0 
+        
+        end      
+        
         @testset "Storage Duration" begin
             ## Battery storage
             d = JSON.parsefile("scenarios/pv_storage.json")
