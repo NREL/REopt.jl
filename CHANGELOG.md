@@ -31,6 +31,15 @@ Classify the change according to the following categories:
 - Updated Cambium API call for CO2e emissions within CONUS to Cambium 2023 dataset.
 - Updated EMISSIONS_DECREASE_DEFAULTS from 0.02163 to 0.0459 based on Cambium 2023 data
 
+## v0.49.0
+### Added
+- Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
+### Changed
+- Internal refactoring of the three types of heating loads into a single `HeatingLoad` struct
+- Moved the annual_[energy] data from the load src files into the /data/load_profiles folder
+### Fixed
+- Constrained export to grid in the NEM bin (`dvProductionToGrid"*_n)][t, :NEM, ts`) to be 0 when system is sized over NEM limit (i.e., when binNEM =0)
+
 ## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
