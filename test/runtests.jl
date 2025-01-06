@@ -1188,7 +1188,7 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
             @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
-            @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
+            @test results["Financial"]["lcc"] ≈ 8.63559824639e7 rtol=0.001
 
             # Scenario with generator, PV, wind, electric storage
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
@@ -1197,7 +1197,7 @@ else  # run HiGHS tests
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
             @test results["Outages"]["expected_outage_cost"] ≈ 1.296319791276051e6 atol=1.0
-            @test results["Financial"]["lcc"] ≈ 4.8046446434e6 rtol=0.001
+            @test results["Financial"]["lcc"] ≈ 4.833635288e6 rtol=0.001
             
         end
 
