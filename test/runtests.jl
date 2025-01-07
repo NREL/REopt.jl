@@ -3045,5 +3045,63 @@ else  # run HiGHS tests
             @test r["ElectricStorage"]["size_kw"]*8 - r["ElectricStorage"]["size_kwh"] ≈ 0.0 atol = 0.1
 
         end
+
+        @testset "Test leap year for URDB demand and energy charges" begin
+            """
+            We tell users to truncate/cut-off the last day of the year of their load profile for leap years, to 
+                preserve the weekday/weekend and month alignment of the load with the rate structure
+        
+            The input .json file has a custom rate tariff to test leap year behavior for timesteps beyond end of February
+                Higher energy price weekdays between 7AM (ts 8, 32, etc) through 7pm (ts 20, 44, etc)
+                Flat/Facility (non-TOU) demand charges of 18.05/kW all month
+                TOU demand charges of 10/kW between 2pm-7pm on weekdays
+            """
+            input_data = JSON.parsefile("./scenarios/leap_year.json")
+            # Set the load profile to zeros except for certain timesteps to test alignment of load with rate structure
+            peak_load = 10.0
+        
+            # Test for TOU energy and demand charges alignment with load profile for leap years
+            input_data["ElectricLoad"]["loads_kw"] = zeros(8760)
+            # Monday (on-peak) March 4, 2024, but Sunday (weekend, off-peak) if February handled as 28 days (as it was in REopt prior to 2025)
+            input_data["ElectricLoad"]["loads_kw"][31*24+29*24+3*24+16] = peak_load
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+        
+            # TOU Energy charges
+            weekend_rate = input_data["ElectricTariff"]["urdb_response"]["energyratestructure"][2][1]["rate"]  # Not used in this test
+            weekday_rate = input_data["ElectricTariff"]["urdb_response"]["energyratestructure"][3][1]["rate"]
+            energy_charge_expected = weekday_rate * peak_load
+            @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ energy_charge_expected atol=1E-6
+        
+            # TOU Demand charges
+            flat_rate = input_data["ElectricTariff"]["urdb_response"]["flatdemandstructure"][3][1]["rate"]
+            tou_rate = input_data["ElectricTariff"]["urdb_response"]["demandratestructure"][3][1]["rate"]
+            demand_charge_expected = (flat_rate + tou_rate) * peak_load
+            @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ demand_charge_expected atol=1E-6
+        
+            # Test for flat/facility (non-TOU) demand charge for 2023 (non-leap year) and 2024 (leap year)
+            for year in [2023, 2024]
+                input_data["ElectricLoad"]["year"] = year
+                input_data["ElectricLoad"]["loads_kw"] = zeros(8760)
+                # Weekday off-peak February 28th, to set February Facility demand charge
+                input_data["ElectricLoad"]["loads_kw"][31*24+27*24+8] = peak_load
+                # Weekday off-peak Feb 29th for leap year, to make sure not adding March facility demand charge if non-leap year or if Feb handled as 28 days for leap year (wrong)
+                input_data["ElectricLoad"]["loads_kw"][31*24+28*24+8] = peak_load
+                s = Scenario(input_data)
+                inputs = REoptInputs(s)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(m, inputs)
+                flat_rate = input_data["ElectricTariff"]["urdb_response"]["flatdemandstructure"][3][1]["rate"]
+                if isleapyear(year)
+                    demand_charge_expected = flat_rate * peak_load
+                else
+                    demand_charge_expected = 2* flat_rate * peak_load
+                end
+                @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ demand_charge_expected atol=1E-6
+            end
+        
+        end
     end
 end
