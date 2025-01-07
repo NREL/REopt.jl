@@ -3087,17 +3087,17 @@ else  # run HiGHS tests
                 input_data["ElectricLoad"]["loads_kw"] = zeros(8760)
                 # Weekday off-peak February 28th, to set February Facility demand charge
                 input_data["ElectricLoad"]["loads_kw"][31*24+27*24+8] = peak_load
-                # Weekday off-peak Feb 29th for leap year, to make sure not adding March facility demand charge if non-leap year or if Feb handled as 28 days for leap year (wrong)
+                # Weekday off-peak Feb 29th for leap year, March 1st for non-leap year (also if Feb is wrongly handled as 28 days for leap year)
                 input_data["ElectricLoad"]["loads_kw"][31*24+28*24+8] = peak_load
                 s = Scenario(input_data)
                 inputs = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, inputs)
                 flat_rate = input_data["ElectricTariff"]["urdb_response"]["flatdemandstructure"][3][1]["rate"]
-                if isleapyear(year)
+                if year == 2024
                     demand_charge_expected = flat_rate * peak_load
-                else
-                    demand_charge_expected = 2* flat_rate * peak_load
+                elseif year == 2023
+                    demand_charge_expected = 2 * flat_rate * peak_load
                 end
                 @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ demand_charge_expected atol=1E-6
             end
