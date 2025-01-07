@@ -3056,7 +3056,7 @@ else  # run HiGHS tests
                 Flat/Facility (non-TOU) demand charges of 18.05/kW all month
                 TOU demand charges of 10/kW between 2pm-7pm on weekdays
             """
-            input_data = JSON.parsefile("./scenarios/leap_year.json")
+            input_data = JSON.parsefile("/scenarios/leap_year.json")
             # Set the load profile to zeros except for certain timesteps to test alignment of load with rate structure
             peak_load = 10.0
         
