@@ -108,7 +108,7 @@ MPC `PV` results keys:
 - `to_load_series_kw`
 - `energy_produced_kwh`
 """
-function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     @info "Starting add_pv_results"
     
     for t in p.techs.pv
