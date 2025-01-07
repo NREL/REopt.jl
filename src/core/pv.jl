@@ -246,16 +246,22 @@ mutable struct PV <: AbstractTech
             throw(ErrorException("Invalid size_class: $size_class. Must be between 0 and $(num_size_classes - 1)."))
         end
 
-        # Handle installed_cost_per_kw defaults and type conversion
+        # New approach
         if isempty(installed_cost_per_kw)
-            default_costs = pv_defaults_all[array_category]["installed_cost_per_kw"][size_class + 1]
-            if typeof(default_costs) <: AbstractVector{Any}
-                installed_cost_per_kw = convert(Vector{Float64}, default_costs)
+            # Get cost ranges from size class
+            costs = pv_defaults_all[array_category]["installed_cost_per_kw"][size_class + 1]
+            size_range = raw_ranges[size_class + 2]
+            
+            # Always create a vector of costs for segments
+            if typeof(costs) <: AbstractVector
+                installed_cost_per_kw = convert(Vector{Float64}, costs)
             else
-                installed_cost_per_kw = convert(Float64, default_costs)
+                # Even for single cost, create vector for consistency with cost curve approach
+                installed_cost_per_kw = [convert(Float64, costs), convert(Float64, costs)]
             end
-        elseif typeof(installed_cost_per_kw) <: AbstractVector{Any}
-            installed_cost_per_kw = convert(Vector{Float64}, installed_cost_per_kw)
+            
+            # Ensure tech_sizes_for_cost_curve matches costs
+            tech_sizes_for_cost_curve = Float64[size_range[1], size_range[2]]
         end
 
         # Handle om_cost_per_kw defaults and type conversion

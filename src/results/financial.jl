@@ -429,65 +429,25 @@ end
 
 function get_pv_initial_capex(p::REoptInputs, pv::AbstractTech, size_kw::Float64)
     @info "Starting get_pv_initial_capex with size_kw = $(size_kw)"
-    cost_list = pv.installed_cost_per_kw
-    size_list = pv.tech_sizes_for_cost_curve
-    @info "Cost list: $(cost_list)"
-    @info "Size list: $(size_list)"
-    @info "Size list type: $(typeof(size_list))"
+    
+    # Get cost curve parameters 
+    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(pv, p.s.financial)
+    
+    # Find the appropriate segment for this size
     initial_capex = 0.0
-
-    if typeof(cost_list) <: AbstractArray && !isempty(size_list)
-        @info "Using array cost list logic"
-        if size_kw <= 0
-            @info "size_kw <= 0, returning 0.0"
-            return 0.0
+    for i in 1:n_segments
+        if size_kw >= cost_curve_bp_x[i] && size_kw < cost_curve_bp_x[i + 1]
+            # Use the piecewise linear formula: y = mx + b
+            initial_capex = cost_slope[i] * size_kw + cost_yint[i]
+            break
         end
-
-        # Normalize the size list structure
-        normalized_ranges = if eltype(size_list) <: AbstractArray
-            @info "Size list contains arrays"
-            sort(size_list, by=x->x[2])  # Sort by upper bound
-        else
-            @info "Size list contains scalar values"
-            # Convert scalar thresholds to ranges
-            [[0.0, val] for val in sort(size_list)]
-        end
-        @info "Normalized ranges: $(normalized_ranges)"
-
-        # Find applicable range
-        applicable_range_index = -1
-        for (i, range) in enumerate(normalized_ranges)
-            @info "Checking range $i: $range"
-            if size_kw <= range[2]  # Compare with upper bound
-                applicable_range_index = i
-                @info "Found applicable range index: $i"
-                break
-            end
-        end
-
-        # If no range found, use the last one
-        if applicable_range_index == -1
-            applicable_range_index = length(normalized_ranges)
-            @info "No range found, using last index: $applicable_range_index"
-        end
-
-        # Map range index to cost index
-        # If we have fewer costs than ranges, use the last available cost
-        cost_index = min(applicable_range_index, length(cost_list))
-        @info "Mapped range index $(applicable_range_index) to cost index $(cost_index)"
-        cost = cost_list[cost_index]
-        @info "Retrieved cost: $cost"
-
-        initial_capex = size_kw * cost
-        @info "Calculated initial_capex: $initial_capex"
-    else
-        @info "Using scalar cost case"
-        # Handle scalar cost case
-        cost = typeof(cost_list) <: AbstractArray ? cost_list[1] : cost_list
-        @info "Using scalar cost: $cost"
-        initial_capex = cost * size_kw
-        @info "Calculated initial_capex (scalar case): $initial_capex"
     end
 
+    # For verification, log what segment and calculation was used
+    @info "Using cost curve with:"
+    @info "Size: $(size_kw)"
+    @info "Base cost from installed_cost_per_kw: $(pv.installed_cost_per_kw)"
+    @info "Final capex: $(initial_capex)"
+    
     return initial_capex
 end

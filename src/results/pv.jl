@@ -39,14 +39,14 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             @info "PV size_kw: $(r["size_kw"])"
 
             # Battery storage calculations
-            if !isempty(p.s.storage.types.elec)
+            PVtoBatt = if !isempty(p.s.storage.types.elec)
                 @info "Calculating storage-related values"
-                PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-                PVtoBatt = round.(value.(PVtoBatt), digits=3)
+                (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
             else
                 @info "No electric storage, using zeros"
-                PVtoBatt = zeros(length(p.time_steps))
+                zeros(length(p.time_steps))
             end
+            PVtoBatt = round.(value.(PVtoBatt), digits=3)
             r["electric_to_storage_series_kw"] = PVtoBatt
 
             # Grid export calculations
@@ -78,11 +78,6 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
             r["annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
 
-            # Lifecycle O&M and LCOE calculations
-            PVPerUnitSizeOMCosts = p.third_party_factor * p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
-            r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
-            
-            # Add a safeguard for LCOE calculation
             pv_tech = get_pv_by_name(t, p.s.pvs)
             if r["annual_energy_produced_kwh"] > 0
                 r["lcoe_per_kwh"] = calculate_lcoe(p, r, pv_tech)
@@ -91,11 +86,8 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
                 r["lcoe_per_kwh"] = NaN
             end
 
-            # Store results
             d[t] = r
             
-            @info "Completed processing PV technology: $t"
-
         catch e
             @error "Error processing PV technology $t" exception=(e, catch_backtrace())
             rethrow(e)
@@ -105,6 +97,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     @info "Completed add_pv_results"
     nothing
 end
+
 
 
 """

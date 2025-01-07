@@ -618,39 +618,10 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         min_sizes[pv.name] = pv.existing_kw + pv.min_kw
         max_sizes[pv.name] = pv.existing_kw + beyond_existing_kw
 
-        # Handle the cost curve
-        # Get cost curve data regardless of type to handle incentives uniformly
-        cost_slopes, boundary_points, y_intercepts, num_segments = cost_curve(pv, s.financial)
-
-        if num_segments > 1
-            # For segmented costs
-            cap_cost_slope[pv.name] = Float64[slope for slope in cost_slopes]  # Ensure consistent type
-            push!(segmented_techs, pv.name)
-            
-            seg_max_size[pv.name] = Dict{Int,Float64}()
-            seg_min_size[pv.name] = Dict{Int,Float64}()
-            seg_yint[pv.name] = Dict{Int,Float64}()
-            n_segs_by_tech[pv.name] = num_segments
-
-            for i in 1:num_segments
-                min_allowable = hasfield(typeof(pv), :min_allowable_kw) ? pv.min_allowable_kw : 0.0
-                seg_min_size[pv.name][i] = max(boundary_points[i], min_allowable)
-                seg_max_size[pv.name][i] = boundary_points[i+1]
-                seg_yint[pv.name][i] = Float64(y_intercepts[i])  # Ensure consistent type
-            end
-        else
-            # For non-segmented costs
-            cap_cost_slope[pv.name] = cost_slopes[1]  # Just take the first (and only) slope
-            
-            if hasfield(typeof(pv), :min_allowable_kw) && pv.min_allowable_kw > 0.0
-                # If there's a minimum size, we still need segmentation
-                push!(segmented_techs, pv.name)
-                n_segs_by_tech[pv.name] = 1
-                seg_min_size[pv.name] = Dict{Int,Float64}(1 => pv.min_allowable_kw)
-                seg_max_size[pv.name] = Dict{Int,Float64}(1 => max_sizes[pv.name])
-                seg_yint[pv.name] = Dict{Int,Float64}(1 => 0.0)
-            end
-        end
+        # Update cost curve similar to CHP approach
+        update_cost_curve!(pv, pv.name, s.financial,
+            cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+        )
 
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
