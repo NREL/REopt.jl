@@ -6,12 +6,12 @@
     interconnection_limit_kw::Real = 1.0e9, # Limit on total electric system capacity size that can be interconnected to the grid 
     allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect). Set to false if the export rate is greater than the cost of energy (otherwise, REopt will export before meeting site load).
     
-    # Single Outage Modeling Inputs (Outage Modeling Option 1)
+    # Single Outage Modeling Inputs (Outage Modeling Option 1):
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
         
-    # Multiple Outage Modeling Inputs (Outage Modeling Option 2): minimax the expected outage cost,
-    # with max taken over outage start time, expectation taken over outage duration
+    # Multiple Outage Modeling Inputs (Outage Modeling Option 2): 
+    # minimax the expected outage cost, with max taken over outage start time, expectation taken over outage duration
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[],  # One-to-one with outage_probabilities. Outage_durations can be a random variable, and should be in timesteps aligning with time_steps_per_hour (e.g., duration of 4 equates to 1 hour if time_steps_per_hour is 4)
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
