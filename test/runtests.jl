@@ -3112,7 +3112,84 @@ else  # run HiGHS tests
                 end
                 @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ demand_charge_expected atol=1E-6
             end
-        
         end
+
+        @testset "Align load profiles based on load year" begin
+            """
+            Common use case: ElectricLoad.loads_kw is input with specific year, but heating and/or cooling is 
+                simulated with either a schedule-based FlatLoad, or b) CRB type with annual or monthly energy
+            This test confirms that the simulated FlatLoad type and CRB are shifted to start on Monday for 2024
+            """
+        
+            input_data = JSON.parsefile("./scenarios/load_year_align.json")
+            year = 2024
+            # ElectricLoad.loads_kw is 2024, and heating and cooling loads are shifted to align
+            # Use a FlatLoad_16_5 shifted to 2024 (Monday start) with the web tool's custom load builder
+            loads_kw = readdlm("./data/10 kW FlatLoad_16_5 2024.csv", ',', Float64, header=true)[1][:, 2]
+            input_data["ElectricLoad"] = Dict("loads_kw" => loads_kw, "year" => year)
+        
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+        
+            electric_load = results["ElectricLoad"]["load_series_kw"]
+            heating_load = results["HeatingLoad"]["space_heating_boiler_fuel_load_series_mmbtu_per_hour"]
+            cooling_load = results["CoolingLoad"]["load_series_ton"]
+        
+            count_misaligned_heating = sum((electric_load .> 0) .& (heating_load .== 0))
+            count_misaligned_cooling = sum((electric_load .> 0) .& (cooling_load .== 0))
+        
+            @test count_misaligned_heating == 0
+            @test count_misaligned_cooling == 0
+        
+            # Simulated load with year input (e.g. when user inputs custom electric load profile but wants to see aligned simulated heating load)
+            d_sim_load = Dict([("latitude", input_data["Site"]["latitude"]),
+                                ("longitude", input_data["Site"]["longitude"]),
+                                ("load_type", "space_heating"),  # since annual_tonhour is not given
+                                ("doe_reference_name", "FlatLoad_16_5"),
+                                ("annual_mmbtu", input_data["SpaceHeatingLoad"]["annual_mmbtu"]),
+                                ("year", year)
+                                ])
+        
+            sim_load_response = simulated_load(d_sim_load)
+        
+            @test sim_load_response["loads_mmbtu_per_hour"] ≈ round.(heating_load, digits=3)
+        
+            # If a non-2017 year is input with a CRB electric load, make sure that 
+            #  electric, heating, and cooling loads are aligned by shifting as expected
+            norm_data = Dict()
+            city = "SanFrancisco"
+            buildingtype = "Hospital"
+            for type in ["electric", "space_heating", "cooling"]
+                lib_path = joinpath(@__DIR__, "..", "data", "load_profiles", type)
+                profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
+                normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+                norm_data[type] = normalized_profile
+            end
+        
+            input_data["ElectricLoad"] = Dict("doe_reference_name" => buildingtype, "annual_kwh" => 10000, "year" => year)
+            input_data["SpaceHeatingLoad"] = Dict("doe_reference_name" => buildingtype, "annual_mmbtu" => 10000)
+            input_data["CoolingLoad"] = Dict("doe_reference_name" => buildingtype)
+        
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+        
+            first_day_of_year = 1  # Monday start day for 2024
+            expected_shift = first_day_of_year - 7  # 7 for Sunday start on 2017, 1 for Monday, 2 for Tuesday etc., so if start day is Sunday there is no shift
+        
+            elec_orig_shifted = circshift(norm_data["electric"], 24*expected_shift)
+            heat_orig_shifted = circshift(norm_data["space_heating"], 24*expected_shift)
+            cool_orig_shifted = circshift(norm_data["cooling"], 24*expected_shift)
+        
+            elec_load_normalized = s.electric_load.loads_kw / sum(s.electric_load.loads_kw)
+            heat_load_normalized = s.space_heating_load.loads_kw / sum(s.space_heating_load.loads_kw)
+            cooling_load_normalized = s.cooling_load.loads_kw_thermal / sum(s.cooling_load.loads_kw_thermal)
+        
+            @test elec_orig_shifted ≈ elec_load_normalized
+            @test heat_orig_shifted ≈ heat_load_normalized
+            @test cool_orig_shifted ≈ cooling_load_normalized 
+        end
+        
     end
 end
