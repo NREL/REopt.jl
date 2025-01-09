@@ -9,11 +9,16 @@
     industrial_reference_name::String = "",  # For ProcessHeatLoad
     blended_industrial_reference_names::Array{String, 1} = String[],  # For ProcessHeatLoad
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],  # For ProcessHeatLoad
-    addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
+    city::String = "",
+    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles are 2017 by default. If providing load profile, specify year of data.    
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
+    addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
     normalize_and_scale_load_profile_input::Bool = false,  # Takes fuel_loads_mmbtu_per_hour and normalizes and scales it to annual or monthly energy
+    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+    latitude::Real = 0.0,
+    longitude::Real = 0.0,
     existing_boiler_efficiency::Real = NaN
 ```
 
@@ -49,7 +54,7 @@ function HeatingLoad(;
     blended_industrial_reference_names::Array{String, 1} = String[],
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],    
     city::String = "",
-    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles must use 2017. If providing load profile, specify year of data.
+    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     addressable_load_fraction::Any = 1.0,
@@ -118,14 +123,14 @@ function HeatingLoad(;
         loads_kw = BuiltInHeatingLoad(load_type, "Chicago", "FlatLoad", 41.8333, -88.0616, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency, normalized_profile)               
         unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)
     elseif !isempty(doe_reference_name)
-        loads_kw = BuiltInHeatingLoad(load_type, city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
+        loads_kw = BuiltInHeatingLoad(load_type, city, doe_reference_name, latitude, longitude, year, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
         if length(blended_doe_reference_names) > 0
             @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
         end
         unaddressable_annual_fuel_mmbtu = get_unaddressable_fuel(addressable_load_fraction, annual_mmbtu, monthly_mmbtu, loads_kw, existing_boiler_efficiency)           
     elseif length(blended_doe_reference_names) > 0 && 
         length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-        loads_kw = blend_and_scale_doe_profiles(BuiltInHeatingLoad, latitude, longitude, 2017, 
+        loads_kw = blend_and_scale_doe_profiles(BuiltInHeatingLoad, latitude, longitude, year, 
                                                 blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                 annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
                                                 existing_boiler_efficiency, load_type)
