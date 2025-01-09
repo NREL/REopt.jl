@@ -328,7 +328,7 @@ function get_monthly_energy(power_profile::AbstractArray{<:Real,1};
     monthly_energy_total = zeros(12)
     for month in 1:12
         plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-        if month == 2 && isleapyear(year)
+        if month == 12 && isleapyear(year)
             plus_hours -= 24
         end
         if !isempty(power_profile)
