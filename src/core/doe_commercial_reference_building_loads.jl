@@ -134,14 +134,24 @@ function built_in_load(
 
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
     input_normalized = false
+    shift_possible = false
     if isempty(normalized_profile)
         if occursin("FlatLoad", buildingtype)
             normalized_profile = custom_normalized_flatload(buildingtype, year)
         else 
             normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+            shift_possible = true
         end
     else
         input_normalized = true
+    end
+
+    # The normalized_profile for CRBs (not FlatLoads) is based on year 2017 which starts on a Sunday. 
+    # If the year is not 2017 and we're using a CRB, we need to shift the profile to make the first day of the profile equal to the first day of the input year.
+    if !(year == 2017) && shift_possible
+        first_day_of_year = Dates.dayofweek(Date(year, 1, 1))
+        shift_days = first_day_of_year - 7  # 7 for Sunday, 1 for Monday, 2 for Tuesday etc., so if start day is Sunday there is no shift
+        normalized_profile = circshift(normalized_profile, 24 * shift_days)
     end
 
     if length(monthly_energies) == 12
@@ -149,10 +159,7 @@ function built_in_load(
         t0 = 1
         for month in 1:12
             plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-            if month == 2 && isleapyear(year) && !input_normalized  # for a leap year with normalized_profile, the last day is assumed to be truncated
-                plus_hours -= 24
-            end
-            if month == 12 && isleapyear(year) && input_normalized
+            if month == 12 && isleapyear(year)  # for a leap year, the last day is assumed to be truncated
                 plus_hours -= 24
             end
             month_total = sum(normalized_profile[t0:t0+plus_hours-1])
@@ -223,10 +230,6 @@ function blend_and_scale_doe_profiles(
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
-    if year != 2017
-        @debug "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
-    end
-    year = 2017
     
     if isempty(city)
         if heating_load_type === "process_heat"
