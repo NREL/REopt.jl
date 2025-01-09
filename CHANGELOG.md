@@ -25,6 +25,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## load-year-align
+### Fixed
+- Align heating and cooling load profiles based on electric load year input, if using custom electric load profile with simulated (CRB or schedule-based flatloads) heating/cooling loads
 
 ## leap-year-fix
 ### Fixed
