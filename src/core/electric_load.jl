@@ -158,11 +158,6 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
     
         elseif !isempty(doe_reference_name)
-            # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
-            if year != 2017
-                @warn "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
-            end
-            year = 2017
             loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
 
         elseif length(blended_doe_reference_names) > 1 && 
@@ -170,7 +165,6 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_kwh, monthly_totals_kwh)
-            # TODO: Should also warn here about year 2017
         else
             throw(@error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
