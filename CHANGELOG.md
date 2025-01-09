@@ -26,6 +26,11 @@ Classify the change according to the following categories:
     ### Removed
 
 
+## leap-year-fix
+### Fixed
+- Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
+
+
 ## v0.49.0
 ### Added
 - Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
