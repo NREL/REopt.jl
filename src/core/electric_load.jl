@@ -8,7 +8,7 @@
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[], # Values should be between 0-1 and sum to 1.0
-    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles defaults to using 2017. If providing load data, specify year of data.
+    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles defaults to using 2017. If providing load data, specify year of data.
     city::String = "",
     annual_kwh::Union{Real, Nothing} = nothing,
     monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -92,7 +92,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
+        year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles 2017 by default. If providing load data, specify year of data.
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -128,6 +128,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
         end
 
+        if isnothing(year)
+            throw(@error("Must provide the year when using loads_kw input."))
+        end 
+
         if length(loads_kw) > 0 && !normalize_and_scale_load_profile_input
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
@@ -143,7 +147,6 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
             # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
             normalized_profile = loads_kw ./ sum(loads_kw)
-            # Need year still mainly for
             loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile)            
 
         elseif !isempty(path_to_csv)

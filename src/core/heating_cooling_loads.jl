@@ -10,15 +10,12 @@
     blended_industrial_reference_names::Array{String, 1} = String[],  # For ProcessHeatLoad
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],  # For ProcessHeatLoad
     city::String = "",
-    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles are 2017 by default. If providing load profile, specify year of data.    
+    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.    
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
     normalize_and_scale_load_profile_input::Bool = false,  # Takes fuel_loads_mmbtu_per_hour and normalizes and scales it to annual or monthly energy
-    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-    latitude::Real = 0.0,
-    longitude::Real = 0.0,
     existing_boiler_efficiency::Real = NaN
 ```
 
@@ -54,7 +51,7 @@ function HeatingLoad(;
     blended_industrial_reference_names::Array{String, 1} = String[],
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],    
     city::String = "",
-    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
+    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     addressable_load_fraction::Any = 1.0,
@@ -83,6 +80,10 @@ function HeatingLoad(;
     else
         throw(@error("load_type must be 'space_heating', 'domestic_hot_water', or 'process_heat'"))
     end
+
+    if isnothing(year)
+        throw(@error("Must provide the year when using fuel_loads_mmbtu_per_hour input."))
+    end     
 
     if length(addressable_load_fraction) > 1
         if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
@@ -298,7 +299,7 @@ struct CoolingLoad
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         city::String = "",
-        year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
+        year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
         thermal_loads_ton::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [ton] = [short ton hours/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
@@ -312,6 +313,11 @@ struct CoolingLoad
         existing_chiller_cop::Union{Real, Nothing} = nothing, # Passed from ExistingChiller or set to a default
         existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}= nothing # Passed from ExistingChiller or set to a default
     )
+
+        if isnothing(year)
+            throw(@error("Must provide the year when using inputs of thermal_loads_ton or per_time_step_fractions_of_electric_load."))
+        end 
+
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
         loads_kw = nothing

@@ -231,11 +231,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
+        # TODO need to add a dummy year here or else will error
         dhw_load = HeatingLoad(;
             load_type = "domestic_hot_water", 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+            year=electric_load.year
         )
     end
 
@@ -256,7 +258,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             load_type = "space_heating",        
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+            year=electric_load.year
         )
     end
 
@@ -277,7 +280,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 load_type = "process_heat",                
                 fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
                 time_steps_per_hour=settings.time_steps_per_hour,
-                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+                year=electric_load.year
         )
     end
 
@@ -438,7 +442,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         cooling_load = CoolingLoad(; 
             thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            year=electric_load.year
         )
     end
 

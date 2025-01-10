@@ -197,7 +197,7 @@ else  # run HiGHS tests
 
         @testset "Fifteen minute load" begin
             d = JSON.parsefile("scenarios/no_techs.json")
-            d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040))
+            d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040), "year" => 2017)
             d["Settings"] = Dict("time_steps_per_hour" => 4)
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, d)
@@ -867,6 +867,7 @@ else  # run HiGHS tests
                 data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
                 data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
                 data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
+                data["ElectricLoad"]["year"] = 2022
                 data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
                 data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
                 #part 1: supplementary firing not used when less efficient than the boiler and expensive 
@@ -1247,6 +1248,7 @@ else  # run HiGHS tests
                 # has a demand charge lookback of 35% for all months with 2 different demand charges based on which month
                 data["ElectricLoad"]["loads_kw"] = ones(8760)
                 data["ElectricLoad"]["loads_kw"][8] = 100.0
+                data["ElectricLoad"]["year"] = 2022
                 inputs = REoptInputs(Scenario(data))        
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, inputs)
@@ -1263,6 +1265,7 @@ else  # run HiGHS tests
                 d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
                 d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
                 d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+                d["ElectricLoad"]["year"] = 2022
                 d["ElectricTariff"]["monthly_demand_rates"] = [10,10,20,50,20,10,20,20,20,20,20,5]
                 d["ElectricTariff"]["demand_lookback_months"] = [1,0,0,1,0,0,0,0,0,0,0,1] # Jan, April, Dec
                 d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
@@ -1282,7 +1285,8 @@ else  # run HiGHS tests
                 d["ElectricLoad"]["loads_kw"][22] = 200 # Jan peak
                 d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
                 d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
-                d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+                d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak
+                d["ElectricLoad"]["year"] = 2022 
                 d["ElectricTariff"]["monthly_demand_rates"] = [10,10,20,50,20,10,20,20,20,20,20,5]
                 d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
                 d["ElectricTariff"]["demand_lookback_range"] = 6
@@ -1909,6 +1913,7 @@ else  # run HiGHS tests
             post_name = "wind_intl_offgrid.json" 
             post = JSON.parsefile("./scenarios/$post_name")
             post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
+            post["ElectricLoad"]["year"] = 2022
             scen = Scenario(post)
             post["Wind"]["production_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
 
