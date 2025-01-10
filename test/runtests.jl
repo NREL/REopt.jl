@@ -2774,8 +2774,18 @@ else  # run HiGHS tests
                 @test results["ASHPWaterHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=1e-4
                 @test results["ASHPWaterHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=1e-4
             
+                #Case 4: confirm that when force_dispatch == true, there is no ASHP system purchased when system is expensive compared to cost of fuel
+                d["ASHPSpaceHeater"]["force_dispatch"] = true
+                d["ASHPWaterHeater"]["force_dispatch"] = true
+                d["ASHPSpaceHeater"]["min_ton"] = 0.0
+                d["ASHPWaterHeater"]["min_ton"] = 0.0
+                s = Scenario(d)
+                p = REoptInputs(s)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                results = run_reopt(m, p)
+                @test results["ASHPSpaceHeater"]["size_ton"] ≈ 0.0 atol=1e-4
+                @test results["ASHPWaterHeater"]["size_ton"] ≈ 0.0 atol=1e-4
             end
-        
         end
 
         @testset "Process Heat Load" begin
