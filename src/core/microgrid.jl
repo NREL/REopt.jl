@@ -1914,7 +1914,7 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
     system_results["total_generator_size_kw"] = total_generator_size_kw
     
     if (system_results_BAU != "") && (system_results_BAU != "none")
-        system_results["net_present_value"] = system_results_BAU["total_lifecycle_cost"] - total_lifecycle_cost
+        system_results["net_present_value"] = system_results_BAU["total_lifecycle_cost"] - value.(model[Symbol("Costs")])
     else
         system_results["net_present_value"] = "Not calculated"
     end
