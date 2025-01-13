@@ -3094,10 +3094,8 @@ else  # run HiGHS tests
                     energy_charge_expected = weekday_rate * peak_load
                     demand_charge_expected = (flat_rate + tou_rate) * peak_load        
                 end
-                println("year = ", year)
                 @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ energy_charge_expected atol=1E-6
                 @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ demand_charge_expected atol=1E-6
-
 
                 # Flat/facility (non-TOU) demand charge
                 input_data["ElectricLoad"]["loads_kw"] = zeros(8760)
@@ -3161,39 +3159,25 @@ else  # run HiGHS tests
         
             @test sim_load_response["loads_mmbtu_per_hour"] ≈ round.(heating_load, digits=3)
         
-            # If a non-2017 year is input with a CRB electric load, make sure that 
-            #  electric, heating, and cooling loads are aligned by shifting as expected
-            norm_data = Dict()
-            city = "SanFrancisco"
-            buildingtype = "Hospital"
-            for type in ["electric", "space_heating", "cooling"]
-                lib_path = joinpath(@__DIR__, "..", "data", "load_profiles", type)
-                profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
-                normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
-                norm_data[type] = normalized_profile
-            end
-        
+            # If a non-2017 year is input with a CRB for electric, heating, or cooling load, make sure that 
+            #  the energy input is preserved while the CRB profile is shifted and adjusted to align with 
+            #  the load year and re-normalized to preserve the annual energy (sum of normalized profile == 1.0)
             input_data["ElectricLoad"] = Dict("doe_reference_name" => buildingtype, "annual_kwh" => 10000, "year" => year)
             input_data["SpaceHeatingLoad"] = Dict("doe_reference_name" => buildingtype, "annual_mmbtu" => 10000)
-            input_data["CoolingLoad"] = Dict("doe_reference_name" => buildingtype)
-        
+            input_data["CoolingLoad"] = Dict("doe_reference_name" => buildingtype, "annual_tonhour" => 100.0)
+
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-        
-            first_day_of_year = 1  # Monday start day for 2024
-            expected_shift = first_day_of_year - 7  # 7 for Sunday start on 2017, 1 for Monday, 2 for Tuesday etc., so if start day is Sunday there is no shift
-        
-            elec_orig_shifted = circshift(norm_data["electric"], 24*expected_shift)
-            heat_orig_shifted = circshift(norm_data["space_heating"], 24*expected_shift)
-            cool_orig_shifted = circshift(norm_data["cooling"], 24*expected_shift)
-        
-            elec_load_normalized = s.electric_load.loads_kw / sum(s.electric_load.loads_kw)
-            heat_load_normalized = s.space_heating_load.loads_kw / sum(s.space_heating_load.loads_kw)
-            cooling_load_normalized = s.cooling_load.loads_kw_thermal / sum(s.cooling_load.loads_kw_thermal)
-        
-            @test elec_orig_shifted ≈ elec_load_normalized
-            @test heat_orig_shifted ≈ heat_load_normalized
-            @test cool_orig_shifted ≈ cooling_load_normalized 
+
+            # Test that the energy input is preserved with the CRB profile shift
+            @test sum(s.electric_load.loads_kw) ≈ input_data["ElectricLoad"]["annual_kwh"]
+            @test sum(s.space_heating_load.loads_kw) / REopt.KWH_PER_MMBTU ≈ input_data["SpaceHeatingLoad"]["annual_mmbtu"]
+            @test sum(s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR ≈ input_data["CoolingLoad"]["annual_tonhour"]
+
+            # The first CRB profile day, Sunday, is replaced by the first day of the load year, and that day is replicated at the end of the year too
+            @test s.electric_load.loads_kw[end-24+1:end] == s.electric_load.loads_kw[1:24]
+            @test s.space_heating_load.loads_kw[end-24+1:end] == s.space_heating_load.loads_kw[1:24]
+            @test s.cooling_load.loads_kw_thermal[end-24+1:end] == s.cooling_load.loads_kw_thermal[1:24]
         end
         
     end

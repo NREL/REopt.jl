@@ -146,12 +146,18 @@ function built_in_load(
         input_normalized = true
     end
 
-    # The normalized_profile for CRBs (not FlatLoads) is based on year 2017 which starts on a Sunday. 
-    # If the year is not 2017 and we're using a CRB, we need to shift the profile to make the first day of the profile equal to the first day of the input year.
+    # The normalized_profile for CRBs (not FlatLoads, which use the year input) is based on year 2017 which starts on a Sunday. 
+    # If the year is not 2017 and we're using a CRB, we shift the 2017 CRB profile to match the weekday/weekend profile of the input year.
+    # We remove the CRB start day Sunday, and shift the CRB profile to the left until reaching the start day of the input year (e.g. Friday for 2021), and 
+    #  the shifted days (but not Sunday) get wrapped around to the end of the year, and the year's start day gets duplicated at the end of the year to match the year's ending day of the week.
+    # We then re-normalize the profile because we've removed the previously-normalized year's first day Sunday and duplicated the year's start day profile
     if !(year == 2017) && shift_possible
-        first_day_of_year = Dates.dayofweek(Date(year, 1, 1))
-        shift_days = first_day_of_year - 7  # 7 for Sunday, 1 for Monday, 2 for Tuesday etc., so if start day is Sunday there is no shift
-        normalized_profile = circshift(normalized_profile, 24 * shift_days)
+        crb_start_day = Dates.dayofweek(DateTime(2017,1,1))
+        load_start_day = Dates.dayofweek(DateTime(year,1,1))
+        cut_days = 7 - (crb_start_day - load_start_day) # Ex: = 7-(7-5) = 5 --> cut Sun, Mon, Tues, Wed, Thurs for 2021 load year
+        wrap_ts = normalized_profile[25:24+24*cut_days] # Ex: = crb_profile[25:144] wrap Mon-Fri to end for 2021
+        normalized_profile = append!(normalized_profile[24*cut_days+1:end], wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
+        normalized_profile = normalized_profile ./ sum(normalized_profile)
     end
 
     if length(monthly_energies) == 12
