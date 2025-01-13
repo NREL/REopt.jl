@@ -31,6 +31,11 @@ Classify the change according to the following categories:
 - Updated Cambium API call for CO2e emissions within CONUS to Cambium 2023 dataset. This includes updates to the default values and valid options for the following **ElectricUtility** inputs:  **cambium_scenario**, **cambium_location_type**, and **cambium_start_year**
 - Updated EMISSIONS_DECREASE_DEFAULTS from 0.02163 to 0.0459 based on Cambium 2023 data
 
+## leap-year-fix
+### Fixed
+- Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
+
+
 ## v0.49.0
 ### Added
 - Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
