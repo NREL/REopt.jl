@@ -244,7 +244,7 @@ struct ElectricUtility
                     if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2 
                         if cambium_start_year < 2025 || cambium_start_year > 2050
                             cambium_start_year = 2025 # Must update annually
-                            @warn("The cambium_start_year must be between $(cambium_start_year) and 2050. Setting to cambium_start_year to $(cambium_start_year).")
+                            @warn("The cambium_start_year must be between $(cambium_start_year) and 2050. Setting cambium_start_year to $(cambium_start_year).")
                         end
                         try
                             cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load and time_steps_per_hour
