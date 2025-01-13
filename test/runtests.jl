@@ -2946,8 +2946,8 @@ else  # run HiGHS tests
             # Check that monthly energy input is preserved when normalizing and scaling the hourly profile
             @test abs(sum(s.electric_load.loads_kw) - sum(input_data["ElectricLoad"]["monthly_totals_kwh"])) < 1.0
 
-            # This get_monthly_energy function is only equivalent for non-leap years with loads_kw normalization and scaling because it removes the leap day from the processing of monthly hours/energy
-            monthly_totals_kwh = REopt.get_monthly_energy(s.electric_load.loads_kw; year=2017)
+            # Check consistency of get_monthly_energy() function which is used in simulated_load()
+            monthly_totals_kwh = REopt.get_monthly_energy(s.electric_load.loads_kw; year=input_data["ElectricLoad"]["year"])
 
             # Check that each month matches
             @test sum(monthly_totals_kwh .- input_data["ElectricLoad"]["monthly_totals_kwh"]) < 1.0
@@ -2995,14 +2995,13 @@ else  # run HiGHS tests
 
             # Check that monthly energy input is preserved when normalizing and scaling the hourly profile
             @test abs(sum(s.space_heating_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU) - sum(input_data["SpaceHeatingLoad"]["monthly_mmbtu"]) * address_frac) < 1.0
-
-            # This get_monthly_energy function is only equivalent for non-leap years with loads_kw normalization and scaling because it removes the leap day from the processing of monthly hours/energy
-            monthly_kwht = REopt.get_monthly_energy(s.space_heating_load.loads_kw; year=2017) 
+            # Check consistency of get_monthly_energy() function which is used in simulated_load()
+            monthly_kwht = REopt.get_monthly_energy(s.space_heating_load.loads_kw; year=input_data["SpaceHeatingLoad"]["year"]) 
             monthly_mmbtu = monthly_kwht/ s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU
-            @test abs(sum(s.process_heat_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU) - input_data["ProcessHeatLoad"]["annual_mmbtu"]) < 1.0
-
-            # Check that each month matches
             @test sum(monthly_mmbtu .- input_data["SpaceHeatingLoad"]["monthly_mmbtu"] * address_frac) < 1.0
+
+            # Check that annual energy input is preserved when normalizing and scaling the hourly profile
+            @test abs(sum(s.process_heat_load.loads_kw / s.existing_boiler.efficiency / REopt.KWH_PER_MMBTU) - input_data["ProcessHeatLoad"]["annual_mmbtu"]) < 1.0
 
             # Check that the load ratio within a month is proportional to the loads_kw ratio
             @test abs(s.space_heating_load.loads_kw[6] / s.space_heating_load.loads_kw[4] - input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][6] / input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][4]) < 0.001
