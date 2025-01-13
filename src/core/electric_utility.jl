@@ -159,7 +159,7 @@ struct ElectricUtility
         
         ### Grid Climate Emissions Inputs ### 
         # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
-        cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
+        cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see ELectricUtility docsting for options and/or Cambium docs for descriptions). 
         cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions 2023"] 
         cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         cambium_start_year::Int = 2025, # First year of operation of system. # Options: any year now through 2050.
