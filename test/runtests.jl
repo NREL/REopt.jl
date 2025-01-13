@@ -3162,6 +3162,7 @@ else  # run HiGHS tests
             # If a non-2017 year is input with a CRB for electric, heating, or cooling load, make sure that 
             #  the energy input is preserved while the CRB profile is shifted and adjusted to align with 
             #  the load year and re-normalized to preserve the annual energy (sum of normalized profile == 1.0)
+            buildingtype = "Hospital"
             input_data["ElectricLoad"] = Dict("doe_reference_name" => buildingtype, "annual_kwh" => 10000, "year" => year)
             input_data["SpaceHeatingLoad"] = Dict("doe_reference_name" => buildingtype, "annual_mmbtu" => 10000)
             input_data["CoolingLoad"] = Dict("doe_reference_name" => buildingtype, "annual_tonhour" => 100.0)
