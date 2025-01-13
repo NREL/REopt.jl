@@ -28,6 +28,9 @@ Classify the change according to the following categories:
 ## load-year-align
 ### Fixed
 - Align heating and cooling load profiles based on electric load year input, if using custom electric load profile with simulated (CRB or schedule-based flatloads) heating/cooling loads
+### Changed
+- Make `year` input required with `ElectricLoad.loads_kw` input
+- Shift and adjust CRB load profiles (i.e. with `doe_reference_name` input) based on the `year` input
 
 ## leap-year-fix
 ### Fixed
