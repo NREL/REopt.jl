@@ -50,6 +50,11 @@ Classify the change according to the following categories:
 - Make **ElectricTariff** **export_rate_beyond_net_metering_limit** and **wholesale_rate** with sub-hour time step work
 
 ## Develop
+## leap-year-fix
+### Fixed
+- Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
+
+
 ## v0.49.0
 ### Added
 - Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
