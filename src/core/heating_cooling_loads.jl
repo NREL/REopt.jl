@@ -10,7 +10,7 @@
     blended_industrial_reference_names::Array{String, 1} = String[],  # For ProcessHeatLoad
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],  # For ProcessHeatLoad
     city::String = "",
-    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.    
+    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] || industrial_reference_name ≠ "" || blended_industrial_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
@@ -51,7 +51,7 @@ function HeatingLoad(;
     blended_industrial_reference_names::Array{String, 1} = String[],
     blended_industrial_reference_percents::Array{<:Real,1} = Real[],    
     city::String = "",
-    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
+    year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] || industrial_reference_name ≠ "" || blended_industrial_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     addressable_load_fraction::Any = 1.0,
