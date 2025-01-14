@@ -12,8 +12,8 @@
     },
     "ElectricLoad": {
       "year": 2017,
-      "loads_kw_is_net": false,
-      "critical_loads_kw_is_net": false
+      "loads_kw_is_net": true,
+      "critical_loads_kw_is_net": true
     },
     "ElectricTariff": {
       "blended_annual_energy_rate": 0.3,
@@ -51,7 +51,6 @@
         },
         {
           "name": "pv_dc",
-          "dc_coupled_with_storage": true,
           "existing_kw": 0.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
