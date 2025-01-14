@@ -11,7 +11,11 @@ using DelimitedFiles
 using Logging
 Random.seed!(42)
 
-if "Xpress" in ARGS
+if "Debug" in ARGS
+    @testset "debugging_tests" begin
+        include("debugging_tests.jl")
+    end
+elseif "Xpress" in ARGS
     @testset "test_with_xpress" begin
         @test true  #skipping Xpress while import to HiGHS takes place
         # include("test_with_xpress.jl")
@@ -21,6 +25,7 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
+
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "Prevent simultaneous charge and discharge" begin
