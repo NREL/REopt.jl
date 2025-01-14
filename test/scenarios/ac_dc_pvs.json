@@ -14,7 +14,7 @@
       "doe_reference_name": "RetailStore",
       "annual_kwh": 1000000.0,
       "year": 2017,
-      "loads_kw_is_net": false
+      "loads_kw_is_net": true
     },
     "ElectricTariff": {
       "blended_annual_energy_rate": 0.3,
