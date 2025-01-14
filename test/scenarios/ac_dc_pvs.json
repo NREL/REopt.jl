@@ -29,46 +29,24 @@
         "min_kwh": 0.0,
         "can_grid_charge": false
     },
-    "PV": [
-        {
-          "name": "pv_ac",
-          "existing_kw": 30.0,
-          "installed_cost_per_kw": 1600.0,
-          "om_cost_per_kw": 16.0,
-          "macrs_option_years": 5,
-          "macrs_bonus_fraction": 1.0,
-          "macrs_itc_reduction": 0.5,
-          "federal_itc_fraction": 0.26,
-          "degradation_fraction": 0.005,
-          "azimuth": 180.0,
-          "losses": 0.14,
-          "array_type": 1,
-          "module_type": 0,
-          "gcr": 0.4,
-          "dc_ac_ratio": 1.2,
-          "inv_eff": 0.96,
-          "tilt": 10.0,
-          "location": "roof"
-        },
-        {
-          "name": "pv_dc",
-          "existing_kw": 0.0,
-          "installed_cost_per_kw": 1600.0,
-          "om_cost_per_kw": 16.0,
-          "macrs_option_years": 5,
-          "macrs_bonus_fraction": 1.0,
-          "macrs_itc_reduction": 0.5,
-          "federal_itc_fraction": 0.26,
-          "degradation_fraction": 0.005,
-          "azimuth": 180.0,
-          "losses": 0.14,
-          "array_type": 1,
-          "module_type": 0,
-          "gcr": 0.4,
-          "dc_ac_ratio": 1.2,
-          "inv_eff": 0.96,
-          "tilt": 10.0,
-          "location": "roof"
-        }
-      ]
+    "PV": {
+        "name": "pv_dc",
+        "existing_kw": 0.0,
+        "installed_cost_per_kw": 1600.0,
+        "om_cost_per_kw": 16.0,
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "macrs_itc_reduction": 0.5,
+        "federal_itc_fraction": 0.26,
+        "degradation_fraction": 0.005,
+        "azimuth": 180.0,
+        "losses": 0.14,
+        "array_type": 1,
+        "module_type": 0,
+        "gcr": 0.4,
+        "dc_ac_ratio": 1.2,
+        "inv_eff": 0.96,
+        "tilt": 10.0,
+        "location": "roof"
+      }
 }
