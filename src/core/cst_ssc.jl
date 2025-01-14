@@ -265,7 +265,7 @@ function run_ssc(case_data::Dict)
         else
             thermal_production_norm = thermal_production .* tcf ./ rated_power
         end
-        if model in ["mst","ptc","lf]
+        if model in ["mst","ptc","lf"]
             println("Total thermal energy collected: " * string(round(sum(thermal_power_produced),digits=2)) * " MWht.")
         elseif model in ["swh_evactube","swh_flatplate"]
             println("Total thermal energy collected: " * string(round(sum(thermal_power_produced),digits=2)) * " kWht.")
