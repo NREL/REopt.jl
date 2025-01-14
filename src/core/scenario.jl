@@ -231,7 +231,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        # TODO need to add a dummy year here or else will error
         dhw_load = HeatingLoad(;
             load_type = "domestic_hot_water", 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
