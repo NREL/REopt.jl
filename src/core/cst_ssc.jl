@@ -201,9 +201,9 @@ function run_ssc(case_data::Dict)
         outputs_dict = Dict(
             "mst" => ["Q_thermal","P_tower_pump",0.0,"q_pb_design","solarm"],         # Q_thermal = [MWt] (confirmed 1/14/2025)
             "lf" => ["q_dot_to_heat_sink","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
-            "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # locked in [MWt]
-            "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # kW, kW, kW
-            "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # kW, kW, kW
+            "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # q_dot_htf_sf_out = [MWt] (confirmed 1/14/2025)
+            "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # Q_useful = [kWt] confirmed 1/14/2025)
+            "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # Q_useful = [kWt] confirmed 1/14/2025), kW, kW, kW
         )
         thermal_conversion_factor = Dict(
             "mst" => 1,         
@@ -258,11 +258,17 @@ function run_ssc(case_data::Dict)
         ecf = elec_conversion_factor[model]
         #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         # print(c_response)
+        ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
         if model == "ptc"
             
             thermal_production_norm = normalize_response(thermal_production, case_data)
         else
             thermal_production_norm = thermal_production .* tcf ./ rated_power
+        end
+        if model in ["mst","ptc","lf]
+            println("Total thermal energy collected: " * string(round(sum(thermal_power_produced),digits=2)) * " MWht.")
+        elseif model in ["swh_evactube","swh_flatplate"]
+            println("Total thermal energy collected: " * string(round(sum(thermal_power_produced),digits=2)) * " kWht.")
         end
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         # R[k] = response_norm
