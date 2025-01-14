@@ -51,16 +51,11 @@ using DelimitedFiles
     inputs["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat(cat(0.2*ones(15), 0.4*ones(5), 0.2*ones(4), dims=1), outer=365)
 
     m = Model(optimizer_with_attributes(HiGHS.Optimizer))
-    # m1 = Model(optimizer_with_attributes(HiGHS.Optimizer))
-    # m2 = Model(optimizer_with_attributes(HiGHS.Optimizer))
-    # m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
-    # m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
-    # results = run_reopt([m1,m2], inputs)
     results = run_reopt(m, inputs)
     open("ac_dc_pvs_results_single_pv.json","w") do f
         JSON.print(f, results, 4)
     end
-    results = JSON.parsefile("./ac_dc_pvs_results_single_pv.json")
+    # results = JSON.parsefile("./ac_dc_pvs_results_single_pv.json")
 
     results_baseline = JSON.parsefile("./ac_dc_pvs_results_baseline_single_pv.json")
 
@@ -75,6 +70,8 @@ using DelimitedFiles
     @test pv_dc["annual_energy_produced_kwh"] ≈ pv_dc_baseline["annual_energy_produced_kwh"] atol=1
     @test sum(pv_dc["electric_to_storage_series_kw"]) ≈ sum(pv_dc_baseline["electric_to_storage_series_kw"]) atol=1
 
+    @test results["Financial"]["lcc"] ≈ results_baseline["Financial"]["lcc"] atol=1
+
 
     ## With existing ac-coupled PV
     inputs = JSON.parsefile("./scenarios/ac_dc_pvs_existing.json")
@@ -86,7 +83,9 @@ using DelimitedFiles
     open("ac_dc_pvs_results_existing.json","w") do f
         JSON.print(f, results, 4)
     end
+    # results = JSON.parsefile("./ac_dc_pvs_results_existing.json")
 
+    # switch comparison from can charge to cannot charge once ac coupled techs not allowed to chanrge dc coupled storage
     results_baseline_ac_can_charge = JSON.parsefile("./ac_dc_pvs_results_baseline_existing_can_charge.json")
     results_baseline_ac_cannot_charge = JSON.parsefile("./ac_dc_pvs_results_baseline_existing_cannot_charge.json")
     results_baseline = results_baseline_ac_can_charge
@@ -106,4 +105,6 @@ using DelimitedFiles
     @test pv_dc["annual_energy_produced_kwh"] ≈ pv_dc_baseline["annual_energy_produced_kwh"] atol=1
     @test sum(pv_ac["electric_to_storage_series_kw"]) ≈ sum(pv_ac_baseline["electric_to_storage_series_kw"]) atol=1
     @test sum(pv_dc["electric_to_storage_series_kw"]) ≈ sum(pv_dc_baseline["electric_to_storage_series_kw"]) atol=1
+    
+    @test results["Financial"]["lcc"] ≈ results_baseline["Financial"]["lcc"] atol=1
 end
