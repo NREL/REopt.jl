@@ -258,7 +258,7 @@ end
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     city::String = "",
-    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # CRB profiles are 2017 by default. If providing load profile, specify year of data.    
+    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # CRB profiles are 2017 by default. If providing load profile, specify year of data.    
     annual_tonhour::Union{Real, Nothing} = nothing,
     monthly_tonhour::Array{<:Real,1} = Real[],
     thermal_loads_ton::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [ton] = [short ton hours/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
