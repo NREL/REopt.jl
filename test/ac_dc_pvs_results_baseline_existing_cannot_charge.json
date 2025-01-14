@@ -20940,7 +20940,7 @@
         ]
     },
     "status": "optimal",
-    "solver_seconds": 4.596,
+    "solver_seconds": 4.521,
     "ElectricUtility": {
         "lifecycle_emissions_tonnes_PM25": 0.16,
         "lifecycle_emissions_tonnes_SO2": 0.17,
