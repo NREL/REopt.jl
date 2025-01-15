@@ -399,12 +399,13 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
 end
 
 function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
-	# Lower bound on DC coupled PV and battery inverter power capacity
+	# Lower bound on DC coupled PV and battery inverter power capacity (only need inverter direction b/c with no grid rectifier direction is 0)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvDCCoupledTechStorageInverterSize]["ElectricStorage"] >= 
         m[:dvMGDischargeFromStorage][s, tz, ts] + 
         sum(m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
-            - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
+            - m[:dvMGProductionToStorage][t, s, tz, ts] 
+            - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.dc_couple_with_stor
         )
     )
