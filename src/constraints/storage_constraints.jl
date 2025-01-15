@@ -144,6 +144,7 @@ function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
     @constraint(m, [ts in p.time_steps],
         m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= 
         m[Symbol("dvGridToStorage"*_n)][b,ts]
+        + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_couple_with_stor)
     )
 
     # Constraint (4d)-2: Don't let AC coupled elec techs charge battery. 
