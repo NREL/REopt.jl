@@ -163,11 +163,10 @@ using DelimitedFiles
     pv_ac_baseline = results_baseline["PV"][findfirst(pv -> pv["name"] == "pv_ac", results_baseline["PV"])]
     pv_dc_baseline = results_baseline["PV"][findfirst(pv -> pv["name"] == "pv_dc", results_baseline["PV"])]
 
-    @test pv_ac["size_kw"] ≈ 30.0 rtol=.005 # 30.0
-    @test pv_dc["size_kw"] ≈ pv_dc_baseline["size_kw"] + pv_ac_baseline["size_kw"] rtol=.005 # 302.9552
+    @test pv_ac["size_kw"] ≈ pv_ac_baseline["size_kw"] rtol=.005 # 30.0
+    @test pv_dc["size_kw"] ≈ pv_dc_baseline["size_kw"] rtol=.005 # 302.9552
     @test sum(pv_ac["electric_to_storage_series_kw"]) ≈ 0.0 rtol=.0001 # 0
     @test sum(pv_dc["electric_to_storage_series_kw"]) ≈ sum(pv_ac_baseline["electric_to_storage_series_kw"]) + sum(pv_dc_baseline["electric_to_storage_series_kw"]) rtol=.0001 # 176038.056
     
-    expected_om_diff = results["Financial"]["lifecycle_om_costs_after_tax"] - results_baseline["Financial"]["lifecycle_om_costs_after_tax"]
-    @test results["Financial"]["lcc"] ≈ results_baseline["Financial"]["lcc"] + expected_om_diff rtol=.001 # 1.3605789661e6
+    @test results["Financial"]["lcc"] ≈ results_baseline["Financial"]["lcc"] rtol=.001 # 1.3605789661e6
 end
