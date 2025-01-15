@@ -287,7 +287,7 @@ function add_MG_storage_dispatch_constraints(m,p)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvMGStoredEnergy][s, tz, ts] == m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (
             p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_couple_with_stor)
-            + p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_couple_with_stor)
+            + p.s.storage.attr["ElectricStorage"].dc_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_couple_with_stor)
             - m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
         )
     )
