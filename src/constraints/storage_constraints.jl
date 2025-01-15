@@ -139,6 +139,20 @@ function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
         - m[Symbol("dvProductionToStorage"*_n)][b, t, ts]
         - m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.dc_couple_with_stor) 
     )
+    # Constraint (4d)-1: Lower bounds on DC coupled PV and battery inverter power capacity 
+    # (inverter direction)
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= 
+        m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+        + sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
+            - m[Symbol("dvProductionToStorage"*_n)][b, t, ts]
+            - m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.dc_couple_with_stor)
+    )
+    # (rectifier direction)
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= 
+        m[Symbol("dvGridToStorage"*_n)][b,ts]
+    )
 
     # Constraint (4d)-2: Don't let AC coupled elec techs charge battery. 
     # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_couple_with_stor
