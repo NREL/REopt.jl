@@ -479,7 +479,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         end
         @info "PVWatts success."
         # Get both possible data of interest
-        pv_profile_key = dc_coupled_with_storage ? "ac" : "ac"
+        pv_profile_key = dc_coupled_with_storage ? "dc" : "ac"
         watts = collect(get(response["outputs"], pv_profile_key, []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
         # Validate outputs
