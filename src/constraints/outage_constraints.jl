@@ -397,3 +397,27 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
         end
     end
 end
+
+function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
+	# Lower bound on DC coupled PV and battery inverter power capacity
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= 
+        m[:dvMGDischargeFromStorage][s, tz, ts] + 
+        sum(m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+            - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
+            for t in p.techs.dc_couple_with_stor
+        )
+    )
+
+    # Don't let AC coupled elec techs charge battery. 
+    # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_couple_with_stor
+    for ts in 1:p.s.site.min_resil_time_steps
+        for tz in p.s.electric_utility.outage_start_time_steps
+            for s in p.s.electric_utility.scenarios
+                for t in p.techs.ac_couple_with_stor
+                    fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
+                end
+            end
+        end
+    end
+end
