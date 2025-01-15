@@ -124,7 +124,7 @@ using DelimitedFiles
     end
     # results = JSON.parsefile("./ac_dc_pvs_results_single_pv.json")
 
-    results_baseline = JSON.parsefile("./ac_dc_pvs_results_prev.json")
+    results_baseline = JSON.parsefile("./ac_dc_pvs_results_single_pv_prev.json")
 
     @test results["ElectricStorage"]["size_kw"] ≈ results_baseline["ElectricStorage"]["size_kw"] rtol=.005 # 100
     @test results["ElectricStorage"]["size_kwh"] ≈ results_baseline["ElectricStorage"]["size_kwh"] rtol=.005 # 594.86
