@@ -25,14 +25,43 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop degradation-cleanup
+## load-year-align
+### Fixed
+- Align heating and cooling load profiles based on electric load year input, if using custom electric load profile with simulated (CRB or schedule-based flatloads) heating/cooling loads
+### Changed
+- Make `year` input required with any custom load profile input (e.g. `ElectricLoad.loads_kw`, `SpaceHeatingLoad.fuel_loads_mmbtu_per_hour`)
+- Shift and adjust CRB load profiles (i.e. with `doe_reference_name` input) based on the `year` input
+
+## leap-year-fix
+### Fixed
+- Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
+
+
+## v0.49.1
+### Changed
+- Swap an error for a warning with inconsistent load-year between electric and heating; soon to 
+
+## v0.49.0
+### Added
+- Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
+### Changed
+- Internal refactoring of the three types of heating loads into a single `HeatingLoad` struct
+- Moved the annual_[energy] data from the load src files into the /data/load_profiles folder
+### Fixed
+- Constrained export to grid in the NEM bin (`dvProductionToGrid"*_n)][t, :NEM, ts`) to be 0 when system is sized over NEM limit (i.e., when binNEM =0)
+
+## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 ### Changed
 - Revised the battery degradation model, refactoring some methods to increase model-building efficiency and reformulating indicator constraints as big-M constraints with smaller big-M's to reduce solve time.
 - Edited several documentation entries and docstrings for clarity.
 ### Removed
 - 80% scaling of battery maintenance costs when using augmentation strategy
+### Fixed 
+- Fixed conditions for which a warning is presented indicating that the wholesale benefit threshold is met. 
+- When setting **thermal_production_series_mmbtu_per_hour** output in **ExistingBoiler**, sum over heating loads instead of time steps
 
 ## v0.48.1
 ### Changed
@@ -57,6 +86,7 @@ Classify the change according to the following categories:
 - Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
 - In `src/core/existing_chiller.jl`, Added new atttribute **retire_in_optimal** to the **ExistingChiller** struct
 - Financial output **initial_capital_costs_after_incentives_without_macrs** which has "net year one" CapEx after incentives except for MACRS, which helps with users defining their own "simple payback period"
+
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage.
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail.
@@ -72,6 +102,7 @@ Classify the change according to the following categories:
 - Added a couple of missing techs for the initial capital cost calculation in financial.jl.
 - An issue with setup_boiler_inputs in reopt_inputs.jl.
 - Fuel costs in proforma.jl were not consistent with the optimization costs, so that was corrected so that they are only added to the offtaker cashflows and not the owner/developer cashflows for third party.
+
 
 ## v0.47.2
 ### Fixed
