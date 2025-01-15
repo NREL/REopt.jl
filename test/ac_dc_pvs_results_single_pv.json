@@ -10,13 +10,13 @@
         "annual_emissions_tonnes_PM25": 0.0064,
         "lifecycle_emissions_tonnes_NOx": 1.03,
         "annual_emissions_from_fuelburn_tonnes_CO2": 0.0,
-        "total_renewable_energy_fraction": 0.549536,
+        "total_renewable_energy_fraction": 0.542026,
         "annual_emissions_from_fuelburn_tonnes_SO2": 0.0,
         "lifecycle_emissions_from_fuelburn_tonnes_SO2": 0.0,
-        "renewable_electricity_fraction": 0.549536,
+        "renewable_electricity_fraction": 0.542026,
         "lifecycle_emissions_from_fuelburn_tonnes_CO2": 0.0,
         "lifecycle_emissions_from_fuelburn_tonnes_NOx": 0.0,
-        "annual_renewable_electricity_kwh": 481393.71,
+        "annual_renewable_electricity_kwh": 474815.14,
         "lifecycle_emissions_tonnes_CO2": 811.12,
         "annual_emissions_tonnes_CO2": 32.4448
     },
@@ -17616,7 +17616,7 @@
         ]
     },
     "status": "optimal",
-    "solver_seconds": 6.38,
+    "solver_seconds": 6.4,
     "ElectricUtility": {
         "lifecycle_emissions_tonnes_PM25": 0.16,
         "lifecycle_emissions_tonnes_SO2": 0.17,
