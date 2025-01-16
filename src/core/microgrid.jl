@@ -230,10 +230,11 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
         REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Microgrid_Inputs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
 
         if Microgrid_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp, LineInfo_PMD, data_math_mn)
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp, LineInfo_PMD, data_math_mn)
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
+            outage_simulator_time_milliseconds = "N/A"
         end 
 
         if Microgrid_Inputs.run_BAU_case
@@ -256,7 +257,7 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
 
         ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
         
-        system_results = REopt.Results_Compilation(model, REopt_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU)
+        system_results = REopt.Results_Compilation(model, REopt_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
@@ -609,6 +610,7 @@ end
 function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp, LineInfo_PMD, data_math_mn)
     
     Outage_Results = Dict([])
+    outage_simulator_time_start = now()
 
     # When line and transformer upgrades are implemented into the REopt-PMD model, define these inputs for the outage simulator
     line_max_amps = "N/A"
@@ -632,8 +634,8 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Micro
                                                                                                                     OutageLength_TimeSteps_Input = OutageLength)
         Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
     end
-    
-    return Outage_Results, single_model_outage_simulator
+    outage_simulator_time_milliseconds = CalculateComputationTime(outage_simulator_time_start)
+    return Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds
 end
 
 
@@ -1855,7 +1857,7 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
 end 
 
 
-function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "")
+function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
     
     @info "Compiling the results"
 
@@ -1969,7 +1971,11 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
                 push!(DataLabels, "  BAU model solve time (minutes)" )
                 push!(Data, round(JuMP.solve_time(bau_model)/60, digits = 2))
             end
-
+            if Microgrid_Inputs.run_outage_simulator
+                push!(DataLabels, "  Total outage simulation time (minutes)")
+                push!(Data, round((Dates.value(outage_simulator_time)/(1000*60)), digits=2))
+            end
+            
             push!(DataLabels, "----System Results----")
             push!(Data,"")
 
