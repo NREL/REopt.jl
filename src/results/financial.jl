@@ -96,7 +96,13 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
+    # Debugging: Print initial capital costs and replacement costs
+    @info "Initial Capital Costs (Pre-Incentives): $(r["initial_capital_costs"])"
+    @info "Present Replacement Cost: $(present_replacement_cost)"
+    @info "Future Replacement Cost: $(future_replacement_cost)"
+
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
+    @info "Initial Capital Costs After Incentives (Third-Party Ownership): $(r["initial_capital_costs_after_incentives"])"
 
     r["replacements_future_cost_after_tax"] = future_replacement_cost 
     r["replacements_present_cost_after_tax"] = present_replacement_cost 
@@ -130,33 +136,47 @@ end
 Calculate and return the up-front capital costs for all technologies, in present value, excluding replacement costs and 
 incentives.
 """
-function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    @info "Starting initial_capex calculation"
+
+function get_pv_initial_capex(p::REoptInputs, pv::AbstractTech, size_kw::Float64)
+    cost_list = pv.installed_cost_per_kw
     initial_capex = 0.0
 
-    if !isempty(p.techs.gen) && isempty(_n)
-        @info "Adding generator capex"
-        gen_capex = p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
-        initial_capex += gen_capex
-        @info "Added generator capex: $gen_capex"
-    end
-
-    if !isempty(p.techs.pv)
-        @info "Processing PV capex"
-        for pv in p.s.pvs
-            @info "Processing PV: $(pv.name)"
-            pv_size_kw = value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
-            @info "PV size: $pv_size_kw"
-            try
-                pv_capex = get_pv_initial_capex(p, pv, pv_size_kw)
-                initial_capex += pv_capex
-                @info "Added PV capex: $pv_capex"
-            catch e
-                @error "Error calculating PV capex" PV=pv.name size=pv_size_kw exception=(e, catch_backtrace())
-                rethrow(e)
+    if typeof(cost_list) <: Number
+        initial_capex = cost_list * size_kw
+    else
+        size_list = pv.tech_sizes_for_cost_curve
+        if size_kw <= size_list[1]
+            initial_capex = cost_list[1] * size_kw
+        elseif size_kw > size_list[end]
+            initial_capex = cost_list[end] * size_kw
+        else
+            for s in 2:length(size_list)
+                if (size_kw > size_list[s-1]) && (size_kw <= size_list[s])
+                    slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                            (size_list[s] - size_list[s-1])
+                    initial_capex = cost_list[s-1] * size_list[s-1] + (size_kw - size_list[s-1]) * slope
+                    break
+                end
             end
         end
     end
+    return initial_capex
+end
+
+function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    initial_capex = 0
+
+    if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
+        initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+    end
+
+    if !isempty(p.techs.pv)
+        for pv in p.s.pvs
+            pv_size_kw = convert(Float64, value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name])
+            initial_capex += get_pv_initial_capex(p, pv, pv_size_kw)
+        end
+    end
+
     for b in p.s.storage.types.elec
         if p.s.storage.attr[b].max_kw > 0
             initial_capex += p.s.storage.attr[b].installed_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
@@ -192,12 +212,13 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if !isempty(p.s.ghp_option_list)
+
         for option in enumerate(p.s.ghp_option_list)
+
             if option[2].heat_pump_configuration == "WSHP"
                 initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
             elseif option[2].heat_pump_configuration == "WWHP"
-                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + 
-                                option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
             else
                 @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
@@ -211,7 +232,6 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "ASHPWaterHeater" in p.techs.all
         initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
     end    
-    @info "Final initial_capex: $initial_capex"
 
     return initial_capex
 end
@@ -278,13 +298,12 @@ divided by annual energy output. This tech-specific LCOE is distinct from the of
 """
 function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0.0
-    new_kw = get(tech_results, "size_kw", 0) - existing_kw # new capacity
+    new_kw = get(tech_results, "size_kw", 0) - existing_kw 
     if new_kw == 0
         return 0.0
     end
 
-    years = p.s.financial.analysis_years # length of financial life
-    # TODO is most of this calculated in proforma metrics?
+    years = p.s.financial.analysis_years
     if p.s.financial.third_party_ownership
         discount_rate_fraction = p.s.financial.owner_discount_rate_fraction
         federal_tax_rate_fraction = p.s.financial.owner_tax_rate_fraction
@@ -293,9 +312,8 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
         federal_tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
 
-    capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
-
-    annual_om = new_kw * tech.om_cost_per_kw 
+    capital_costs = get_pv_initial_capex(p, tech, new_kw)
+    annual_om = new_kw * tech.om_cost_per_kw
 
     om_series = [annual_om * (1+p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
     npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)]) # NPV of O&M charges escalated over financial life
@@ -423,31 +441,5 @@ function get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
     # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
     end
 
-    return initial_capex
-end
-
-
-function get_pv_initial_capex(p::REoptInputs, pv::AbstractTech, size_kw::Float64)
-    @info "Starting get_pv_initial_capex with size_kw = $(size_kw)"
-    
-    # Get cost curve parameters 
-    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(pv, p.s.financial)
-    
-    # Find the appropriate segment for this size
-    initial_capex = 0.0
-    for i in 1:n_segments
-        if size_kw >= cost_curve_bp_x[i] && size_kw < cost_curve_bp_x[i + 1]
-            # Use the piecewise linear formula: y = mx + b
-            initial_capex = cost_slope[i] * size_kw + cost_yint[i]
-            break
-        end
-    end
-
-    # For verification, log what segment and calculation was used
-    @info "Using cost curve with:"
-    @info "Size: $(size_kw)"
-    @info "Base cost from installed_cost_per_kw: $(pv.installed_cost_per_kw)"
-    @info "Final capex: $(initial_capex)"
-    
     return initial_capex
 end

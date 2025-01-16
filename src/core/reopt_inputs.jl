@@ -382,7 +382,6 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     pv_to_location = Dict(t => copy(d) for t in techs.pv)
     maxsize_pv_locations = DenseAxisArray([1.0e9, 1.0e9, 1.0e9], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
-
     if !isempty(techs.pv)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
                         pvlocations, pv_to_location, maxsize_pv_locations, techs.segmented, n_segs_by_tech, 
@@ -542,12 +541,17 @@ and all of the other arguments will be updated as well.
 function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
     cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
-    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
-    cap_cost_slope[tech_name] = cost_slope[1]
-    min_allowable_kw = 0.0
-    if isdefined(tech, :min_allowable_kw)
-        min_allowable_kw = tech.min_allowable_kw
+    if typeof(tech) == PV && (typeof(tech.installed_cost_per_kw) <: Number || length(tech.installed_cost_per_kw) == 1)
+        # Handle single cost point for PV
+        cap_cost_slope[tech_name] = first(tech.installed_cost_per_kw)
+        return nothing
     end
+    
+    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
+    cap_cost_slope[tech_name] = first(cost_slope)
+    
+    min_allowable_kw = isdefined(tech, :min_allowable_kw) ? tech.min_allowable_kw : 0.0
+    
     if n_segments > 1 || (typeof(tech)==CHP && min_allowable_kw > 0.0)
         cap_cost_slope[tech_name] = cost_slope
         push!(segmented_techs, tech_name)
@@ -555,15 +559,24 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
         seg_min_size[tech_name] = Dict{Int,Float64}()
         n_segs_by_tech[tech_name] = n_segments
         seg_yint[tech_name] = Dict{Int,Float64}()
+        
         for s in 1:n_segments
-            seg_min_size[tech_name][s] = max(cost_curve_bp_x[s], min_allowable_kw)
+            seg_min_size[tech_name][s] = typeof(tech)==CHP ? max(cost_curve_bp_x[s], min_allowable_kw) : cost_curve_bp_x[s]
             seg_max_size[tech_name][s] = cost_curve_bp_x[s+1]
             seg_yint[tech_name][s] = cost_yint[s]
         end
     end
     nothing
-end
 
+    @info "Running update_cost_curve! for $(tech_name)"
+    @info "Cap Cost Slope Calculated: ", cap_cost_slope[tech_name]
+    @info "Number of Segments: ", n_segments
+    @info "Seg Min Size: ", seg_min_size[tech_name]
+    @info "Seg Max Size: ", seg_max_size[tech_name]
+    @info "Y-Intercept: ", seg_yint[tech_name]
+
+    nothing
+end
 
 function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
@@ -575,11 +588,41 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
-    for pv in s.pvs        
+    for pv in s.pvs
+        # Get defaults if needed based on size class
+        if isnothing(pv.size_class) || isempty(pv.installed_cost_per_kw) || isempty(pv.om_cost_per_kw)
+            array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
+            pv_defaults_all = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.existing_kw)
+            defaults = pv_defaults_all[array_category]["size_classes"]
+            
+            if isnothing(pv.size_class)
+                pv.size_class = get_pv_size_class(
+                    pv.existing_kw,
+                    [c["tech_sizes_for_cost_curve"] for c in defaults],
+                    min_kw=pv.min_kw,
+                    max_kw=pv.max_kw,
+                    existing_kw=pv.existing_kw
+                )
+            end
+            
+            class_defaults = defaults[pv.size_class]
+            
+            if isempty(pv.installed_cost_per_kw)
+                pv.installed_cost_per_kw = convert(Vector{Float64}, class_defaults["installed_cost_per_kw"])
+            end
+            
+            if isempty(pv.om_cost_per_kw)
+                pv.om_cost_per_kw = convert(Float64, class_defaults["om_cost_per_kw"])
+            end
+            
+            if isempty(pv.tech_sizes_for_cost_curve) && length(pv.installed_cost_per_kw) > 1
+                pv.tech_sizes_for_cost_curve = convert(Vector{Float64}, class_defaults["tech_sizes_for_cost_curve"])
+            end
+        end
+
         production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
 
-        # Handle PV location mapping
         for location in pvlocations
             if pv.location == String(location)
                 pv_to_location[pv.name][location] = 1
@@ -588,7 +631,6 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             end
         end
 
-        # Calculate available capacity considering location constraints
         beyond_existing_kw = pv.max_kw
         if pv.location == "both"
             both_existing_pv_kw += pv.existing_kw
@@ -618,32 +660,58 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         min_sizes[pv.name] = pv.existing_kw + pv.min_kw
         max_sizes[pv.name] = pv.existing_kw + beyond_existing_kw
 
-        # Update cost curve similar to CHP approach
         update_cost_curve!(pv, pv.name, s.financial,
             cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
         )
 
-        om_cost_per_kw[pv.name] = pv.om_cost_per_kw
+        om_cost_per_kw[pv.name] = typeof(pv.om_cost_per_kw) <: Number ? 
+        convert(Float64, pv.om_cost_per_kw) : convert(Float64, first(pv.om_cost_per_kw))
+        
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
 
         if !pv.can_curtail
             push!(techs.no_curtail, pv.name)
         end
     end
+end
 
-    # Update location-based maximum sizes
-    if pv_roof_limited
-        maxsize_pv_locations[:roof] = float(roof_existing_pv_kw + roof_max_kw)
-    end
-    if pv_ground_limited
-        maxsize_pv_locations[:ground] = float(ground_existing_pv_kw + land_max_kw)
-    end
-    if pv_space_limited
-        maxsize_pv_locations[:both] = float(both_existing_pv_kw + roof_max_kw + land_max_kw)
-    end
+"""
+    function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
+        production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+        heating_cf
+        )
 
+Update tech-indexed data arrays necessary to build the JuMP model with the values for CHP.
+"""
+function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
+    production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+    heating_cf
+    )
+    max_sizes["CHP"] = s.chp.max_kw
+    min_sizes["CHP"] = s.chp.min_kw
+    update_cost_curve!(s.chp, "CHP", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+    om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
+    production_factor["CHP", :] = get_production_factor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
+        s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
+    fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
+    if !s.chp.can_curtail
+        push!(techs.no_curtail, "CHP")
+    end  
+    tech_renewable_energy_fraction["CHP"] = s.chp.fuel_renewable_energy_fraction
+    tech_emissions_factors_CO2["CHP"] = s.chp.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
+    tech_emissions_factors_NOx["CHP"] = s.chp.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
+    tech_emissions_factors_SO2["CHP"] = s.chp.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
+    tech_emissions_factors_PM25["CHP"] = s.chp.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU
+    chp_fuel_cost_per_kwh = s.chp.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
+    fuel_cost_per_kwh["CHP"] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "CHP")   
+    heating_cf["CHP"] = ones(8760*s.settings.time_steps_per_hour)
     return nothing
 end
+
 
 function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
@@ -838,42 +906,6 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
     return nothing
 end
 
-"""
-    function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
-        production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
-        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
-        heating_cf
-        )
-
-Update tech-indexed data arrays necessary to build the JuMP model with the values for CHP.
-"""
-function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
-    production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
-    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
-    heating_cf
-    )
-    max_sizes["CHP"] = s.chp.max_kw
-    min_sizes["CHP"] = s.chp.min_kw
-    update_cost_curve!(s.chp, "CHP", s.financial,
-        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
-    )
-    om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
-    production_factor["CHP", :] = get_production_factor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
-        s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
-    fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
-    if !s.chp.can_curtail
-        push!(techs.no_curtail, "CHP")
-    end  
-    tech_renewable_energy_fraction["CHP"] = s.chp.fuel_renewable_energy_fraction
-    tech_emissions_factors_CO2["CHP"] = s.chp.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
-    tech_emissions_factors_NOx["CHP"] = s.chp.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
-    tech_emissions_factors_SO2["CHP"] = s.chp.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
-    tech_emissions_factors_PM25["CHP"] = s.chp.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU
-    chp_fuel_cost_per_kwh = s.chp.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
-    fuel_cost_per_kwh["CHP"] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "CHP")   
-    heating_cf["CHP"] = ones(8760*s.settings.time_steps_per_hour)
-    return nothing
-end
 
 function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
     om_cost_per_kw, production_factor, techs_by_exportbin, techs, heating_cf

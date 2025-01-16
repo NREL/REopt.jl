@@ -1,40 +1,70 @@
 {
-  "pv_groundmount": {
-    "installed_cost_per_kw": [
-      [3300, 2000],
-      [3300, 3000],
-      [3000, 2750],
-      [2750, 2500],
-      [2500, 2250],
-      [2250, 2000]
-    ],
-    "tech_sizes_for_cost_curve": [
-      [0, 10000],
-      [0, 25],
-      [25, 250],
-      [250, 750],
-      [750, 2000],
-      [2000, 10000]
-    ],
-    "om_cost_per_kw": [34, 30, 27, 24, 21,18]
+  "ground": {
+    "size_classes": [
+      {
+        "size_class": 1,
+        "tech_sizes_for_cost_curve": [0, 25],
+        "installed_cost_per_kw": [2900, 2600],
+        "om_cost_per_kw": 32
+      },
+      {
+        "size_class": 2,
+        "tech_sizes_for_cost_curve": [25, 250],
+        "installed_cost_per_kw": [2600, 2350],
+        "om_cost_per_kw": 28
+      },
+      {
+        "size_class": 3,
+        "tech_sizes_for_cost_curve": [250, 750],
+        "installed_cost_per_kw": [2350, 2100],
+        "om_cost_per_kw": 25
+      },
+      {
+        "size_class": 4,
+        "tech_sizes_for_cost_curve": [750, 2000],
+        "installed_cost_per_kw": [2100, 1850],
+        "om_cost_per_kw": 22
+      },
+      {
+        "size_class": 5,
+        "tech_sizes_for_cost_curve": [2000, 10000],
+        "installed_cost_per_kw": [1850, 1600],
+        "om_cost_per_kw": 18
+      }
+    ]
   },
-  "pv_rooftop": {
-    "installed_cost_per_kw": [
-      [3100, 2250],
-      [3100, 2890],
-      [2890, 2750],
-      [2750, 2650],
-      [2650, 2550],
-      [2550, 2250]
-    ],
-    "tech_sizes_for_cost_curve": [
-      [0, 10000],
-      [0, 25],
-      [25, 250],
-      [250, 750],
-      [750, 2000],
-      [2000, 10000]
-    ],
-    "om_cost_per_kw": [30, 28, 26, 24, 22, 19]
+  "roof": {
+    "size_classes": [
+      {
+        "size_class": 1,
+        "tech_sizes_for_cost_curve": [0, 25],
+        "installed_cost_per_kw": [2800, 2500],
+        "om_cost_per_kw": 29
+      },
+      {
+        "size_class": 2,
+        "tech_sizes_for_cost_curve": [25, 250],
+        "installed_cost_per_kw": [2500, 2250],
+        "om_cost_per_kw": 26
+      },
+      {
+        "size_class": 3,
+        "tech_sizes_for_cost_curve": [250, 750],
+        "installed_cost_per_kw": [2250, 2050],
+        "om_cost_per_kw": 24
+      },
+      {
+        "size_class": 4,
+        "tech_sizes_for_cost_curve": [750, 2000],
+        "installed_cost_per_kw": [2050, 1850],
+        "om_cost_per_kw": 22
+      },
+      {
+        "size_class": 5,
+        "tech_sizes_for_cost_curve": [2000, 10000],
+        "installed_cost_per_kw": [1850, 1600],
+        "om_cost_per_kw": 20
+      }
+    ]
   }
 }

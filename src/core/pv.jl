@@ -117,7 +117,7 @@ mutable struct PV <: AbstractTech
         min_kw::Real=0,
         max_kw::Real=1.0e9,
         installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[],
-        om_cost_per_kw::Union{Float64, AbstractVector{Float64}} = 0.0,
+        om_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[],
         degradation_fraction::Real=0.005,
         macrs_option_years::Int = 5,
         macrs_bonus_fraction::Real = 0.6,
@@ -155,14 +155,14 @@ mutable struct PV <: AbstractTech
             @warn "PV operating_reserve_required_fraction applies only when off_grid_flag is true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
             operating_reserve_required_fraction = 0.0
         end
-    
+
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
             @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
         end
-    
+
         # Validate inputs
         invalid_args = String[]
         if !(0 <= azimuth < 360)
@@ -192,93 +192,130 @@ mutable struct PV <: AbstractTech
         if !(0.0 <= dc_ac_ratio <= 2.0)
             push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
-    
+
         if length(invalid_args) > 0
             throw(ErrorException("Invalid PV argument values: $(invalid_args)"))
         end
 
-        # Load PV defaults
-        pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
-        if !isfile(pv_defaults_path)
-            throw(ErrorException("pv_defaults.json not found at path: $pv_defaults_path"))
-        end
-        pv_defaults_all = JSON.parsefile(pv_defaults_path)
+        # Get defaults structure
+        pv_defaults_all = get_pv_defaults_size_class(array_type=array_type, avg_electric_load_kw=avg_electric_load_kw)
+        array_category = array_type in [0, 2, 3, 4] ? "ground" : "roof" 
+        defaults = pv_defaults_all[array_category]["size_classes"]
 
-        # Determine array_category based on array_type
-        array_category = array_type in [0, 2, 3, 4] ? "pv_groundmount" : "pv_rooftop"
-        
-        # Handle vector type conversion for arrays coming from JSON
-        raw_ranges = if isempty(tech_sizes_for_cost_curve)
-            ranges = pv_defaults_all[array_category]["tech_sizes_for_cost_curve"]
-            if typeof(ranges) <: AbstractVector{Any}
-                convert(Vector{Vector{Float64}}, ranges)
+        # Initialize variables we'll need
+        local determined_size_class
+        local final_tech_sizes
+        local final_installed_cost
+        local final_om_cost
+
+        # STEP 1: Determine size class
+        determined_size_class = if !isnothing(size_class)
+            # Case 1: User explicitly set size class
+            if size_class < 1
+                @warn "Size class $size_class is less than 1, using size class 1 instead"
+                1
+            elseif size_class > length(defaults)
+                @warn "Size class $size_class is greater than maximum available ($(length(defaults))), using largest size class $(length(defaults)) instead"
+                length(defaults)
             else
-                ranges
+                @info "Using explicitly provided size class: $size_class"
+                size_class
+            end
+
+        elseif typeof(installed_cost_per_kw) <: Number || (installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1)
+            # Case 2: Single cost value provided - size class not needed
+            @info "Single cost value provided, size class not needed"
+            nothing
+        elseif !isempty(tech_sizes_for_cost_curve) && isempty(installed_cost_per_kw)
+            # Case 4: User provided tech curves but no costs, need size class for installed costs
+            if isnothing(size_class)
+                get_pv_size_class(
+                    avg_electric_load_kw,
+                    [c["tech_sizes_for_cost_curve"] for c in defaults],
+                    min_kw=min_kw,
+                    max_kw=max_kw,
+                    existing_kw=existing_kw
+                )
+            else
+                size_class
+            end
+        elseif !isempty(installed_cost_per_kw)
+            # Case 3: Vector of costs provided
+            if isnothing(size_class)
+                get_pv_size_class(
+                    avg_electric_load_kw,
+                    [c["tech_sizes_for_cost_curve"] for c in defaults],
+                    min_kw=min_kw,
+                    max_kw=max_kw,
+                    existing_kw=existing_kw
+                )
+            else
+                size_class
             end
         else
-            if typeof(tech_sizes_for_cost_curve) <: AbstractVector{Any}
-                convert(Vector{Vector{Float64}}, tech_sizes_for_cost_curve)
-            else
-                tech_sizes_for_cost_curve
+            # Default case: Calculate based on average load
+            get_pv_size_class(
+                avg_electric_load_kw,
+                [c["tech_sizes_for_cost_curve"] for c in defaults],
+                min_kw=min_kw,
+                max_kw=max_kw,
+                existing_kw=existing_kw
+            )
+        end
+
+        class_defaults = if !isnothing(determined_size_class)            
+            # Julia is 1-based indexed but we want to match the size_class numbers
+            matching_default = findfirst(d -> d["size_class"] == determined_size_class, defaults)            
+            if isnothing(matching_default)
+                throw(ErrorException("Could not find matching defaults for size class $(determined_size_class)"))
             end
+            defaults[matching_default]
         end
 
-        # Determine size class if not provided
-        if isnothing(size_class)
-            @info "Computing size class for avg_electric_load_kw: $avg_electric_load_kw"
-            size_class = get_pv_size_class(avg_electric_load_kw, raw_ranges)
+        # STEP 2: Handle installed costs
+        final_installed_cost = if typeof(installed_cost_per_kw) <: Number
+            # Single cost value provided
+            convert(Float64, installed_cost_per_kw)
+        elseif installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1
+            # Single value in vector
+            convert(Float64, first(installed_cost_per_kw))
+        elseif !isempty(installed_cost_per_kw)
+            # Multiple costs provided
+            convert(Vector{Float64}, installed_cost_per_kw)
+        elseif !isnothing(class_defaults)
+            # Use defaults from size class
+            convert(Vector{Float64}, class_defaults["installed_cost_per_kw"])
+        else
+            throw(ErrorException("No installed costs provided and no size class determined"))
         end
 
-        # After determining size class, get the specific range and convert to Float64
-        tech_sizes_for_cost_curve = if size_class >= 0
-            size_range = raw_ranges[size_class + 2]  # +2 because we skip first range
-            Float64[convert(Float64, size_range[1]), convert(Float64, size_range[2])]
+        # STEP 3: Handle tech sizes
+        final_tech_sizes = if typeof(final_installed_cost) <: Number
+            # Single cost value - no tech sizes needed
+            Float64[]
+        elseif !isempty(tech_sizes_for_cost_curve)
+            # User provided tech sizes
+            if final_installed_cost isa Vector && length(tech_sizes_for_cost_curve) != length(final_installed_cost)
+                throw(ErrorException("Length mismatch: installed_cost_per_kw and tech_sizes_for_cost_curve"))
+            end
+            convert(Vector{Float64}, tech_sizes_for_cost_curve)
+        elseif !isnothing(class_defaults)
+            # Use defaults from size class
+            convert(Vector{Float64}, class_defaults["tech_sizes_for_cost_curve"])
         else
             Float64[]
         end
 
-        # Convert input values to ensure correct types
-        avg_electric_load_kw = convert(Float64, avg_electric_load_kw)
-
-        # Validate size_class
-        num_size_classes = length(pv_defaults_all[array_category]["installed_cost_per_kw"])
-        if size_class < 0 || size_class >= num_size_classes
-            throw(ErrorException("Invalid size_class: $size_class. Must be between 0 and $(num_size_classes - 1)."))
+        # STEP 4: Handle O&M costs
+        final_om_cost = if typeof(om_cost_per_kw) <: Number
+            convert(Float64, om_cost_per_kw)
+        elseif isempty(om_cost_per_kw) && !isnothing(class_defaults)
+            convert(Float64, class_defaults["om_cost_per_kw"])
+        elseif isempty(om_cost_per_kw)
+            18.0  # Default value from REopt Webtool
+        else
+            throw(ErrorException("O&M cost must be a single value"))
         end
-
-        # New approach
-        if isempty(installed_cost_per_kw)
-            # Get cost ranges from size class
-            costs = pv_defaults_all[array_category]["installed_cost_per_kw"][size_class + 1]
-            size_range = raw_ranges[size_class + 2]
-            
-            # Always create a vector of costs for segments
-            if typeof(costs) <: AbstractVector
-                installed_cost_per_kw = convert(Vector{Float64}, costs)
-            else
-                # Even for single cost, create vector for consistency with cost curve approach
-                installed_cost_per_kw = [convert(Float64, costs), convert(Float64, costs)]
-            end
-            
-            # Ensure tech_sizes_for_cost_curve matches costs
-            tech_sizes_for_cost_curve = Float64[size_range[1], size_range[2]]
-        end
-
-        # Handle om_cost_per_kw defaults and type conversion
-        if isempty(om_cost_per_kw)
-            default_om = pv_defaults_all[array_category]["om_cost_per_kw"][size_class + 1]
-            om_cost_per_kw = convert(Float64, default_om)  # Convert single value to Float64 instead of Vector
-        elseif typeof(om_cost_per_kw) <: AbstractVector{Any}
-            om_cost_per_kw = convert(Float64, om_cost_per_kw[1])  # Take first value if vector provided
-        end
-
-        # Validate cost curve inputs
-        if typeof(installed_cost_per_kw) <: AbstractVector && length(installed_cost_per_kw) > 1
-            if length(tech_sizes_for_cost_curve) != length(installed_cost_per_kw)
-                throw(ErrorException("Length mismatch: installed_cost_per_kw ($(length(installed_cost_per_kw))) and tech_sizes_for_cost_curve ($(length(tech_sizes_for_cost_curve))) must be equal when using cost curves"))
-            end
-        end
-
         # Instantiate the PV struct
         new(
             tilt,
@@ -334,29 +371,57 @@ function get_pv_by_name(name::String, pvs::AbstractArray{PV, 1})
 end
 
 # Helper function 
-function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector)
-    @info "Determining size class for load: $avg_electric_load_kw"
-    @info "Available ranges: $tech_sizes_for_cost_curve"
 
-    # Skip the first range [0, 10000] as it's not used for size class determination
-    for (i, size_range) in enumerate(tech_sizes_for_cost_curve[2:end])
+function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw::Real = 0.0)
+    pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
+    if !isfile(pv_defaults_path)
+        throw(ErrorException("pv_defaults.json not found at path: $pv_defaults_path"))
+    end
+    
+    # Parse JSON once
+    pv_defaults_all = JSON.parsefile(pv_defaults_path)
+    
+    # Return full defaults structure
+    return pv_defaults_all
+end
+
+
+function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
+                          min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
+    # Adjust max_kw to account for existing capacity
+    adjusted_max_kw = max_kw - existing_kw
+    
+    effective_size = if max_kw != 1.0e9 
+        min(avg_electric_load_kw, adjusted_max_kw)
+    else
+        avg_electric_load_kw
+    end
+    
+    effective_size = if min_kw != 0.0
+        max(effective_size, min_kw)
+    else
+        effective_size
+    end
+
+    @info "Determining size class for effective size: $effective_size"
+    
+    for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
         min_size = convert(Float64, size_range[1])
         max_size = convert(Float64, size_range[2])
         
-        if avg_electric_load_kw > min_size && avg_electric_load_kw <= max_size
+        if effective_size >= min_size && effective_size <= max_size
             @info "Found matching size class: $i"
-            return i
+            return i  # Size classes now start at 1
         end
     end
     
-    # If no match found, use largest class if exceeding last range
-    last_range = tech_sizes_for_cost_curve[end]
-    if avg_electric_load_kw > convert(Float64, last_range[2])
-        size_class = length(tech_sizes_for_cost_curve) - 2
-        @info "Load exceeds maximum range, using largest class: $size_class"
+    # Handle sizes above the largest range
+    if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
+        size_class = length(tech_sizes_for_cost_curve)
+        @info "Size exceeds maximum range, using largest class: $size_class"
         return size_class
     end
     
-    @info "No matching range found, using default class: 0"
-    return 0
+    @info "No matching range found, using default class: 1"
+    return 1
 end
