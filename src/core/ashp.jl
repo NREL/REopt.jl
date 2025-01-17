@@ -106,7 +106,7 @@ function ASHPSpaceHeater(;
 """
 function ASHPSpaceHeater(;
         min_ton::Real = 0.0,
-        max_ton::Real = BIG_NUMBER,
+        max_ton::Union{Real, Nothing} = nothing,
         min_allowable_ton::Union{Real, Nothing} = nothing,
         min_allowable_peak_capacity_fraction::Union{Real, Nothing} = nothing, 
         sizing_factor::Union{Real, Nothing} = nothing, 
@@ -305,7 +305,7 @@ function ASHPWaterHeater(;
 """
 function ASHPWaterHeater(;
     min_ton::Real = 0.0,
-    max_ton::Real = BIG_NUMBER,
+    max_ton::Union{Real, Nothing} = nothing,
     min_allowable_ton::Union{Real, Nothing} = nothing,
     min_allowable_peak_capacity_fraction::Union{Real, Nothing} = nothing, 
     sizing_factor::Union{Real, Nothing} = nothing, 
