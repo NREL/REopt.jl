@@ -209,6 +209,12 @@ function ASHPSpaceHeater(;
         else
             max_ton = min(defaults["max_ton"], 10*maximum(heating_load ./ heating_cf))
         end
+    else
+        if can_serve_cooling 
+            max_ton = min(max_ton, 10*(maximum(heating_load ./ heating_cf)+maximum(cooling_load ./ cooling_cf)))
+        else
+            max_ton = min(max_ton, 10*maximum(heating_load ./ heating_cf)) 
+        end
         max_ton = max(max_ton, min_ton)
     end
 
@@ -371,9 +377,11 @@ function ASHPWaterHeater(;
 
     if isnothing(max_ton)
         #these are in kW rathern than tons so will be larger as a measure of conservatism
-        max_ton = max(max_ton, min_ton)
         max_ton = min(defaults["max_ton"], 10*maximum(heating_load ./ heating_cf))
+    else
+        max_ton = min(max_ton, 10*maximum(heating_load ./ heating_cf))
     end
+    max_ton = max(max_ton, min_ton)
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
     min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
