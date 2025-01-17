@@ -32,17 +32,16 @@ function ExistingChiller(;
         cop::Union{Real, Nothing} = nothing,
         max_thermal_factor_on_peak_load::Real=1.25,
         installed_cost_per_ton::Real = 0.0,
-        installed_cost_dollars::Real = NaN,
+        installed_cost_dollars::Real = 0.0,
         retire_in_optimal::Bool = false
     )
     max_kw = maximum(loads_kw_thermal) * max_thermal_factor_on_peak_load  # This is really the **actual** size in BAU
     
-    if isnan(installed_cost_dollars)
-        installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
-        installed_cost_dollars = installed_cost_per_kw * max_kw
-    else
-        # This is not actually used anywhere with installed_cost_dollars being input, but needed for Struct
-        installed_cost_per_kw = installed_cost_dollars / max_kw        
+    installed_cost_per_kw = 0.0
+    if !(installed_cost_per_ton == 0.0) && (installed_cost_dollars == 0.0)
+        installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR * max_thermal_factor_on_peak_load
+    elseif !(installed_cost_per_ton == 0.0) && !(installed_cost_dollars == 0.0)
+        throw(@error("A non-zero value for both installed_cost_per_ton and installed_cost_dollars was input for ExistingChiller; only provide one or the other"))
     end
 
     ExistingChiller(
