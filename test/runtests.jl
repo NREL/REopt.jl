@@ -2739,7 +2739,7 @@ else  # run HiGHS tests
                 
                 s = Scenario(d)
                 p = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
             
                 #Case 1: ASHP systems run to meet full site load as they are oversized and dispatch is forced
@@ -2756,7 +2756,7 @@ else  # run HiGHS tests
             
                 s = Scenario(d)
                 p = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
             
                 #Case 2: ASHP systems run to meet at capacity as they are undersized and dispatch is forced, Space Heater is heat only
@@ -2770,7 +2770,7 @@ else  # run HiGHS tests
             
                 s = Scenario(d)
                 p = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
             
                 #Case 3: ASHP present but does not run because dispatch is not forced and boiler fuel is cheap
@@ -2786,7 +2786,7 @@ else  # run HiGHS tests
                 d["ASHPWaterHeater"]["min_ton"] = 0.0
                 s = Scenario(d)
                 p = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
                 @test results["ASHPSpaceHeater"]["size_ton"] ≈ 0.0 atol=1e-4
                 @test results["ASHPWaterHeater"]["size_ton"] ≈ 0.0 atol=1e-4
