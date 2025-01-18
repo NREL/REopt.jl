@@ -99,6 +99,7 @@ mutable struct PV <: AbstractTech
     operating_reserve_required_fraction
     size_class
     tech_sizes_for_cost_curve
+    avg_electric_load_kw
 
     function PV(;
         off_grid_flag::Bool = false,
@@ -149,7 +150,8 @@ mutable struct PV <: AbstractTech
         size_class::Union{Int, Nothing} = nothing,
         tech_sizes_for_cost_curve::AbstractVector = Float64[]
         )
-        
+        @info "PV Constructor - Initial values:" avg_electric_load_kw array_type size_class
+
         # Adjust operating_reserve_required_fraction based on off_grid_flag
         if !off_grid_flag && !(operating_reserve_required_fraction == 0.0)
             @warn "PV operating_reserve_required_fraction applies only when off_grid_flag is true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
@@ -196,6 +198,7 @@ mutable struct PV <: AbstractTech
         if length(invalid_args) > 0
             throw(ErrorException("Invalid PV argument values: $(invalid_args)"))
         end
+        @info "Before getting defaults:" avg_electric_load_kw array_type
 
         # Get defaults structure
         pv_defaults_all = get_pv_defaults_size_class(array_type=array_type, avg_electric_load_kw=avg_electric_load_kw)
@@ -225,7 +228,7 @@ mutable struct PV <: AbstractTech
         elseif typeof(installed_cost_per_kw) <: Number || (installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1)
             # Case 2: Single cost value provided - size class not needed
             @info "Single cost value provided, size class not needed"
-            nothing
+            size_class
         elseif !isempty(tech_sizes_for_cost_curve) && isempty(installed_cost_per_kw)
             # Case 4: User provided tech curves but no costs, need size class for installed costs
             if isnothing(size_class)
@@ -361,7 +364,8 @@ mutable struct PV <: AbstractTech
             can_curtail,
             operating_reserve_required_fraction,
             size_class,
-            tech_sizes_for_cost_curve 
+            tech_sizes_for_cost_curve,
+            avg_electric_load_kw 
         )
     end
 end
@@ -373,6 +377,8 @@ end
 # Helper function 
 
 function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw::Real = 0.0)
+    @info "get_pv_defaults_size_class called with:" array_type avg_electric_load_kw
+
     pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
     if !isfile(pv_defaults_path)
         throw(ErrorException("pv_defaults.json not found at path: $pv_defaults_path"))
@@ -389,6 +395,8 @@ end
 function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
                           min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
     # Adjust max_kw to account for existing capacity
+    @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
+
     adjusted_max_kw = max_kw - existing_kw
     
     effective_size = if max_kw != 1.0e9 

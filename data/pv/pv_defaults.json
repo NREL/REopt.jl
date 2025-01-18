@@ -3,33 +3,43 @@
     "size_classes": [
       {
         "size_class": 1,
+        "name": "Residential",
         "tech_sizes_for_cost_curve": [0, 25],
-        "installed_cost_per_kw": [2900, 2600],
-        "om_cost_per_kw": 32
+        "installed_cost_per_kw": [2680, 2400],
+        "om_cost_per_kw": 30,
+        "notes": "Based on 2023 NREL residential benchmark of $2.68/WDC (Ramasamy et al., 2023)"
       },
       {
         "size_class": 2,
+        "name": "Light Commercial",
         "tech_sizes_for_cost_curve": [25, 250],
-        "installed_cost_per_kw": [2600, 2350],
-        "om_cost_per_kw": 28
+        "installed_cost_per_kw": [2200, 1900],
+        "om_cost_per_kw": 22,
+        "notes": "Based on NREL commercial benchmarks with size-based scaling"
       },
       {
         "size_class": 3,
+        "name": "Heavy Commercial",
         "tech_sizes_for_cost_curve": [250, 750],
-        "installed_cost_per_kw": [2350, 2100],
-        "om_cost_per_kw": 25
+        "installed_cost_per_kw": [1900, 1780],
+        "om_cost_per_kw": 19,
+        "notes": "Based on NREL 200kW commercial benchmark of $1.78/WDC"
       },
       {
         "size_class": 4,
-        "tech_sizes_for_cost_curve": [750, 2000],
-        "installed_cost_per_kw": [2100, 1850],
-        "om_cost_per_kw": 22
+        "name": "Industrial",
+        "tech_sizes_for_cost_curve": [750, 5000],
+        "installed_cost_per_kw": [1780, 1600],
+        "om_cost_per_kw": 19,
+        "notes": "Transition scale between commercial and utility, upper bound aligned with EIA utility definition of 5MW"
       },
       {
         "size_class": 5,
-        "tech_sizes_for_cost_curve": [2000, 10000],
-        "installed_cost_per_kw": [1850, 1600],
-        "om_cost_per_kw": 18
+        "name": "Utility",
+        "tech_sizes_for_cost_curve": [5000, 100000],
+        "installed_cost_per_kw": [1600, 1560],
+        "om_cost_per_kw": 22,
+        "notes": "Based on NREL utility benchmark of $1.56/WAC (adjusted for DC), EIA data shows 86% of utility capacity from systems >50MW"
       }
     ]
   },
@@ -37,33 +47,43 @@
     "size_classes": [
       {
         "size_class": 1,
+        "name": "Residential",
         "tech_sizes_for_cost_curve": [0, 25],
-        "installed_cost_per_kw": [2800, 2500],
-        "om_cost_per_kw": 29
+        "installed_cost_per_kw": [2680, 2400],
+        "om_cost_per_kw": 30,
+        "notes": "Based on 2023 NREL residential benchmark"
       },
       {
         "size_class": 2,
+        "name": "Light Commercial",
         "tech_sizes_for_cost_curve": [25, 250],
-        "installed_cost_per_kw": [2500, 2250],
-        "om_cost_per_kw": 26
+        "installed_cost_per_kw": [2300, 2000],
+        "om_cost_per_kw": 24,
+        "notes": "Higher than ground-mount due to roof mounting complexity"
       },
       {
         "size_class": 3,
+        "name": "Heavy Commercial",
         "tech_sizes_for_cost_curve": [250, 750],
-        "installed_cost_per_kw": [2250, 2050],
-        "om_cost_per_kw": 24
+        "installed_cost_per_kw": [2000, 1880],
+        "om_cost_per_kw": 21,
+        "notes": "~$0.10/W premium over ground-mount due to rooftop installation requirements"
       },
       {
         "size_class": 4,
-        "tech_sizes_for_cost_curve": [750, 2000],
-        "installed_cost_per_kw": [2050, 1850],
-        "om_cost_per_kw": 22
+        "name": "Large Commercial/Industrial",
+        "tech_sizes_for_cost_curve": [750, 5000],
+        "installed_cost_per_kw": [1880, 1750],
+        "om_cost_per_kw": 21,
+        "notes": "Examples include large warehouses and manufacturing facilities"
       },
       {
         "size_class": 5,
-        "tech_sizes_for_cost_curve": [2000, 10000],
-        "installed_cost_per_kw": [1850, 1600],
-        "om_cost_per_kw": 20
+        "name": "Mega-Rooftop",
+        "tech_sizes_for_cost_curve": [5000, 35000],
+        "installed_cost_per_kw": [1750, 1650],
+        "om_cost_per_kw": 23,
+        "notes": "Upper limit based on DSV Logistics (35MW) and Tesla Gigafactory (30MW) examples"
       }
     ]
   }

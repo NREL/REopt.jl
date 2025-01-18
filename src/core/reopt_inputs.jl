@@ -540,13 +540,7 @@ and all of the other arguments will be updated as well.
 """
 function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
     cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
-    )
-    if typeof(tech) == PV && (typeof(tech.installed_cost_per_kw) <: Number || length(tech.installed_cost_per_kw) == 1)
-        # Handle single cost point for PV
-        cap_cost_slope[tech_name] = first(tech.installed_cost_per_kw)
-        return nothing
-    end
-    
+    )    
     cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
     cap_cost_slope[tech_name] = first(cost_slope)
     
@@ -566,7 +560,6 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
             seg_yint[tech_name][s] = cost_yint[s]
         end
     end
-    nothing
 
     @info "Running update_cost_curve! for $(tech_name)"
     @info "Cap Cost Slope Calculated: ", cap_cost_slope[tech_name]
@@ -592,12 +585,12 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         # Get defaults if needed based on size class
         if isnothing(pv.size_class) || isempty(pv.installed_cost_per_kw) || isempty(pv.om_cost_per_kw)
             array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
-            pv_defaults_all = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.existing_kw)
+            pv_defaults_all = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.avg_electric_load_kw)
             defaults = pv_defaults_all[array_category]["size_classes"]
             
             if isnothing(pv.size_class)
                 pv.size_class = get_pv_size_class(
-                    pv.existing_kw,
+                    pv.avg_electric_load_kw,
                     [c["tech_sizes_for_cost_curve"] for c in defaults],
                     min_kw=pv.min_kw,
                     max_kw=pv.max_kw,
