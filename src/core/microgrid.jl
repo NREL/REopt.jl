@@ -13,7 +13,7 @@ const PMD = PowerModelsDistribution
     model_type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution",
     run_BAU_case::Bool=true,
     optimizer::Any, # Such as HiGHS.Optimizer
-    optimizer_tolerance::Float64=0.001, # Only works for Xpress and Gurobi
+    optimizer_tolerance::Float64=0.001, # Only works for Xpress, HiGHS, and Gurobi
     PMD_time_steps::Any=[1:24], # By default, apply the PMD model to the first 24 timesteps of the model
     REopt_inputs_list::Array=[],
     bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
@@ -273,7 +273,7 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                                 ("ComputationTime_EntireModel", ComputationTime_EntireModel),
                                 ("Line_Info_PMD", LineInfo_PMD),
-                                ("pm", pm), # This can be a very large variable and it can be slow to load
+                                #("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
                                 ("single_outage_simulator_model", single_model_outage_simulator)
@@ -1037,6 +1037,8 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
         set_optimizer_attribute(m, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
     elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
         set_optimizer_attributes(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
+    elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
+        set_optimizer_attribute(m, "primal_feasibility_tolerance", Microgrid_Inputs.optimizer_tolerance)
     else
         @info "The solver's default tolerance is being used for the optimization"
     end
@@ -1764,6 +1766,8 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
                 set_optimizer_attribute(m_outagesimulator, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
             elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
                 set_optimizer_attributes(m_outagesimulator, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
+            elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
+                set_optimizer_attribute(m, "primal_feasibility_tolerance", Microgrid_Inputs.optimizer_tolerance)
             else
                 @info "The solver's default tolerance is being used for the optimization"
             end
@@ -1975,7 +1979,7 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
                 push!(DataLabels, "  Total outage simulation time (minutes)")
                 push!(Data, round((Dates.value(outage_simulator_time)/(1000*60)), digits=2))
             end
-            
+
             push!(DataLabels, "----System Results----")
             push!(Data,"")
 
