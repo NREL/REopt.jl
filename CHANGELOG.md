@@ -26,7 +26,31 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## Develop
+## develop
+### Added
+- New parameter `force_dispatch` in the **ASHPSpaceHeater** and **ASHPWaterHeater** technologies (default = `true`).  When kept at `true`, the ASHP's thermal output will be the minimum of the site load(s) served and the system size (adjusted for timestep-specific capacity factor) in each period. If set to `false`, ASHP will do economic dispatch considering COP and CF along with electricity prices.
+### Fixed
+- Align heating and cooling load profiles based on electric load year input, if using custom electric load profile with simulated (CRB or schedule-based flatloads) heating/cooling loads
+- Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
+### Changed
+- Make `year` input required with any custom load profile input (e.g. `ElectricLoad.loads_kw`, `SpaceHeatingLoad.fuel_loads_mmbtu_per_hour`)
+- Shift and adjust CRB load profiles (i.e. with `doe_reference_name` input) based on the `year` input
+
+
+## v0.49.1
+### Changed
+- Swap an error for a warning with inconsistent load-year between electric and heating; soon to 
+
+## v0.49.0
+### Added
+- Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
+### Changed
+- Internal refactoring of the three types of heating loads into a single `HeatingLoad` struct
+- Moved the annual_[energy] data from the load src files into the /data/load_profiles folder
+### Fixed
+- Constrained export to grid in the NEM bin (`dvProductionToGrid"*_n)][t, :NEM, ts`) to be 0 when system is sized over NEM limit (i.e., when binNEM =0)
+
+## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
