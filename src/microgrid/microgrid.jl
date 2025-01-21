@@ -1486,6 +1486,8 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
 
     outage_start_timesteps_checked = outage_start_timesteps_filtered[1:MaximumTimeStepToEvaluate]
 
+    #=
+    # The commented-out plots below are likely redundant with the results plots for the outage simulator
     if Microgrid_Inputs.generate_results_plots == true
         time_of_day = zeros(MaximumTimeStepToEvaluate)
         day_of_year = zeros(MaximumTimeStepToEvaluate)
@@ -1507,6 +1509,7 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
         Plots.savefig(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Day_of_Year_Distribution_of_Outage_Start_Times_"*TimeStamp*".png")
         
     end
+    =#
 
     RunNumber = 0
     SuccessfullySolved = 0
