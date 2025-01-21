@@ -624,16 +624,21 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Micro
     single_model_outage_simulator = "empty"
     for i in 1:length(Microgrid_Inputs.length_of_simulated_outages_time_steps)
         OutageLength = Microgrid_Inputs.length_of_simulated_outages_time_steps[i]
-        OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived, single_model_outage_simulator = Microgrid_OutageSimulator(DataDictionaryForEachNode, 
-                                                                                                                    REopt_dictionary, 
-                                                                                                                    Microgrid_Inputs, 
-                                                                                                                    TimeStamp;
-                                                                                                                    LineInfo_PMD = LineInfo_PMD,
-                                                                                                                    data_math_mn = data_math_mn, 
-                                                                                                                    NumberOfOutagesToTest = Microgrid_Inputs.number_of_outages_to_simulate, 
-                                                                                                                    OutageLength_TimeSteps_Input = OutageLength)
-        Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
-    end
+        OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived, single_model_outage_simulator, outage_survival_results, outage_start_timesteps = Microgrid_OutageSimulator(DataDictionaryForEachNode, 
+                                                                                                                                                                                                    REopt_dictionary, 
+                                                                                                                                                                                                    Microgrid_Inputs, 
+                                                                                                                                                                                                    TimeStamp;
+                                                                                                                                                                                                    LineInfo_PMD = LineInfo_PMD,
+                                                                                                                                                                                                    data_math_mn = data_math_mn, 
+                                                                                                                                                                                                    NumberOfOutagesToTest = Microgrid_Inputs.number_of_outages_to_simulate, 
+                                                                                                                                                                                                    OutageLength_TimeSteps_Input = OutageLength)
+        Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, 
+                                                                             "NumberOfRuns" => RunNumber, 
+                                                                             "NumberOfOutagesSurvived" => SuccessfullySolved, 
+                                                                             "outage_survival_results_each_timestep" => outage_survival_results,
+                                                                             "outage_start_timesteps" => outage_start_timesteps ])
+    
+                                                                            end
     outage_simulator_time_milliseconds = CalculateComputationTime(outage_simulator_time_start)
     return Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds
 end
@@ -1450,6 +1455,19 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
                                     )
     # Use the function below to run the outage simulator 
     
+    # Import the randomly ordered array
+    path = joinpath(dirname(pathof(REopt)))
+    path = replace(path, "\\" => "/")
+    randomly_ordered_timesteps = JSON.parsefile(path*"/microgrid/random_vectors.json")
+    
+    if Microgrid_Inputs.time_steps_per_hour == 1
+        outage_start_timesteps = randomly_ordered_timesteps["8760"]
+    #elseif Microgrid_Inputs.time_steps_per_hour == 4
+    #    outage_start_timesteps = randomly_ordered_timesteps["35040"]
+    else
+        throw(@error("The defined time steps per hour are currently not compatible with the outage simulator"))
+    end
+    
     NodeList = string.(GenerateREoptNodesList(Microgrid_Inputs))
 
     OutageLength_TimeSteps = OutageLength_TimeSteps_Input
@@ -1457,11 +1475,37 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
     NumberOfTimeSteps = Microgrid_Inputs.time_steps_per_hour * 8760
     MaximumTimeStepToEvaluate_limit = NumberOfTimeSteps - (OutageLength_TimeSteps+1) 
 
+    outage_start_timesteps_filtered = outage_start_timesteps[outage_start_timesteps .< MaximumTimeStepToEvaluate_limit]
+
     if MaximumTimeStepToEvaluate_limit < NumberOfOutagesToTest
         @warn "The number of possible outages to test is less than the number of outages requested by the user. $(MaximumTimeStepToEvaluate) will be evaluated instead of $(NumberOfOutagesToTest)."
         MaximumTimeStepToEvaluate = MaximumTimeStepToEvaluate_limit
     else
         MaximumTimeStepToEvaluate = NumberOfOutagesToTest
+    end
+
+    outage_start_timesteps_checked = outage_start_timesteps_filtered[1:MaximumTimeStepToEvaluate]
+
+    if Microgrid_Inputs.generate_results_plots == true
+        time_of_day = zeros(MaximumTimeStepToEvaluate)
+        day_of_year = zeros(MaximumTimeStepToEvaluate)
+        for x in collect(1:MaximumTimeStepToEvaluate)
+            time_of_day[x] = outage_start_timesteps_checked[x] % 24
+            day_of_year[x] = ceil(outage_start_timesteps_checked[x] / 24)
+        end
+
+        Plots.histogram(time_of_day, bins=range(0,24, length=25))
+        Plots.xlabel!("Hour of Day")
+        Plots.ylabel!("Occurances")
+        display(Plots.title!("Outage Start Times: Time of day distribution, $(length) tests"))
+        Plots.savefig(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Time_of_Day_Distribution_of_Outage_Start_Times_"*TimeStamp*".png")
+                
+        Plots.histogram(day_of_year, bins=0:7:371) 
+        Plots.xlabel!("Day of Year")
+        Plots.ylabel!("Occurances")
+        display(Plots.title!("Outage Start Times: Day of year distribution, $(length) tests"))
+        Plots.savefig(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Day_of_Year_Distribution_of_Outage_Start_Times_"*TimeStamp*".png")
+        
     end
 
     RunNumber = 0
@@ -1500,13 +1544,16 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
     end
 
     # Define the outage start time steps based on the number of outages
-    IncrementSize_ForOutageStartTimes = Int(floor(MaximumTimeStepToEvaluate_limit/NumberOfOutagesToTest))
+    #IncrementSize_ForOutageStartTimes = Int(floor(MaximumTimeStepToEvaluate_limit/NumberOfOutagesToTest))
     RunsTested = 0
     index = 0
+    outage_survival_results = -1 * ones(MaximumTimeStepToEvaluate)
+    
     for x in 1:MaximumTimeStepToEvaluate
         print("\n Outage Simulation Run # "*string(x)*"  of  "*string(MaximumTimeStepToEvaluate)*" runs")
         RunsTested = RunsTested + 1
-        i = Int(x*IncrementSize_ForOutageStartTimes)
+        #i = Int(x*IncrementSize_ForOutageStartTimes)
+        i = outage_start_timesteps_checked[x]
         TotalTimeSteps = 8760*Microgrid_Inputs.time_steps_per_hour   
 
         # Generate the power flow constraints
@@ -1658,8 +1705,8 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
                                                             m_outagesimulator[Symbol("dvBatToLoadWithEfficiency_"*n)][ts] + 
                                                             m_outagesimulator[Symbol("dvGenToLoad_"*n)][ts] .== (DataDictionaryForEachNode[n]["loads_kw"][i:(i+OutageLength_TimeSteps-1)])[ts])
             
-            print("\n m_outagesimulator Outage simulator model step 2: ")
-            show(m_outagesimulator)
+            #print("\n m_outagesimulator Outage simulator model step 2: ")
+            #show(m_outagesimulator)
         
         end 
         
@@ -1772,11 +1819,11 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
                 @info "The solver's default tolerance is being used for the optimization"
             end
 
-            print("\n Outage Simulator Outage simulator model step 3: ")
-            show(m_outagesimulator)
+            #print("\n Outage Simulator Outage simulator model step 3: ")
+            #show(m_outagesimulator)
             
-            print("\n pm.model Outage simulator model step 4: ")
-            show(pm.model)
+            #print("\n pm.model Outage simulator model step 4: ")
+            #show(pm.model)
             results = PMD.optimize_model!(pm) 
             TerminationStatus = string(results["termination_status"])
             print("\n The result from run #"*string(RunsTested)*" is: "*TerminationStatus)
@@ -1788,6 +1835,8 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
 
         if TerminationStatus == "OPTIMAL"
             SuccessfullySolved = SuccessfullySolved + 1
+            
+            outage_survival_results[x] = 1 # 1 indicates that the outage was survived
 
             # TODO: change the calculation of the fuel remaining so it automatically calculates the fuel left on nodes with generators
             #print("\n the fuel left is: "*string(value.(m_outagesimulator[Symbol("FuelLeft_3")]) +
@@ -1846,6 +1895,10 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
                     end
                 end 
             end
+        else
+        
+            outage_survival_results[x] = 0 # a value of 0 indicates that the outage was not survived
+        
         end 
         print("\n  Outages survived so far: "*string(SuccessfullySolved)*", Outages tested so far: "*string(RunsTested))
     end
@@ -1856,8 +1909,50 @@ function Microgrid_OutageSimulator( DataDictionaryForEachNode, REopt_dictionary,
     print("\n The length of outage tested is: "*string(OutageLength_TimeSteps)*" time steps")
     print("\n The number of outages survived is: "*string(SuccessfullySolved)*"  of  "*string(RunNumber)*" runs")
     print("\n Percent of outages survived: "*string(round(PercentOfOutagesSurvived, digits = 2))*" % \n")
+    
+    if Microgrid_Inputs.generate_results_plots == true
+        # Create a stacked histogram of the data
+               
+        indices_outage_survived = findall(x -> x==1, outage_survival_results) # Find indices of survived outages
+        indices_outage_not_survived = findall(x -> x==0, outage_survival_results) # Find indices of non-survived outages
 
-    return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived, m_outagesimulator
+        outage_start_timesteps_survived = outage_start_timesteps[indices_outage_survived]
+        outage_start_timesteps_not_survived = outage_start_timesteps[indices_outage_not_survived]
+
+        time_of_day_survived = zeros(length(outage_start_timesteps_survived))
+        day_of_year_survived = zeros(length(outage_start_timesteps_survived))
+        time_of_day_not_survived = zeros(length(outage_start_timesteps_not_survived))
+        day_of_year_not_survived = zeros(length(outage_start_timesteps_not_survived))
+
+        for x in collect(1:length(outage_start_timesteps_survived))
+            time_of_day_survived[x] = outage_start_timesteps_survived[x] % 24
+            day_of_year_survived[x] = ceil(outage_start_timesteps_survived[x] / 24)
+        end
+
+        for x in collect(1:length(outage_start_timesteps_not_survived))
+            time_of_day_not_survived[x] = outage_start_timesteps_not_survived[x] % 24
+            day_of_year_not_survived[x] = ceil(outage_start_timesteps_not_survived[x] / 24)
+        end        
+
+        traces = PlotlyJS.GenericTrace[]
+        push!(traces, PlotlyJS.histogram(x=time_of_day_survived, name="Survived", xbins_start=0, xbins_end=24, xbins_size=1))
+        push!(traces, PlotlyJS.histogram(x=time_of_day_not_survived, name="Not Surived", xbins_start=0, xbins_end=24, xbins_size=1)) 
+        layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps) Time Step Outage: Distribution of Survival by time of day", xaxis_title = "Time of Day (hour)", yaxis_title="Count")
+        p1 = PlotlyJS.plot(traces, layout)
+        PlotlyJS.savefig(p1, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Time_Of_Day_$(OutageLength_TimeSteps)_Timestep_Outage.html")
+        display(p1)
+        
+        traces = PlotlyJS.GenericTrace[]
+        push!(traces, PlotlyJS.histogram(x=day_of_year_survived, name="Survived", xbins_start=0, xbins_end=371, xbins_size=7))
+        push!(traces, PlotlyJS.histogram(x=day_of_year_not_survived, name="Not Surived", xbins_start=0, xbins_end=371, xbins_size=7)) 
+        layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps) Time Step Outage: Distribution of Survival by day of year", xaxis_title = "Day of Year (binned in weekly intervals)", yaxis_title="Count")
+        p2 = PlotlyJS.plot(traces, layout)
+        PlotlyJS.savefig(p2, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Day_Of_Year_$(OutageLength_TimeSteps)_Timestep_Outage.html")
+        display(p2)
+
+    end
+
+    return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived, m_outagesimulator, outage_survival_results, outage_start_timesteps_checked
 end 
 
 
@@ -2636,7 +2731,7 @@ function CreateRandomVectorOrder(filepath, vector1, vector2)
                  "35040" => vector_35040_randomly_unordered
                 ])
     
-    open(filepath*"/random_vectors.JSON", "w") do x
+    open(filepath*"/random_vectors.json", "w") do x
         JSON.print(x, data)
     end
 
