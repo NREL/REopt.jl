@@ -83,7 +83,7 @@ function ASHPSpaceHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
     force_into_system::Bool = false # force into system to serve all space heating loads if true
-    force_dispatch::Bool = false # force ASHP to meet load or maximize output if true
+    force_dispatch::Bool = true # force ASHP to meet load or maximize output if true
     avoided_capex_by_ashp_present_value::Real = 0.0 # avoided capital expenditure due to presence of ASHP system vs. defaults heating and cooling techs
 
     #The following inputs are used to create the attributes heating_cop and heating cf: 
@@ -295,7 +295,7 @@ function ASHPWaterHeater(;
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     avoided_capex_by_ashp_present_value::Real = 0.0 # avoided capital expenditure due to presence of ASHP system vs. defaults heating and cooling techs
     force_into_system::Bool = false # force into system to serve all hot water loads if true
-    force_dispatch::Bool = false # force ASHP to meet load or maximize output if true
+    force_dispatch::Bool = true # force ASHP to meet load or maximize output if true
     
     #The following inputs are used to create the attributes heating_cop and heating cf: 
     heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
