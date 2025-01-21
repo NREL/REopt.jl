@@ -229,7 +229,7 @@ function ASHPSpaceHeater(;
         @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
     else
         if isnothing(min_allowable_peak_capacity_fraction)
-            min_allowable_peak_capacity_fraction = 0.5
+            min_allowable_peak_capacity_fraction = 0.25
         end
         min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf, min_allowable_peak_capacity_fraction)
     end
@@ -394,7 +394,7 @@ function ASHPWaterHeater(;
         @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
     else
         if isnothing(min_allowable_peak_capacity_fraction)
-            min_allowable_peak_capacity_fraction = 0.5
+            min_allowable_peak_capacity_fraction = 0.25
         end
         min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], min_allowable_peak_capacity_fraction)
     end
