@@ -2615,3 +2615,55 @@ function RunDataChecks(Microgrid_Inputs,  REopt_dictionary; ldf_inputs_dictionar
         throw(@error("In the Microgrid_Inputs dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
     end
 end
+
+
+
+function CreateRandomVectorOrder(filepath, vector1, vector2)
+    # Function to create a random ordering of vector data for the outage simulator
+        #=
+        # Use this code to create inputs into the function:
+        vector_8760_ordered = collect(1:8760)
+        vector_8760_randomly_unordered = Random.shuffle(vector_8760_ordered)
+
+        vector_35040_ordered = collect(1:35040)
+        vector_35040_randomly_unordered = Random.shuffle(vector_35040_ordered)
+        =#
+
+    vector_8760_randomly_unordered = vector1
+    vector_35040_randomly_unordered = vector2
+
+    data = Dict(["8760" => vector_8760_randomly_unordered,
+                 "35040" => vector_35040_randomly_unordered
+                ])
+    
+    open(filepath*"/random_vectors.JSON", "w") do x
+        JSON.print(x, data)
+    end
+
+    # Visualize some distributions of the data
+    lengths = [100,250,500,1000]
+    
+    for length in lengths
+
+        selected_values = vector_8760_randomly_unordered[1:length]
+        time_of_day = zeros(length)
+        day_of_year = zeros(length)
+        for x in collect(1:length)
+            time_of_day[x] = selected_values[x] % 24
+            day_of_year[x] = ceil(selected_values[x] / 24)
+        end
+        Plots.histogram(time_of_day, bins=range(0,24, length=25))
+        Plots.xlabel!("Hour of Day")
+        Plots.ylabel!("Occurances")
+        display(Plots.title!("Time of day distribution, $(length) tests"))
+        Plots.histogram(day_of_year, bins=0:7:371) # range(0,365, length=366))
+        Plots.xlabel!("Day of Year")
+        Plots.ylabel!("Occurances")
+        display(Plots.title!("Day of year distribution, $(length) tests"))
+    end
+
+
+
+end
+
+
