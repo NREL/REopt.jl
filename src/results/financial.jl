@@ -280,7 +280,7 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
         federal_tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
     capital_costs = get_pv_initial_capex(p, tech, new_kw)
-    @info "Using initial cap cost: $(capital_costs) for lcoe calculation"
+    # @info "Using initial cap cost: $(capital_costs) for lcoe calculation"
 
     # capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
 

@@ -150,7 +150,7 @@ mutable struct PV <: AbstractTech
         size_class::Union{Int, Nothing} = nothing,
         tech_sizes_for_cost_curve::AbstractVector = Float64[]
         )
-        @info "PV Constructor - Initial values:" avg_electric_load_kw array_type size_class
+        # @info "PV Constructor - Initial values:" avg_electric_load_kw array_type size_class
 
         # Adjust operating_reserve_required_fraction based on off_grid_flag
         if !off_grid_flag && !(operating_reserve_required_fraction == 0.0)
@@ -198,7 +198,7 @@ mutable struct PV <: AbstractTech
         if length(invalid_args) > 0
             throw(ErrorException("Invalid PV argument values: $(invalid_args)"))
         end
-        @info "Before getting defaults:" avg_electric_load_kw array_type
+        # @info "Before getting defaults:" avg_electric_load_kw array_type
 
         # Get defaults structure
         pv_defaults_all = get_pv_defaults_size_class(array_type=array_type, avg_electric_load_kw=avg_electric_load_kw)
@@ -221,13 +221,13 @@ mutable struct PV <: AbstractTech
                 @warn "Size class $size_class is greater than maximum available ($(length(defaults))), using largest size class $(length(defaults)) instead"
                 length(defaults)
             else
-                @info "Using explicitly provided size class: $size_class"
+                # @info "Using explicitly provided size class: $size_class"
                 size_class
             end
 
         elseif typeof(installed_cost_per_kw) <: Number || (installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1)
             # Case 2: Single cost value provided - size class not needed
-            @info "Single cost value provided, size class not needed"
+            # @info "Single cost value provided, size class not needed"
             size_class
         elseif !isempty(tech_sizes_for_cost_curve) && isempty(installed_cost_per_kw)
             # Case 4: User provided tech curves but no costs, need size class for installed costs
@@ -377,7 +377,7 @@ end
 # Helper function 
 
 function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw::Real = 0.0)
-    @info "get_pv_defaults_size_class called with:" array_type avg_electric_load_kw
+    # @info "get_pv_defaults_size_class called with:" array_type avg_electric_load_kw
 
     pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
     if !isfile(pv_defaults_path)
@@ -395,7 +395,7 @@ end
 function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
                           min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
     # Adjust max_kw to account for existing capacity
-    @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
+    # @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
 
     adjusted_max_kw = max_kw - existing_kw
     
@@ -411,14 +411,14 @@ function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve
         effective_size
     end
 
-    @info "Determining size class for effective size: $effective_size"
+    # @info "Determining size class for effective size: $effective_size"
     
     for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
         min_size = convert(Float64, size_range[1])
         max_size = convert(Float64, size_range[2])
         
         if effective_size >= min_size && effective_size <= max_size
-            @info "Found matching size class: $i"
+            # @info "Found matching size class: $i"
             return i  # Size classes now start at 1
         end
     end
@@ -426,10 +426,10 @@ function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve
     # Handle sizes above the largest range
     if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
         size_class = length(tech_sizes_for_cost_curve)
-        @info "Size exceeds maximum range, using largest class: $size_class"
+        # @info "Size exceeds maximum range, using largest class: $size_class"
         return size_class
     end
     
-    @info "No matching range found, using default class: 1"
+    # @info "No matching range found, using default class: 1"
     return 1
 end
