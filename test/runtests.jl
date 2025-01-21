@@ -2691,7 +2691,7 @@ else  # run HiGHS tests
                 d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 0.001
                 d["ASHPSpaceHeater"]["can_serve_cooling"] = true
                 d["ASHPSpaceHeater"]["force_into_system"] = true
-                d["ASHPWaterHeater"] = Dict{String,Any}("force_into_system" => true, "max_ton" => 100000)
+                d["ASHPWaterHeater"] = Dict{String,Any}("force_into_system" => true, "force_dispatch" => false, "max_ton" => 100000)
                 
                 s = Scenario(d)
                 p = REoptInputs(s)
