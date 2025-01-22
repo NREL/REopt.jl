@@ -394,7 +394,7 @@ end
 
 function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
     min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
-@info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
+# @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
 
 effective_size = if max_kw != 1.0e9 
 min(avg_electric_load_kw, max_kw)
