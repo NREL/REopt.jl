@@ -666,6 +666,19 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             push!(techs.no_curtail, pv.name)
         end
     end
+
+    if pv_roof_limited
+        maxsize_pv_locations[:roof] = float(roof_existing_pv_kw + roof_max_kw)
+    end
+    if pv_ground_limited
+        maxsize_pv_locations[:ground] = float(ground_existing_pv_kw + land_max_kw)
+    end
+    if pv_space_limited
+        maxsize_pv_locations[:both] = float(both_existing_pv_kw + roof_max_kw + land_max_kw)
+    end
+    
+    return nothing
+
 end
 
 """
