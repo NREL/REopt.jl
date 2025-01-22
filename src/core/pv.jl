@@ -393,43 +393,33 @@ end
 
 
 function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
-                          min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
-    # Adjust max_kw to account for existing capacity
-    # @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
+    min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
+@info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
 
-    adjusted_max_kw = max_kw - existing_kw
-    
-    effective_size = if max_kw != 1.0e9 
-        min(avg_electric_load_kw, adjusted_max_kw)
-    else
-        avg_electric_load_kw
-    end
-    
-    effective_size = if min_kw != 0.0
-        max(effective_size, min_kw)
-    else
-        effective_size
-    end
+effective_size = if max_kw != 1.0e9 
+min(avg_electric_load_kw, max_kw)
+else
+avg_electric_load_kw
+end
 
-    # @info "Determining size class for effective size: $effective_size"
-    
-    for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
-        min_size = convert(Float64, size_range[1])
-        max_size = convert(Float64, size_range[2])
-        
-        if effective_size >= min_size && effective_size <= max_size
-            # @info "Found matching size class: $i"
-            return i  # Size classes now start at 1
-        end
-    end
-    
-    # Handle sizes above the largest range
-    if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
-        size_class = length(tech_sizes_for_cost_curve)
-        # @info "Size exceeds maximum range, using largest class: $size_class"
-        return size_class
-    end
-    
-    # @info "No matching range found, using default class: 1"
-    return 1
+effective_size = if min_kw != 0.0
+max(effective_size, min_kw)
+else
+effective_size
+end
+
+for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
+min_size = convert(Float64, size_range[1])
+max_size = convert(Float64, size_range[2])
+
+if effective_size >= min_size && effective_size <= max_size
+return i
+end
+end
+
+if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
+return length(tech_sizes_for_cost_curve)
+end
+
+return 1
 end
