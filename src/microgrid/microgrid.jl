@@ -883,7 +883,7 @@ function ApplyGridImportAndExportConstraints(Microgrid_Inputs, REoptInputs_Combi
         print("\n Switches modeled:")
         for i in keys(Microgrid_Inputs.switch_open_timesteps)
             #print("\n   Opening the switch on line $(i) from timesteps $(minimum(Microgrid_Inputs.switch_open_timesteps[i])) to $(maximum(Microgrid_Inputs.switch_open_timesteps[i])) \n")
-            RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, "line"*i, Microgrid_Inputs.switch_open_timesteps[i], LineInfo; Switches_Open=true)
+            RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, i, Microgrid_Inputs.switch_open_timesteps[i], LineInfo; Switches_Open=true)
         end
     end
     
@@ -1150,11 +1150,13 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, p_to .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
                 JuMP.@constraint(m, q_fr .== 0)
                 JuMP.@constraint(m, q_to .== 0)
-            else
+            elseif Switches_Open==false
                 @constraint(m, 
                         sum(m[Symbol("dvGridPurchase_"*Microgrid_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) == 0)
                 @constraint(m, 
                         sum(m[Symbol("dvProductionToGrid_"*Microgrid_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
+            elseif Switches_Open==true
+                @warn "The switches were defined as open during a time period when the PMD model is not applied"
             end
         end
     end
