@@ -279,7 +279,14 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
         discount_rate_fraction = p.s.financial.offtaker_discount_rate_fraction
         federal_tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
-    capital_costs = get_pv_initial_capex(p, tech, new_kw)
+    capital_costs = if typeof(tech) == PV && :tech_sizes_for_cost_curve in fieldnames(typeof(tech))
+        # Use PV-specific cost curve calculation for PV tech
+        get_pv_initial_capex(p, tech, new_kw)
+    else
+        # Use simple calculation for other techs like Wind
+        new_kw * tech.installed_cost_per_kw
+    end
+
     # @info "Using initial cap cost: $(capital_costs) for lcoe calculation"
 
     # capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs

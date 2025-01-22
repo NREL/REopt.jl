@@ -135,35 +135,61 @@ end
 
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
 """
+
 function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
+    try
+        # Create BAU inputs
+        bau_inputs = try 
+            BAUInputs(p)
+        catch e
+            @error "BAU initialization failed" 
+            rethrow(e)
+        end
 
-	try
-		bau_inputs = BAUInputs(p)
-		inputs = ((ms[1], bau_inputs), (ms[2], p))
-		rs = Any[0, 0]
-		Threads.@threads for i = 1:2
-			rs[i] = run_reopt(inputs[i])
-		end
-		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
-			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
-			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
-			# results_dict["Financial"] = merge(results_dict["Financial"])
+        # Run optimizations in parallel
+        inputs = ((ms[1], bau_inputs), (ms[2], p))
+        rs = Any[0, 0]
+        
+        Threads.@threads for i = 1:2
+            rs[i] = run_reopt(inputs[i])
+        end
 
-			if !isempty(p.techs.pv)
-				organize_multiple_pv_results(p, results_dict)
-			end
-			return results_dict
-		else
-			throw(@error("REopt scenarios solved either with errors or non-optimal solutions."))
-		end
-	catch e
-		if isnothing(e) # Error thrown by REopt
-			handle_errors()
-		else
-			handle_errors(e, stacktrace(catch_backtrace()))
-		end
-	end
+        # Validate results
+        if !isa(rs[1], Dict) || !isa(rs[2], Dict)
+            throw(ErrorException("Invalid optimization results: Expected Dict outputs"))
+        end
+
+        if rs[1]["status"] == "error" || rs[2]["status"] == "error"
+            error_msg = """
+            Optimization failed:
+            BAU status: $(rs[1]["status"])
+            Optimal status: $(rs[2]["status"])
+            Error details: $(get(rs[2], "Messages", Dict()).get("errors", "None"))
+            """
+            throw(ErrorException(error_msg))
+        end
+
+        # Process results
+        try
+            results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+            results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+
+            if !isempty(p.techs.pv)
+                organize_multiple_pv_results(p, results_dict)
+            end
+            return results_dict
+        catch e
+            @error "Results processing failed" exception=e
+            rethrow(e)
+        end
+
+    catch e
+        if isnothing(e)
+            handle_errors()
+        else
+            handle_errors(e, stacktrace(catch_backtrace()))
+        end
+    end
 end
 
 
