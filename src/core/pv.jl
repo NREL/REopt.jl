@@ -391,35 +391,34 @@ function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw:
     return pv_defaults_all
 end
 
-
 function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
-    min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
-# @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
-
-effective_size = if max_kw != 1.0e9 
-min(avg_electric_load_kw, max_kw)
-else
-avg_electric_load_kw
-end
-
-effective_size = if min_kw != 0.0
-max(effective_size, min_kw)
-else
-effective_size
-end
-
-for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
-min_size = convert(Float64, size_range[1])
-max_size = convert(Float64, size_range[2])
-
-if effective_size >= min_size && effective_size <= max_size
-return i
-end
-end
-
-if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
-return length(tech_sizes_for_cost_curve)
-end
-
-return 1
+                          min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
+    # @info "get_pv_size_class called with:" avg_electric_load_kw min_kw max_kw existing_kw
+    
+    effective_size = if max_kw != 1.0e9 
+        min(avg_electric_load_kw, max_kw)
+    else
+        avg_electric_load_kw
+    end
+    
+    effective_size = if min_kw != 0.0
+        max(effective_size, min_kw)
+    else
+        effective_size
+    end
+    
+    for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
+        min_size = convert(Float64, size_range[1])
+        max_size = convert(Float64, size_range[2])
+        
+        if effective_size >= min_size && effective_size <= max_size
+            return i
+        end
+    end
+    
+    if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
+        return length(tech_sizes_for_cost_curve)
+    end
+    
+    return 1
 end
