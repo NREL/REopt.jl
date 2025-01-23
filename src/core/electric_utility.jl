@@ -92,7 +92,7 @@
     - For sites in the contiguous United States (CONUS): 
         - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
             - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent (CO2e) emissions* for the region in which the site is located. 
-                By default, the emissions rates are levelized over the analysis period (e.g., from 2024 through 2048 for a 25-year analysis)
+                By default, the emissions rates are levelized over the analysis period (e.g., from 2025 through 2049 for a 25-year analysis)
             - The inputs to the Cambium API request can be modified by the user based on emissions accounting needs (e.g., can change "lifetime" to 1 to analyze a single year's emissions)
             - Note for analysis periods extending beyond 2050: Values beyond 2050 are estimated with the 2050 values. Analysts are advised to use caution when selecting values that place significant weight on 2050 (e.g., greater than 50%)
         - Users can alternatively choose to use emissions factors from the EPA's AVERT by setting `co2_from_avert` to `true`
@@ -285,7 +285,7 @@ struct ElectricUtility
                         end
                     else # otherwise use AVERT
                         if !isnothing(region_abbr)
-                            avert_data_year = 2022 # Must update when AVERT data are updated
+                            avert_data_year = 2023 # Must update when AVERT data are updated
                             emissions_and_cef_series_dict[ekey] = avert_emissions_profiles(
                                                             avert_region_abbr = region_abbr,
                                                             latitude = latitude,
@@ -492,7 +492,7 @@ function region_name_to_abbr(region_name)
 end
 
 """
-    avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
+    avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2023)
 
 This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
     If avert_region_abbr is supplied, this will overwrite the default region that would otherwise be selected using the lat, long.
@@ -502,7 +502,7 @@ This function is used for the /emissions_profile endpoint in the REopt API, in p
     for the webtool to display grid emissions defaults before running REopt, 
     but is also generally an external way to access AVERT data without running REopt.
 """
-function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
+function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2023)
     if avert_region_abbr == "" # Region not supplied
         avert_region_abbr, avert_meters_to_region = avert_region_abbreviation(latitude, longitude)
     else
@@ -575,21 +575,22 @@ function cambium_profile(; scenario::String,
                         )
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
-    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2" # Cambium 2022 
+    project_uuid = "0f92fe57-3365-428a-8fe8-0afc326b3b43" # Cambium 2023 
+    
 
     payload=Dict(
             "project_uuid" => project_uuid,
             "scenario" => scenario,
-            "location_type" => location_type,  # Nations, States, GEA Regions (Default: GEA Regions)
+            "location_type" => location_type,  
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
-            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036) # The 2023 release has five-year time steps from 2025 through 2050
+            "start_year" => string(start_year), # data year covers nominal year and 4 years proceeding; e.g., 2040 values cover time range starting in 2036
             "lifetime" => string(lifetime), # Integer 1 or greater (Default 25 yrs)
             "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not quantity.)
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col, # lrmer_co2e
             "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries). "rolling" best with TMY data; "none" best if 2012 weather data used.
-            "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
+            "gwp" => [1, 29.8, 273.0], # TODO update back to "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => grid_level, # enduse or busbar 
             "ems_mass_units" => "lb" # lb or kg
     )
