@@ -590,7 +590,7 @@ function cambium_profile(; scenario::String,
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col, # lrmer_co2e
             "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries). "rolling" best with TMY data; "none" best if 2012 weather data used.
-            "gwp" => [1, 29.8, 273.0], # TODO update back to "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
+            "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => grid_level, # enduse or busbar 
             "ems_mass_units" => "lb" # lb or kg
     )
