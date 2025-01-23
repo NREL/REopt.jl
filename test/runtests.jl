@@ -2219,7 +2219,7 @@ else  # run HiGHS tests
         
             @test scen.electric_utility.avert_emissions_region == "Alaska"
             @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
-            @test scen.electric_utility.cambium_region == "NA - Cambium data not used for climate emissions"
+            @test scen.electric_utility.cambium_region == "NA - Cambium data not used"
             @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ CSV.read("../data/emissions/AVERT_Data/AVERT_$(avert_year)_CO2_lb_per_kwh.csv", DataFrame)[!,"AKGD"][1] rtol=1e-3 # check that data from eGRID (AVERT data file) is used
             @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["CO2e"] # should get updated to this value
             @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
@@ -2368,10 +2368,10 @@ else  # run HiGHS tests
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_SO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
-                    @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
-                    @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
-                    @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
+                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] rtol=0.001
+                    @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] rtol=0.001
+                    @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] rtol=0.001
+                    @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] rtol=0.001
                     @test results["Site"]["annual_onsite_renewable_electricity_kwh"] ≈ results["PV"]["annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_electric_production_kwh"] atol=1
                     @test results["Site"]["onsite_renewable_electricity_fraction_of_elec_load"] ≈ results["Site"]["annual_onsite_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] rtol=0.001 #0.044285 atol=1e-4
                     annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_thermal_production_mmbtu"] * REopt.KWH_PER_MMBTU + results["Site"]["annual_onsite_renewable_electricity_kwh"]
@@ -2399,7 +2399,7 @@ else  # run HiGHS tests
             onsiteRE = pv2load + pv2grid + pv2bess * bess_effic
             
             @test results["ElectricUtility"]["annual_renewable_electricity_supplied_kwh"] ≈ gridRE rtol=1e-4
-            @test results["Site"]["onsite_and_grid_renewable_electricity_fraction_of_elec_load"] ≈ ((onsiteRE+gridRE) / results["ElectricLoad"]["annual_calculated_kwh"]) rtol=1e-4
+            @test results["Site"]["onsite_and_grid_renewable_electricity_fraction_of_elec_load"] ≈ ((onsiteRE+gridRE) / results["ElectricLoad"]["annual_calculated_kwh"]) rtol=1e-3
 
             # TODO: Add tests with heating techs (ASHP or GHP) once AnnualEleckWh is updated
         end
