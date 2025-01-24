@@ -114,7 +114,7 @@ end
     can_supply_steam_turbine::Bool = true
     can_serve_dhw::Bool = false
     can_serve_space_heating:Bool = false
-    can_serve_process_heat::Bool = false
+    can_serve_process_heat::Bool = true
     one_direction_flow::Bool = false
 ```
 """
@@ -138,7 +138,7 @@ Base.@kwdef struct HotSensibleTesDefaults <: AbstractThermalStorageDefaults
     can_supply_steam_turbine::Bool = true
     can_serve_dhw::Bool = false
     can_serve_space_heating::Bool = false
-    can_serve_process_heat::Bool = false
+    can_serve_process_heat::Bool = true
     supply_turbine_only::Bool = true
     one_direction_flow::Bool = false
 end
