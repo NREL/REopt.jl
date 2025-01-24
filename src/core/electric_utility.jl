@@ -18,9 +18,9 @@
     
     ### Cambium Emissions and Clean Energy Inputs ###
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
-        ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
-    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
-    cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050. # TODO: update options with Cambium 2023
+        ## Options: ["Mid-case", "Low renewable energy cost",   "High renewable energy cost", "High demand growth",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
+    cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions 2023"] 
+    cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2025 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
@@ -173,8 +173,8 @@ struct ElectricUtility
 
         ### Cambium Emissions and Clean Energy Inputs ###
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
-        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
-        cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+        cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions and clean energy fraction are calculated.  
+        cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. 
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
         cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
@@ -195,7 +195,7 @@ struct ElectricUtility
 
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
+        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -204,9 +204,9 @@ struct ElectricUtility
         if !is_MPC
             # Check some inputs 
             error_if_series_vals_not_0_to_1(renewable_energy_fraction_series, "ElectricUtility", "renewable_energy_fraction_series")
-            if cambium_start_year < 2023 || cambium_start_year > 2050 # TODO: update?
+            if cambium_start_year < 2025 || cambium_start_year > 2050
                 cambium_start_year = 2025 # Must update annually 
-                @warn("The cambium_start_year must be between 2023 and 2050. Setting cambium_start_year to $(cambium_start_year).")
+                @warn("The cambium_start_year must be between 2025 and 2050. Setting cambium_start_year to $(cambium_start_year).")
             end
 
             # Get AVERT emissions region

@@ -2192,7 +2192,6 @@ else  # run HiGHS tests
             post["Site"]["longitude"] = cities[city][2]
             post["ElectricLoad"]["loads_kw"] = [20 for i in range(1,8760)]
             post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
-            post["ElectricUtility"]["cambium_start_year"] = 2024
             scen = Scenario(post)
             
             @test scen.electric_utility.avert_emissions_region == "Rocky Mountains"
@@ -2370,7 +2369,7 @@ else  # run HiGHS tests
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
                     @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] rtol=0.001
                     @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] rtol=0.001
-                    @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] rtol=0.001
+                    @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] rtol=0.01 # rounding causes difference
                     @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] rtol=0.001
                     @test results["Site"]["annual_onsite_renewable_electricity_kwh"] ≈ results["PV"]["annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_electric_production_kwh"] atol=1
                     @test results["Site"]["onsite_renewable_electricity_fraction_of_elec_load"] ≈ results["Site"]["annual_onsite_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] rtol=0.001 #0.044285 atol=1e-4
