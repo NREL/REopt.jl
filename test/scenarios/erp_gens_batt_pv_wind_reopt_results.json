@@ -10,7 +10,7 @@
         "annual_emissions_tonnes_PM25": 0.02,
         "lifecycle_emissions_tonnes_NOx": 0.46,
         "annual_emissions_from_fuelburn_tonnes_CO2": 0.0,
-        "onsite_renewable_energy_fraction_of_elec_and_thermal_load": 0.271611,
+        "onsite_renewable_energy_fraction_of_total_load": 0.271611,
         "annual_emissions_from_fuelburn_tonnes_SO2": 0.0,
         "lifecycle_emissions_from_fuelburn_tonnes_SO2": 0.0,
         "onsite_renewable_electricity_fraction_of_elec_load": 0.271611,

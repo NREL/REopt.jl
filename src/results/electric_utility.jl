@@ -62,10 +62,10 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["electric_to_storage_series_kw"] = round.(value.(GridToBatt), digits=3)
 
     if _n=="" #only output emissions and RE results if not a multinode model
-        r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB*p.pwf_grid_emissions["CO2"]), digits=2)
-        r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB*p.pwf_grid_emissions["NOx"]), digits=2)
-        r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
-        r["lifecycle_emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB*p.pwf_grid_emissions["PM25"]), digits=2)
+        r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:Lifecycle_Emissions_Lbs_CO2_grid_net_if_selected]*TONNE_PER_LB), digits=2)
+        r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:Lifecycle_Emissions_Lbs_NOx_grid_net_if_selected]*TONNE_PER_LB), digits=2)
+        r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:Lifecycle_Emissions_Lbs_SO2_grid_net_if_selected]*TONNE_PER_LB), digits=2)
+        r["lifecycle_emissions_tonnes_PM25"] = round(value(m[:Lifecycle_Emissions_Lbs_PM25_grid_net_if_selected]*TONNE_PER_LB), digits=2)
         r["annual_emissions_tonnes_CO2"] = r["lifecycle_emissions_tonnes_CO2"] / p.s.financial.analysis_years
         r["annual_emissions_tonnes_NOx"] = r["lifecycle_emissions_tonnes_NOx"] / p.s.financial.analysis_years
         r["annual_emissions_tonnes_SO2"] = r["lifecycle_emissions_tonnes_SO2"] / p.s.financial.analysis_years

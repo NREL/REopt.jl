@@ -6,21 +6,21 @@
     interconnection_limit_kw::Real = 1.0e9, # Limit on total electric system capacity size that can be interconnected to the grid 
     allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect). Set to false if the export rate is greater than the cost of energy (otherwise, REopt will export before meeting site load).
     
-    # Single Outage Modeling Inputs (Outage Modeling Option 1)
+    # Single Outage Modeling Inputs (Outage Modeling Option 1):
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
         
-    # Multiple Outage Modeling Inputs (Outage Modeling Option 2): minimax the expected outage cost,
-    # with max taken over outage start time, expectation taken over outage duration
+    # Multiple Outage Modeling Inputs (Outage Modeling Option 2): 
+    # minimax the expected outage cost, with max taken over outage start time, expectation taken over outage duration
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
-    outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
+    outage_durations::Array{Int,1}=Int[],  # One-to-one with outage_probabilities. Outage_durations can be a random variable, and should be in timesteps aligning with time_steps_per_hour (e.g., duration of 4 equates to 1 hour if time_steps_per_hour is 4)
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
     
     ### Cambium Emissions and Clean Energy Inputs ###
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
-        ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
-    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
-    cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050. # TODO: update options with Cambium 2023
+        ## Options: ["Mid-case", "Low renewable energy cost",   "High renewable energy cost", "High demand growth",  "Low natural gas prices", "High natural gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
+    cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions 2023"] 
+    cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2025 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
@@ -92,7 +92,7 @@
     - For sites in the contiguous United States (CONUS): 
         - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
             - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent (CO2e) emissions* for the region in which the site is located. 
-                By default, the emissions rates are levelized over the analysis period (e.g., from 2024 through 2048 for a 25-year analysis)
+                By default, the emissions rates are levelized over the analysis period (e.g., from 2025 through 2049 for a 25-year analysis)
             - The inputs to the Cambium API request can be modified by the user based on emissions accounting needs (e.g., can change "lifetime" to 1 to analyze a single year's emissions)
             - Note for analysis periods extending beyond 2050: Values beyond 2050 are estimated with the 2050 values. Analysts are advised to use caution when selecting values that place significant weight on 2050 (e.g., greater than 50%)
         - Users can alternatively choose to use emissions factors from the EPA's AVERT by setting `co2_from_avert` to `true`
@@ -126,6 +126,7 @@ struct ElectricUtility
     emissions_factor_NOx_decrease_fraction::Real
     emissions_factor_SO2_decrease_fraction::Real
     emissions_factor_PM25_decrease_fraction::Real
+    renewable_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int  # ... utility production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
@@ -138,7 +139,6 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    renewable_energy_fraction_series::Array{<:Real,1} # fraction of grid electricity that is clean or renewable
 
     function ElectricUtility(;
 
@@ -173,8 +173,8 @@ struct ElectricUtility
 
         ### Cambium Emissions and Clean Energy Inputs ###
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
-        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions and clean energy fraction are calculated. Options: ["Nations", "GEA Regions", "States"] 
-        cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+        cambium_location_type::String =  "GEA Regions 2023", # Geographic boundary at which emissions and clean energy fraction are calculated.  
+        cambium_start_year::Int = 2025, # First year of operation of system. Emissions and clean energy fraction will be levelized starting in this year for the duration of cambium_levelization_years. 
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions and clean energy fraction will be averaged over this period.
         cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
@@ -195,7 +195,7 @@ struct ElectricUtility
 
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
+        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -203,12 +203,10 @@ struct ElectricUtility
         
         if !is_MPC
             # Check some inputs 
-            if any(x -> x < 0 || x > 1, renewable_energy_fraction_series)
-                throw(@error("All values in the provided ElectricUtility renewable_energy_fraction_series must be between 0 and 1."))
-            end
-            if cambium_start_year < 2023 || cambium_start_year > 2050 # TODO: update?
+            error_if_series_vals_not_0_to_1(renewable_energy_fraction_series, "ElectricUtility", "renewable_energy_fraction_series")
+            if cambium_start_year < 2025 || cambium_start_year > 2050
                 cambium_start_year = 2025 # Must update annually 
-                @warn("The cambium_start_year must be between 2023 and 2050. Setting cambium_start_year to $(cambium_start_year).")
+                @warn("The cambium_start_year must be between 2025 and 2050. Setting cambium_start_year to $(cambium_start_year).")
             end
 
             # Get AVERT emissions region
@@ -254,7 +252,7 @@ struct ElectricUtility
                 elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                     if length(eseries) == 8760
                         emissions_and_cef_series_dict[ekey] = repeat(eseries,inner=time_steps_per_hour)
-                        @warn("The ElectricUtility emissions or clean enery fraction series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
+                        @warn("The ElectricUtility emissions or clean energy fraction series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
                     else
                         throw(@error("The provided ElectricUtility emissions or clean enery fraction series for $(ekey) does not match the time_steps_per_hour."))
                     end
@@ -287,7 +285,7 @@ struct ElectricUtility
                         end
                     else # otherwise use AVERT
                         if !isnothing(region_abbr)
-                            avert_data_year = 2022 # Must update when AVERT data are updated
+                            avert_data_year = 2023 # Must update when AVERT data are updated
                             emissions_and_cef_series_dict[ekey] = avert_emissions_profiles(
                                                             avert_region_abbr = region_abbr,
                                                             latitude = latitude,
@@ -357,6 +355,7 @@ struct ElectricUtility
             emissions_factor_NOx_decrease_fraction,
             emissions_factor_SO2_decrease_fraction,
             emissions_factor_PM25_decrease_fraction,
+            is_MPC ? Float64[] : emissions_and_cef_series_dict["renewable_energy_fraction_series"],
             outage_start_time_step,
             outage_end_time_step,
             allow_simultaneous_export_import,
@@ -366,8 +365,7 @@ struct ElectricUtility
             outage_time_steps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw,
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["renewable_energy_fraction_series"]
+            interconnection_limit_kw
         )
     end
 end
@@ -494,7 +492,7 @@ function region_name_to_abbr(region_name)
 end
 
 """
-    avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
+    avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2023)
 
 This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
     If avert_region_abbr is supplied, this will overwrite the default region that would otherwise be selected using the lat, long.
@@ -504,7 +502,7 @@ This function is used for the /emissions_profile endpoint in the REopt API, in p
     for the webtool to display grid emissions defaults before running REopt, 
     but is also generally an external way to access AVERT data without running REopt.
 """
-function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
+function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2023)
     if avert_region_abbr == "" # Region not supplied
         avert_region_abbr, avert_meters_to_region = avert_region_abbreviation(latitude, longitude)
     else
@@ -577,16 +575,16 @@ function cambium_profile(; scenario::String,
                         )
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
-    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2" # Cambium 2022 
+    project_uuid = "0f92fe57-3365-428a-8fe8-0afc326b3b43" # Cambium 2023 
+    
 
     payload=Dict(
             "project_uuid" => project_uuid,
             "scenario" => scenario,
-            "location_type" => location_type,  # Nations, States, GEA Regions (Default: GEA Regions)
-            # "location" => "Colorado", # e.g., Contiguous United States, Colorado, Kansas, p33, p34 
+            "location_type" => location_type,  
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
-            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036) # The 2023 release has five-year time steps from 2025 through 2050
+            "start_year" => string(start_year), # data year covers nominal year and 4 years proceeding; e.g., 2040 values cover time range starting in 2036
             "lifetime" => string(lifetime), # Integer 1 or greater (Default 25 yrs)
             "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not quantity.)
             "time_type" => "hourly", # hourly or annual
@@ -620,7 +618,7 @@ function cambium_profile(; scenario::String,
         return response_dict
     catch
         return Dict{String, Any}(
-            "error" => "Could not look up Cambium profile from point ($(latitude), $(longitude)). 
+            "error" => "Could not look up Cambium $(metric_col) profile from point ($(latitude), $(longitude)). 
              Location is likely outside contiguous US or something went wrong with the Cambium API request."
         )
     end

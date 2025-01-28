@@ -156,7 +156,7 @@ function dictkeys_tosymbols(d::Dict)
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
-            "blended_industry_reference_percents",
+            "blended_industrial_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
@@ -164,6 +164,7 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
+            "renewable_energy_fraction_series",
             "heating_cop_reference",
             "heating_cf_reference",
             "heating_reference_temps_degF",
@@ -183,7 +184,7 @@ function dictkeys_tosymbols(d::Dict)
         end
         if k in [
             "blended_doe_reference_names",
-            "blended_industry_reference_names"
+            "blended_industrial_reference_names"
         ]
             try
                 v = convert(Array{String, 1}, v)
@@ -550,7 +551,7 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
     for m in range(1, stop=12)
         n_days = daysinmonth(Date(string(year) * "-" * string(m)))
         stop = n_days * 24 * time_steps_per_hour + i - 1
-        if m == 2 && isleapyear(year)
+        if m == 12 && isleapyear(year)
             stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
         end
         steps = [step for step in range(i, stop=stop)]
@@ -595,5 +596,11 @@ function check_api_key()
         throw(@error("No NREL Developer API Key provided when trying to call PVWatts or Wind Toolkit.
                     Within your Julia environment, specify ENV['NREL_DEVELOPER_API_KEY']='your API key'
                     See https://nrel.github.io/REopt.jl/dev/ for more information."))
+    end
+end
+
+function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
+    if any(x -> x < 0 || x > 1, series)
+        throw(@error("All values in the provided $(input_struct_name) $(input_name) must be between 0 and 1."))
     end
 end

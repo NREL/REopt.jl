@@ -3,7 +3,7 @@
 	add_re_elec_constraints(m,p)
 
 Function to add minimum and/or maximum renewable electricity (as percentage of load) constraints, if specified by user.
-Includes renewable energy from grid if specified by user.
+Includes renewable energy from grid if specified by user using Site input include_grid_renewable_fraction_in_RE_constraints.
 
 !!! note
     When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
@@ -54,6 +54,8 @@ function add_re_elec_calcs(m,p)
 	# 	))
 	# end
 
+	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
+	# 		onsite is counted so battery doesn't become a back door for RE to grid.
 	m[:AnnualOnsiteREEleckWh] = @expression(m, p.hours_per_time_step * (
 			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
 				p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps
@@ -62,7 +64,9 @@ function add_re_elec_calcs(m,p)
 				1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) 
 				for t in p.techs.elec, b in p.s.storage.types.elec, ts in p.time_steps
 			) - #minus battery efficiency losses
-			sum(m[:dvCurtail][t,ts]*p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps) - # minus curtailment.
+			sum(m[:dvCurtail][t,ts] * p.tech_renewable_energy_fraction[t] 
+				for t in p.techs.elec, ts in p.time_steps
+			) - # minus curtailment
 			(1 - p.s.site.include_exported_renewable_electricity_in_total) *
 			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_fraction[t] 
 				for t in p.techs.elec,  u in p.export_bins_by_tech[t], ts in p.time_steps
@@ -70,9 +74,9 @@ function add_re_elec_calcs(m,p)
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
 	)		
-    # Note: if battery ends up being allowed to discharge to grid, need to make sure only RE that is being consumed onsite is counted so battery doesn't become a back door for RE to grid.
-	# Note: calculations currently do not ascribe any renewable energy attribute to grid-purchased electricity
 
+	# Note: when we add capability for battery to discharge to grid, need to subtract out *grid RE* discharged from battery 
+	# 		back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
 	m[:AnnualGridREEleckWh] = @expression(m, p.hours_per_time_step * (
 			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
 				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 

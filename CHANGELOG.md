@@ -25,29 +25,57 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-
 ## gridRE-dev
 ### Added 
 - Added the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
-  - ElectricUtility **cambium_cef_metric** to utilize clean energy data from NREL's Cambium database
-  - **renewable_energy_fraction_series** to supply a custom grid clean or renewable energy scalar or series
-  - Site **include_grid_renewable_fraction_in_RE_constraints** - to allow user to choose whether to include grid RE in min max constraints
+  - **ElectricUtility** **cambium_cef_metric** to utilize clean energy data from NREL's Cambium database
+  - **ElectricUtility** **renewable_energy_fraction_series** to supply a custom grid clean or renewable energy scalar or series
+  - **Site** **include_grid_renewable_fraction_in_RE_constraints** - to allow user to choose whether to include grid RE in min max constraints
 - Added the following outputs: 
-  - ElectricUtility **annual_renewable_electricity_supplied_kwh**
-  - Site **onsite_and_grid_renewable_electricity_fraction_of_elec_load**
-  - Site **onsite_and_grid_renewable_energy_fraction_of_elec_and_thermal_load**
+  - **ElectricUtility** **annual_renewable_electricity_supplied_kwh**
+  - **Site** **onsite_and_grid_renewable_electricity_fraction_of_elec_load**
+  - **Site** **onsite_and_grid_renewable_energy_fraction_of_total_load**
+- Added input option **optimize_soc_init_fraction** (defaults to false) to **ElectricStorage**, which makes the optimization choose the inital SOC (equal to final SOC) instead of using soc_init_fraction. The initial SOC is also constrained to equal the final SOC, which eliminates the "free energy" issue. We currently do not fix SOC when soc_init_fraction is used because this has caused infeasibility.
 ### Changed
 - Changed name of the following inputs: 
-  - ElectricUtility input **cambium_metric_col** changed to **cambium_co2_metric**
+  - **ElectricUtility** input **cambium_metric_col** changed to **cambium_co2_metric**
 - Changed name of the following outputs:
-  - ElectricUtility **cambium_emissions_region** changed to **cambium_region**
-  - Site **annual_renewable_electricity_kwh** changed to **annual_onsite_renewable_electricity_kwh**
-  - Site **renewable_electricity_fraction** changed to **onsite_renewable_electricity_fraction_of_elec_load** 
-  - Site **total_renewable_energy_fraction** changed to **onsite_renewable_energy_fraction_of_elec_and_thermal_load**
+  - **ElectricUtility** **cambium_emissions_region** changed to **cambium_region**
+  - **Site** **annual_renewable_electricity_kwh** changed to **annual_onsite_renewable_electricity_kwh**
+  - **Site** **renewable_electricity_fraction** changed to **onsite_renewable_electricity_fraction_of_elec_load** 
+  - **Site** **total_renewable_energy_fraction** changed to **onsite_renewable_energy_fraction_of_total_load**
 - Changed name of function (also available as endpoint through REopt API) from **cambium_emissions_profile** to **cambium_profile**
+- Updated AVERT emissions data to v4.3, which uses Regional Data Files for year 2023 for CONUS. For Alaska and Hawaii (regions AKGD, HIMS, HIOA), updated eGRID data to eGRID2022 datafile, adjusted to CO2e values. Emissions profiles are saved in `data/emissions/AVERT_Data`. 
+- Updated Cambium API call for CO2e emissions within CONUS to Cambium 2023 dataset. This includes updates to the default values and valid options for the following **ElectricUtility** inputs:  **cambium_scenario**, **cambium_location_type**, and **cambium_start_year**
+- Updated EMISSIONS_DECREASE_DEFAULTS from 0.02163 to 0.0459 based on Cambium 2023 data
+### Fixed
+- Make **ElectricTariff** **export_rate_beyond_net_metering_limit** and **wholesale_rate** with sub-hour time step work
+
+## develop
+### Added
+- New parameter `force_dispatch` in the **ASHPSpaceHeater** and **ASHPWaterHeater** technologies (default = `true`).  When kept at `true`, the ASHP's thermal output will be the minimum of the site load(s) served and the system size (adjusted for timestep-specific capacity factor) in each period. If set to `false`, ASHP will do economic dispatch considering COP and CF along with electricity prices.
+### Fixed
+- Align heating and cooling load profiles based on electric load year input, if using custom electric load profile with simulated (CRB or schedule-based flatloads) heating/cooling loads
+- Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
+### Changed
+- Make `year` input required with any custom load profile input (e.g. `ElectricLoad.loads_kw`, `SpaceHeatingLoad.fuel_loads_mmbtu_per_hour`)
+- Shift and adjust CRB load profiles (i.e. with `doe_reference_name` input) based on the `year` input
 
 
-## Develop
+## v0.49.1
+### Changed
+- Swap an error for a warning with inconsistent load-year between electric and heating; soon to 
+
+## v0.49.0
+### Added
+- Ability to normalize and scale a custom load profile input to annual or monthly energy input values, for all load types
+### Changed
+- Internal refactoring of the three types of heating loads into a single `HeatingLoad` struct
+- Moved the annual_[energy] data from the load src files into the /data/load_profiles folder
+### Fixed
+- Constrained export to grid in the NEM bin (`dvProductionToGrid"*_n)][t, :NEM, ts`) to be 0 when system is sized over NEM limit (i.e., when binNEM =0)
+
+## v0.48.2
 ### Added
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
