@@ -33,6 +33,8 @@ const PMD = PowerModelsDistribution
     switch_open_timesteps::Dict=Dict(),
     single_outage_start_time_step::Real=0,
     single_outage_end_time_step::Real=0,
+    model_outages_with_outages_vector::Bool=false,
+    outages_vector::Array=[],
     run_outage_simulator::Bool=false,
     length_of_simulated_outages_time_steps::Array=[],
     critical_load_method::String="Fraction",
@@ -82,6 +84,8 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     switch_open_timesteps
     single_outage_start_time_step
     single_outage_end_time_step
+    model_outages_with_outages_vector
+    outages_vector
     run_outage_simulator
     length_of_simulated_outages_time_steps
     critical_load_method
@@ -131,6 +135,8 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         switch_open_timesteps::Dict=Dict(),
         single_outage_start_time_step::Real=0,
         single_outage_end_time_step::Real=0,
+        model_outages_with_outages_vector::Bool=false,
+        outages_vector::Array=[],
         run_outage_simulator::Bool=false,
         length_of_simulated_outages_time_steps::Array=[],
         critical_load_method::String="Fraction",
@@ -181,6 +187,8 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         switch_open_timesteps,
         single_outage_start_time_step,
         single_outage_end_time_step,
+        model_outages_with_outages_vector,
+        outages_vector,
         run_outage_simulator,
         length_of_simulated_outages_time_steps,
         critical_load_method,
@@ -384,7 +392,26 @@ function PrepareElectricLoads(Microgrid_Inputs)
     end
     
     # If outages are defined in the optimization, set the loads to the critical loads during the outages
-    if Microgrid_Inputs.single_outage_end_time_step - Microgrid_Inputs.single_outage_start_time_step > 0
+    if Microgrid_Inputs.model_outages_with_outages_vector
+        if Microgrid_Inputs.outages_vector != []
+
+            for i in 1:length(Microgrid_Inputs.REopt_inputs_list)
+                if sum(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
+
+                    node = Microgrid_Inputs.REopt_inputs_list[i]["Site"]["node"]
+                    
+                    load_segment_initial = deepcopy(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
+                    for outage_timestep in Microgrid_Inputs.outages_vector
+                        if Microgrid_Inputs.critical_load_method == "Fraction"
+                            Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"][outage_timestep] = Microgrid_Inputs.critical_load_fraction[string(node)] * load_segment_initial[outage_timestep]
+                        elseif Microgrid_Inputs.critical_load_method == "TimeSeries"
+                            Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"][outage_timestep] = Microgrid_Inputs.critical_load_timeseries[string(node)][outage_timestep]
+                        end
+                    end
+                end
+            end
+        end
+    elseif Microgrid_Inputs.single_outage_end_time_step - Microgrid_Inputs.single_outage_start_time_step > 0
         
         OutageStart = Microgrid_Inputs.single_outage_start_time_step
         OutageEnd = Microgrid_Inputs.single_outage_end_time_step
@@ -577,6 +604,7 @@ function SetTechSizesToZero(Microgrid_Settings)
     
     Microgrid_Settings_No_Techs["single_outage_start_time_step"] = 0
     Microgrid_Settings_No_Techs["single_outage_end_time_step"] = 0
+    Microgrid_Settings_No_Techs["outages_vector"] = []
     Microgrid_Settings_No_Techs["run_outage_simulator"] = false
     Microgrid_Settings_No_Techs["display_results"] = false
     Microgrid_Settings_No_Techs["generate_results_plots"] = false
@@ -872,9 +900,15 @@ function ApplyGridImportAndExportConstraints(Microgrid_Inputs, REoptInputs_Combi
     end 
     
     # Apply a grid outage to the model
-    if Microgrid_Inputs.single_outage_end_time_step - Microgrid_Inputs.single_outage_start_time_step > 0
+    if Microgrid_Inputs.model_outages_with_outages_vector
+        if Microgrid_Inputs.outages_vector != []
+            print("\n Applying a grid outages on the following timesteps: ")
+            print(Microgrid_Inputs.model_outages_with_outages_vector)
+            RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, Microgrid_Inputs.outages_vector, LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
+        end    
+    elseif Microgrid_Inputs.single_outage_end_time_step - Microgrid_Inputs.single_outage_start_time_step > 0
         print("\n Applying a grid outage from time step $(Microgrid_Inputs.single_outage_start_time_step) to $(Microgrid_Inputs.single_outage_end_time_step) ")
-        RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, collect(Microgrid_Inputs.single_outage_start_time_step:Microgrid_Inputs.single_outage_end_time_step), LineInfo; Single_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
+        RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, collect(Microgrid_Inputs.single_outage_start_time_step:Microgrid_Inputs.single_outage_end_time_step), LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
     end
     
     # Open switches if defined by the user
@@ -1061,7 +1095,7 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
 end
 
 
-function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo; Single_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
+function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
     # Function used for restricting power flow for grid outages, times when switches are opened, and substation import and export limits
     
     # Save the REopt Inputs for the site not to a variable
@@ -1143,7 +1177,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
             end
         end
 
-        if Off_Grid == true || Single_Outage == true || Switches_Open==true
+        if Off_Grid == true || Grid_Outage == true || Switches_Open==true
             # Restrict all power flow
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, p_fr .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
@@ -1296,23 +1330,7 @@ end
 
 function GenerateInputsForOutageSimulator(Microgrid_Inputs, REopt_results)
     results = REopt_results
-            
-            # Temporarily including this code
-            #=
-            REopt_inputs_all_nodes = Microgrid_Inputs.REopt_inputs_list
-            # Prepare loads for using with the outage simulator, if the fraction method is used for determining the critical load
-            if  Microgrid_Inputs.critical_load_method == "Fraction"
-                load_profiles_for_outage_sim_if_using_the_fraction_method = Dict([])
-                for REopt_inputs in REopt_inputs_all_nodes
-                    load_profiles_for_outage_sim_if_using_the_fraction_method[REopt_inputs["Site"]["node"]] = deepcopy( REopt_inputs["ElectricLoad"]["loads_kw"] )
-                end
-                Microgrid_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method = load_profiles_for_outage_sim_if_using_the_fraction_method
-            else
-                Microgrid_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method = ""
-            end
-            =#
-            # End of temporarily included code
-            
+                        
     TimeSteps = collect(1:(8760*Microgrid_Inputs.time_steps_per_hour))
     NodeList = string.(GenerateREoptNodesList(Microgrid_Inputs))
     
@@ -2526,14 +2544,18 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
     Plots.plot!(days, BatteryOutput, label = "Combined Battery Output")
     Plots.plot!(days, GeneratorOutput, label = "Combined Generator Output")
     Plots.plot!(days, PowerFromGrid, label = "Grid Power")
-    if (OutageStopTimeStep - OutageStartTimeStep) > 0
+    if Microgrid_Inputs.model_outages_with_outages_vector
+        if Microgrid_Inputs.outages_vector != []
+            # TODO: model the multiple outages in the static plot
+        end
+    elseif (OutageStopTimeStep - OutageStartTimeStep) > 0
         OutageStart_Line = OutageStartTimeStep/24
         OutageStop_Line = OutageStopTimeStep/24
         Plots.plot!([OutageStart_Line, OutageStart_Line],[0,maximum(TotalLoad_series)], label= "Outage Start")
         Plots.plot!([OutageStop_Line, OutageStop_Line],[0,maximum(TotalLoad_series)], label= "Outage End")
         Plots.xlims!(OutageStartTimeStep-12, OutageStopTimeStep+12)
     else
-        Plots.xlims!(100,104)
+        Plots.xlims!(0,7*Microgrid_Inputs.time_steps_per_hour) # Show the first week of results
     end
     display(Plots.title!("System Wide Power Demand and Generation"))
     print("\n The static plot has been generated")
@@ -2606,7 +2628,38 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         y = PowerFromGrid
     ))  
     
-    if (OutageStopTimeStep - OutageStartTimeStep) > 0
+    if Microgrid_Inputs.model_outages_with_outages_vector
+        if Microgrid_Inputs.outages_vector != []
+            
+            outage_starts, outage_ends = DetermineOutageStartsAndEnds(Microgrid_Inputs, Microgrid_Inputs.outages_vector)
+            
+            for i in outage_starts
+                if i == outage_starts[1]
+                    showlegend = true
+                else
+                    showlegend = false
+                end
+                push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = showlegend, fill = "none", line = PlotlyJS.attr(width = 3, color="red"), #, dash="dot"),
+                    x = [i, i],
+                    y = [0,maximum(TotalLoad_series)]
+                ))
+            end 
+
+            for i in outage_ends
+                if i == outage_ends[1]
+                    showlegend = true
+                else
+                    showlegend = false
+                end
+                push!(traces, PlotlyJS.scatter(name = "Outage End", showlegend = showlegend, fill = "none", line = PlotlyJS.attr(width = 3, color="red", dash="dot"),
+                    x = [i, i],
+                    y = [0,maximum(TotalLoad_series)]
+                ))
+            end 
+
+
+        end
+    elseif (OutageStopTimeStep - OutageStartTimeStep) > 0
         OutageStart_Line = OutageStartTimeStep/24
         OutageStop_Line = OutageStopTimeStep/24
         push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="red", dash="dot"),
@@ -2621,9 +2674,33 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
 
     p = PlotlyJS.plot(traces, layout)
     display(p)
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/CombinedResults_PowerOutput_interactiveplot.html")
+    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/CombinedResults_PowerOutput_InteractivePlot.html")
 end
  
+
+function DetermineOutageStartsAndEnds(Microgrid_Inputs, outages_vector)
+    # From the list of outage timesteps, construct an array for the outage start times and outage end times by identifying groups of values
+
+    outage_starts = [outages_vector[1]]
+    outage_ends = []
+
+    for i in collect(2:length(outages_vector))
+        if (outages_vector[i] - outages_vector[i-1]) >= 2
+            push!(outage_starts, outages_vector[i])
+            push!(outage_ends, outages_vector[i-1])
+        end
+    end
+
+    # Make sure that the last value in the outage vector is part of the outage_ends array:
+    if outage_ends[length(outage_ends)] != outages_vector[length(outages_vector)]
+        push!(outage_ends, outages_vector[length(outages_vector)])
+    end
+    # Convert to days:
+    outage_starts = outage_starts / (24 * Microgrid_Inputs.time_steps_per_hour)
+    outage_ends = outage_ends / (24 * Microgrid_Inputs.time_steps_per_hour)
+    return outage_starts, outage_ends
+end
+
 
 # Function to check for errors in the data inputs for the model
 function RunDataChecks(Microgrid_Inputs,  REopt_dictionary; ldf_inputs_dictionary="")
