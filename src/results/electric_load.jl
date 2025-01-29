@@ -25,10 +25,6 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     r["annual_calculated_kwh"] = round(
         sum(r["load_series_kw"]) * p.hours_per_time_step, digits=2
     )
-
-    r["annual_kwh_with_thermal_conversion"] = round(
-        value(m[:AnnualEleckWh]), digits=2
-    )
     
     if p.s.settings.off_grid_flag
         @expression(m, LoadMet[ts in p.time_steps_without_grid], p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts])
