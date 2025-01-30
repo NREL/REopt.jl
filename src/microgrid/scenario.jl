@@ -1,0 +1,216 @@
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+
+const PMD = PowerModelsDistribution
+
+"""
+`microgrid` is an optional input with the following keys and default values:
+```julia
+    folder_location::String="",
+    bus_coordinates::String="",  # Location of the csv document with the bus coordinates
+    PMD_network_input::String="",
+    microgrid_type::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
+    nonlinear_solver::Bool=false,
+    model_type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution",
+    run_BAU_case::Bool=true,
+    optimizer::Any, # Such as HiGHS.Optimizer
+    optimizer_tolerance::Float64=0.001, # Only works for Xpress, HiGHS, and Gurobi
+    PMD_time_steps::Any=[1:24], # By default, apply the PMD model to the first 24 timesteps of the model
+    REopt_inputs_list::Array=[],
+    bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
+    bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
+    bus_neutral_voltage_upper_bound_per_unit::Float64=0.1, 
+    facility_meter_node::String="",
+    substation_node::String="",
+    substation_line::String="",
+    allow_export_beyond_substation::Bool=false,
+    substation_export_limit::Real=0,
+    substation_import_limit::Real=0,
+    model_switches::Bool=false,
+    model_line_upgrades::Bool=false,
+    line_upgrade_options::Dict=Dict(), 
+    model_transformer_upgrades::Bool=false,
+    transformer_upgrade_options::Dict=Dict(),
+    switch_open_timesteps::Dict=Dict(),
+    single_outage_start_time_step::Real=0,
+    single_outage_end_time_step::Real=0,
+    model_outages_with_outages_vector::Bool=false,
+    outages_vector::Array=[],
+    run_outage_simulator::Bool=false,
+    length_of_simulated_outages_time_steps::Array=[],
+    critical_load_method::String="Fraction",
+    critical_load_fraction::Real=0.0,
+    critical_load_timeseries::Array=[],
+    number_of_outages_to_simulate::Real=0,
+    run_numbers_for_plotting_outage_simulator_results::Array=[], 
+    time_steps_per_hour::Real=0,
+    generator_fuel_gallon_available::Dict=Dict(),
+    generators_only_run_during_grid_outage::Bool=false,
+    generate_CSV_of_outputs::Bool=false,
+    generate_results_plots::Bool=false,
+    result_plots_start_time_step::Real=0,
+    result_plots_end_time_step::Real=0,
+    plot_voltage_drop::Bool=true,
+    plot_voltage_drop_node_numbers::Array=[],
+    plot_voltage_drop_voltage_time_step::Real=0,
+    display_results::Bool=true
+"""
+
+mutable struct MicrogridInputs <: AbstractMicrogrid
+    folder_location
+    bus_coordinates
+    PMD_network_input
+    microgrid_type
+    model_type
+    run_BAU_case
+    optimizer
+    optimizer_tolerance
+    PMD_time_steps
+    nonlinear_solver
+    REopt_inputs_list
+    bus_phase_voltage_lower_bound_per_unit
+    bus_phase_voltage_upper_bound_per_unit
+    bus_neutral_voltage_upper_bound_per_unit
+    facility_meter_node
+    substation_node
+    substation_line
+    allow_export_beyond_substation
+    substation_export_limit
+    substation_import_limit
+    model_switches
+    model_line_upgrades
+    line_upgrade_options 
+    model_transformer_upgrades
+    transformer_upgrade_options
+    switch_open_timesteps
+    single_outage_start_time_step
+    single_outage_end_time_step
+    model_outages_with_outages_vector
+    outages_vector
+    run_outage_simulator
+    length_of_simulated_outages_time_steps
+    critical_load_method
+    critical_load_fraction
+    critical_load_timeseries
+    number_of_outages_to_simulate
+    run_numbers_for_plotting_outage_simulator_results
+    time_steps_per_hour
+    generator_fuel_gallon_available
+    generators_only_run_during_grid_outage
+    generate_CSV_of_outputs
+    generate_results_plots
+    result_plots_start_time_step
+    result_plots_end_time_step
+    plot_voltage_drop
+    plot_voltage_drop_node_numbers
+    plot_voltage_drop_voltage_time_step
+    display_results
+    load_profiles_for_outage_sim_if_using_the_fraction_method
+
+    function MicrogridInputs(;
+        folder_location::String="",
+        bus_coordinates::String="",  
+        PMD_network_input::String="",
+        microgrid_type::String="BehindTheMeter", 
+        model_type::String="PowerModelsDistribution",
+        run_BAU_case::Bool=true, 
+        optimizer::Any, 
+        optimizer_tolerance::Float64=0.001,
+        PMD_time_steps::Any=[1:24],
+        nonlinear_solver::Bool=false,
+        REopt_inputs_list::Array=[],
+        bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
+        bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
+        bus_neutral_voltage_upper_bound_per_unit::Float64=0.1,
+        facility_meter_node::String="",
+        substation_node::String="",
+        substation_line::String="",
+        allow_export_beyond_substation::Bool=false,
+        substation_export_limit::Real=0,
+        substation_import_limit::Real=0,
+        model_switches::Bool=false,
+        model_line_upgrades::Bool=false,
+        line_upgrade_options::Dict=Dict(), 
+        model_transformer_upgrades::Bool=false,
+        transformer_upgrade_options::Dict=Dict(),
+        switch_open_timesteps::Dict=Dict(),
+        single_outage_start_time_step::Real=0,
+        single_outage_end_time_step::Real=0,
+        model_outages_with_outages_vector::Bool=false,
+        outages_vector::Array=[],
+        run_outage_simulator::Bool=false,
+        length_of_simulated_outages_time_steps::Array=[],
+        critical_load_method::String="Fraction",
+        critical_load_fraction::Dict=Dict(),
+        critical_load_timeseries::Dict=Dict(),
+        number_of_outages_to_simulate::Real=0,
+        run_numbers_for_plotting_outage_simulator_results::Array=[], 
+        time_steps_per_hour::Real=0,
+        generator_fuel_gallon_available::Dict=Dict(),
+        generators_only_run_during_grid_outage::Bool=false,
+        generate_CSV_of_outputs::Bool=false,
+        generate_results_plots::Bool=false,
+        result_plots_start_time_step::Real=0,
+        result_plots_end_time_step::Real=0,
+        plot_voltage_drop::Bool=true,
+        plot_voltage_drop_node_numbers::Array=[],
+        plot_voltage_drop_voltage_time_step::Real=0,
+        display_results::Bool=true,
+        load_profiles_for_outage_sim_if_using_the_fraction_method::Array=[]
+        )
+    
+    new(
+        folder_location,
+        bus_coordinates,
+        PMD_network_input,
+        microgrid_type,
+        model_type,
+        run_BAU_case,
+        optimizer,
+        optimizer_tolerance,
+        PMD_time_steps,  
+        nonlinear_solver,
+        REopt_inputs_list,
+        bus_phase_voltage_lower_bound_per_unit,
+        bus_phase_voltage_upper_bound_per_unit,
+        bus_neutral_voltage_upper_bound_per_unit,
+        facility_meter_node,
+        substation_node,
+        substation_line,
+        allow_export_beyond_substation,
+        substation_export_limit,
+        substation_import_limit,
+        model_switches,
+        model_line_upgrades,
+        line_upgrade_options, 
+        model_transformer_upgrades,
+        transformer_upgrade_options,
+        switch_open_timesteps,
+        single_outage_start_time_step,
+        single_outage_end_time_step,
+        model_outages_with_outages_vector,
+        outages_vector,
+        run_outage_simulator,
+        length_of_simulated_outages_time_steps,
+        critical_load_method,
+        critical_load_fraction,
+        critical_load_timeseries,
+        number_of_outages_to_simulate,
+        run_numbers_for_plotting_outage_simulator_results,
+        time_steps_per_hour,
+        generator_fuel_gallon_available,
+        generators_only_run_during_grid_outage,
+        generate_CSV_of_outputs,
+        generate_results_plots,
+        result_plots_start_time_step,
+        result_plots_end_time_step,
+        plot_voltage_drop,
+        plot_voltage_drop_node_numbers,
+        plot_voltage_drop_voltage_time_step,
+        display_results,
+        load_profiles_for_outage_sim_if_using_the_fraction_method
+    )
+   
+    end
+end
+
+

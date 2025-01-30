@@ -199,8 +199,9 @@ include("outagesim/outage_simulator.jl")
 include("outagesim/backup_reliability.jl")
 
 include("microgrid/microgrid.jl")
-include("microgrid/power_flow.jl")
-include("microgrid/basic_linear_model_microgrid.jl")
+include("microgrid/microgrid_outage_simulator.jl")
+include("microgrid/microgrid_results_processing.jl")
+include("microgrid/scenario.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")
