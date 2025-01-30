@@ -51,7 +51,7 @@ Classify the change according to the following categories:
 ### Fixed
 - Make **ElectricTariff** **export_rate_beyond_net_metering_limit** and **wholesale_rate** with sub-hour time step work
 
-## develop
+## v0.50.0
 ### Added
 - New parameter `force_dispatch` in the **ASHPSpaceHeater** and **ASHPWaterHeater** technologies (default = `true`).  When kept at `true`, the ASHP's thermal output will be the minimum of the site load(s) served and the system size (adjusted for timestep-specific capacity factor) in each period. If set to `false`, ASHP will do economic dispatch considering COP and CF along with electricity prices.
 ### Fixed
@@ -64,7 +64,7 @@ Classify the change according to the following categories:
 
 ## v0.49.1
 ### Changed
-- Swap an error for a warning with inconsistent load-year between electric and heating; soon to 
+- Swap an error for a warning with inconsistent load-year between electric and heating
 
 ## v0.49.0
 ### Added
