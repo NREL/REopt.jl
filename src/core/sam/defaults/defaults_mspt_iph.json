@@ -20,7 +20,7 @@
     "helio_reflectance" : 0.90000000000000002,
     "rec_absorptance" : 0.93999999999999995,
     "rec_hl_perm2" : 30,
-    "land_max" : 9.5,
+    "land_max" : 15.0,
     "land_min" : 0.75,
     "p_start" : 0.025000000000000001,
     "p_track" : 0.055,
