@@ -474,7 +474,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     eval_ghp = false
-    get_ghpghx_from_input = false    
+    get_ghpghx_from_input = false
     if haskey(d, "GHP") && haskey(d["GHP"],"building_sqft")
         eval_ghp = true
         if haskey(d["GHP"], "ghpghx_responses") && !isempty(d["GHP"]["ghpghx_responses"])
@@ -618,9 +618,38 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # Call GhpGhx.jl to size GHP and GHX
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
+                # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
+                heating_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
+                thermal_load_ton = heating_load_ton
+                if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                    cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
+                    thermal_load_ton = heating_load_ton + cooling_load_ton
+                end
+                peak_thermal_load = maximum(thermal_load_ton)
+                if haskey(d["GHP"],"max_ton") && peak_thermal_load > d["GHP"]["max_ton"]
+                    @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
+                    # When user specifies undersized GHP, calculate the load to be served by GHP and send the rest to REopt
+                    # If user choose to scale down total load (load_served_by_ghp="scaled"), calculate the ratio of the udersized GHP size and peak load
+                    if d["GHP"]["load_served_by_ghp"] == "scaled"
+                        @info "GHP served scaled down of total thermal load"
+                        peak_ratio = d["GHP"]["max_ton"]/peak_thermal_load
+                        # Scale down the total load profile by the peak ratio and use this scaled down load to rerun GhpGhx.jl
+                        ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*peak_ratio
+                        if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                            ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton*peak_ratio
+                        end
+                    elseif d["GHP"]["load_served_by_ghp"] == "nonpeak"
+                        @info "GHP serves all thermal load below thermal peak load"
+                        heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]                     
+                        #ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"][ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] .>= d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
+                        heating_load_mmbtu[heating_load_mmbtu .>=d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
+                        ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu                    
+                    end
+                end
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                 # Create a dictionary of the results data needed for REopt
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+                # Return results from GhpGhx.jl without load scaling if user does not provide GHP size or if user entered GHP size is greater than GHP size output
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
             catch e
                 @info e
@@ -638,9 +667,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end                    
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
             # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-            #open("scenarios/ghpghx_response.json","w") do f
-            #    JSON.print(f, ghpghx_response)
-            #end                
+            # open("scenarios/ghpghx_response.json","w") do f             
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
