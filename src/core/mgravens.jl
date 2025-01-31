@@ -189,16 +189,23 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             end
 
             # Coincident peak prices (monthly)
-            # TODO allow EnergyPrices.CoincidentPeakPrices to be optional
+            # TODO allow EnergyPrices.CoincidentPeakPrices to be optional 
+            # TODO allow multiple prices with different times for each; also consider more than one consecutive hour
             coincident_peak_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CoincidentPeakPrices"], "::")[2], "'" => "")
             coincident_peak_dict = get(mgravens["EnergyPrices"]["CoincidentPeakPrices"], coincident_peak_prices_name, nothing)
             if !isnothing(coincident_peak_dict)
                 coincident_peak_list_of_dict = coincident_peak_dict["CoincidentPeakPrices.CoincidentPeakPriceCurve"]["PriceCurve.CurveDatas"]
-                prices, ts_array = [], []
-                for (i, price) in enumerate(coincident_peak_list_of_dict)
-                    append!(prices, [price["CurveData.y1value"]])
-                    append!(ts_array, [price["CurveData.xvalue"]])
-                end
+                # prices, ts_array = [], [[]]
+                # for (i, price) in enumerate(coincident_peak_list_of_dict)
+                #     append!(prices, [price["CurveData.y1value"]])
+                #     if !(price in prices)
+                #         append!(ts_array, [[price["CurveData.xvalue"]]])
+                #     else
+                #         append!(ts_array[i], [price["CurveData.xvalue"]])
+                #     end
+                # end
+                prices = [coincident_peak_list_of_dict[1]["CurveData.y1value"]]
+                ts_array = [[coincident_peak_list_of_dict[i]["CurveData.xvalue"]] for i in eachindex(coincident_peak_list_of_dict)]
                 reopt_inputs["ElectricTariff"]["coincident_peak_load_charge_per_kw"] = prices
                 reopt_inputs["ElectricTariff"]["coincident_peak_load_active_time_steps"] = ts_array
             else
