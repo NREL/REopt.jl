@@ -5,23 +5,23 @@
         "size_class": 1,
         "name": "Residential",
         "tech_sizes_for_cost_curve": [0, 25],
-        "installed_cost_per_kw": [2680, 2400],
-        "om_cost_per_kw": 30,
+        "installed_cost_per_kw": [4340, 3461],
+        "om_cost_per_kw": 30.66,
         "notes": "Based on 2023 NREL residential benchmark of $2.68/WDC (Ramasamy et al., 2023)"
       },
       {
         "size_class": 2,
-        "name": "Light Commercial",
+        "name": "Small Commercial",
         "tech_sizes_for_cost_curve": [25, 250],
-        "installed_cost_per_kw": [2200, 1900],
+        "installed_cost_per_kw": [3461, 2230],
         "om_cost_per_kw": 22,
         "notes": "Based on NREL commercial benchmarks with size-based scaling"
       },
       {
         "size_class": 3,
-        "name": "Heavy Commercial",
+        "name": "Large Commercial",
         "tech_sizes_for_cost_curve": [250, 750],
-        "installed_cost_per_kw": [1900, 1780],
+        "installed_cost_per_kw": [2230, 2056],
         "om_cost_per_kw": 19,
         "notes": "Based on NREL 200kW commercial benchmark of $1.78/WDC"
       },
@@ -29,7 +29,7 @@
         "size_class": 4,
         "name": "Industrial",
         "tech_sizes_for_cost_curve": [750, 5000],
-        "installed_cost_per_kw": [1780, 1600],
+        "installed_cost_per_kw": [2056, 1680],
         "om_cost_per_kw": 19,
         "notes": "Transition scale between commercial and utility, upper bound aligned with EIA utility definition of 5MW"
       },
@@ -37,9 +37,9 @@
         "size_class": 5,
         "name": "Utility",
         "tech_sizes_for_cost_curve": [5000, 100000],
-        "installed_cost_per_kw": [1600, 1560],
+        "installed_cost_per_kw": [1680, 1164],
         "om_cost_per_kw": 22,
-        "notes": "Based on NREL utility benchmark of $1.56/WAC (adjusted for DC), EIA data shows 86% of utility capacity from systems >50MW"
+        "notes": "Based on NREL utility benchmark of $1.56/WAC (1.16/WDC [1.34 DC-to-AC ratio, or inverter loading ratio]), EIA data shows 86% of utility capacity from systems >50MW"
       }
     ]
   },
@@ -49,15 +49,15 @@
         "size_class": 1,
         "name": "Residential",
         "tech_sizes_for_cost_curve": [0, 25],
-        "installed_cost_per_kw": [2680, 2400],
+        "installed_cost_per_kw": [4217, 3285],
         "om_cost_per_kw": 30,
-        "notes": "Based on 2023 NREL residential benchmark"
+        "notes": "Based on Q1 2024 PVSCM Model"
       },
       {
         "size_class": 2,
         "name": "Light Commercial",
         "tech_sizes_for_cost_curve": [25, 250],
-        "installed_cost_per_kw": [2300, 2000],
+        "installed_cost_per_kw": [3285, 2218],
         "om_cost_per_kw": 24,
         "notes": "Higher than ground-mount due to roof mounting complexity"
       },
@@ -65,7 +65,7 @@
         "size_class": 3,
         "name": "Heavy Commercial",
         "tech_sizes_for_cost_curve": [250, 750],
-        "installed_cost_per_kw": [2000, 1880],
+        "installed_cost_per_kw": [2218, 1991],
         "om_cost_per_kw": 21,
         "notes": "~$0.10/W premium over ground-mount due to rooftop installation requirements"
       },
@@ -73,7 +73,7 @@
         "size_class": 4,
         "name": "Large Commercial/Industrial",
         "tech_sizes_for_cost_curve": [750, 5000],
-        "installed_cost_per_kw": [1880, 1750],
+        "installed_cost_per_kw": [1991, 1337],
         "om_cost_per_kw": 21,
         "notes": "Examples include large warehouses and manufacturing facilities"
       },
@@ -81,7 +81,7 @@
         "size_class": 5,
         "name": "Mega-Rooftop",
         "tech_sizes_for_cost_curve": [5000, 35000],
-        "installed_cost_per_kw": [1750, 1650],
+        "installed_cost_per_kw": [1337, 1088],
         "om_cost_per_kw": 23,
         "notes": "Upper limit based on DSV Logistics (35MW) and Tesla Gigafactory (30MW) examples"
       }
