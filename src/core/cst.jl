@@ -40,7 +40,7 @@ function CST(;
     installed_cost_per_kw::Real = 293000.0, # Thermal power-based cost
     om_cost_per_kw::Real = 2930.0, # Thermal power-based fixed O&M cost
     om_cost_per_kwh::Real = 0.0, # Thermal energy-based variable O&M cost
-    tech_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
+    tech_type::String = "natural_gas",  # restrict to: ["ptc", "mst", "lf", "swh_evactube", "swh_flatplate"]
     can_supply_steam_turbine::Bool = true # If the boiler can supply steam to the steam turbine for electric production
     can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
