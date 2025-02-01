@@ -19,4 +19,11 @@ Base.@kwdef struct Settings
     include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
     include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
     solver_name::String = "HiGHS" # solver used to obtain a solution to model instance. available options: ["HiGHS", "Cbc", "CPLEX", "Xpress"]
+    track::Bool = true
+    name::String = ""
+    webtool_run::Bool = false
+    webtool_user_uuid::String = ""
+    webtool_portfolio_uuid::String = ""
+    api_run_uuid::String = ""
+    reoptjl_version::String = "0.50.0"
 end
