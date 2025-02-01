@@ -612,9 +612,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
 				headers = Dict("Content-Type" => "application/json")
 				HTTP.post("http://localhost:8000/reopt/post/", headers, JSON.json(track_data))
-			catch e
+			catch #e
 				@warn "Could not post tracking data to REopt API"
-				@info e.message
+				#@info e.message
 			end
 		end
 
