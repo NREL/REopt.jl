@@ -620,6 +620,31 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
 end
 
 
+function Create_Voltage_Plot(results, Microgrid_Inputs)
+
+    # Generate list of lengths from the node to the substation
+
+    # Determine the per unit voltage at each node
+    timestep = Microgrid_Inputs.voltage_plot_time_step
+
+    # Interactive plot using PlotlyJS
+    traces = PlotlyJS.GenericTrace[]
+    layout = PlotlyJS.Layout(title_text = "Voltage Stability", xaxis_title_text = "Day", yaxis_title_text = "Per Unit Voltage")
+    
+    push!(traces, PlotlyJS.scatter(name = "Node", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="black"),
+    x = [1], # TODO: enter the actual data
+    y = [1]
+        ))
+
+        
+
+    p = PlotlyJS.plot(traces, layout)
+    display(p)
+    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/VoltagePlot_InteractivePlot.html")
+
+end
+
+
 function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptInputs_Combined, model)
     # Function to create additional plots using PlotlyJS
     

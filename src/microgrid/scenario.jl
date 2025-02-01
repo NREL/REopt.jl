@@ -47,11 +47,9 @@ const PMD = PowerModelsDistribution
     generators_only_run_during_grid_outage::Bool=false,
     generate_CSV_of_outputs::Bool=false,
     generate_results_plots::Bool=false,
-    result_plots_start_time_step::Real=0,
-    result_plots_end_time_step::Real=0,
-    plot_voltage_drop::Bool=true,
-    plot_voltage_drop_node_numbers::Array=[],
-    plot_voltage_drop_voltage_time_step::Real=0,
+    voltage_plot_time_step::Real=0,
+    generate_same_pv_production_profile_for_each_node::Bool=false,
+    pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
     display_results::Bool=true
 """
 
@@ -98,11 +96,9 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     generators_only_run_during_grid_outage
     generate_CSV_of_outputs
     generate_results_plots
-    result_plots_start_time_step
-    result_plots_end_time_step
-    plot_voltage_drop
-    plot_voltage_drop_node_numbers
-    plot_voltage_drop_voltage_time_step
+    voltage_plot_time_step
+    generate_same_pv_production_profile_for_each_node
+    pv_inputs_for_standardized_pv_production_profile 
     display_results
     load_profiles_for_outage_sim_if_using_the_fraction_method
 
@@ -149,15 +145,40 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         generators_only_run_during_grid_outage::Bool=false,
         generate_CSV_of_outputs::Bool=false,
         generate_results_plots::Bool=false,
-        result_plots_start_time_step::Real=0,
-        result_plots_end_time_step::Real=0,
-        plot_voltage_drop::Bool=true,
-        plot_voltage_drop_node_numbers::Array=[],
-        plot_voltage_drop_voltage_time_step::Real=0,
+        voltage_plot_time_step::Real=0,
+        generate_same_pv_production_profile_for_each_node::Bool=false,
+        pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
         display_results::Bool=true,
         load_profiles_for_outage_sim_if_using_the_fraction_method::Array=[]
         )
     
+    if generate_same_pv_production_profile_for_each_node == true
+
+        pv_power_production_factor_series, ambient_temp_celcius = REopt.call_pvwatts_api(pv_inputs_for_standardized_pv_production_profile["latitude"], 
+                                                                                        pv_inputs_for_standardized_pv_production_profile["longitude"]; 
+                                                                                        tilt= pv_inputs_for_standardized_pv_production_profile["tilt"], 
+                                                                                        azimuth= pv_inputs_for_standardized_pv_production_profile["azimuth"], 
+                                                                                        module_type= pv_inputs_for_standardized_pv_production_profile["module_type"], 
+                                                                                        array_type= pv_inputs_for_standardized_pv_production_profile["array_type"], 
+                                                                                        losses= pv_inputs_for_standardized_pv_production_profile["losses"], 
+                                                                                        dc_ac_ratio= pv_inputs_for_standardized_pv_production_profile["dc_ac_ratio"],
+                                                                                        gcr= pv_inputs_for_standardized_pv_production_profile["gcr"], 
+                                                                                        inv_eff= 100 * pv_inputs_for_standardized_pv_production_profile["inv_eff_fraction"], 
+                                                                                        timeframe="hourly", 
+                                                                                        radius=0, 
+                                                                                        time_steps_per_hour=time_steps_per_hour)
+
+        for node in collect(1:length(REopt_inputs_list))
+            if "PV" in keys(REopt_inputs_list[node])
+                if "production_factor_series" in keys(REopt_inputs_list[node]["PV"])
+                    # do nothing because the power_factor_series is already defined
+                else
+                    REopt_inputs_list[node]["PV"]["production_factor_series"] = pv_power_production_factor_series
+                end
+            end
+        end
+    end
+
     new(
         folder_location,
         bus_coordinates,
@@ -201,11 +222,9 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         generators_only_run_during_grid_outage,
         generate_CSV_of_outputs,
         generate_results_plots,
-        result_plots_start_time_step,
-        result_plots_end_time_step,
-        plot_voltage_drop,
-        plot_voltage_drop_node_numbers,
-        plot_voltage_drop_voltage_time_step,
+        voltage_plot_time_step,
+        generate_same_pv_production_profile_for_each_node,
+        pv_inputs_for_standardized_pv_production_profile, 
         display_results,
         load_profiles_for_outage_sim_if_using_the_fraction_method
     )
