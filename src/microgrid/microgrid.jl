@@ -157,10 +157,10 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
     end
 
     if Microgrid_Inputs.generate_results_plots == true 
+        Create_Voltage_Plot(CompiledResults, TimeStamp)
         Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Inputs, REoptInputs_Combined, model)
         if Microgrid_Inputs.bus_coordinates != ""
             CreateResultsMap(CompiledResults, Microgrid_Inputs, TimeStamp)
-            Create_Voltage_Plot(CompiledResults, Microgrid_Inputs)
         end
     end
 

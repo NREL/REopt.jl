@@ -620,23 +620,39 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
 end
 
 
-function Create_Voltage_Plot(results, Microgrid_Inputs)
-
+function Create_Voltage_Plot(results, TimeStamp)
+    Microgrid_Inputs = results["Microgrid_Inputs"]
     # Generate list of lengths from the node to the substation
+    DistancesToSourcebus, lengths_dict, paths_dict = DetermineDistanceFromSourcebus(results)
 
     # Determine the per unit voltage at each node
     timestep = Microgrid_Inputs.voltage_plot_time_step
+    
+    per_unit_voltage = Dict([])
+    for bus in keys(DistancesToSourcebus)
+        per_unit_voltage[bus] = sqrt(results["PMD_results"]["nw"][string(timestep)]["bus"][bus]["w"][1])
+    end
 
     # Interactive plot using PlotlyJS
     traces = PlotlyJS.GenericTrace[]
-    layout = PlotlyJS.Layout(title_text = "Voltage Stability", xaxis_title_text = "Day", yaxis_title_text = "Per Unit Voltage")
+    layout = PlotlyJS.Layout(title_text = "Voltage Stability, PMD Timestep $(timestep)", xaxis_title_text = "Distance from Substation", yaxis_title_text = "Per Unit Voltage")
     
-    push!(traces, PlotlyJS.scatter(name = "Node", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="black"),
-    x = [1], # TODO: enter the actual data
-    y = [1]
-        ))
+    for line in keys(results["PMD_data_eng"]["line"])
+        bus1 = results["PMD_data_eng"]["line"][line]["f_bus"]
+        bus2 = results["PMD_data_eng"]["line"][line]["t_bus"]
+        push!(traces, PlotlyJS.scatter(name = "Line $(line)", showlegend = false, fill = "none", line = PlotlyJS.attr(width = 1, color="black"),
+                x = [DistancesToSourcebus[string(bus1)], DistancesToSourcebus[string(bus2)]],
+                y = [per_unit_voltage[string(bus1)], per_unit_voltage[string(bus2)]]
+            ))
+    end
 
-        
+    for bus in keys(DistancesToSourcebus)
+        voltage = round(per_unit_voltage[bus], digits = 6)
+        push!(traces, PlotlyJS.scatter(name = "Node $(bus)", showlegend = false, text ="Node $(bus), p.u. voltage $(voltage)", hoverinfo = "text", fill = "none", line = PlotlyJS.attr(width = 3, color="black"),
+                x = [DistancesToSourcebus[bus]],
+                y = [per_unit_voltage[bus]]
+            ))
+    end       
 
     p = PlotlyJS.plot(traces, layout)
     display(p)
@@ -890,5 +906,137 @@ function DetermineOutageStartsAndEnds(Microgrid_Inputs, outages_vector)
     outage_starts = outage_starts / (24 * Microgrid_Inputs.time_steps_per_hour)
     outage_ends = outage_ends / (24 * Microgrid_Inputs.time_steps_per_hour)
     return outage_starts, outage_ends
+end
+
+
+function DetermineDistanceFromSourcebus(results)
+    neighbors = REopt.modified_calc_connected_components_eng(results["PMD_data_eng"])
+    paths = REopt.DeterminePathToSourcebus(neighbors)
+
+    Microgrid_Inputs = results["Microgrid_Inputs"]
+
+    line_names_to_sourcebus_dict = Dict()
+    lengths_to_sourcebus_dict = Dict()
+
+    for i in keys(paths)
+        path = paths[i]
+        line_names_temp = []
+        line_lengths_temp = []
+
+        for j in collect(1:(length(path)-1))
+            firstnode = path[j]
+            if path[j] == "sourcebus"
+                firstnode = string(Microgrid_Inputs.substation_node)
+            end
+            line_name = string("line"*firstnode*"_"*path[j+1])
+            if haskey(results["PMD_data_eng"]["line"], line_name)
+                push!(line_names_temp, line_name)
+                push!(line_lengths_temp, results["PMD_data_eng"]["line"][line_name]["length"])
+            end
+        end
+        line_names_to_sourcebus_dict[i] = line_names_temp
+        lengths_to_sourcebus_dict[i] = line_lengths_temp
+    end
+    
+    summed_lengths_to_sourcebus_dict = Dict()
+    for i in keys(lengths_to_sourcebus_dict)
+        if lengths_to_sourcebus_dict[i] != Any[]
+            summed_lengths_to_sourcebus_dict[i] = sum(lengths_to_sourcebus_dict[i])
+        else
+            summed_lengths_to_sourcebus_dict[i] = 0
+        end
+    end
+
+    return summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict
+end
+
+
+function DeterminePathToSourcebus(neighbors)
+    # Acknowledgement: This function was built with the assistance of ChatGPT
+    parent_dict = Dict()
+    path_dict = Dict()
+    substation_bus = "sourcebus"
+    queue = [substation_bus]
+    visited = Dict() #{Int, Bool}()
+    visited[substation_bus] = true
+
+    while !isempty(queue)
+        bus = popfirst!(queue)
+        for i in neighbors[bus]
+            if !haskey(visited, i)
+                visited[i] = true
+                parent_dict[i] = bus
+                push!(queue, i)
+            end
+        end
+    end
+
+    for bus in keys(neighbors)
+        path = []
+        current_bus = bus
+        while current_bus != substation_bus
+            push!(path, current_bus)
+            current_bus = parent_dict[current_bus]
+        end
+        push!(path, substation_bus)
+        path_dict[bus] = reverse(path)
+    end
+
+    return path_dict
+end
+
+
+function modified_calc_connected_components_eng(data; edges::Vector{<:String}=String["line", "switch", "transformer"], type::Union{Missing,String}=missing, check_enabled::Bool=true) #::Set{Set{String}}
+    # Acknowledgement: This function is based on code from the julia package PowerModelsDistribution
+    
+    @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
+
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
+    active_bus_ids = Set{String}([i for (i,bus) in active_bus])
+
+    neighbors = Dict{String,Vector{String}}(i => [] for i in active_bus_ids)
+    for edge_type in edges
+        for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
+            if edge_obj["status"] == ENABLED || !check_enabled
+                if edge_type == "transformer" && haskey(edge_obj, "bus")
+                    for f_bus in edge_obj["bus"]
+                        for t_bus in edge_obj["bus"]
+                            if f_bus != t_bus
+                                push!(neighbors[f_bus], t_bus)
+                                push!(neighbors[t_bus], f_bus)
+                            end
+                        end
+                    end
+                else
+                    if edge_type == "switch" && !ismissing(type)
+                        if type == "load_blocks"
+                            if edge_obj["dispatchable"] == NO && edge_obj["state"] == CLOSED
+                                push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                                push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            end
+                        elseif type == "blocks"
+                            if edge_obj["state"] == CLOSED
+                                push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                                push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            end
+                        end
+                    else
+                        push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                        push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                    end
+                end
+            end
+        end
+    end
+
+    component_lookup = Dict(i => Set{String}([i]) for i in active_bus_ids)
+    touched = Set{String}()
+
+    for i in active_bus_ids
+        if !(i in touched)
+            PowerModelsDistribution._cc_dfs(i, neighbors, component_lookup, touched)
+        end
+    end
+    return neighbors 
 end
 
