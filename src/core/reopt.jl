@@ -591,31 +591,31 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 		results["Messages"] = logger_to_dict()
 
 		if p.s.settings.track && !(typeof(p.s) <: BAUScenario)
-			try
-				track_data = Dict(
-					"run_data" => Dict(
-						"name" => p.s.settings.name,
-						"latitude" => p.s.site.latitude,
-						"longitude" => p.s.site.longitude,
-						"country" => "",
-						"city" => "",
-						"pv_size" => get(get(results, "PV", Dict()), "size_kw", nothing),
-						"battery_energy_size" => get(get(results, "ElectricStorage", Dict()), "size_kwh", nothing),
-						"battery_power_size" => get(get(results, "ElectricStorage", Dict()), "size_kw", nothing)
-					),
-					"webtool_run" => p.s.settings.webtool_run,
-					"api_run_uuid" => p.s.settings.api_run_uuid,
-					"webtool_user_uuid" => p.s.settings.webtool_user_uuid,
-					"reoptjl_version" => p.s.settings.reoptjl_version,
-					"status" => results["status"]
-				)
+			# try
+			track_data = Dict(
+				"run_data" => Dict(
+					"name" => p.s.settings.name,
+					"latitude" => p.s.site.latitude,
+					"longitude" => p.s.site.longitude,
+					"country" => "",
+					"city" => "",
+					"pv_size" => get(get(results, "PV", Dict()), "size_kw", nothing),
+					"battery_energy_size" => get(get(results, "ElectricStorage", Dict()), "size_kwh", nothing),
+					"battery_power_size" => get(get(results, "ElectricStorage", Dict()), "size_kw", nothing)
+				),
+				"webtool_run" => p.s.settings.webtool_run,
+				"api_run_uuid" => p.s.settings.api_run_uuid,
+				"webtool_user_uuid" => p.s.settings.webtool_user_uuid,
+				"reoptjl_version" => p.s.settings.reoptjl_version,
+				"status" => results["status"]
+			)
 
-				headers = Dict("Content-Type" => "application/json")
-				HTTP.post("http://localhost:7800/reopt/post/", headers, JSON.json(track_data))
-			catch #e
-				@warn "Could not post tracking data to REopt API"
-				#@info e.message
-			end
+			headers = Dict("Content-Type" => "application/json")
+			HTTP.post("http://localhost:7800/reopt/post/", headers, JSON.json(track_data))
+			# catch #e
+			# 	@warn "Could not post tracking data to REopt API"
+			# 	#@info e.message
+			# end
 		end
 
 		return results
