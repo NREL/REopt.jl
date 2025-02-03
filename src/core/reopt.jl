@@ -597,8 +597,6 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 					"name" => p.s.settings.name,
 					"latitude" => p.s.site.latitude,
 					"longitude" => p.s.site.longitude,
-					"country" => "",
-					"city" => "",
 					"pv_size" => get(get(results, "PV", Dict()), "size_kw", nothing),
 					"battery_energy_size" => get(get(results, "ElectricStorage", Dict()), "size_kwh", nothing),
 					"battery_power_size" => get(get(results, "ElectricStorage", Dict()), "size_kw", nothing)
@@ -610,8 +608,10 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 				"status" => results["status"]
 			)
 
+			print("track_data dict to reopt-track API = ", track_data)
 			headers = Dict("Content-Type" => "application/json")
-			HTTP.post("http://localhost:7800/reopt/post/", headers, JSON.json(track_data))
+			# HTTP.post("http://localhost:7800/reopt/post/", headers, JSON.json(track_data))
+			HTTP.post("http://host.docker.internal:7800/reopt/post/", headers, JSON.json(track_data))
 			# catch #e
 			# 	@warn "Could not post tracking data to REopt API"
 			# 	#@info e.message
