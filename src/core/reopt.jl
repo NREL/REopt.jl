@@ -602,8 +602,10 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 						"battery_power_size" => get(get(results, "ElectricStorage", Dict()), "size_kw", nothing)
 					),
 					"webtool_run" => p.s.settings.webtool_run,
-					"api_run_uuid" => p.s.settings.api_run_uuid,
 					"webtool_user_uuid" => p.s.settings.webtool_user_uuid,
+					"webtool_portfolio_uuid" => p.s.settings.webtool_portfolio_uuid,
+					"direct_api_run" => p.s.settings.direct_api_run,
+					"api_run_uuid" => p.s.settings.api_run_uuid,
 					"reoptjl_version" => p.s.settings.reoptjl_version,
 					"status" => results["status"]
 				)
@@ -612,9 +614,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 				headers = Dict("Content-Type" => "application/json")
 				# HTTP.post("http://localhost:7800/reopt/post/", headers, JSON.json(track_data))
 				HTTP.post("http://host.docker.internal:7800/reopt/post/", headers, JSON.json(track_data))
-			catch e
+			catch #e
 				@warn "Could not post tracking data to REopt API"
-				@info e.message
+				# @info e.message
 			end
 		end
 

@@ -24,6 +24,7 @@ Base.@kwdef struct Settings
     webtool_run::Bool = false
     webtool_user_uuid::String = ""
     webtool_portfolio_uuid::String = ""
+    direct_api_run::Bool = false
     api_run_uuid::String = ""
     reoptjl_version::String = "0.50.0"
 end
