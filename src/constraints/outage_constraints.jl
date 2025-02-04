@@ -3,12 +3,15 @@ function add_dv_UnservedLoad_constraints(m,p)
     # Effective load balance
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvUnservedLoad][s, tz, ts] == p.s.electric_load.critical_loads_kw[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
-        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
-              - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
+        - sum( m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
+              - m[:dvMGProductionToStorage][t, s, tz, ts]
+              - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.ac_couple_with_stor
         )
-        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
-              - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
+        - sum( p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
+                m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+                - m[:dvMGProductionToStorage][t, s, tz, ts]
+                - m[:dvMGCurtail][t, s, tz, ts])
             for t in p.techs.dc_couple_with_stor
         )
         - m[:dvMGDischargeFromStorage][s, tz, ts]
