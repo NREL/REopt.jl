@@ -71,10 +71,10 @@ struct Wind <: AbstractTech
     production_factor_series::Union{Nothing, Array{Real,1}}
     size_class::String
     hub_height::T where T <: Real
-    wind_meters_per_sec::AbstractArray{Float64,1}
-    wind_direction_degrees::AbstractArray{Float64,1}
-    temperature_celsius::AbstractArray{Float64,1}
-    pressure_atmospheres::AbstractArray{Float64,1}
+    wind_meters_per_sec::Union{AbstractArray{Float64,1}, AbstractArray{Vector{Float64}}}
+    wind_direction_degrees::Union{AbstractArray{Float64,1}, AbstractArray{Vector{Float64}}}
+    temperature_celsius::Union{AbstractArray{Float64,1}, AbstractArray{Vector{Float64}}}
+    pressure_atmospheres::Union{AbstractArray{Float64,1}, AbstractArray{Vector{Float64}}}
     acres_per_kw::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
