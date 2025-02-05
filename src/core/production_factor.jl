@@ -63,6 +63,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
             push!(resources, [wind.temperature_celsius[1], wind.pressure_atmospheres[1], wind.wind_meters_per_sec[1], wind.wind_direction_degrees[1]]...)
             push!(resources, [wind.temperature_celsius[2], wind.pressure_atmospheres[2], wind.wind_meters_per_sec[2], wind.wind_direction_degrees[2]]...)
             resources = hcat(resources...)
+        end
     else  # download resource data from WindToolKit
 
         # Allowed hub heights in meters for the Wind Toolkit
