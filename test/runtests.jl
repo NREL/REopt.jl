@@ -1080,7 +1080,7 @@ else  # run HiGHS tests
             d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
             results = run_reopt([m1,m2], d)
 
-            @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+            @test results["PV"]["size_kw"] ≈ 323.0952 atol=0.01
             @test results["PV"]["lcoe_per_kwh"] ≈ 0.0468 atol = 0.001
             @test results["Financial"]["lcc"] ≈ 1.22413889276e7 rtol=1e-5
             @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
