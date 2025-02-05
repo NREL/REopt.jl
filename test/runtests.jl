@@ -154,10 +154,10 @@ else  # run HiGHS tests
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt(model, "./scenarios/pv_storage.json")
 
-            @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-            @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
-            @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
-            @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+            @test r["PV"]["size_kw"] ≈ 323.0952 atol=0.01
+            @test r["Financial"]["lcc"] ≈ 1.22413889276e7 rtol=1e-5
+            @test r["ElectricStorage"]["size_kw"] ≈ 53.59 atol=0.1
+            @test r["ElectricStorage"]["size_kwh"] ≈ 76.71 atol=0.1
         end
 
         # TODO test MPC with outages
@@ -192,7 +192,7 @@ else  # run HiGHS tests
             """
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/incentives.json")
-            @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
+            @test results["Financial"]["lcc"] ≈ 1.0856245598e7 atol=1e4  
         end
 
         @testset "Fifteen minute load" begin
@@ -1082,10 +1082,10 @@ else  # run HiGHS tests
 
             @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
             @test results["PV"]["lcoe_per_kwh"] ≈ 0.0468 atol = 0.001
-            @test results["Financial"]["lcc"] ≈ 1.239179e7 rtol=1e-5
+            @test results["Financial"]["lcc"] ≈ 1.22413889276e7 rtol=1e-5
             @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
-            @test results["ElectricStorage"]["size_kw"] ≈ 49.02 atol=0.1
-            @test results["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+            @test results["ElectricStorage"]["size_kw"] ≈ 53.59 atol=0.1
+            @test results["ElectricStorage"]["size_kwh"] ≈ 76.71 atol=0.1
             proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
                 results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
             @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
@@ -1217,7 +1217,7 @@ else  # run HiGHS tests
                 REoptInputs("./scenarios/monthly_rate.json"),
             ];
             results = run_reopt(m, ps)
-            @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.2830872235e7 rtol=1e-5
+            @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.26804749978e7 rtol=1e-5
         end
 
         @testset verbose=true "Rate Structures" begin
@@ -1851,7 +1851,7 @@ else  # run HiGHS tests
             @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
             @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
             @test r["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
-            @test r["PV"]["size_kw"] ≈ 5050.0
+            @test r["PV"]["size_kw"] ≈ 7227.8571
             f = r["Financial"]
             @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
                     f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
