@@ -98,7 +98,7 @@ struct Wind <: AbstractTech
     can_export_beyond_nem_limit::Bool
     can_curtail::Bool
     operating_reserve_required_fraction::Real
-
+    """Still needs to undergo more work"""
     function Wind(;
         off_grid_flag::Bool = false,
         min_kw = 0.0,
@@ -168,7 +168,7 @@ struct Wind <: AbstractTech
                 size_class = "Bespoke 6 MW 196"
             end
         elseif !(size_class in keys(size_class_to_hub_height))
-            throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
+            #throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
             throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
         end
 
