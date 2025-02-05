@@ -492,7 +492,7 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
 end
 
 
-function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
+function CollectMapInformation(results, Microgrid_Inputs)
 
     if Microgrid_Inputs.model_type == "PowerModelsDistribution"
         lines = keys(results["Line_Info_PMD"])
@@ -529,6 +529,12 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
     
     bus_key_values = collect(keys(bus_cords))
     line_key_values = collect(keys(line_cords))
+
+return bus_key_values, line_key_values, bus_cords, line_cords, busses
+
+end
+
+function CollectResultsByNode(results, busses)
 
     # Create a dictionary of the technology sizing at each node, which will be plotted on the map:
     results_by_node = Dict([])
@@ -575,6 +581,15 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
             results_by_node[string(i)] = ""
         end
     end
+
+    return results_by_node
+end
+
+function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
+
+    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Microgrid_Inputs) 
+
+    results_by_node = CollectResultsByNode(results, busses)
 
     traces = PlotlyJS.GenericTrace[] # initiate the vector as a vector of PlotlyJS traces
 
@@ -885,6 +900,82 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
 end
  
 
+function PlotPowerFlows(results, TimeStamp)
+    # This function plots the power flows through the network
+
+    Microgrid_Inputs = results["Microgrid_Inputs"]
+
+    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Microgrid_Inputs) 
+
+    results_by_node = CollectResultsByNode(results, busses)
+
+    color1 = [0,180,0] # green
+    color2 = [238,155,0] # orange
+    color3 = [215,20,20] # red
+
+    # *******
+    # The method in these asterisks came from ChatGPT
+    increments = 20 # steps must be a positive number
+    color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
+    color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
+    color_numbers = vcat(color1_to_color2, color2_to_color3)
+    Colors = [string("rgb(",Int(round(c[1])),",",Int(round(c[2])),",",Int(round(c[3])),")") for c in color_numbers]
+    #*******
+
+    max_power = maximum(maximum([abs.(results["DataFrame_LineFlow_Summary"][!, :Minimum_LineFlow_ActivekW]), results["DataFrame_LineFlow_Summary"][!, :Maximum_LineFlow_ActivekW]]))
+    Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
+
+    powerflow = results["Dictionary_LineFlow_Power_Series"]
+    timesteps = length(powerflow[line_key_values[1]]["ActiveLineFlow"])
+
+    line_colors = Dict{Any, Any}()
+    for line in line_key_values
+        line_colors[line] = Vector{String}(undef, timesteps)
+        for i in 1:timesteps 
+            for j in 1:(length(Color_bins)-1)
+                if (abs(powerflow[line]["ActiveLineFlow"][i]) >= Color_bins[j]) && (abs(powerflow[line]["ActiveLineFlow"][i]) <= Color_bins[j+1])
+                    line_colors[line][i] = Colors[j]
+                end
+            end
+        end
+    end
+
+    frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
+            data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))],
+            name = "time=$(j)",
+            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation", xaxis_title_text = "Longitude", yaxis_title_text = "Latitude")) for j in collect(1:timesteps)]
+    
+    steps = [PlotlyJS.attr(method = "animate",
+            args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
+            label = "Timestep $(i)") for i in collect(1:timesteps)]
+   
+    layout = PlotlyJS.Layout(
+        showlegend=false,
+        sliders=[PlotlyJS.attr(yanchor="top", 
+                    xanchor="left",
+                    currentvalue=PlotlyJS.attr(prefix="Timestep: ", visible=true, font_size=12),
+                    steps=steps,
+                    active=0,
+                    minorticklen=0
+                    )],
+        updatemenus = [PlotlyJS.attr(
+            type="buttons",
+            showactive=false,
+            buttons=[PlotlyJS.attr(
+                label="Animate",
+                method="animate",
+                args=[nothing,PlotlyJS.attr(transition=PlotlyJS.attr(duration=0),fromcurrent=true, visible=true, frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate")]
+        )])])
+    
+    data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][1])) for i in collect(1:length(line_cords))]
+    p = PlotlyJS.Plot(data, layout, frames)
+    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation.html")
+    
+    #display(p) # do not display because this plot does not work in VScode
+    #return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values
+end
+
+
 function DetermineOutageStartsAndEnds(Microgrid_Inputs, outages_vector)
     # From the list of outage timesteps, construct an array for the outage start times and outage end times by identifying groups of values
 
@@ -1039,4 +1130,9 @@ function modified_calc_connected_components_eng(data; edges::Vector{<:String}=St
     end
     return neighbors 
 end
+
+
+
+
+
 
