@@ -52,6 +52,23 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
     resources = []
     heights_for_sam = [wind.hub_height]
 
+    # Allowed hub heights in meters for the Wind Toolkit
+    windtoolkit_hub_heights = [10, 40, 60, 80, 100, 120, 140, 160, 200]
+    """
+    SAM can interpolate the wind power if the wind.hub_height is not one of the windtoolkit_hub_heights.
+        If we do need to interpolate then we need to provide SAM with the resources for two hub heights. Copying this up here.
+    """
+    if !(wind.hub_height in windtoolkit_hub_heights)
+        if wind.hub_height < minimum(windtoolkit_hub_heights)
+            heights_for_sam = [windtoolkit_hub_heights[1]]
+        elseif wind.hub_height > maximum(windtoolkit_hub_heights)
+            heights_for_sam = [windtoolkit_hub_heights[end]]
+        else
+            upper_index = findfirst(x -> x > wind.hub_height, windtoolkit_hub_heights)
+            heights_for_sam = [windtoolkit_hub_heights[upper_index-1], windtoolkit_hub_heights[upper_index]]
+        end
+    end
+
     if all(length(a) > 0 for a in [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
                                    wind.wind_meters_per_sec])
         if all(a isa Vector && length(a) == 8760 for a in [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
