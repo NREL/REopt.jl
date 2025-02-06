@@ -909,7 +909,7 @@ function PlotPowerFlows(results, TimeStamp)
 
     results_by_node = CollectResultsByNode(results, busses)
 
-    color1 = [0,180,0] # green
+    color1 = [30,62,250] # blue
     color2 = [238,155,0] # orange
     color3 = [215,20,20] # red
 
@@ -921,10 +921,11 @@ function PlotPowerFlows(results, TimeStamp)
     color_numbers = vcat(color1_to_color2, color2_to_color3)
     Colors = [string("rgb(",Int(round(c[1])),",",Int(round(c[2])),",",Int(round(c[3])),")") for c in color_numbers]
     #*******
+    
+    deleteat!(Colors, increments) # with 20 increments, there should only be 19 color bins
 
     max_power = maximum(maximum([abs.(results["DataFrame_LineFlow_Summary"][!, :Minimum_LineFlow_ActivekW]), results["DataFrame_LineFlow_Summary"][!, :Maximum_LineFlow_ActivekW]]))
     Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
-
     powerflow = results["Dictionary_LineFlow_Power_Series"]
     timesteps = length(powerflow[line_key_values[1]]["ActiveLineFlow"])
 
@@ -939,6 +940,30 @@ function PlotPowerFlows(results, TimeStamp)
             end
         end
     end
+    
+    x_bus_values = zeros(length(keys(bus_cords)))
+    y_bus_values = zeros(length(keys(bus_cords)))
+
+    for i in collect(1:length(keys(bus_cords)))
+        x_bus_values[i] = bus_cords[collect(keys(bus_cords))[i]][2]
+        y_bus_values[i] = bus_cords[collect(keys(bus_cords))[i]][1]
+    end
+
+    minx = minimum(x_bus_values)
+    maxx = maximum(x_bus_values)
+    miny = minimum(y_bus_values)
+    maxy = maximum(y_bus_values)
+    y0 = zeros(increments)
+    y1 = zeros(increments)
+    stepsize = (maxy - miny)/increments
+    x_spacing = 0.05*(maxx - minx)
+    legend_box_width = 0.02*(maxx - minx)
+    x0 = maxx + x_spacing
+    x1 = maxx + x_spacing + legend_box_width
+    for i in collect(1:increments)
+        y0[i] = miny + ((i-1)*stepsize)
+        y1[i] = miny + (i * stepsize)
+    end
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
             data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))],
@@ -947,10 +972,13 @@ function PlotPowerFlows(results, TimeStamp)
     
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
-            label = "Timestep $(i)") for i in collect(1:timesteps)]
-   
+            label = "$(i)") for i in collect(1:timesteps)]
+    
     layout = PlotlyJS.Layout(
         showlegend=false,
+        shapes = [ PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))],
+        annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)]),
+                        
         sliders=[PlotlyJS.attr(yanchor="top", 
                     xanchor="left",
                     currentvalue=PlotlyJS.attr(prefix="Timestep: ", visible=true, font_size=12),
@@ -969,6 +997,7 @@ function PlotPowerFlows(results, TimeStamp)
     
     data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][1])) for i in collect(1:length(line_cords))]
     p = PlotlyJS.Plot(data, layout, frames)
+
     PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation.html")
     
     #display(p) # do not display because this plot does not work in VScode
