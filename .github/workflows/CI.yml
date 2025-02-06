@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        julia-version: ['1.11']
+        julia-version: ['1.10']
         julia-arch: [x64]
         os: [windows-latest]
 
@@ -21,8 +21,6 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
-        with:
-          coverage: false
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
       - run: julia --project=. -e 'using Pkg; Pkg.activate("test"); Pkg.rm("Xpress"); Pkg.activate("."); using TestEnv; TestEnv.activate(); cd("test"); include("runtests.jl")'
         shell: bash
