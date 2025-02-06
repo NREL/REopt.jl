@@ -596,10 +596,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 					"run_data" => Dict(
 						"name" => p.s.settings.name,
 						"latitude" => p.s.site.latitude,
-						"longitude" => p.s.site.longitude,
-						"pv_size" => get(get(results, "PV", Dict()), "size_kw", nothing),
-						"battery_energy_size" => get(get(results, "ElectricStorage", Dict()), "size_kwh", nothing),
-						"battery_power_size" => get(get(results, "ElectricStorage", Dict()), "size_kw", nothing)
+						"longitude" => p.s.site.longitude
 					),
 					"webtool_run" => p.s.settings.webtool_run,
 					"webtool_user_uuid" => p.s.settings.webtool_user_uuid,
