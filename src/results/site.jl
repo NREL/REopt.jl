@@ -115,7 +115,7 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		# 	)
 		# end
 
-		# Renewable heat (RE steam/hot water heat that is not being used to generate electricity)
+		#To account for hot storage losses and the RE contributions from fuel-fired sources when calculating end-use load, these expressions are used.
 		AnnualREHeatkWh = @expression(m,p.hours_per_time_step*(
 				- sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses, note does not account for p.DecayRate
 				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total RE end-use heat generation from fuel sources
@@ -125,7 +125,7 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 			# + AnnualSteamTurbineREThermOut #plus steam turbine RE generation, adjusted for storage losses, adjusted by p.hours_per_time_step (not included in first line because p.tech_renewable_energy_fraction for SteamTurbine is 0)
 		)
 
-		# Total heat (steam/hot water heat that is not being used to generate electricity)
+		# End-use consumed heating load from fuel-fired sources (electrified heat is addressed in the renewable electricity calculation)
 		AnnualHeatkWh = @expression(m,p.hours_per_time_step*(
 				- sum(m[:dvProductionToStorage][b,t,ts]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses
 				sum(m[:dvHeatingProduction][t,q,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total end-use heat generation from fuel sources
