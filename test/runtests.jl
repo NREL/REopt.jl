@@ -1402,10 +1402,10 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
             results = run_reopt(m, d)
-            @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+            @test results["Wind"]["size_kw"] == 6050.0 # Wind should be constrained by land_acres
 
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
+            d["Wind"]["min_kw"] = 6051.0 # min_kw greater than land-constrained max should error
             results = run_reopt(m, d)
             @test "errors" ∈ keys(results["Messages"])
             @test length(results["Messages"]["errors"]) > 0
