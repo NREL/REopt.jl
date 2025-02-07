@@ -117,15 +117,14 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		# end
 
 		#To account for hot storage losses and the RE contributions from fuel-fired sources when calculating end-use load, these expressions are used.
-		AnnualHeatContributionToStorage = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.hot, ts in p.time_steps))
-		AnnualREFBToHotStoragekWh = @expression(m, sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
-		AnnualFBTotHotStoragekWh = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
-		FBStorageDeliveryREFraction = @expression(m, m[:AnnualREHotStorageDeliverykWh] / m[:AnnualTotHotStorageDeliverykWh])
-		AnnualHotStorageLosses = @expression(m, m[:AnnualTotHotStorageDeliverykWh] - sum(m[:dvDischargeFromStorage][b, ts]  for b in p.s.storage.types.hot, ts in p.time_steps))
-		FBToHotStorageFraction = @expression(m, m[:AnnualHeatContributionToStorage] / m[:AnnualHotStorageLosses])
-
+		m[:AnnualHeatContributionToStorage] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.hot, ts in p.time_steps))
+		m[:AnnualREFBToHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
+		m[:AnnualFBTotHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
+		m[:FBStorageDeliveryREFraction] = @expression(m, m[:AnnualREHotStorageDeliverykWh] / m[:AnnualTotHotStorageDeliverykWh])
+		m[:AnnualHotStorageLosses] = @expression(m, m[:AnnualTotHotStorageDeliverykWh] - sum(m[:dvDischargeFromStorage][b, ts]  for b in p.s.storage.types.hot, ts in p.time_steps))
+		m[:FBToHotStorageFraction] = @expression(m, m[:AnnualHeatContributionToStorage] / m[:AnnualHotStorageLosses])
 		# End-use consumed heating load from renewable, fuel-fired sources (electrified heat is addressed in the renewable electricity calculation)
-		AnnualREHeatkWh = @expression(m,p.hours_per_time_step*(
+		m[:AnnualREHeatkWh] = @expression(m,p.hours_per_time_step*(
 				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total RE end-use heat generation from fuel sources
 				- sum(m[:dvProductionToWaste][t,q,ts]* p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #minus waste heat
 				- m[:FBStorageDeliveryREFraction] * m[:FBToHotStorageFraction] * m[:AnnualHotStorageLosses] # RE weight times hot storage loss attributable to FB techs
@@ -135,7 +134,7 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		)
 
 		# End-use consumed heating load from fuel-fired sources (electrified heat is addressed in the renewable electricity calculation)
-		AnnualHeatkWh = @expression(m,p.hours_per_time_step*(
+		m[:AnnualHeatkWh] = @expression(m,p.hours_per_time_step*(
 				sum(m[:dvHeatingProduction][t,q,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total end-use heat generation from fuel sources
 				- sum(m[:dvProductionToWaste][t,q,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #minus waste heat
 				- m[:FBToHotStorageFraction] * m[:AnnualHotStorageLosses] # hot storage loss attributable to FB techs
@@ -143,8 +142,8 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 			# - AnnualSteamToSteamTurbine # minus steam going to SteamTurbine; already adjusted by p.hours_per_time_step
 		)
 	else
-		AnnualREHeatkWh = @expression(m, 0.0) 
-		AnnualHeatkWh = @expression(m, 0.0) 
+		m[:AnnualREHeatkWh] = @expression(m, 0.0) 
+		m[:AnnualHeatkWh] = @expression(m, 0.0) 
 	end 
 	m[:AnnualOnsiteRETotkWh] = @expression(m, m[:AnnualOnsiteREEleckWh] + m[:AnnualREHeatkWh])
 	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + m[:AnnualHeatkWh]) # TODO: ensure no double counting once AnnualEleckWh accounts for electric heating and cooling loads
