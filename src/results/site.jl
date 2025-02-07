@@ -47,7 +47,8 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_onsite_renewable_electricity_kwh"] = round(value(m[:AnnualOnsiteREEleckWh]), digits=2)
 	r["onsite_renewable_electricity_fraction_of_elec_load"] = round(value(m[:AnnualOnsiteREEleckWh])/value(m[:AnnualEleckWh]), digits=4)
 	r["onsite_and_grid_renewable_electricity_fraction_of_elec_load"] = round((value(m[:AnnualOnsiteREEleckWh]) + value(m[:AnnualGridREEleckWh])) /value(m[:AnnualEleckWh]), digits=4)
-	r["electric_load_converted_from_thermal_kwh"] = round(value(m[:AnnualEleckWh]) - (sum(p.s.electric_load.loads_kw) * p.hours_per_time_step), digits=2)
+	# This measure is the difference between all end-use electrical loads (including electrified heating and cooling) and the site-specific electrical load.
+	r["electric_load_converted_from_thermal_kwh"] = round(value(m[:AnnualEleckWh]) - (sum(p.s.electric_load.loads_kw .- p.s.cooling_load.loads_kw_thermal) * p.hours_per_time_step), digits=2)
 
 	# total renewable energy
 	add_re_tot_calcs(m,p)
