@@ -89,7 +89,7 @@ Function to calculate annual energy (electricity plus heat) demand and annual en
 #Renewable heat calculations and totalling heat/electric emissions
 function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
  
-	if !isempty(union(p.techs.heating, p.techs.chp))
+	if !isempty(intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)))
 		# TODO: When steam turbine implemented, uncomment code below, replacing p.TechCanSupplySteamTurbine, p.STElecOutToThermInRatio, p.STThermOutToThermInRatio with new names
 		# # Steam turbine RE heat calculations
 		# if isempty(p.steam)
@@ -117,9 +117,9 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 
 		# Renewable heat (RE steam/hot water heat that is not being used to generate electricity)
 		AnnualREHeatkWh = @expression(m,p.hours_per_time_step*(
-				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), q in p.heating_loads, ts in p.time_steps) #total RE heat generation (excl steam turbine, GHP)
-				- sum(m[:dvProductionToWaste][t,q,ts]* p.tech_renewable_energy_fraction[t] for t in p.techs.chp, q in p.heating_loads, ts in p.time_steps) #minus CHP waste heat
 				- sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses, note does not account for p.DecayRate
+				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total RE end-use heat generation from fuel sources
+				- sum(m[:dvProductionToWaste][t,q,ts]* p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #minus waste heat
 			)
 			# - AnnualRESteamToSteamTurbine # minus RE steam feeding steam turbine, adjusted by p.hours_per_time_step 
 			# + AnnualSteamTurbineREThermOut #plus steam turbine RE generation, adjusted for storage losses, adjusted by p.hours_per_time_step (not included in first line because p.tech_renewable_energy_fraction for SteamTurbine is 0)
@@ -127,9 +127,9 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 
 		# Total heat (steam/hot water heat that is not being used to generate electricity)
 		AnnualHeatkWh = @expression(m,p.hours_per_time_step*(
-				sum(m[:dvHeatingProduction][t,q,ts] for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), q in p.heating_loads, ts in p.time_steps) #total heat generation (need to see how GHP fits into this)
-				- sum(m[:dvProductionToWaste][t,q,ts] for t in p.techs.chp, q in p.heating_loads, ts in p.time_steps) #minus CHP waste heat
 				- sum(m[:dvProductionToStorage][b,t,ts]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses
+				sum(m[:dvHeatingProduction][t,q,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total end-use heat generation from fuel sources
+				- sum(m[:dvProductionToWaste][t,q,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #minus waste heat
 			)
 			# - AnnualSteamToSteamTurbine # minus steam going to SteamTurbine; already adjusted by p.hours_per_time_step
 		)
