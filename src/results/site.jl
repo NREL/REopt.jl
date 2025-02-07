@@ -121,7 +121,6 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		AnnualREHeatkWh = @expression(m,p.hours_per_time_step*(
 				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), q in p.heating_loads, ts in p.time_steps) #total RE heat generation (excl steam turbine, GHP)
 				- sum(m[:dvProductionToWaste][t,q,ts]* p.tech_renewable_energy_fraction[t] for t in p.techs.chp, q in p.heating_loads, ts in p.time_steps) #minus CHP waste heat
-				+ sum(m[:dvSupplementaryThermalProduction][t,ts] * p.tech_renewable_energy_fraction[t] for t in p.techs.chp, ts in p.time_steps) # plus CHP supplemental firing thermal generation
 				- sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses, note does not account for p.DecayRate
 			)
 			# - AnnualRESteamToSteamTurbine # minus RE steam feeding steam turbine, adjusted by p.hours_per_time_step 
@@ -132,7 +131,6 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		AnnualHeatkWh = @expression(m,p.hours_per_time_step*(
 				sum(m[:dvHeatingProduction][t,q,ts] for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), q in p.heating_loads, ts in p.time_steps) #total heat generation (need to see how GHP fits into this)
 				- sum(m[:dvProductionToWaste][t,q,ts] for t in p.techs.chp, q in p.heating_loads, ts in p.time_steps) #minus CHP waste heat
-				+ sum(m[:dvSupplementaryThermalProduction][t,ts] for t in p.techs.chp, ts in p.time_steps) # plus CHP supplemental firing thermal generation
 				- sum(m[:dvProductionToStorage][b,t,ts]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in setdiff(union(p.techs.heating, p.techs.chp), union(p.techs.ghp, p.techs.electric_heater)), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses
 			)
 			# - AnnualSteamToSteamTurbine # minus steam going to SteamTurbine; already adjusted by p.hours_per_time_step
