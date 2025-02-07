@@ -654,8 +654,8 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     """ This needs more editing"""
     if !(s.site.land_acres === nothing) # Limit based on available land 
         land_max_kw = s.site.land_acres / s.wind.acres_per_kw
-        if land_max_kw < 1500 # turbines less than 1.5 MW aren't subject to the acres/kW limit
-            land_max_kw = 1500
+        if land_max_kw < 6050 # turbines less than 6 MW aren't subject to the acres/kW limit
+            land_max_kw = 6050
         end
         if max_sizes["Wind"] > land_max_kw # if user-provided max is greater than land max, update max (otherwise use user-provided max)
             @warn "User-provided maximum wind kW is greater than the calculated land-constrained kW (site.land_acres/wind.acres_per_kw). Wind max kW has been updated to land-constrained max of $(land_max_kw) kW."
