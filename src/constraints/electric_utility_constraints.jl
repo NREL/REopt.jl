@@ -55,7 +55,6 @@ function add_export_constraints(m, p; _n="")
             max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*p.pwf_e*p.hours_per_time_step*10
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
-            
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
                 @constraint(m,
@@ -92,6 +91,10 @@ function add_export_constraints(m, p; _n="")
                     }
                 )
                 @constraint(m, !binNEM => {NEM_benefit >= 0})
+                @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
+                    !binNEM => { m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] == 0
+                        }
+                )
             else
                 @constraint(m,
                     NEM_benefit >= p.pwf_e * p.hours_per_time_step *
@@ -99,6 +102,9 @@ function add_export_constraints(m, p; _n="")
                             for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
                 )
                 @constraint(m, NEM_benefit >= max_bene * binNEM)
+                @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
+                    m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] <= binNEM * sum(p.s.electric_load.loads_kw)
+                )
             end
 
             EXC_benefit = 0
