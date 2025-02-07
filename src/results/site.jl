@@ -89,8 +89,6 @@ Function to calculate annual energy (electricity plus heat) demand and annual en
 #Renewable heat calculations and totalling heat/electric emissions
 function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
  
-	AnnualREHeatkWh = 0 
-	AnnualHeatkWh = 0
 	if !isempty(union(p.techs.heating, p.techs.chp))
 		# TODO: When steam turbine implemented, uncomment code below, replacing p.TechCanSupplySteamTurbine, p.STElecOutToThermInRatio, p.STThermOutToThermInRatio with new names
 		# # Steam turbine RE heat calculations
@@ -135,8 +133,11 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 			)
 			# - AnnualSteamToSteamTurbine # minus steam going to SteamTurbine; already adjusted by p.hours_per_time_step
 		)
+	else
+		AnnualREHeatkWh = @expression(m, 0.0) 
+		AnnualHeatkWh = @expression(m, 0.0) 
 	end 
-	m[:AnnualOnsiteRETotkWh] = @expression(m, m[:AnnualOnsiteREEleckWh] + AnnualREHeatkWh)
-	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + AnnualHeatkWh) # TODO: ensure no double counting once AnnualEleckWh accounts for electric heating and cooling loads
+	m[:AnnualOnsiteRETotkWh] = @expression(m, m[:AnnualOnsiteREEleckWh] + m[:AnnualREHeatkWh])
+	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + m[:AnnualHeatkWh]) # TODO: ensure no double counting once AnnualEleckWh accounts for electric heating and cooling loads
 	nothing
 end
