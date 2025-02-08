@@ -904,9 +904,7 @@ function PlotPowerFlows(results, TimeStamp)
     # This function plots the power flows through the network
 
     Microgrid_Inputs = results["Microgrid_Inputs"]
-
     bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Microgrid_Inputs) 
-
     results_by_node = CollectResultsByNode(results, busses)
 
     # *******
@@ -979,12 +977,14 @@ function PlotPowerFlows(results, TimeStamp)
     legend_box_width = 0.02*(maxx - minx)
     x0 = maxx + x_spacing
     x1 = maxx + x_spacing + legend_box_width
+    scaleratio_input = 0.85 # TODO: determine if this scale ratio should be different for different latitudes
+
     for i in collect(1:increments)
         y0[i] = miny + ((i-1)*stepsize)
         y1[i] = miny + (i * stepsize)
     end
 
-    Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx)
+    Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx, scaleratio_input)
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
             data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], mode="lines+markers",marker=PlotlyJS.attr(color="black"), line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))], 
@@ -1007,16 +1007,7 @@ function PlotPowerFlows(results, TimeStamp)
                                                          line = PlotlyJS.attr(color=line_colors[line_key_values[k]][j]), 
                                                          ) for k in 1:length(line_cords)],
                                                [PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))])
-                                )
-                                 #annotations =  [PlotlyJS.attr(x= Symbol_data_inputs[line_key_values[k]][1][1],
-                                 #                              y= Symbol_data_inputs[line_key_values[k]][1][2], 
-                                 #                              font=PlotlyJS.attr(size=24, color=line_colors[line_key_values[k]][j]), 
-                                 #                              text= "^", # "Δ", ^ 
-                                 #                              xanchor="center", 
-                                 #                              yanchor="center", 
-                                 #                              textangle=Symbol_data_inputs[line_key_values[k]][3][j], 
-                                 #                              showarrow=false) for k in 1:length(line_cords)]) # for i in collect(1:increments)]                    
-            ) for j in timesteps]
+                                )) for j in timesteps]
     
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
@@ -1024,9 +1015,8 @@ function PlotPowerFlows(results, TimeStamp)
     
     layout = PlotlyJS.Layout(
         showlegend=false,
-        xaxis = PlotlyJS.attr(showticklabels=false),
-        yaxis = PlotlyJS.attr(showticklabels=false),
-        #shapes = [ PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))],
+        xaxis = PlotlyJS.attr(showticklabels=false, scaleanchor='y', scaleratio = scaleratio_input),
+        yaxis = PlotlyJS.attr(showticklabels=false, scaleanchor='x'),
         annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], 
                            [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)],
                            [PlotlyJS.attr(x=bus_cords[bus_key_values[j]][2], y=bus_cords[bus_key_values[j]][1], text=bus_key_values[j]*results_by_node[bus_key_values[j]], xanchor="left", yanchor="bottom", showarrow=false) for j in 1:length(bus_key_values) ]),
@@ -1058,11 +1048,11 @@ function PlotPowerFlows(results, TimeStamp)
     PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation.html")
     
     #display(p) # do not display because this plot does not work in VScode
-    #return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values, line_colors, timesteps, powerflow
+    return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values, line_colors, timesteps, powerflow, Symbol_data_inputs
 end
 
 
-function SymbolData(results, line_cords, timesteps_PMD, minx, maxx)
+function SymbolData(results, line_cords, timesteps_PMD, minx, maxx, scaleratio_input)
     # Function to generate information for mapping a power flow direction symbol in the power flow chart
     SymbolDictionary = Dict()
     powerflow = results["Dictionary_LineFlow_Power_Series"]
@@ -1084,7 +1074,7 @@ function SymbolData(results, line_cords, timesteps_PMD, minx, maxx)
         end
         slope_degrees = slope_radians * (180 / 3.14159)
         SymbolDictionary[i] = [midpoint, slope_degrees, [], [], [], []] # initiate the arrays for the end points of the arrows
-        arrow_angle_degrees = 45
+        arrow_angle_radians = pi / 4 
         arrow_length = 0.01 * (maxx - minx) # define the arrow length as a fraction of the plot size
         x2 = zeros(maximum(timesteps_PMD))
         y2 = zeros(maximum(timesteps_PMD))
@@ -1094,19 +1084,20 @@ function SymbolData(results, line_cords, timesteps_PMD, minx, maxx)
         for j in timesteps_PMD
             active_power = powerflow[i]["ActiveLineFlow"][j]
 
-            if active_power > 0.001 || active_power < -0.001
-                if active_power > 0.001
-                    angle_line = arrow_angle_degrees + 90
-                    
-                elseif active_power < -0.001
-                    angle_line = arrow_angle_degrees
-                
-                end
-                x2[j] = midpoint[1] + (arrow_length * cos(slope_radians + deg2rad(angle_line) ) )
-                y2[j] = midpoint[2] + (arrow_length * sin(slope_radians + deg2rad(angle_line) ) )
+            if active_power < -0.001
+                x2[j] = midpoint[1] + (arrow_length * cos(slope_radians + arrow_angle_radians))
+                y2[j] = midpoint[2] + (arrow_length * sin(slope_radians + arrow_angle_radians) * scaleratio_input)
 
-                x3[j] = midpoint[1] + (arrow_length * cos(slope_radians - deg2rad(angle_line) ) )
-                y3[j] = midpoint[2] + (arrow_length * sin(slope_radians - deg2rad(angle_line) ) )
+                x3[j] = midpoint[1] + (arrow_length * cos(slope_radians - arrow_angle_radians))
+                y3[j] = midpoint[2] + (arrow_length * sin(slope_radians - arrow_angle_radians) * scaleratio_input)
+            
+            elseif active_power > 0.001
+                x2[j] = midpoint[1] - (arrow_length * cos(slope_radians + arrow_angle_radians))
+                y2[j] = midpoint[2] - (arrow_length * sin(slope_radians + arrow_angle_radians) * scaleratio_input)
+
+                x3[j] = midpoint[1] - (arrow_length * cos(slope_radians - arrow_angle_radians))
+                y3[j] = midpoint[2] - (arrow_length * sin(slope_radians - arrow_angle_radians) * scaleratio_input)
+            
             else
                 # If there is no power flow in the line, draw the angled line to start and stop at the midpoint (so no arrow will be shown)
                 x2[j] = midpoint[1]
@@ -1119,8 +1110,7 @@ function SymbolData(results, line_cords, timesteps_PMD, minx, maxx)
         SymbolDictionary[i][3] = x2
         SymbolDictionary[i][4] = y2
         SymbolDictionary[i][5] = x3
-        SymbolDictionary[i][6] = y3
-                
+        SymbolDictionary[i][6] = y3       
     end
 
     return  SymbolDictionary
