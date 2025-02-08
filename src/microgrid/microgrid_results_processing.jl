@@ -909,12 +909,11 @@ function PlotPowerFlows(results, TimeStamp)
 
     results_by_node = CollectResultsByNode(results, busses)
 
+    # *******
+    # The method in these asterisks came from ChatGPT
     color1 = [30,62,250] # blue
     color2 = [238,155,0] # orange
     color3 = [215,20,20] # red
-
-    # *******
-    # The method in these asterisks came from ChatGPT
     increments = 20 # steps must be a positive number
     color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
     color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
@@ -924,15 +923,35 @@ function PlotPowerFlows(results, TimeStamp)
     
     deleteat!(Colors, increments) # with 20 increments, there should only be 19 color bins
 
-    max_power = maximum(maximum([abs.(results["DataFrame_LineFlow_Summary"][!, :Minimum_LineFlow_ActivekW]), results["DataFrame_LineFlow_Summary"][!, :Maximum_LineFlow_ActivekW]]))
+    max_power = maximum([maximum(abs.(results["DataFrame_LineFlow_Summary"][!, :Minimum_LineFlow_ActivekW])), maximum(results["DataFrame_LineFlow_Summary"][!, :Maximum_LineFlow_ActivekW])])
     Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
     powerflow = results["Dictionary_LineFlow_Power_Series"]
-    timesteps = length(powerflow[line_key_values[1]]["ActiveLineFlow"])
+    
+    # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
+    REopt_timesteps_for_dashboard_InREoptTimes = Microgrid_Inputs.time_steps_for_results_dashboard
+    maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
+    minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
+    PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
+
+    PMDTimeSteps_for_dashboard_InPMDTimes = []
+    PMD_dashboard_InPMDTimes_toREoptTimes = Dict([])
+    for timestep in REopt_timesteps_for_dashboard_InREoptTimes
+        PMD_time_step_IndecesForDashboard = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
+        push!(PMDTimeSteps_for_dashboard_InPMDTimes, PMD_time_step_IndecesForDashboard)
+        PMD_dashboard_InPMDTimes_toREoptTimes[PMD_time_step_IndecesForDashboard] = timestep
+    end
+
+    #print("\n Timesteps for dashboard in the PMD times are: ")
+    #print(PMDTimeSteps_for_dashboard_InPMDTimes)
+    #print("\n Timesteps for dashboard in the associated REopt times are: ")
+    #print(REopt_timesteps_for_dashboard_InREoptTimes)
+
+    timesteps = PMDTimeSteps_for_dashboard_InPMDTimes 
 
     line_colors = Dict{Any, Any}()
     for line in line_key_values
-        line_colors[line] = Vector{String}(undef, timesteps)
-        for i in 1:timesteps 
+        line_colors[line] = Vector{String}(undef, maximum(timesteps))
+        for i in timesteps 
             for j in 1:(length(Color_bins)-1)
                 if (abs(powerflow[line]["ActiveLineFlow"][i]) >= Color_bins[j]) && (abs(powerflow[line]["ActiveLineFlow"][i]) <= Color_bins[j+1])
                     line_colors[line][i] = Colors[j]
@@ -965,23 +984,57 @@ function PlotPowerFlows(results, TimeStamp)
         y1[i] = miny + (i * stepsize)
     end
 
+    Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx)
+
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
-            data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))],
+            data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], mode="lines+markers",marker=PlotlyJS.attr(color="black"), line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))], 
             name = "time=$(j)",
-            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation", xaxis_title_text = "Longitude", yaxis_title_text = "Latitude")) for j in collect(1:timesteps)]
+            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation, from timestep $(minimum_timestep) to $(maximum_timestep)", 
+                                 xaxis_title_text = "",
+                                 yaxis_title_text = "",
+                                 shapes = vcat([PlotlyJS.line(xref='x', yref='y', 
+                                                         x0= Symbol_data_inputs[line_key_values[k]][1][1], 
+                                                         y0= Symbol_data_inputs[line_key_values[k]][1][2], 
+                                                         x1= Symbol_data_inputs[line_key_values[k]][3][j], 
+                                                         y1= Symbol_data_inputs[line_key_values[k]][4][j], 
+                                                         line = PlotlyJS.attr(color=line_colors[line_key_values[k]][j]), 
+                                                         ) for k in 1:length(line_cords)],
+                                                [PlotlyJS.line(xref='x', yref='y', 
+                                                         x0= Symbol_data_inputs[line_key_values[k]][1][1], 
+                                                         y0= Symbol_data_inputs[line_key_values[k]][1][2], 
+                                                         x1= Symbol_data_inputs[line_key_values[k]][5][j], 
+                                                         y1= Symbol_data_inputs[line_key_values[k]][6][j], 
+                                                         line = PlotlyJS.attr(color=line_colors[line_key_values[k]][j]), 
+                                                         ) for k in 1:length(line_cords)],
+                                               [PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))])
+                                )
+                                 #annotations =  [PlotlyJS.attr(x= Symbol_data_inputs[line_key_values[k]][1][1],
+                                 #                              y= Symbol_data_inputs[line_key_values[k]][1][2], 
+                                 #                              font=PlotlyJS.attr(size=24, color=line_colors[line_key_values[k]][j]), 
+                                 #                              text= "^", # "Δ", ^ 
+                                 #                              xanchor="center", 
+                                 #                              yanchor="center", 
+                                 #                              textangle=Symbol_data_inputs[line_key_values[k]][3][j], 
+                                 #                              showarrow=false) for k in 1:length(line_cords)]) # for i in collect(1:increments)]                    
+            ) for j in timesteps]
     
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
-            label = "$(i)") for i in collect(1:timesteps)]
+            label = "$(PMD_dashboard_InPMDTimes_toREoptTimes[i])") for i in timesteps]
     
     layout = PlotlyJS.Layout(
         showlegend=false,
-        shapes = [ PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))],
-        annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)]),
+        xaxis = PlotlyJS.attr(showticklabels=false),
+        yaxis = PlotlyJS.attr(showticklabels=false),
+        #shapes = [ PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))],
+        annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], 
+                           [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)],
+                           [PlotlyJS.attr(x=bus_cords[bus_key_values[j]][2], y=bus_cords[bus_key_values[j]][1], text=bus_key_values[j]*results_by_node[bus_key_values[j]], xanchor="left", yanchor="bottom", showarrow=false) for j in 1:length(bus_key_values) ]),
+                          
                         
         sliders=[PlotlyJS.attr(yanchor="top", 
                     xanchor="left",
-                    currentvalue=PlotlyJS.attr(prefix="Timestep: ", visible=true, font_size=12),
+                    currentvalue=PlotlyJS.attr(prefix="REopt Timestep: ", visible=true, font_size=12),
                     steps=steps,
                     active=0,
                     minorticklen=0
@@ -989,19 +1042,88 @@ function PlotPowerFlows(results, TimeStamp)
         updatemenus = [PlotlyJS.attr(
             type="buttons",
             showactive=false,
-            buttons=[PlotlyJS.attr(
-                label="Animate",
-                method="animate",
-                args=[nothing,PlotlyJS.attr(transition=PlotlyJS.attr(duration=0),fromcurrent=true, visible=true, frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate")]
-        )])])
+            buttons=[
+                PlotlyJS.attr(
+                    label="Animate", method="animate",
+                    args=[nothing,PlotlyJS.attr(transition=PlotlyJS.attr(duration=0),fromcurrent=true, visible=true, frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate")]),
+                PlotlyJS.attr(
+                    label="Pause", method="animate",
+                    args=[[nothing],PlotlyJS.attr(transition=PlotlyJS.attr(duration=0), mode="immediate")])
+        ])])
     
-    data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][1])) for i in collect(1:length(line_cords))]
+    data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][1])) for i in 1:length(line_cords)]
+            
     p = PlotlyJS.Plot(data, layout, frames)
 
     PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation.html")
     
     #display(p) # do not display because this plot does not work in VScode
-    #return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values
+    #return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values, line_colors, timesteps, powerflow
+end
+
+
+function SymbolData(results, line_cords, timesteps_PMD, minx, maxx)
+    # Function to generate information for mapping a power flow direction symbol in the power flow chart
+    SymbolDictionary = Dict()
+    powerflow = results["Dictionary_LineFlow_Power_Series"]
+    
+    for i in collect(keys(line_cords))
+        midpoint = [0,0]
+        x_average = 0.5 * (line_cords[i][1][2] + line_cords[i][2][2])
+        y_average = 0.5 * (line_cords[i][1][1] + line_cords[i][2][1])
+        midpoint = [x_average, y_average]
+        
+        x_change = line_cords[i][2][2] - line_cords[i][1][2]
+        y_change = line_cords[i][2][1] - line_cords[i][1][1]
+        if x_change != 0
+            slope_radians = atan(y_change, x_change)
+        elseif y_change > 0
+            slope_radians = 3.14159 / 2
+        elseif y_change < 0
+            slope_radians = -3.14159 / 2
+        end
+        slope_degrees = slope_radians * (180 / 3.14159)
+        SymbolDictionary[i] = [midpoint, slope_degrees, [], [], [], []] # initiate the arrays for the end points of the arrows
+        arrow_angle_degrees = 45
+        arrow_length = 0.01 * (maxx - minx) # define the arrow length as a fraction of the plot size
+        x2 = zeros(maximum(timesteps_PMD))
+        y2 = zeros(maximum(timesteps_PMD))
+        x3 = zeros(maximum(timesteps_PMD))
+        y3 = zeros(maximum(timesteps_PMD))
+
+        for j in timesteps_PMD
+            active_power = powerflow[i]["ActiveLineFlow"][j]
+
+            if active_power > 0.001 || active_power < -0.001
+                if active_power > 0.001
+                    angle_line = arrow_angle_degrees + 90
+                    
+                elseif active_power < -0.001
+                    angle_line = arrow_angle_degrees
+                
+                end
+                x2[j] = midpoint[1] + (arrow_length * cos(slope_radians + deg2rad(angle_line) ) )
+                y2[j] = midpoint[2] + (arrow_length * sin(slope_radians + deg2rad(angle_line) ) )
+
+                x3[j] = midpoint[1] + (arrow_length * cos(slope_radians - deg2rad(angle_line) ) )
+                y3[j] = midpoint[2] + (arrow_length * sin(slope_radians - deg2rad(angle_line) ) )
+            else
+                # If there is no power flow in the line, draw the angled line to start and stop at the midpoint (so no arrow will be shown)
+                x2[j] = midpoint[1]
+                y2[j] = midpoint[2]
+                x3[j] = midpoint[1]
+                y3[j] = midpoint[2]
+            end
+        end
+
+        SymbolDictionary[i][3] = x2
+        SymbolDictionary[i][4] = y2
+        SymbolDictionary[i][5] = x3
+        SymbolDictionary[i][6] = y3
+                
+    end
+
+    return  SymbolDictionary
 end
 
 

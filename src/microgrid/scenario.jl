@@ -47,6 +47,7 @@ const PMD = PowerModelsDistribution
     generators_only_run_during_grid_outage::Bool=false,
     generate_CSV_of_outputs::Bool=false,
     generate_results_plots::Bool=false,
+    time_steps_for_results_dashboard::Array=[],
     voltage_plot_time_step::Real=0,
     generate_same_pv_production_profile_for_each_node::Bool=false,
     pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
@@ -96,6 +97,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     generators_only_run_during_grid_outage
     generate_CSV_of_outputs
     generate_results_plots
+    time_steps_for_results_dashboard
     voltage_plot_time_step
     generate_same_pv_production_profile_for_each_node
     pv_inputs_for_standardized_pv_production_profile 
@@ -145,6 +147,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         generators_only_run_during_grid_outage::Bool=false,
         generate_CSV_of_outputs::Bool=false,
         generate_results_plots::Bool=false,
+        time_steps_for_results_dashboard::Array=[],
         voltage_plot_time_step::Real=0,
         generate_same_pv_production_profile_for_each_node::Bool=false,
         pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
@@ -222,6 +225,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         generators_only_run_during_grid_outage,
         generate_CSV_of_outputs,
         generate_results_plots,
+        time_steps_for_results_dashboard,
         voltage_plot_time_step,
         generate_same_pv_production_profile_for_each_node,
         pv_inputs_for_standardized_pv_production_profile, 

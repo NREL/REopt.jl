@@ -1017,6 +1017,12 @@ function RunDataChecks(Microgrid_Inputs,  REopt_dictionary; ldf_inputs_dictionar
                 throw(@error("In the Microgrid_Inputs dictionary, all values for the run_numbers_for_plotting_outage_simulator_results must be less than the number_of_outages_to_simulate"))
             end
         end
+
+        for i in Microgrid_Inputs.time_steps_for_results_dashboard
+            if i ∉ Microgrid_Inputs.PMD_time_steps
+                throw(@error("Please adjust the following model inputs: Every time step for the results dashboard (time_steps_for_results_dashboard) must be in the PMD time steps (PMD_time_steps)."))
+            end
+        end
     end
 
     if Microgrid_Inputs.critical_load_method == "Fraction"
