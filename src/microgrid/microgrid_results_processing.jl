@@ -941,10 +941,10 @@ function PlotPowerFlows(results, TimeStamp)
         PMD_dashboard_InPMDTimes_toREoptTimes[PMD_time_step_IndecesForDashboard] = timestep
     end
 
-    #print("\n Timesteps for dashboard in the PMD times are: ")
-    #print(PMDTimeSteps_for_dashboard_InPMDTimes)
-    #print("\n Timesteps for dashboard in the associated REopt times are: ")
-    #print(REopt_timesteps_for_dashboard_InREoptTimes)
+    print("\n Timesteps for dashboard in the PMD times are: ")
+    print(PMDTimeSteps_for_dashboard_InPMDTimes)
+    print("\n Timesteps for dashboard in the associated REopt times are: ")
+    print(REopt_timesteps_for_dashboard_InREoptTimes)
 
     timesteps = PMDTimeSteps_for_dashboard_InPMDTimes 
 
@@ -1051,7 +1051,7 @@ function PlotPowerFlows(results, TimeStamp)
                     args=[[nothing],PlotlyJS.attr(transition=PlotlyJS.attr(duration=0), mode="immediate")])
         ])])
     
-    data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][1])) for i in 1:length(line_cords)]
+    data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][timesteps[1]])) for i in 1:length(line_cords)]
             
     p = PlotlyJS.Plot(data, layout, frames)
 
