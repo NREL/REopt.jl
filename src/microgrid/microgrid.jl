@@ -77,88 +77,11 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
                                 #("transformer_upgrade_results", transformer_upgrade_results_output)
                                 #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series) 
                                 ])
-    #=
-    elseif Microgrid_Inputs.model_type == "BasicLinear"
-        # Note: this code running the BasicLinear model will likely be removed soon
-
-        # Run function to check for errors in the model inputs
-        RunDataChecks(Microgrid_Inputs, REopt_dictionary; ldf_inputs_dictionary = ldf_inputs_dictionary)
-            
-        # Run the optimization:
-        DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model, lines_for_upgrades, line_upgrade_options, transformer_upgrade_options, line_upgrade_results, transformer_upgrade_results, line_upgrades_each_line, all_lines = Microgrid_REopt_Model_BasicLinear(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
-        
-        # Run the outage simulator if "run_outage_simulator" is set to true
-        if Microgrid_Inputs.run_outage_simulator == true
-            OutageLengths = Microgrid_Inputs.length_of_simulated_outages_time_steps 
-            NumberOfOutagesToTest = Microgrid_Inputs.number_of_outages_to_simulate
-
-            line_max_amps = value.(model[:line_max_amps])
-            if Microgrid_Inputs.model_line_upgrades == true && Microgrid_Inputs.nonlinear_solver == true
-                lines_rmatrix = value.(model[:line_rmatrix])
-                lines_xmatrix = value.(model[:line_xmatrix])
-            else
-                lines_rmatrix = []
-                lines_xmatrix = []
-            end
-            transformer_max_kva = value.(model[:transformer_max_kva])
-            Outage_Results = Dict([])
-            for i in 1:length(OutageLengths)
-                OutageLength = OutageLengths[i]
-                OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived, m_outagesimulator = Microgrid_OutageSimulator(DataDictionaryForEachNode, 
-                                                                                                                            REopt_dictionary, 
-                                                                                                                            Microgrid_Inputs,  
-                                                                                                                            TimeStamp;
-                                                                                                                            line_max_amps=line_max_amps, 
-                                                                                                                            lines_rmatrix=lines_rmatrix, 
-                                                                                                                            lines_xmatrix=lines_xmatrix, 
-                                                                                                                            lines_for_upgrades=lines_for_upgrades, 
-                                                                                                                            line_upgrades_each_line=line_upgrades_each_line, 
-                                                                                                                            all_lines=all_lines, 
-                                                                                                                            transformer_max_kva=transformer_max_kva, 
-                                                                                                                            BasicLinear_model=JuMP_Model, 
-                                                                                                                            NumberOfOutagesToTest = NumberOfOutagesToTest, 
-                                                                                                                            ldf_inputs_dictionary = ldf_inputs_dictionary, 
-                                                                                                                            OutageLength_TimeSteps_Input = OutageLength)
-                
-                Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
-            end 
-        else
-            Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
-        end 
-
-        EndTime_EntireModel = now()
-        ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
-        
-        system_results = Results_Compilation(results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; line_upgrade_results=dataframe_line_upgrade_summary, transformer_upgrade_results=dataframe_transformer_upgrade_summary)
-    
-        transformer_upgrade_options_output = transformer_upgrade_options
-        transformer_upgrade_results_output = transformer_upgrade_results
-        line_upgrade_options_output = line_upgrade_options
-        line_upgrade_results_output = line_upgrade_results
-    
-       # Compile output data into a dictionary to return from the dictionary
-        CompiledResults = Dict([("System_Results", system_results),
-                                ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
-                                ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
-                                ("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
-                                ("ldf_inputs", ldf_inputs),
-                                ("REopt_results", results),
-                                ("Outage_Results", Outage_Results),
-                                ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
-                                ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
-                                ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
-                                ("ComputationTime_EntireModel", ComputationTime_EntireModel),
-                                ("line_upgrade_options", line_upgrade_options_output),
-                                ("transformer_upgrade_options", transformer_upgrade_options_output),
-                                ("line_upgrade_results", line_upgrade_results_output),
-                                ("transformer_upgrade_results", transformer_upgrade_results_output)
-                                ])
-        =#
     end
 
     if Microgrid_Inputs.generate_results_plots == true 
-        Create_Voltage_Plot(CompiledResults, TimeStamp)
-        PlotPowerFlows(CompiledResults, TimeStamp)
+        Create_Voltage_Plot(CompiledResults, TimeStamp, Microgrid_Inputs.voltage_plot_time_step)
+        PlotPowerFlows(CompiledResults, TimeStamp, Microgrid_Inputs.time_steps_for_results_dashboard)
         Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Inputs, REoptInputs_Combined, model)
         if Microgrid_Inputs.bus_coordinates != ""
             CreateResultsMap(CompiledResults, Microgrid_Inputs, TimeStamp)
@@ -602,6 +525,7 @@ function add_objective(pm, Microgrid_Inputs, REoptInputs_Combined)
 
 end
 
+
 function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Microgrid_Inputs, LineInfo)
     # Apply basic constraints to limit export from and import to nodes
 
@@ -981,28 +905,8 @@ function RunDataChecks(Microgrid_Inputs,  REopt_dictionary; ldf_inputs_dictionar
         if Int(length(p.s.electric_load.loads_kw)) != Int(8760 * Microgrid_Inputs.time_steps_per_hour)
             throw(@error("At REopt node $(node_temp), the length of the electric loads vector does not correlate with the time steps per hour defined in the Microgrid_Inputs dictionary"))
         end
-        #=
-        if Microgrid_Inputs.model_type == "BasicLinear"
-            if p.s.settings.time_steps_per_hour != Int(ldf_inputs_dictionary["T"]/8760)
-                throw(@error("The number of time steps in the ldf_inputs_dictionary must correlate to the time_steps_per_hour in all REopt nodes"))
-            end
-            if string(p.s.site.node) ∉ keys(ldf_inputs_dictionary["load_nodes"]) #  ∉ is the "not in" symbol
-                throw(@error("The REopt node $(node_temp) is not in the list of nodes in the ldf_inputs_dictionary"))
-            end
-        end
-        =#
-
     end
-    #=
-    if Microgrid_Inputs.model_type == "BasicLinear"
-        if ldf_inputs_dictionary["v0_input"] > ldf_inputs_dictionary["v_uplim_input"]
-            throw(@error("In the ldf_inputs_dictionary, the v0_input value must be less than the v_uplim_input value"))
-        end 
-        if ldf_inputs_dictionary["v0_input"] < ldf_inputs_dictionary["v_lolim_input"]
-            throw(@error("In the ldf_inputs_dictionary, the v0_input value must be greater than the v_lolim_input value"))
-        end   
-    end
-    =#
+    
     if Microgrid_Inputs.microgrid_type ∉ ["CommunityDistrict", "BehindTheMeter", "OffGrid"]
         throw(@error("An invalid microgrid type was provided in the inputs"))
     end

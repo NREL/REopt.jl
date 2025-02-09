@@ -226,19 +226,6 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
                 MaximumPowerOnsubstation_line_ReactivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
                 MinimumPowerOnsubstation_line_ReactivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
                 AveragePowerOnsubstation_line_ReactivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
-            #=
-            elseif Microgrid_Inputs.model_type == "BasicLinear"
-                LineFromSubstationToFacilityMeter = Microgrid_Inputs.substation_node * "-" * Microgrid_Inputs.facility_meter_node
-
-                MaximumPowerOnsubstation_line_ActivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
-                MinimumPowerOnsubstation_line_ActivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
-                AveragePowerOnsubstation_line_ActivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0))
-                
-                # Temporarily not recording the reactive power through the lines:
-                MaximumPowerOnsubstation_line_ReactivePower = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
-                MinimumPowerOnsubstation_line_ReactivePower = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
-                AveragePowerOnsubstation_line_ReactivePower = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
-            =#
             end
 
             # Add system-level results
@@ -496,10 +483,6 @@ function CollectMapInformation(results, Microgrid_Inputs)
 
     if Microgrid_Inputs.model_type == "PowerModelsDistribution"
         lines = keys(results["Line_Info_PMD"])
-    #=
-    elseif Microgrid_Inputs.model_type == "BasicLinear"
-        lines = keys(results["FromREopt_Dictionary_LineFlow_Power_Series"])
-    =#
     end
 
     # Extract the latitude and longitude for the busses
@@ -635,13 +618,13 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
 end
 
 
-function Create_Voltage_Plot(results, TimeStamp)
+function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_suffix="")
     Microgrid_Inputs = results["Microgrid_Inputs"]
     # Generate list of lengths from the node to the substation
     DistancesToSourcebus, lengths_dict, paths_dict = DetermineDistanceFromSourcebus(results)
 
     # Determine the per unit voltage at each node
-    timestep = Microgrid_Inputs.voltage_plot_time_step
+    timestep = voltage_plot_time_step
     
     per_unit_voltage = Dict([])
     for bus in keys(DistancesToSourcebus)
@@ -671,7 +654,7 @@ function Create_Voltage_Plot(results, TimeStamp)
 
     p = PlotlyJS.plot(traces, layout)
     display(p)
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/VoltagePlot_InteractivePlot.html")
+    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/VoltagePlot_InteractivePlot"*file_suffix*".html")
 
 end
 
@@ -748,10 +731,6 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
     PowerFromGrid = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
     if Microgrid_Inputs.model_type == "PowerModelsDistribution"    
         PowerFromGrid = value.(model[Symbol("dvSubstationPowerFlow")]).data  
-    #=
-    elseif Microgrid_Inputs.model_type == "BasicLinear"
-        PowerFromGrid = results["FromREopt_Dictionary_LineFlow_Power_Series"]["0-15"]["NetRealLineFlow"]
-    =#
     end 
     print("\n The grid power has been recorded")
     
@@ -900,7 +879,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
 end
  
 
-function PlotPowerFlows(results, TimeStamp)
+function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREoptTimes; file_suffix="")
     # This function plots the power flows through the network
 
     Microgrid_Inputs = results["Microgrid_Inputs"]
@@ -926,7 +905,7 @@ function PlotPowerFlows(results, TimeStamp)
     powerflow = results["Dictionary_LineFlow_Power_Series"]
     
     # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
-    REopt_timesteps_for_dashboard_InREoptTimes = Microgrid_Inputs.time_steps_for_results_dashboard
+    #REopt_timesteps_for_dashboard_InREoptTimes = Microgrid_Inputs.time_steps_for_results_dashboard
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
     PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
@@ -984,12 +963,20 @@ function PlotPowerFlows(results, TimeStamp)
         y1[i] = miny + (i * stepsize)
     end
 
+    start_day = round(minimum_timestep/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
+    end_day = round(maximum_timestep/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
+    #=
+    timesteps_to_days = Dict()
+    for i in timesteps
+        timesteps_to_days[i] == round(i/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
+    end
+    =#
     Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx, scaleratio_input)
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
             data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], mode="lines+markers",marker=PlotlyJS.attr(color="black"), line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))], 
             name = "time=$(j)",
-            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation, from timestep $(minimum_timestep) to $(maximum_timestep)", 
+            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation, from day $(start_day) to day $(end_day)", 
                                  xaxis_title_text = "",
                                  yaxis_title_text = "",
                                  shapes = vcat([PlotlyJS.line(xref='x', yref='y', 
@@ -1011,7 +998,7 @@ function PlotPowerFlows(results, TimeStamp)
     
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
-            label = "$(PMD_dashboard_InPMDTimes_toREoptTimes[i])") for i in timesteps]
+            label = "$(round(PMD_dashboard_InPMDTimes_toREoptTimes[i]/(24*Microgrid_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
     
     layout = PlotlyJS.Layout(
         showlegend=false,
@@ -1024,7 +1011,7 @@ function PlotPowerFlows(results, TimeStamp)
                         
         sliders=[PlotlyJS.attr(yanchor="top", 
                     xanchor="left",
-                    currentvalue=PlotlyJS.attr(prefix="REopt Timestep: ", visible=true, font_size=12),
+                    currentvalue=PlotlyJS.attr(prefix="Day Number: ", visible=true, font_size=12),
                     steps=steps,
                     active=0,
                     minorticklen=0
@@ -1045,7 +1032,7 @@ function PlotPowerFlows(results, TimeStamp)
             
     p = PlotlyJS.Plot(data, layout, frames)
 
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation.html")
+    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation"*file_suffix*".html")
     
     #display(p) # do not display because this plot does not work in VScode
     return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values, line_colors, timesteps, powerflow, Symbol_data_inputs
