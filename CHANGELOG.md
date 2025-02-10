@@ -25,6 +25,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## reconcile-total-site-load
+### Added
+- Added new result **Site** **annual_electric_load_with_thermal_conversions_kwh**` which calculates end-use electrical load after including electric consumption by heaters and chillers
+### Fixed
+- Updated the expression `m[:AnnualEleckWh]` to include electrified thermal loads
+- Updated expressions `m[AnnualREHeatkWh]` and `AnnualHeatkWh` so that only non-electrified thermal loads are included and storage losses are proportional to the contribution of fuel-burning technologies to charging storage
+  
 ## gridRE-dev
 ### Added 
 - Added the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
