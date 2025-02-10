@@ -43,7 +43,7 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
             REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Microgrid_Inputs_No_Techs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = false)
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
-            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, Outage_Results_No_Techs, Microgrid_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
+            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Microgrid_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
             
         else
             system_results_BAU = "none"
@@ -53,7 +53,7 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
 
         ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
         
-        system_results = REopt.Results_Compilation(model, REopt_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
+        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),

@@ -8,7 +8,7 @@ function CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
         @info "Creating a folder for the results"
         mkdir(Microgrid_Inputs.folder_location*"/results_"*TimeStamp)
     end
-    if Microgrid_Inputs.generate_results_plots == true
+    if (Microgrid_Inputs.generate_results_plots == true) && (Microgrid_Inputs.run_outage_simulator == true)
         mkdir(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots") 
     end
 end
@@ -142,7 +142,7 @@ function Check_REopt_PMD_Alignment(Microgrid_Inputs, m, PMD_results, node, line,
 end 
 
 
-function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
+function Results_Compilation(model, results, PMD_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
     
     @info "Compiling the results"
 
@@ -208,6 +208,8 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
     else
         system_results["net_present_value"] = "Not calculated"
     end
+
+    DataFrame_BusVoltages_Summary, per_unit_voltages, average_voltage = VoltageResultsSummary(PMD_Results)
 
     # Generate a csv file with outputs from the model if the "generate_CSV_of_outputs" field is set to true
     if system_results_BAU != ""
@@ -284,9 +286,12 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
             push!(DataLabels,"  Total generator size kw")
             push!(Data, round(system_results["total_generator_size_kw"],digits=0))
             
-
             push!(DataLabels, "----Power Flow Model Results----")
             push!(Data, "")
+            push!(DataLabels,"  Total Number of PMD timesteps, based on the user input")
+            push!(Data, length(PMD_Results["nw"]) )
+            push!(DataLabels,"  Average per unit bus voltage")
+            push!(Data, average_voltage)
             push!(DataLabels,"  Maximum power flow on substation line, Active Power kW")
             push!(Data, MaximumPowerOnsubstation_line_ActivePower)
             push!(DataLabels,"  Minimum power flow on substation line, Active Power kW")
@@ -397,13 +402,16 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
                     push!(Data, " None")   
                 end 
             end
-                
-            # Save the dataframe as a csv document
+            
+            # Save the results summary dataframe as a csv document
             dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
             CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
             
             # Save the Line Flow summary to a different csv
             CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
+            
+            # Save the bus voltage summary to a different csv
+            CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
             
             # Save the transformer upgrade results to a csv
             if Microgrid_Inputs.model_transformer_upgrades
@@ -476,6 +484,34 @@ function Results_Compilation(model, results, Outage_Results, Microgrid_Inputs, D
         end 
     end
     return system_results    
+end
+
+
+function VoltageResultsSummary(results)
+
+    DataFrame_BusVoltages = DataFrame(fill(Any[],4), [:Bus, :minimum_pu_voltage, :Average_pu_voltage, :maximum_pu_voltage ])
+    per_unit_voltages = Dict([])
+    bus_voltage_averages = []
+    for bus in keys(results["nw"]["1"]["bus"]) # read all of the line names from the first time step
+        Data_BusVoltages = zeros(3)
+        per_unit_voltages[bus] = []
+        for timestep in collect(keys(results["nw"]))
+            per_unit_voltages[bus] = push!(per_unit_voltages[bus], sqrt(results["nw"][string(timestep)]["bus"][bus]["w"][1]))
+        end
+
+        Data_BusVoltages[1] = round(minimum(per_unit_voltages[bus][:]), digits = 6)
+        Data_BusVoltages[2] = round(mean(per_unit_voltages[bus][:]), digits = 6)
+        Data_BusVoltages[3] = round(maximum(per_unit_voltages[bus][:]), digits = 6)
+        
+        bus_voltage_averages = push!(bus_voltage_averages, Data_BusVoltages[2])
+
+        DataFrame_BusVoltages_temp = DataFrame([("Bus "*string(bus)) Data_BusVoltages[1] Data_BusVoltages[2] Data_BusVoltages[3] ], [:Bus, :minimum_pu_voltage, :Average_pu_voltage, :maximum_pu_voltage])
+        DataFrame_BusVoltages = append!(DataFrame_BusVoltages, DataFrame_BusVoltages_temp)
+    end
+
+    average_voltage = mean(bus_voltage_averages)
+
+    return DataFrame_BusVoltages, per_unit_voltages, average_voltage
 end
 
 
