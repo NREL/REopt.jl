@@ -120,9 +120,17 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:AnnualHeatContributionToStorage] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.hot, ts in p.time_steps))
 		m[:AnnualREFBToHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
 		m[:AnnualFBTotHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
-		m[:FBStorageDeliveryREFraction] = @expression(m, m[:AnnualREFBToHotStoragekWh] / m[:AnnualFBTotHotStoragekWh])
+		if value(m[:AnnualFBTotHotStoragekWh]) > 0.0
+			m[:FBStorageDeliveryREFraction] = @expression(m, m[:AnnualREFBToHotStoragekWh] / m[:AnnualFBTotHotStoragekWh])
+		else
+			m[:FBStorageDeliveryREFraction] = @expression(m, 0.0)
+		end
 		m[:AnnualHotStorageLosses] = @expression(m, m[:AnnualFBTotHotStoragekWh] - sum(m[:dvDischargeFromStorage][b, ts]  for b in p.s.storage.types.hot, ts in p.time_steps))
-		m[:FBToHotStorageFraction] = @expression(m, m[:AnnualHeatContributionToStorage] / m[:AnnualHotStorageLosses])
+		if value(m[:AnnualHeatContributionToStorage]) > 0.0
+			m[:FBToHotStorageFraction] = @expression(m, m[:AnnualFBTotHotStoragekWh] / m[:AnnualHeatContributionToStorage])
+		else
+			m[:FBToHotStorageFraction] = @expression(m, 0.0)
+		end
 		# End-use consumed heating load from renewable, fuel-fired sources (electrified heat is addressed in the renewable electricity calculation)
 		m[:AnnualREHeatkWh] = @expression(m,p.hours_per_time_step*(
 				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), q in p.heating_loads, ts in p.time_steps) #total RE end-use heat generation from fuel sources
