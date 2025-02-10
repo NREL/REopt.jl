@@ -54,11 +54,14 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
 		r["electric_curtailed_series_kw"] = round.(value.(PVtoCUR), digits=3)
-		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
-					- r["electric_curtailed_series_kw"][ts]
-					- r["electric_to_grid_series_kw"][ts]
-					- r["electric_to_storage_series_kw"][ts] for ts in p.time_steps
-		)
+		PVtoLoad = (
+            (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+                - r["electric_curtailed_series_kw"][ts]
+                - r["electric_to_storage_series_kw"][ts]
+            ) * (t in p.techs.dc_couple_with_stor ? p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction : 1)
+            - r["electric_to_grid_series_kw"][ts]
+            for ts in p.time_steps
+        )
 		r["electric_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
 		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
 		r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
