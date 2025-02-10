@@ -154,6 +154,6 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:AnnualHeatkWh] = @expression(m, 0.0) 
 	end 
 	m[:AnnualOnsiteRETotkWh] = @expression(m, m[:AnnualOnsiteREEleckWh] + m[:AnnualREHeatkWh])
-	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + m[:AnnualHeatkWh]) # TODO: ensure no double counting once AnnualEleckWh accounts for electric heating and cooling loads
+	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + m[:AnnualHeatkWh]) 
 	nothing
 end
