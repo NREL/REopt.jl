@@ -360,8 +360,8 @@ struct HotSensibleTes <: AbstractThermalStorage
         # kwh_per_gal = get_kwh_per_gal(s.hot_temp_degF, s.cool_temp_degF, s.fluid)
         # min_kwh = s.min_gal * kwh_per_gal
         # max_kwh = s.max_gal * kwh_per_gal
-        min_kw = s.min_kwh / num_hours
-        max_kw = s.max_kwh / num_hours
+        min_kw = s.min_kwh / s.num_hours
+        max_kw = s.max_kwh / s.num_hours
         # om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
         charge_efficiency = s.internal_efficiency_fraction^0.5

@@ -1,6 +1,13 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_export_constraints(m, p; _n="")
 
+    ## Imports and Exports must be no greater than the transmission limit
+    @constraint(m, ImportExportLimitCon[ts in p.time_steps_with_grid],
+    sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for t in p.techs.elec, u in p.export_bins_by_tech[t])
+        + sum(sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers))
+        <= p.s.electric_utility.transmission_limit_kw
+    )
+
     ##Constraint (8e): Production export and curtailment no greater than production
     @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
         p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 

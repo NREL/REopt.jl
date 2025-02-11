@@ -143,7 +143,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
     # Reconcile dvStoragePower and dvStorageEnergy for HotSensibleTes
     if "HotSensibleTes" in p.s.storage.types.hot
         @constraint(m, 
-            m[Symbol("dvStoragePower"*_n)]["HotSensibleTes"] * p.s.stroage.attr["HotSensibleTes"].num_hours == m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"]
+            m[Symbol("dvStoragePower"*_n)]["HotSensibleTes"] * p.s.storage.attr["HotSensibleTes"].num_hours == m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"]
         )
     end
 
