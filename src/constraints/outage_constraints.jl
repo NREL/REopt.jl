@@ -403,20 +403,17 @@ end
 
 function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
 	# Lower bound on DC coupled PV and battery inverter power capacity
-    # (inverter direction)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvDCCoupledTechStorageInverterSizeDC]["ElectricStorage"] >= 
-        m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr[b].inverter_efficiency_fraction + 
-        sum(m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+        # (inverter direction)
+        m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction
+        + sum(m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
             - m[:dvMGProductionToStorage][t, s, tz, ts] 
             - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.dc_couple_with_stor
         )
-    )
-    # (rectifier direction, though currently dvMGProductionToStorage for AC coupled techs must be 0)
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvDCCoupledTechStorageInverterSizeDC]["ElectricStorage"] >= 
-        sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_couple_with_stor) * p.s.storage.attr[b].rectifier_efficiency_fraction
+        # (rectifier direction, though currently dvMGProductionToStorage for AC coupled techs must be 0)
+        + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_couple_with_stor) * p.s.storage.attr["ElectricStorage"].rectifier_efficiency_fraction
     )
 
     # Don't let AC coupled elec techs charge battery. 
