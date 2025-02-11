@@ -97,23 +97,11 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             + sum(p.s.storage.attr[b].dc_charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.dc_couple_with_stor) 
         )
     )
-
-	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps_with_grid],
+	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
-
-	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
-	@constraint(m, [ts in p.time_steps_without_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
     )
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
