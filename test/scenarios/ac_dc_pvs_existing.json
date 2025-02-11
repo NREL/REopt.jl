@@ -28,7 +28,8 @@
     "ElectricStorage": {
         "min_kw": 0.0,
         "min_kwh": 0.0,
-        "can_grid_charge": false
+        "can_grid_charge": false,
+        "dc_coupled": true
     },
     "PV": [
         {
