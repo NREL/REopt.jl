@@ -122,6 +122,7 @@ Base.@kwdef struct HotSensibleTesDefaults <: AbstractThermalStorageDefaults
     fluid::String = "INCOMP::NaK"
     min_kwh::Float64 = 0.0
     max_kwh::Float64 = 0.0
+    num_hours::Float64 = 5.0
     hot_temp_degF::Float64 = 1065.0
     cool_temp_degF::Float64 = 554.0
     internal_efficiency_fraction::Float64 = 0.999999
@@ -352,14 +353,15 @@ struct HotSensibleTes <: AbstractThermalStorage
     can_serve_process_heat::Bool
     supply_turbine_only::Bool
     one_direction_flow::Bool
+    num_hours::Float64
 
     function HotSensibleTes(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
         # kwh_per_gal = get_kwh_per_gal(s.hot_temp_degF, s.cool_temp_degF, s.fluid)
         # min_kwh = s.min_gal * kwh_per_gal
         # max_kwh = s.max_gal * kwh_per_gal
-        min_kw = s.min_kwh * time_steps_per_hour
-        max_kw = s.max_kwh * time_steps_per_hour
+        min_kw = s.min_kwh / num_hours
+        max_kw = s.max_kwh / num_hours
         # om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
         charge_efficiency = s.internal_efficiency_fraction^0.5
@@ -403,7 +405,8 @@ struct HotSensibleTes <: AbstractThermalStorage
             s.can_serve_space_heating,
             s.can_serve_process_heat,
             s.supply_turbine_only,
-            s.one_direction_flow
+            s.one_direction_flow,
+            s.num_hours
         )
     end
 end
