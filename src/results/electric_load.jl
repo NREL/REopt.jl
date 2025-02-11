@@ -27,8 +27,10 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         sum(r["load_series_kw"]) * p.hours_per_time_step, digits=2
     )
 
-    # Aggregation of all end-use electrical loads (including electrified heating and cooling).
-	r["annual_electric_load_with_thermal_conversions_kwh"] = round(value(m[:AnnualEleckWh]), digits=2)
+    if _n==""
+        # Aggregation of all end-use electrical loads (including electrified heating and cooling).
+	    r["annual_electric_load_with_thermal_conversions_kwh"] = round(value(m[:AnnualEleckWh]), digits=2)
+    end
 
     if p.s.settings.off_grid_flag
         @expression(m, LoadMet[ts in p.time_steps_without_grid], p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts])
