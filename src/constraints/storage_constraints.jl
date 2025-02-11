@@ -140,6 +140,13 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         )
     )
     
+    # Reconcile dvStoragePower and dvStorageEnergy for HotSensibleTes
+    if "HotSensibleTes" in p.s.storage.types.hot
+        @constraint(m, 
+            m[Symbol("dvStoragePower"*_n)]["HotSensibleTes"] * p.s.stroage.attr["HotSensibleTes"].num_hours == m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"]
+        )
+    end
+
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= 
