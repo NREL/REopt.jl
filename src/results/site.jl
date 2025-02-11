@@ -6,10 +6,10 @@ Adds the Site results to the dictionary passed back from `run_reopt` using the s
 
 Site results:
 - `annual_onsite_renewable_electricity_kwh` # renewable electricity from on-site renewable electricity-generating technologies (including fuel-burning technologies)
-- `onsite_renewable_electricity_fraction_of_elec_load`
-- `onsite_and_grid_renewable_electricity_fraction_of_elec_load`
-- `onsite_renewable_energy_fraction_of_total_load`
-- `onsite_and_grid_renewable_energy_fraction_of_total_load`
+- `onsite_renewable_electricity_fraction_of_elec_load` # Portion of electricity consumption (incl. electric heating/cooling loads) that is derived from on-site renewable resource generation
+- `onsite_and_grid_renewable_electricity_fraction_of_elec_load` # "Calculation is the same as onsite_renewable_electricity_fraction_of_elec_load, but additionally includes the renewable energy content of grid-purchased electricity, accounting for any battery efficiency losses
+- `onsite_renewable_energy_fraction_of_total_load` # Portion of total annual energy consumption (including non-electric heating/cooling loads) that is derived from on-site renewable resource generation
+- `onsite_and_grid_renewable_energy_fraction_of_total_load` # Calculation is the same as onsite_renewable_energy_fraction_of_total_load, but additionally includes the renewable energy content of grid-purchased electricity, accounting for any battery efficiency losses
 - `annual_emissions_tonnes_CO2` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
 - `annual_emissions_tonnes_NOx` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
 - `annual_emissions_tonnes_SO2` # Average annual total tons of emissions associated with the site's grid-purchased electricity and on-site fuel consumption.
@@ -38,7 +38,6 @@ calculated in combine_results function if BAU scenario is run:
     By default, REopt uses marginal emissions rates for grid-purchased electricity. Marginal emissions rates are most appropriate for reporting a change in emissions (avoided or increased) rather than emissions totals.
     It is therefore recommended that emissions results from REopt (using default marginal emissions rates) be reported as the difference in emissions between the optimized and BAU case.
 
-
 """
 function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r = Dict{String, Any}()
@@ -50,8 +49,6 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	
 	# total renewable energy
 	add_re_tot_calcs(m,p)
-	# This measure is the aggregation of all end-use electrical loads (including electrified heating and cooling).
-	r["annual_electric_load_with_thermal_conversions_kwh"] = round(value(m[:AnnualEleckWh]), digits=2)
 	r["onsite_renewable_energy_fraction_of_total_load"] = round(value(m[:AnnualOnsiteRETotkWh])/value(m[:AnnualTotkWh]), digits=4)
 	r["onsite_and_grid_renewable_energy_fraction_of_total_load"] = round((value(m[:AnnualOnsiteRETotkWh]) + value(m[:AnnualGridREEleckWh]))/value(m[:AnnualTotkWh]), digits=4)
 
@@ -119,15 +116,15 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 		#To account for hot storage losses and the RE contributions from fuel-fired sources when calculating end-use load, these expressions are used.
 		m[:AnnualHeatContributionToStorage] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.hot, ts in p.time_steps))
 		m[:AnnualREFBToHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
-		m[:AnnualFBTotHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
-		if value(m[:AnnualFBTotHotStoragekWh]) > 0.0
-			m[:FBStorageDeliveryREFraction] = @expression(m, m[:AnnualREFBToHotStoragekWh] / m[:AnnualFBTotHotStoragekWh])
+		m[:AnnualFBToHotStoragekWh] = @expression(m, sum(m[:dvProductionToStorage][b,t,ts] for t in intersect(p.techs.fuel_burning, union(p.techs.heating, p.techs.chp)), b in p.s.storage.types.hot, ts in p.time_steps))
+		if value(m[:AnnualFBToHotStoragekWh]) > 0.0
+			m[:FBStorageDeliveryREFraction] = @expression(m, m[:AnnualREFBToHotStoragekWh] / m[:AnnualFBToHotStoragekWh])
 		else
 			m[:FBStorageDeliveryREFraction] = @expression(m, 0.0)
 		end
-		m[:AnnualHotStorageLosses] = @expression(m, m[:AnnualFBTotHotStoragekWh] - sum(m[:dvDischargeFromStorage][b, ts]  for b in p.s.storage.types.hot, ts in p.time_steps))
+		m[:AnnualHotStorageLosses] = @expression(m, m[:AnnualFBToHotStoragekWh] - sum(m[:dvDischargeFromStorage][b, ts]  for b in p.s.storage.types.hot, ts in p.time_steps))
 		if value(m[:AnnualHeatContributionToStorage]) > 0.0
-			m[:FBToHotStorageFraction] = @expression(m, m[:AnnualFBTotHotStoragekWh] / m[:AnnualHeatContributionToStorage])
+			m[:FBToHotStorageFraction] = @expression(m, m[:AnnualFBToHotStoragekWh] / m[:AnnualHeatContributionToStorage])
 		else
 			m[:FBToHotStorageFraction] = @expression(m, 0.0)
 		end
