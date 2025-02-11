@@ -99,9 +99,11 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     )
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+	@constraint(m, [ts in p.time_steps_with_grid],
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_couple_with_stor)
+            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.dc_couple_with_stor)
+            + m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
