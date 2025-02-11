@@ -26,7 +26,7 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
         REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Microgrid_Inputs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
 
         if Microgrid_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp, LineInfo_PMD, data_math_mn)
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp, LineInfo_PMD)
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
