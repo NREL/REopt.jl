@@ -311,19 +311,7 @@ function add_MG_storage_dispatch_constraints(m,p)
         )
     end
     
-    # Dispatch to MG electrical storage is no greater than storage power capacity
-    # and can't charge the battery unless binMGStorageUsed = 1
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvStoragePower]["ElectricStorage"] >= sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec)
-    )
-    
-    # Dispatch from MG storage is no greater than storage power capacity
-    # and can't discharge from storage unless binMGStorageUsed = 1
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage][s, tz, ts]
-    )
-    
-    # Dispatch to and from electrical storage is no greater than power capacity
+    # Dispatch to and from MG electrical storage is no greater than power capacity
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage][s, tz, ts]
             + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec)
