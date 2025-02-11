@@ -99,12 +99,22 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     )
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
-            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_couple_with_stor)
-            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.dc_couple_with_stor)
-            + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
+    if b in p.s.storage.types.dc_coupled
+        @info "b in p.s.storage.types.dc_coupled"
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].inverter_efficiency_fraction
+                + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_couple_with_stor) * p.s.storage.attr[b].rectifier_efficiency_fraction
+                + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.dc_couple_with_stor) 
+                + m[Symbol("dvGridToStorage"*_n)][b, ts] * p.s.storage.attr[b].rectifier_efficiency_fraction
+        )
+    else
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+                + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_couple_with_stor)
+                + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.dc_couple_with_stor) * p.s.storage.attr[b].inverter_efficiency_fraction #TODO: remove term or leave for future flexibility?
+                + m[Symbol("dvGridToStorage"*_n)][b, ts]
+        )
+    end
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
     if !(p.s.storage.attr[b].can_grid_charge)
