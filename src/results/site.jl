@@ -50,7 +50,7 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	
 	# total renewable energy
 	add_re_tot_calcs(m,p)
-	# This measure is the aggregation of all end-use electrical loads (including electrified heating and cooling) and the site-specific electrical load.
+	# This measure is the aggregation of all end-use electrical loads (including electrified heating and cooling).
 	r["annual_electric_load_with_thermal_conversions_kwh"] = round(value(m[:AnnualEleckWh]), digits=2)
 	r["onsite_renewable_energy_fraction_of_total_load"] = round(value(m[:AnnualOnsiteRETotkWh])/value(m[:AnnualTotkWh]), digits=4)
 	r["onsite_and_grid_renewable_energy_fraction_of_total_load"] = round((value(m[:AnnualOnsiteRETotkWh]) + value(m[:AnnualGridREEleckWh]))/value(m[:AnnualTotkWh]), digits=4)
