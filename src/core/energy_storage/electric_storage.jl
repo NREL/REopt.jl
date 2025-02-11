@@ -189,6 +189,7 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+    dc_coupled::Bool = false
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -226,6 +227,7 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
+    dc_coupled::Bool = false
 end
 
 
@@ -271,6 +273,7 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     min_duration_hours::Real
     max_duration_hours::Real
+    dc_coupled::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -365,7 +368,8 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.min_duration_hours,
-            s.max_duration_hours
+            s.max_duration_hours,
+            s.dc_coupled
         )
     end
 end
