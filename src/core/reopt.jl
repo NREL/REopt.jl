@@ -632,7 +632,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if !isempty(p.techs.dc_couple_with_stor)
-		@variable(m, dvDCCoupledTechStorageInverterSize[p.s.storage.types.elec] >= 0)   # Power capacity of the DC coupled PV and electric storage system b [kW]
+		@variable(m, dvDCCoupledTechStorageInverterSizeDC[p.s.storage.types.elec] >= 0)   # Power capacity of the DC coupled PV and electric storage system b [kW]
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
