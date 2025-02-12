@@ -474,29 +474,19 @@ end
 
 function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageSimulator=false, OutageLength_Timesteps=0)
     
-    m = pm.model
-
-    #REoptInputsList = Microgrid_Inputs.REopt_inputs_list 
-    
+    m = pm.model   
     REopt_nodes = REopt.GenerateREoptNodesList(Microgrid_Inputs)
-        
     REoptInputs_Combined = PrepareREoptInputs(Microgrid_Inputs)  
     
     print("\n Building the REopt model\n")
     REopt.build_reopt!(m, REoptInputs_Combined) # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     
     CreateREoptTotalExportVariables(m, REoptInputs_Combined)
-
     REopt_gen_ind_e = LinkREoptAndPMD(pm, m, data_math_mn, Microgrid_Inputs, REopt_nodes)
-
     LineInfo = CreateLineInfoDictionary(pm)
-    
     REoptTimeSteps = collect(1:(Microgrid_Inputs.time_steps_per_hour * 8760))
-
     ApplyGridImportAndExportConstraints(Microgrid_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
-
     LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
-    
     Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Microgrid_Inputs, LineInfo)
 
     if Microgrid_Inputs.generators_only_run_during_grid_outage == true
@@ -593,7 +583,6 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
 
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
-            #@info "Setting facility-level grid purchase and export (if applicable) to the power flow on line "*string(Microgrid_Inputs.substation_line)*", using the variable: "*string(" dvGridPurchase_", p.s.settings.facilitymeter_node)
             #@info "The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"])"
             
             i = LineInfo[Microgrid_Inputs.substation_line]["index"]
@@ -608,16 +597,9 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
                 t_idx = (i, t_bus, f_bus)
     
             @variable(m, binSubstationPositivePowerFlow[ts in REoptTimeSteps], Bin)
-
             @variable(m, dvSubstationPowerFlow[ts in REoptTimeSteps])
-            
-            #for t in REoptTimeSteps
-            #    @constraint(m, dvSubstationPowerFlow[t] == (sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][t, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
-            #                                                sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, t] for u in p.export_bins_by_tech["PV"]))) 
-            #end
-            
+                        
             for timestep in REoptTimeSteps
-
                 @constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {m[:dvSubstationPowerFlow][timestep] >= 0 } )  # TODO: make this compatible with phase 2 and 3 of three phase (right now it's only consider 1-phase I think)
                 @constraint(m, !m[:binSubstationPositivePowerFlow][timestep] => {m[:dvSubstationPowerFlow][timestep] <= 0 } )
                    
@@ -635,17 +617,13 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
                         q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
                         q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
-                        #@constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] >= 0 } )  # TODO: make this compatible with phase 2 and 3 of three phase (right now it's only consider 1-phase I think)
-                        #@constraint(m, !m[:binSubstationPositivePowerFlow][timestep] => {p_fr[1] <= 0 } )
-                    
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] == p_fr[1])
 
                     else
-                    # Instead of using the line flow from PMD, consider the total system inflow/outflow to be based on a lumped-element model, which sums all power inflows and outflows for each node
+                        # Instead of using the line flow from PMD, consider the total system inflow/outflow to be based on a lumped-element model, which sums all power inflows and outflows for each node
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] ==
                             (-sum(m[Symbol("TotalExport_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e) + 
                             sum(m[Symbol("dvGridPurchase_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e)))
-                            
                     end
 
                     @constraint(m, m[:dvSubstationPowerFlow][timestep] == (sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
@@ -699,7 +677,16 @@ end
 function LimitGeneratorOperatingTimes(m, Microgrid_Inputs, REoptInputs_Combined)
     # Prevent the generators from generating power during times that aren't a grid outage
 
-    NonOutageTimeSteps = vcat(collect(1:Microgrid_Inputs.single_outage_start_time_step), collect(Microgrid_Inputs.single_outage_end_time_step:(8760*Microgrid_Inputs.time_steps_per_hour)))
+    if model_outages_with_outages_vector == false
+        NonOutageTimeSteps = vcat(collect(1:Microgrid_Inputs.single_outage_start_time_step), collect(Microgrid_Inputs.single_outage_end_time_step:(8760*Microgrid_Inputs.time_steps_per_hour)))
+    elseif model_outages_with_outages_vector == true
+        NonOutageTimeSteps = []
+        for i in 1:(8760*Microgrid_Inputs.time_steps_per_hour)
+            if !(i in Microgrid_Inputs.outages_vector) 
+                push!(NonOutageTimeSteps, i)
+            end
+        end
+    end
 
     for p in REoptInputs_Combined
         _n = "_"*string(p.s.site.node)
@@ -815,8 +802,6 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
         end
 
         if Substation_Export_Limit != ""
-            # Set a substation export limit
-           
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, p_fr[1] .>= -Substation_Export_Limit) # TODO: change this to deal with multi-phase power correctly: likely need to sum p_to across each of the connections
                 JuMP.@constraint(m, q_fr[1] .>= -Substation_Export_Limit) # TODO apply power factor to the export limit for Q
@@ -827,10 +812,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
         end
 
         if Substation_Import_Limit != ""
-            # Set a substation import limit
-            #print("*********************** applying an import limit of $(Substation_Import_Limit)")
             if timestep in PMDTimeSteps_InREoptTimes
-                #print("************* applying import limit of $(Substation_Import_Limit) to the PMD timesteps")
                 JuMP.@constraint(m, p_fr[1] .<= Substation_Import_Limit)
                 JuMP.@constraint(m, q_fr[1] .<= Substation_Import_Limit) # TODO apply power factor to the import limit for Q
             else
@@ -865,12 +847,12 @@ function GenerateREoptNodesList(Microgrid_Inputs)
             push!(REopt_nodes, i["Site"]["node"])
         end
     end
-    return REopt_nodes;
+    return REopt_nodes
 end
 
 
 # Function to check for errors in the data inputs for the model
-function RunDataChecks(Microgrid_Inputs,  REopt_dictionary; ldf_inputs_dictionary="")
+function RunDataChecks(Microgrid_Inputs,  REopt_dictionary)
 
     ps = REopt_dictionary
     

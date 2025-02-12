@@ -110,38 +110,6 @@ function Process_Line_Upgrades(m, line_upgrade_options_each_line, Microgrid_Inpu
 end
 
 
-function Check_REopt_PMD_Alignment(Microgrid_Inputs, m, PMD_results, node, line, phase)
-    # Compare the REopt and PMD results to ensure the models are linked
-        # Note the calculations below are only valid if there are not any REopt nodes or PMD loads downstream of the node being evaluated
-    
-    Node = node #3 # This is for the REopt data
-    Line = line # "line2_3" # This is for the PMD data
-    Phase = phase # 1  # This data is for the PMD data
-
-    # Save REopt data to variables for comparison with PMD:
-    TotalExport = JuMP.value.(m[Symbol("TotalExport_"*string(Node))]) #[1]
-    TotalImport = JuMP.value.(m[Symbol("dvGridPurchase_"*string(Node))]) #[1] If needed, define the time step in the brackets appended to this line
-    REopt_power_injection = TotalImport - TotalExport
-
-    #GridImport_REopt = REopt_results[Node]["ElectricUtility"]["electric_to_storage_series_kw"] + REopt_results[Node]["ElectricUtility"]["electric_to_load_series_kw"] 
-  
-    # Save the power injection data from PMD into a vector for the line
-    PowerFlow_line = []
-    for i in 1:length(PMD_results["nw"])
-        push!(PowerFlow_line, PMD_results["nw"][string(i)]["line"][Line]["pf"][Phase])
-    end
-
-    # This calculation compares the power flow through the Line (From PMD), to the power injection into the Node (From REopt). If the PMD and REopt models are connected, this should be zero or very close to zero.
-    Mismatch_in_expected_powerflow = PowerFlow_line - REopt_power_injection[1:length(PMD_results["nw"])].data   # This is only valid for the model with only one REopt load on node 1
-
-    # Visualize the mismatch to ensure the results are zero for each time step
-    Plots.plot(collect(1:length(PMD_results["nw"])), Mismatch_in_expected_powerflow)
-    Plots.xlabel!("Timestep")
-    Plots.ylabel!("Mismatch between REopt and PMD (kW)")
-    display(Plots.title!("REopt and PMD Mismatch: Node $(Node), Phase $(Phase)"))
-end 
-
-
 function Results_Compilation(model, results, PMD_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
     
     @info "Compiling the results"
@@ -876,7 +844,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
                 else
                     showlegend = false
                 end
-                push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = showlegend, fill = "none", line = PlotlyJS.attr(width = 3, color="red"), #, dash="dot"),
+                push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = showlegend, fill = "none", line = PlotlyJS.attr(width = 3, color="red"),
                     x = [i, i],
                     y = [0,maximum(TotalLoad_series)]
                 ))
@@ -894,11 +862,10 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
                 ))
             end 
 
-
         end
     elseif (OutageStopTimeStep - OutageStartTimeStep) > 0
-        OutageStart_Line = OutageStartTimeStep/24
-        OutageStop_Line = OutageStopTimeStep/24
+        OutageStart_Line = OutageStartTimeStep/(24 * Microgrid_Inputs.time_steps_per_hour)
+        OutageStop_Line = OutageStopTimeStep/(24 * Microgrid_Inputs.time_steps_per_hour)
         push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="red", dash="dot"),
             x = [OutageStart_Line, OutageStart_Line],
             y = [0,maximum(TotalLoad_series)]
@@ -927,7 +894,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     color1 = [30,62,250] # blue
     color2 = [238,155,0] # orange
     color3 = [215,20,20] # red
-    increments = 20 # steps must be a positive number
+    increments = 20 # steps must be a even number
     color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
     color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
     color_numbers = vcat(color1_to_color2, color2_to_color3)
@@ -941,7 +908,6 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     powerflow = results["Dictionary_LineFlow_Power_Series"]
     
     # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
-    #REopt_timesteps_for_dashboard_InREoptTimes = Microgrid_Inputs.time_steps_for_results_dashboard
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
     PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
@@ -1001,12 +967,6 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
 
     start_day = round(minimum_timestep/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
     end_day = round(maximum_timestep/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
-    #=
-    timesteps_to_days = Dict()
-    for i in timesteps
-        timesteps_to_days[i] == round(i/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
-    end
-    =#
     Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx, scaleratio_input)
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
@@ -1212,7 +1172,7 @@ function DeterminePathToSourcebus(neighbors)
     path_dict = Dict()
     substation_bus = "sourcebus"
     queue = [substation_bus]
-    visited = Dict() #{Int, Bool}()
+    visited = Dict()
     visited[substation_bus] = true
 
     while !isempty(queue)
@@ -1296,7 +1256,32 @@ function modified_calc_connected_components_eng(data; edges::Vector{<:String}=St
 end
 
 
+function Check_REopt_PMD_Alignment(m, PMD_results, node, line, phase)
+    # Compare the REopt and PMD results to ensure the models are linked
+        # Note the calculations below are only valid if there are not any REopt nodes or PMD loads downstream of the node being evaluated
+    
+    Node = node # This is for the REopt data
+    Line = line # This is for the PMD data
+    Phase = phase # This data is for the PMD data
 
+    # Save REopt data to variables for comparison with PMD:
+    TotalExport = JuMP.value.(m[Symbol("TotalExport_"*string(Node))]) #[1]
+    TotalImport = JuMP.value.(m[Symbol("dvGridPurchase_"*string(Node))]) #[1] If needed, define the time step in the brackets appended to this line
+    REopt_power_injection = TotalImport - TotalExport
 
+    # Save the power injection data from PMD into a vector for the line
+    PowerFlow_line = []
+    for i in 1:length(PMD_results["nw"])
+        push!(PowerFlow_line, PMD_results["nw"][string(i)]["line"][Line]["pf"][Phase])
+    end
 
+    # This calculation compares the power flow through the Line (From PMD), to the power injection into the Node (From REopt). If the PMD and REopt models are connected, this should be zero or very close to zero.
+    Mismatch_in_expected_powerflow = PowerFlow_line - REopt_power_injection[1:length(PMD_results["nw"])].data   # This is only valid for the model with only one REopt load on node 1
+
+    # Visualize the mismatch to ensure the results are zero for each time step
+    Plots.plot(collect(1:length(PMD_results["nw"])), Mismatch_in_expected_powerflow)
+    Plots.xlabel!("Timestep")
+    Plots.ylabel!("Mismatch between REopt and PMD (kW)")
+    display(Plots.title!("REopt and PMD Mismatch: Node $(Node), Phase $(Phase)"))
+end 
 

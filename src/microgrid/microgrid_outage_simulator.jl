@@ -8,14 +8,14 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Micro
     outage_simulator_time_start = now()
 
     # TODO: Transfer any line and transformer upgrades from the main optimization model into the outage simulator
-    line_max_amps = "N/A"
-    lines_rmatrix= "N/A"
-    lines_xmatrix= "N/A"
-    lines_for_upgrades= "N/A"
-    line_upgrades_each_line= "N/A"
-    all_lines= "N/A"
-    transformer_max_kva= "N/A"
-    ldf_inputs_dictionary = "N/A"
+    #line_max_amps = "N/A"
+    #lines_rmatrix= "N/A"
+    #lines_xmatrix= "N/A"
+    #lines_for_upgrades= "N/A"
+    #line_upgrades_each_line= "N/A"
+    #all_lines= "N/A"
+    #transformer_max_kva= "N/A"
+    
     single_model_outage_simulator = "empty"
     for i in 1:length(Microgrid_Inputs.length_of_simulated_outages_time_steps)
         OutageLength = Microgrid_Inputs.length_of_simulated_outages_time_steps[i]
@@ -49,7 +49,6 @@ function Microgrid_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
     RunNumber = 0
     OutageSimulator_LineFromSubstationToFacilityMeter, RunNumber, outage_start_timesteps_checked = PrepareInputsForOutageSimulator(Microgrid_Inputs, OutageLength_TimeSteps_Input, NumberOfOutagesToTest)
     RunsTested = 0
-    index = 0
     outage_survival_results = -1 * ones(RunNumber)
     SuccessfullySolved = 0
     
@@ -64,7 +63,7 @@ function Microgrid_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
                 m_outagesimulator = "" # empty the m_outagesimulator variable
             end
             pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, OutageLength_TimeSteps_Input; RunningOutageSimulator = true)
-            m_outagesimulator = pm.model # TODO: Confirm that when make changes to pm.model again in line 2050 in the function, that that version of pm.model has the additional constraints defined below for m_outagesimulator
+            m_outagesimulator = pm.model # TODO: Confirm that when make changes to pm.model again in the function, that that version of pm.model has the additional constraints defined below for m_outagesimulator
         end
         
         for n in NodeList
@@ -407,7 +406,7 @@ function GenerateInputsForOutageSimulator(Microgrid_Inputs, REopt_results)
         ]) 
         merge!(DataDictionaryForEachNode, DictionaryToAdd)
     end 
-return DataDictionaryForEachNode;
+return DataDictionaryForEachNode
 end
 
 
@@ -415,6 +414,8 @@ function PrepareInputsForOutageSimulator(Microgrid_Inputs, OutageLength_TimeStep
     randomly_ordered_timesteps = RandomlyOrderedTimesteps() 
     if Microgrid_Inputs.time_steps_per_hour == 1
         outage_start_timesteps = randomly_ordered_timesteps["8760"]
+    elseif Microgrid_Inputs.time_steps_per_hour == 2
+        outage_start_timesteps = randomly_ordered_timesteps["17540"]
     elseif Microgrid_Inputs.time_steps_per_hour == 4
         outage_start_timesteps = randomly_ordered_timesteps["35040"]
     else
@@ -500,7 +501,7 @@ end
 
 
 function CreatePlotsForOutageSimulatorModel(Microgrid_Inputs, m_outagesimulator, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList, x, i)
-    # This function makes plots for each of the REopt node
+    # This function makes plots for each of the REopt nodes
     
     mkdir(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)")
     
@@ -563,13 +564,13 @@ function MapOutageSimulatorResultsPlots(Microgrid_Inputs, outage_survival_result
     day_of_year_not_survived = zeros(length(outage_start_timesteps_not_survived))
 
     for x in collect(1:length(outage_start_timesteps_survived))
-        time_of_day_survived[x] = outage_start_timesteps_survived[x] % 24
-        day_of_year_survived[x] = ceil(outage_start_timesteps_survived[x] / 24)
+        time_of_day_survived[x] = outage_start_timesteps_survived[x] % (24*Microgrid_Inputs.time_steps_per_hour)
+        day_of_year_survived[x] = ceil(outage_start_timesteps_survived[x] / (24*Microgrid_Inputs.time_steps_per_hour))
     end
 
     for x in collect(1:length(outage_start_timesteps_not_survived))
-        time_of_day_not_survived[x] = outage_start_timesteps_not_survived[x] % 24
-        day_of_year_not_survived[x] = ceil(outage_start_timesteps_not_survived[x] / 24)
+        time_of_day_not_survived[x] = outage_start_timesteps_not_survived[x] % (24*Microgrid_Inputs.time_steps_per_hour)
+        day_of_year_not_survived[x] = ceil(outage_start_timesteps_not_survived[x] / (24*Microgrid_Inputs.time_steps_per_hour))
     end        
 
     traces = PlotlyJS.GenericTrace[]
@@ -598,21 +599,28 @@ function RandomlyOrderedTimesteps()
 end
 
 
-function CreateRandomVectorOrder(filepath, vector1, vector2)
+function CreateRandomVectorOrder(filepath, vector1, vector2, vector3)
     # This function saves a random ordering of vector data for the outage simulator
         #=
         # Use this code to create inputs into the function:
         vector_8760_ordered = collect(1:8760)
         vector_8760_randomly_unordered = Random.shuffle(vector_8760_ordered)
-
+        
+        vector_17540_ordered = collect(1:17540)
+        vector_17540_randomly_unordered = Random.shuffle(vector_17540_ordered)
+        
         vector_35040_ordered = collect(1:35040)
         vector_35040_randomly_unordered = Random.shuffle(vector_35040_ordered)
+
+        CreateRandomVectorOrder(filepath, vector_8760_randomly_unordered, vector_17540_randomly_unordered, vector_35040_randomly_unordered
         =#
 
     vector_8760_randomly_unordered = vector1
-    vector_35040_randomly_unordered = vector2
+    vector_17540_randomly_unordered = vector2
+    vector_35040_randomly_unordered = vector3
 
     data = Dict(["8760" => vector_8760_randomly_unordered,
+                 "17540" => vector_17540_randomly_unordered,
                  "35040" => vector_35040_randomly_unordered
                 ])
     
