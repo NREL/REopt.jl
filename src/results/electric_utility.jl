@@ -34,7 +34,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
 
     # add a warning if the WHL benefit is the max benefit
     if :WHL in p.s.electric_tariff.export_bins
-        if sum(value.(m[Symbol("WHL_benefit"*_n)])) - 10*sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])]) / value(m[Symbol("WHL_benefit"*_n)])  <= 1e-3
+        if sum(value.(m[Symbol("WHL_benefit"*_n)])) - 1e8-1000*sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])]) / value(m[Symbol("WHL_benefit"*_n)])  <= 1e-3
             @warn """Wholesale benefit is at the maximum allowable by the model; the problem is likely unbounded without this 
             limit in place.  Check the inputs to ensure that there are practical limits for max system sizes and that 
             the wholesale and retail electricity rates are accurate."""

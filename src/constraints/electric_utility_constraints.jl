@@ -59,7 +59,7 @@ function add_export_constraints(m, p; _n="")
             @warn "Adding binary variable for net metering choice. Some solvers are slow with binaries."
 
             # Good to bound the benefit - we use max_bene as a lower bound because the benefit is treated as a negative cost
-            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*p.pwf_e*p.hours_per_time_step*10
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*p.pwf_e*p.hours_per_time_step*100
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
             
@@ -142,7 +142,7 @@ function add_export_constraints(m, p; _n="")
         else
             binWHL = @variable(m, binary = true)
             @warn "Adding binary variable for wholesale export choice. Some solvers are slow with binaries."
-            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*p.pwf_e*p.hours_per_time_step*100
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*p.pwf_e*p.hours_per_time_step*1000 + 1e8
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
