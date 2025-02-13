@@ -409,7 +409,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
-		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.ac_coupled) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvDCCoupledTechStorageInverterSizeDC][b] for b in p.s.storage.types.dc_coupled) + 
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
 	))
 	
