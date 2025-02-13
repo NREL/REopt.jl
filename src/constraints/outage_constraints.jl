@@ -83,7 +83,9 @@ function add_outage_cost_constraints(m,p)
         @constraint(m,
             m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts] - (
                 p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * (
-                    sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec) + 
+                    # sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec) + 
+                    sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.ac_coupled) + 
+                    sum( p.s.storage.attr[b].net_present_cost_per_kw * (p.s.storage.attr[b].max_kw + sum(p.max_sizes[t] * maximum(p.production_factor[t,:]) * p.levelization_factor[t] for t in p.techs.dc_couple_with_stor)) for b in p.s.storage.types.dc_coupled) + 
                     sum( p.s.storage.attr[b].net_present_cost_per_kwh * p.s.storage.attr[b].max_kwh for b in p.s.storage.types.all )
                 ) * (1-m[:binMGStorageUsed])  # Big-M is capital cost of battery with max size kw and kwh
             )
