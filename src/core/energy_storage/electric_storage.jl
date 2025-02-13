@@ -181,12 +181,15 @@ end
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
     discharge_efficiency::Float64 = inverter_efficiency_fraction * internal_efficiency_fraction^0.5
+    dc_charge_efficiency::Float64 = internal_efficiency_fraction^0.5
+    dc_discharge_efficiency::Float64 = internal_efficiency_fraction^0.5
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+    dc_coupled::Bool = false
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -216,12 +219,15 @@ Base.@kwdef struct ElectricStorageDefaults
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
     discharge_efficiency::Float64 = inverter_efficiency_fraction * internal_efficiency_fraction^0.5
+    dc_charge_efficiency::Float64 = internal_efficiency_fraction^0.5
+    dc_discharge_efficiency::Float64 = internal_efficiency_fraction^0.5
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
+    dc_coupled::Bool = false
 end
 
 
@@ -257,6 +263,8 @@ struct ElectricStorage <: AbstractElectricStorage
     total_rebate_per_kwh::Real
     charge_efficiency::Float64
     discharge_efficiency::Float64
+    dc_charge_efficiency::Float64
+    dc_discharge_efficiency::Float64
     grid_charge_efficiency::Float64
     net_present_cost_per_kw::Real
     net_present_cost_per_kwh::Real
@@ -265,6 +273,7 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     min_duration_hours::Real
     max_duration_hours::Real
+    dc_coupled::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -350,6 +359,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.total_rebate_per_kwh,
             s.charge_efficiency,
             s.discharge_efficiency,
+            s.dc_charge_efficiency,
+            s.dc_discharge_efficiency,
             s.grid_charge_efficiency,
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
@@ -357,7 +368,8 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.min_duration_hours,
-            s.max_duration_hours
+            s.max_duration_hours,
+            s.dc_coupled
         )
     end
 end
