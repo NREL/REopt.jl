@@ -7,7 +7,7 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
         return pv.production_factor_series
     end
 
-    watts, ambient_temp_celcius = call_pvwatts_api(latitude, longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+    watts, ambient_temp_celsius = call_pvwatts_api(latitude, longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
         array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
         gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe=timeframe, radius=pv.radius,
         time_steps_per_hour=time_steps_per_hour)
@@ -72,7 +72,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
             resource = []
             try
                 @info "Querying Wind Toolkit for resource data ..."
-                r = HTTP.get(url; retries=5)
+                r = HTTP.get(url, ["User-Agent" => "REopt.jl"]; retries=5)
                 if r.status != 200
                     throw(@error("Bad response from Wind Toolkit: $(response["errors"])"))
                 end

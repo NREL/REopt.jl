@@ -25,6 +25,8 @@ struct Scenario <: AbstractScenario
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
+    ashp::Union{ASHP, Nothing}
+    ashp_wh::Union{ASHP, Nothing}
 end
 
 """
@@ -38,11 +40,15 @@ A Scenario struct can contain the following keys:
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
+- [HotThermalStorage](@ref) (optional)
+- [ColdThermalStorage](@ref) (optional)
+- [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ProcessHeatLoad](@ref) (optional)
+- [CoolingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
@@ -52,6 +58,8 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
+- [ASHPSpaceHeater](@ref) (optional)
+- [ASHPWaterHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -213,51 +221,66 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+        year = get!(d["DomesticHotWaterLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "DomesticHotWaterLoad")
+        dhw_load = HeatingLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+                                        load_type = "domestic_hot_water",
                                         latitude=site.latitude, longitude=site.longitude, 
                                         time_steps_per_hour=settings.time_steps_per_hour,
                                         existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        dhw_load = DomesticHotWaterLoad(; 
+        dhw_load = HeatingLoad(;
+            load_type = "domestic_hot_water", 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+            year=electric_load.year
         )
     end
 
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+        year = get!(d["SpaceHeatingLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "SpaceHeatingLoad")
+        space_heating_load = HeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+                                            load_type = "space_heating",
                                             latitude=site.latitude, longitude=site.longitude, 
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             existing_boiler_efficiency = existing_boiler_efficiency
                                             )
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
-        space_heating_load = SpaceHeatingLoad(; 
+        space_heating_load = HeatingLoad(; 
+            load_type = "space_heating",        
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+            year=electric_load.year
         )
     end
 
     if haskey(d, "ProcessHeatLoad") && !haskey(d, "FlexibleHVAC")
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
-                                            latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour,
-                                            existing_boiler_efficiency = existing_boiler_efficiency
+        year = get!(d["ProcessHeatLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "ProcessHeatLoad")
+        process_heat_load = HeatingLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
+                                            load_type = "process_heat",
+                                            latitude = site.latitude, longitude = site.longitude, 
+                                            time_steps_per_hour = settings.time_steps_per_hour,
+                                            existing_boiler_efficiency = existing_boiler_efficiency                                           
                                             )
                                     
         max_heat_demand_kw = maximum(process_heat_load.loads_kw .+ max_heat_demand_kw)
     else
-        process_heat_load = ProcessHeatLoad(;
+        process_heat_load = HeatingLoad(;
+                load_type = "process_heat",                
                 fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
                 time_steps_per_hour=settings.time_steps_per_hour,
-                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+                year=electric_load.year
         )
     end
 
@@ -395,6 +418,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
             end
         end
+        year = get!(d["CoolingLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "CoolingLoad")
         cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
                                     latitude=site.latitude, longitude=site.longitude, 
                                     time_steps_per_hour=settings.time_steps_per_hour
@@ -416,7 +441,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         cooling_load = CoolingLoad(; 
             thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            year=electric_load.year
         )
     end
 
@@ -443,6 +469,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     # GHP
+    ambient_temp_celsius = nothing
     ghp_option_list = []
     space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
@@ -477,26 +504,27 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         # Call PVWatts for hourly dry-bulb outdoor air temperature
         ambient_temp_degF = []
-        if !haskey(d["GHP"]["ghpghx_inputs"][1], "ambient_temperature_f") || isempty(d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"])
+        if (!haskey(d["GHP"]["ghpghx_inputs"][1], "ambient_temperature_f") || isempty(d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"])) &&
+            isnothing(site.outdoor_air_temperature_degF)
             # If PV is evaluated and we need to call PVWatts for ambient temperature, assign PV production factor here too with the same call
             # By assigning pv.production_factor_series here, it will skip the PVWatts call in get_production_factor(PV) call from reopt_input.jl
             if !isempty(pvs)
                 for pv in pvs
-                    pv.production_factor_series, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                    pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
                         array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
                         gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
                 end
             else
-                pv_prodfactor, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
             end
-            ambient_temp_degF = ambient_temp_celcius * 1.8 .+ 32.0
-        else
-            ambient_temp_degF = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
+            site.outdoor_air_temperature_degF = ambient_temp_celsius * 1.8 .+ 32.0
+        elseif isnothing(site.outdoor_air_temperature_degF)
+            site.outdoor_air_temperature_degF = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
         end
         
         for i in 1:number_of_ghpghx
             ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
-            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
+            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = site.outdoor_air_temperature_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
                 if get(d["GHP"], "can_serve_dhw", false)  # This is assuming the default stays false
@@ -610,9 +638,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end                    
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
             # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-            # open("scenarios/ghpghx_response.json","w") do f
-            #     JSON.print(f, ghpghx_response)
-            # end                
+            #open("scenarios/ghpghx_response.json","w") do f
+            #    JSON.print(f, ghpghx_response)
+            #end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
@@ -643,9 +671,90 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    # Electric Heater
     electric_heater = nothing
     if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
+    end
+
+    # ASHP
+    ashp = nothing
+    if haskey(d, "ASHPSpaceHeater")
+        if !haskey(d["ASHPSpaceHeater"], "max_ton")
+            max_ton = get_ashp_defaults("SpaceHeating")["max_ton"]
+        else
+            max_ton = d["ASHPSpaceHeater"]["max_ton"]
+        end
+
+        if max_ton > 0
+            # ASHP Space Heater's temp back_up_temp_threshold_degF
+            if !haskey(d["ASHPSpaceHeater"], "back_up_temp_threshold_degF")
+                ambient_temp_thres_fahrenheit = get_ashp_defaults("SpaceHeating")["back_up_temp_threshold_degF"]
+            else
+                ambient_temp_thres_fahrenheit = d["ASHPSpaceHeater"]["back_up_temp_threshold_degF"]
+            end
+            
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if isnothing(site.outdoor_air_temperature_degF)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                end
+                site.outdoor_air_temperature_degF = (9/5 .* ambient_temp_celsius) .+ 32
+            end
+
+            d["ASHPSpaceHeater"]["ambient_temp_degF"] = site.outdoor_air_temperature_degF
+            d["ASHPSpaceHeater"]["heating_load"] = space_heating_load.loads_kw
+            d["ASHPSpaceHeater"]["cooling_load"] = cooling_load.loads_kw_thermal
+
+            ashp = ASHPSpaceHeater(;dictkeys_tosymbols(d["ASHPSpaceHeater"])...)
+        end    
+    end
+
+    # ASHP Water Heater:
+    ashp_wh = nothing
+
+    if haskey(d, "ASHPWaterHeater")
+        if !haskey(d["ASHPWaterHeater"], "max_ton")
+            max_ton = get_ashp_defaults("DomesticHotWater")["max_ton"]
+        else
+            max_ton = d["ASHPWaterHeater"]["max_ton"]
+        end
+
+        if max_ton > 0.0
+            # ASHP Space Heater's temp back_up_temp_threshold_degF
+            if !haskey(d["ASHPWaterHeater"], "back_up_temp_threshold_degF")
+                ambient_temp_thres_fahrenheit = get_ashp_defaults("DomesticHotWater")["back_up_temp_threshold_degF"]
+            else
+                ambient_temp_thres_fahrenheit = d["ASHPWaterHeater"]["back_up_temp_threshold_degF"]
+            end
+            
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if isnothing(site.outdoor_air_temperature_degF)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                end
+                site.outdoor_air_temperature_degF = (9/5 .* ambient_temp_celsius) .+ 32
+            end
+
+            d["ASHPWaterHeater"]["ambient_temp_degF"] = site.outdoor_air_temperature_degF
+            d["ASHPWaterHeater"]["heating_load"] = dhw_load.loads_kw
+
+            ashp_wh = ASHPWaterHeater(;dictkeys_tosymbols(d["ASHPWaterHeater"])...)
+        end
     end
 
     return Scenario(
@@ -673,7 +782,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
-        electric_heater
+        electric_heater,
+        ashp,
+        ashp_wh
     )
 end
 
@@ -714,4 +825,10 @@ function get_existing_boiler_efficiency(d)
     end  
 
     return existing_boiler_efficiency
+end
+
+function validate_load_year_consistency(electric_load_year, year, load_type)
+    if electric_load_year != year
+        throw(@error("Inconsistent load years: ElectricLoad year ($electric_load_year) does not match the provided year ($year) for $load_type."))
+    end
 end

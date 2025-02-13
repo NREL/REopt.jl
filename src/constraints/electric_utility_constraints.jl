@@ -62,10 +62,9 @@ function add_export_constraints(m, p; _n="")
             @warn "Adding binary variable for net metering choice. Some solvers are slow with binaries."
 
             # Good to bound the benefit - we use max_bene as a lower bound because the benefit is treated as a negative cost
-            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*10
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*p.pwf_e*p.hours_per_time_step*10
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
-            
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
                 @constraint(m,
@@ -82,7 +81,7 @@ function add_export_constraints(m, p; _n="")
                     sum(p.max_sizes[t] for t in NEM_techs),
                     p.hours_per_time_step * maximum([sum((
                         p.s.electric_load.loads_kw[ts] + 
-                        p.s.cooling_load.loads_kw_thermal[ts]/p.cop["ExistingChiller"] + 
+                        p.s.cooling_load.loads_kw_thermal[ts]/p.cooling_cop["ExistingChiller"][ts] + 
                         (p.s.space_heating_load.loads_kw[ts] + p.s.dhw_load.loads_kw[ts] + p.s.process_heat_load.loads_kw[ts]) 
                     ) for ts in p.s.electric_tariff.time_steps_monthly[m]) for m in p.months
                     ])
@@ -102,6 +101,10 @@ function add_export_constraints(m, p; _n="")
                     }
                 )
                 @constraint(m, !binNEM => {NEM_benefit >= 0})
+                @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
+                    !binNEM => { m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] == 0
+                        }
+                )
             else
                 @constraint(m,
                     NEM_benefit >= p.pwf_e * p.hours_per_time_step *
@@ -109,6 +112,9 @@ function add_export_constraints(m, p; _n="")
                             for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
                 )
                 @constraint(m, NEM_benefit >= max_bene * binNEM)
+                @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
+                    m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] <= binNEM * sum(p.s.electric_load.loads_kw)
+                )
             end
 
             EXC_benefit = 0
@@ -157,7 +163,7 @@ function add_export_constraints(m, p; _n="")
         else
             binWHL = @variable(m, binary = true)
             @warn "Adding binary variable for wholesale export choice. Some solvers are slow with binaries."
-            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*10
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*p.pwf_e*p.hours_per_time_step*100
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
@@ -224,7 +230,7 @@ function add_monthly_peak_constraint(m, p; _n="")
         b = m[Symbol(dv)]
         # Upper bound on peak electrical power demand by month, tier; if tier is selected (0 o.w.)
         @constraint(m, [mth in p.months, tier in 1:ntiers],
-            m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] <= p.s.electric_tariff.monthly_demand_tier_limits[tier] * 
+            m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] <= p.s.electric_tariff.monthly_demand_tier_limits[mth, tier] * 
                 b[mth, tier]
         )
 
@@ -233,7 +239,7 @@ function add_monthly_peak_constraint(m, p; _n="")
 
         # One monthly peak electrical power demand tier must be full before next one is active
         @constraint(m, [mth in p.months, tier in 2:ntiers],
-        b[mth, tier] * p.s.electric_tariff.monthly_demand_tier_limits[tier-1] <= 
+        b[mth, tier] * p.s.electric_tariff.monthly_demand_tier_limits[mth, tier-1] <= 
             m[Symbol("dvPeakDemandMonth"*_n)][mth, tier-1]
         )
         # TODO implement NewMaxDemandMonthsInTier, which adds mth index to monthly_demand_tier_limits
@@ -257,7 +263,7 @@ function add_tou_peak_constraint(m, p; _n="")
 
         # Upper bound on peak electrical power demand by tier, by ratchet, if tier is selected (0 o.w.)
         @constraint(m, [r in p.ratchets, tier in 1:ntiers],
-            m[Symbol("dvPeakDemandTOU"*_n)][r, tier] <= p.s.electric_tariff.tou_demand_tier_limits[tier] * b[r, tier]
+            m[Symbol("dvPeakDemandTOU"*_n)][r, tier] <= p.s.electric_tariff.tou_demand_tier_limits[r, tier] * b[r, tier]
         )
 
         # Ratchet peak electrical power ratchet tier ordering
@@ -267,7 +273,7 @@ function add_tou_peak_constraint(m, p; _n="")
 
         # One ratchet peak electrical power demand tier must be full before next one is active
         @constraint(m, [r in p.ratchets, tier in 2:ntiers],
-            b[r, tier] * p.s.electric_tariff.tou_demand_tier_limits[tier-1] 
+            b[r, tier] * p.s.electric_tariff.tou_demand_tier_limits[r, tier-1] 
             <= m[Symbol("dvPeakDemandTOU"*_n)][r, tier-1]
         )
     end
@@ -323,7 +329,7 @@ function add_energy_tier_constraints(m, p; _n="")
     ##Constraint (10a): Usage limits by pricing tier, by month
     @constraint(m, [mth in p.months, tier in 1:p.s.electric_tariff.n_energy_tiers],
         p.hours_per_time_step * sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.s.electric_tariff.time_steps_monthly[mth] ) 
-        <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[tier]
+        <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier]
     )
     ##Constraint (10b): Ordering of pricing tiers
     @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
@@ -331,7 +337,7 @@ function add_energy_tier_constraints(m, p; _n="")
     )
     ## Constraint (10c): One tier must be full before any usage in next tier
     @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
-        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[tier-1] - 
+        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier-1] - 
         sum( m[Symbol("dvGridPurchase"*_n)][ts, tier-1] for ts in p.s.electric_tariff.time_steps_monthly[mth]) 
         <= 0
     )
