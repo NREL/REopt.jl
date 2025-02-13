@@ -425,7 +425,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
 			add_MG_storage_dispatch_constraints(m,p)
-			if !isempty(p.techs.dc_couple_with_stor)
+			if !isempty(p.s.storage.types.dc_coupled)
 				add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
 			end
 		else
