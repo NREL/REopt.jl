@@ -58,7 +58,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
                 - r["electric_curtailed_series_kw"][ts]
                 - r["electric_to_storage_series_kw"][ts]
-            ) * (t in p.techs.dc_couple_with_stor ? p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction : 1)
+            ) * (t in p.techs.dc_coupled_with_storage ? p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction : 1)
             - r["electric_to_grid_series_kw"][ts]
             for ts in p.time_steps
         )

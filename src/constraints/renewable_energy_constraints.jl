@@ -66,7 +66,7 @@ function add_re_elec_calcs(m,p)
 					for b in p.s.storage.types.elec)) #minus battery efficiency losses
 				* p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction #converted to AC
 				* p.tech_renewable_energy_fraction[t]
-				for t in p.techs.dc_couple_with_stor, ts in p.time_steps
+				for t in p.techs.dc_coupled_with_storage, ts in p.time_steps
 			)	
 			- (1 - p.s.site.include_exported_renewable_electricity_in_total) *
 			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_fraction[t] 
