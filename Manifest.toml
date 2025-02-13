@@ -1428,12 +1428,6 @@ git-tree-sha1 = "b9ead2d2bdb27330545eb14234a2e300da61232e"
 uuid = "c5fb5394-a638-5e4d-96e5-b29de1b5cf10"
 version = "1.5.0+3"
 
-[[deps.Xpress]]
-deps = ["Libdl", "MathOptInterface"]
-git-tree-sha1 = "f48ea69baa747f63b0d08c89ce7bc38d8ef62bd4"
-uuid = "9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054"
-version = "0.17.1"
-
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
