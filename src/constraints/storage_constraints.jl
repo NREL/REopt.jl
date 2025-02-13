@@ -100,7 +100,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
     if b in p.s.storage.types.dc_coupled
-        @info "b in p.s.storage.types.dc_coupled"
         @constraint(m, [ts in p.time_steps],
             m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].inverter_efficiency_fraction
                 + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_couple_with_stor) * p.s.storage.attr[b].rectifier_efficiency_fraction
