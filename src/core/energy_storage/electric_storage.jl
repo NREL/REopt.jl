@@ -167,6 +167,7 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
+    can_export_to_grid::Bool = false
     installed_cost_per_kw::Real = 910.0
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
@@ -187,6 +188,7 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+    allow_simultaneous_charge_discharge::Bool = true # Simultaneous charge/discharge is typically suboptimal anyway and allowing this avoids additional binary variables (which can slow solve time)
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -202,6 +204,7 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
+    can_export_to_grid::Bool = false
     installed_cost_per_kw::Real = 910.0
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
@@ -222,6 +225,7 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
+    allow_simultaneous_charge_discharge::Bool = true
 end
 
 
@@ -243,6 +247,7 @@ struct ElectricStorage <: AbstractElectricStorage
     soc_min_applies_during_outages::Bool
     soc_init_fraction::Float64
     can_grid_charge::Bool
+    can_export_to_grid::Bool
     installed_cost_per_kw::Real
     installed_cost_per_kwh::Real
     replace_cost_per_kw::Real
@@ -265,7 +270,8 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     min_duration_hours::Real
     max_duration_hours::Real
-
+    allow_simultaneous_charge_discharge::Bool
+    
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
 
@@ -336,6 +342,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
+            s.can_export_to_grid,
             s.installed_cost_per_kw,
             s.installed_cost_per_kwh,
             replace_cost_per_kw,
@@ -357,7 +364,8 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.min_duration_hours,
-            s.max_duration_hours
+            s.max_duration_hours,
+            s.allow_simultaneous_charge_discharge
         )
     end
 end

@@ -17,7 +17,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	]
 	dvs_idx_on_storagetypes_time_steps = String[
 		"dvDischargeFromStorage",
-		"dvStorageToGrid",
+		"dvStorageToGrid"
 	]
 	for p in ps
 		_n = string("_", p.s.site.node)
@@ -70,27 +70,17 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		dv = "binGenIsOnInTS"*_n
 		m[Symbol(dv)] = @variable(m, [p.techs.gen, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 		
-		dv = "dvBattCharge_binary"*_n
-		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, Bin) # Binary for battery charge
-		
-		dv = "dvBattDischarge_binary"*_n
-		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, Bin) # Binary for battery discharge
+		if !isempty(p.s.storage.types.elec_no_simultaneous_charge_discharge)
+			@warn "Adding binary variable to prevent simultaneous battery charge/discharge. Some solvers are very slow with integer variables."
+		end
+
+		dv = "binBattCharging"*_n
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.elec_no_simultaneous_charge_discharge, p.time_steps], base_name=dv, Bin)
 		
 		if !isempty(p.s.electric_tariff.export_bins)
             dv = "dvProductionToGrid"*_n
             m[Symbol(dv)] = @variable(m, [p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
         end
-
-		# Display some information:
-		#print("\n For node: ")
-		#print(string(p.s.site.node))
-		#print("\n   p.techs.elec are: ")	
-		#print(p.techs.elec)						
-		#print("\n   p.techs.gen are: ")	
-		#print(p.techs.gen)	
-		#print("\n   p.techs.all are: ")	
-		#print(p.techs.all)	
-		#print("\n")
 
 		ex_name = "TotalTechCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor *
@@ -157,11 +147,6 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 
     for p in ps
         _n = string("_", p.s.site.node)
-		#print("\n For node $(_n):")
-		#print("   The p.s.storage.types.all is: ")
-		#print(p.s.storage.types.all)
-		#print("   The p.s.storage.types.elec is: ")
-		#print(p.s.storage.types.elec)
 		
 		for b in p.s.storage.types.all
             if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
@@ -175,10 +160,12 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
 				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b,ts] == 0)
             else 
-				#@info "\n Adding electric storage constraints for node $(_n)"
-                add_storage_size_constraints(m, p, b; _n=_n)
+				add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)				
 				add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
+				if b in p.s.storage.types.elec_no_simultaneous_charge_discharge
+					add_simultaneous_charge_discharge_constraint(m, p, b; _n=_n)
+				end
             end
         end
 
@@ -195,22 +182,12 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 		
 		# Only apply the load balance constraint to nodes that aren't the facility meter node. The facility meter node may be used as a meter for the microgrid, so the "grid_import" is set to the power flow through the line upstream of that node
 		if string(p.s.site.node) != p.s.settings.facilitymeter_node  
-			#print("\n            Applying the electrical load balance constraint to the node: "*_n)
 			add_elec_load_balance_constraints(m, p; _n=_n)
 			add_production_constraints(m, p; _n=_n)
 		else
 			print("\n  Not applying the REopt load balance constraint to the node $(_n) because it is the facility meter node. No technologies should be applied to it. \n")
 		end       
-    
-        #if !isempty(p.s.electric_tariff.export_bins)
-	#		if string(p.s.site.node) != p.s.settings.facilitymeter_node
-		#		print("\n Adding export constraints to node $(p.s.site.node)")
-        #		add_export_constraints(m, p; _n=_n)
-		#	else
-		#		@info "Not applying the add_export_constraints to the facility meter node"
-		#	end
-        #end
-    
+        
         if !isempty(p.s.electric_tariff.monthly_demand_rates)
             add_monthly_peak_constraint(m, p; _n=_n)
         end

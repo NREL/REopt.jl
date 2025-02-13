@@ -677,9 +677,9 @@ end
 function LimitGeneratorOperatingTimes(m, Microgrid_Inputs, REoptInputs_Combined)
     # Prevent the generators from generating power during times that aren't a grid outage
 
-    if model_outages_with_outages_vector == false
+    if Microgrid_Inputs.model_outages_with_outages_vector == false
         NonOutageTimeSteps = vcat(collect(1:Microgrid_Inputs.single_outage_start_time_step), collect(Microgrid_Inputs.single_outage_end_time_step:(8760*Microgrid_Inputs.time_steps_per_hour)))
-    elseif model_outages_with_outages_vector == true
+    elseif Microgrid_Inputs.model_outages_with_outages_vector == true
         NonOutageTimeSteps = []
         for i in 1:(8760*Microgrid_Inputs.time_steps_per_hour)
             if !(i in Microgrid_Inputs.outages_vector) 
