@@ -631,7 +631,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
 
-	if !isempty(p.techs.dc_couple_with_stor)
+	if !isempty(p.s.storage.types.dc_coupled)
 		@variable(m, dvDCCoupledTechStorageInverterSizeDC[p.s.storage.types.elec] >= 0)   # Power capacity of the DC coupled PV and electric storage system b [kW]
 	end
 
