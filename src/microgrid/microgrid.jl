@@ -735,7 +735,7 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
     elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
         set_optimizer_attributes(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
     elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
-        set_optimizer_attribute(m, "primal_feasibility_tolerance", Microgrid_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
     else
         @info "The solver's default tolerance is being used for the optimization"
     end

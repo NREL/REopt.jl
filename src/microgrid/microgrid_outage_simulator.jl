@@ -475,7 +475,7 @@ function PrepareOptimizer(pm, Microgrid_Inputs)
     elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
         set_optimizer_attributes(pm.model, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
     elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
-        set_optimizer_attribute(pm.model, "primal_feasibility_tolerance", Microgrid_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(pm.model, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
     else
         @info "The solver's default tolerance is being used for the optimization"
     end
