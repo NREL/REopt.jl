@@ -132,20 +132,29 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
 	end
 
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
-	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+	@constraint(m, [b in setdiff(p.s.storage.types.hot, ["HotSensibleTes"]), ts in p.time_steps],
     m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
         p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
         sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
         p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     )
-    
-    # Reconcile dvStoragePower and dvStorageEnergy for HotSensibleTes
-    if "HotSensibleTes" in p.s.storage.types.hot
-        @constraint(m, 
-            m[Symbol("dvStoragePower"*_n)]["HotSensibleTes"] * p.s.storage.attr["HotSensibleTes"].num_hours == m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"]
+    if "HotSensibleTes" in p.storage.types.hot
+        @constraint(m, [b in intersect(p.s.storage.types.hot, ["HotSensibleTes"]), ts in p.time_steps],
+        m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
+            p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
+            sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
+            p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1]
+            )
         )
     end
+    
+    # # Reconcile dvStoragePower and dvStorageEnergy for HotSensibleTes
+    # if "HotSensibleTes" in p.s.storage.types.hot
+    #     @constraint(m, 
+    #         m[Symbol("dvStoragePower"*_n)]["HotSensibleTes"] * p.s.storage.attr["HotSensibleTes"].num_hours == m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"]
+    #     )
+    # end
 
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
@@ -154,6 +163,18 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp))
         for q in p.heating_loads)
     )
+
+    if "HotSensibleTes" in p.s.storage.types.hot
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"] / p.s.storage.attr["HotSensibleTes"].num_charge_hours >= 
+            sum(m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)
+        )
+        @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"] / p.s.storage.attr["HotSensibleTes"].num_discharge_hours  >= 
+            sum(m[Symbol("dvHeatFromStorage"*_n)]["HotSensibleTes",q,ts] 
+            for q in p.heating_loads)
+        )
+    end
     # TODO missing thermal storage constraints from API ???
 
     # Constraint (4o): Discharge from storage is equal to sum of heat from storage for all qualities
