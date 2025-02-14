@@ -102,7 +102,7 @@ function add_gen_constraints(m, p; _n="")
         sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
         m[Symbol("dvRatedProduction"*_n)][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
-    m[Symbol("TotalGenFuelCosts"*_n)] = @expression(m, p.pwf_fuel[t] *
-        sum(m[Symbol("dvFuelUsage"*_n)][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
-    )
+    m[Symbol("TotalGenFuelCosts"*_n)] = @expression(m, 
+		sum(p.pwf_fuel[t] * m[Symbol("dvFuelUsage"*_n)][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps) 
+	)
 end

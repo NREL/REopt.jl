@@ -143,7 +143,6 @@ end
 function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
     add_variables!(m, ps)
 	@warn "Emissions and renewable energy fractions are not currently modeled in multinode mode."
-	@warn "Only electric storage can be modeled in multinode mode currently"
 
     for p in ps
         _n = string("_", p.s.site.node)

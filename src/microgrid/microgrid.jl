@@ -161,6 +161,11 @@ end
 function build_run_and_process_results(Microgrid_Inputs, PMD_number_of_timesteps, timestamp; allow_upgrades=false)
     # Function to build the model, run the model, and process results
 
+    # Empty these variables from any previous contents
+    pm = nothing
+    data_math_mn = nothing
+    data_eng = nothing
+
     pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_timesteps)
         
     LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn)
@@ -600,9 +605,14 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
             @variable(m, dvSubstationPowerFlow[ts in REoptTimeSteps])
                         
             for timestep in REoptTimeSteps
-                @constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {m[:dvSubstationPowerFlow][timestep] >= 0 } )  # TODO: make this compatible with phase 2 and 3 of three phase (right now it's only consider 1-phase I think)
-                @constraint(m, !m[:binSubstationPositivePowerFlow][timestep] => {m[:dvSubstationPowerFlow][timestep] <= 0 } )
+                # Previous constraints with indicator constraints
+                #@constraint(m, m[:binSubstationPositivePowerFlow][timestep] => {m[:dvSubstationPowerFlow][timestep] >= 0 } )  # TODO: make this compatible with phase 2 and 3 of three phase (right now it's only consider 1-phase I think)
+                #@constraint(m, !m[:binSubstationPositivePowerFlow][timestep] => {m[:dvSubstationPowerFlow][timestep] <= 0 } )
                    
+                # New constraints without indicator constraints:
+                @constraint(m, m[:dvSubstationPowerFlow][timestep] <= m[:binSubstationPositivePowerFlow][timestep] * 1000000 )
+                @constraint(m, m[:dvSubstationPowerFlow][timestep] >=  (1 - m[:binSubstationPositivePowerFlow][timestep]) * -1000000 )
+
                 if Microgrid_Inputs.allow_export_beyond_substation == true
                     # Set the power flowing through the line from the substation to be the grid purchase minus the dvProductionToGrid for node 15
                     #TODO: make this compatible with three phase power- I believe p_fr[1] only refers to the first phase: might be able to say:  p_fr .>= 0   with the period
