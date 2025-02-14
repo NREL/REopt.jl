@@ -448,7 +448,7 @@ This calls the PVWatts API and returns both:
  - Ambient outdoor air dry bulb temperature profile [Celcius]
 """
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
-    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1,area::Real)
+    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
     
     # Determine resource dataset to use for this location
     dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
