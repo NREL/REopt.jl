@@ -139,7 +139,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     )
-    if "HotSensibleTes" in p.storage.types.hot
+    if "HotSensibleTes" in p.s.storage.types.hot
         @constraint(m, [b in intersect(p.s.storage.types.hot, ["HotSensibleTes"]), ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
             p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
