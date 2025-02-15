@@ -477,7 +477,7 @@ function VoltageResultsSummary(results)
         DataFrame_BusVoltages = append!(DataFrame_BusVoltages, DataFrame_BusVoltages_temp)
     end
 
-    average_voltage = mean(bus_voltage_averages)
+    average_voltage = round(mean(bus_voltage_averages), digits=6)
 
     return DataFrame_BusVoltages, per_unit_voltages, average_voltage
 end
@@ -889,24 +889,6 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Microgrid_Inputs) 
     results_by_node = CollectResultsByNode(results, busses)
 
-    # *******
-    # The method in these asterisks came from ChatGPT
-    color1 = [30,62,250] # blue
-    color2 = [238,155,0] # orange
-    color3 = [215,20,20] # red
-    increments = 20 # steps must be a even number
-    color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
-    color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
-    color_numbers = vcat(color1_to_color2, color2_to_color3)
-    Colors = [string("rgb(",Int(round(c[1])),",",Int(round(c[2])),",",Int(round(c[3])),")") for c in color_numbers]
-    #*******
-    
-    deleteat!(Colors, increments) # with 20 increments, there should only be 19 color bins
-
-    max_power = maximum([maximum(abs.(results["DataFrame_LineFlow_Summary"][!, :Minimum_LineFlow_ActivekW])), maximum(results["DataFrame_LineFlow_Summary"][!, :Maximum_LineFlow_ActivekW])])
-    Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
-    powerflow = results["Dictionary_LineFlow_Power_Series"]
-    
     # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
@@ -927,6 +909,34 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
 
     timesteps = PMDTimeSteps_for_dashboard_InPMDTimes 
 
+    # *******
+    # The method in these asterisks came from ChatGPT
+    color1 = [30,62,250] # blue
+    color2 = [238,155,0] # orange
+    color3 = [215,20,20] # red
+    increments = 20 # steps must be a even number
+    color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
+    color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
+    color_numbers = vcat(color1_to_color2, color2_to_color3)
+    Colors = [string("rgb(",Int(round(c[1])),",",Int(round(c[2])),",",Int(round(c[3])),")") for c in color_numbers]
+    #*******
+    
+    deleteat!(Colors, increments) # with 20 increments, there should only be 19 color bins
+
+    # Determine the maximum power in the data that is being plotted:
+    powerflow = results["Dictionary_LineFlow_Power_Series"]
+    max_power = 0
+    power = 0
+    for key in collect(keys(results["Dictionary_LineFlow_Power_Series"]))
+        for p in results["Dictionary_LineFlow_Power_Series"][key]["ActiveLineFlow"][PMDTimeSteps_for_dashboard_InPMDTimes]
+            power = abs(p)
+            if power > max_power
+                max_power = power
+            end
+        end
+    end
+
+    Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
     line_colors = Dict{Any, Any}()
     for line in line_key_values
         line_colors[line] = Vector{String}(undef, maximum(timesteps))
