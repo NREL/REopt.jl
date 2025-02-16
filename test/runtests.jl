@@ -10,6 +10,7 @@ using Random
 using DelimitedFiles
 using Logging
 Random.seed!(42)
+using PowerModelsDistribution
 
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
