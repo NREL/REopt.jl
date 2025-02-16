@@ -62,7 +62,7 @@ function Microgrid_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
             if x != 1
                 m_outagesimulator = "" # empty the m_outagesimulator variable
             end
-            pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, OutageLength_TimeSteps_Input; RunningOutageSimulator = true)
+            pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, OutageLength_TimeSteps_Input)
             m_outagesimulator = pm.model # TODO: Confirm that when make changes to pm.model again in the function, that that version of pm.model has the additional constraints defined below for m_outagesimulator
         end
         
