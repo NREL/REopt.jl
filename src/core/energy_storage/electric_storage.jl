@@ -188,7 +188,6 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
-    allow_simultaneous_charge_discharge::Bool = true # Simultaneous charge/discharge is typically suboptimal anyway and allowing this avoids additional binary variables (which can slow solve time)
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -225,7 +224,6 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
-    allow_simultaneous_charge_discharge::Bool = true
 end
 
 
@@ -270,7 +268,6 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     min_duration_hours::Real
     max_duration_hours::Real
-    allow_simultaneous_charge_discharge::Bool
     
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -364,8 +361,7 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.min_duration_hours,
-            s.max_duration_hours,
-            s.allow_simultaneous_charge_discharge
+            s.max_duration_hours
         )
     end
 end

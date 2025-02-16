@@ -141,21 +141,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 end
 
 
-function add_simultaneous_charge_discharge_constraint(m, p, b; _n="")
-    # Prevent charging and discharging of the battery at the same time
-
-    #TODO: implement indicator constraint version for solvers that support it
-    @constraint(m, [ts in p.time_steps],
-                    m[Symbol("dvGridToStorage"*_n)][b, ts] + 
-                    sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) <=
-                    p.s.storage.attr[b].max_kw * m[Symbol("binBattCharging"*_n)][b, ts])
-    @constraint(m, [ts in p.time_steps], 
-                    m[Symbol("dvStorageToGrid"*_n)][b, ts] +
-                    m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
-                    p.s.storage.attr[b].max_kw * (1-m[Symbol("binBattCharging"*_n)][b, ts]))
-end
-
-
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
