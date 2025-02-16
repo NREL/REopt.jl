@@ -7,7 +7,7 @@ const PMD = PowerModelsDistribution
 ```julia
     folder_location::String="",
     bus_coordinates::String="",  # Location of the csv document with the bus coordinates
-    PMD_network_input::String="",
+    PMD_network_input::Any,
     microgrid_type::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
     nonlinear_solver::Bool=false,
     model_type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution",
@@ -109,7 +109,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     function MicrogridInputs(;
         folder_location::String="",
         bus_coordinates::String="",  
-        PMD_network_input::String="",
+        PMD_network_input::Any,
         microgrid_type::String="BehindTheMeter", 
         model_type::String="PowerModelsDistribution",
         run_BAU_case::Bool=true, 

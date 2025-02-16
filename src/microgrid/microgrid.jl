@@ -2,7 +2,7 @@
 
 const PMD = PowerModelsDistribution
 
-function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", ldf_inputs_dictionary="")
+function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
     # The main function to run all parts of the microgrid model
 
     StartTime_EntireModel = now() # Record the start time for the computation
@@ -390,11 +390,17 @@ function CreatePMDGenerators(data_eng, REopt_nodes)
 end
 
 
-function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_timesteps; RunningOutageSimulator = false)
+function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_timesteps)
     
     print("\n Parsing the network input file \n")
-    data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.folder_location.*"/"*Microgrid_Inputs.PMD_network_input) # Load in the data from the OpenDSS inputs file; data is stored to the data_eng variable
-        
+    if typeof(Microgrid_Inputs.PMD_network_input) == String 
+        data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.folder_location.*"/"*Microgrid_Inputs.PMD_network_input) # Load in the data from the OpenDSS inputs file; data is stored to the data_eng variable
+    elseif typeof(Microgrid_Inputs.PMD_network_input) == Dict{String, Any}
+        data_eng = Microgrid_Inputs.PMD_network_input
+    else
+        throw(@error("The PMD_network_input input format is not valid"))
+    end 
+
     REopt_nodes = REopt.GenerateREoptNodesList(Microgrid_Inputs) # Generate a list of the REopt nodes
         
     ApplyDataEngSettings(data_eng, Microgrid_Inputs)
