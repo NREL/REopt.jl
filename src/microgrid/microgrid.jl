@@ -394,7 +394,7 @@ function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_
     
     print("\n Parsing the network input file \n")
     if typeof(Microgrid_Inputs.PMD_network_input) == String 
-        data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.folder_location.*"/"*Microgrid_Inputs.PMD_network_input) # Load in the data from the OpenDSS inputs file; data is stored to the data_eng variable
+        data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.PMD_network_input)
     elseif typeof(Microgrid_Inputs.PMD_network_input) == Dict{String, Any}
         data_eng = Microgrid_Inputs.PMD_network_input
     else
