@@ -162,9 +162,6 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 				add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)				
 				add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
-				if b in p.s.storage.types.elec_no_simultaneous_charge_discharge
-					add_simultaneous_charge_discharge_constraint(m, p, b; _n=_n)
-				end
             end
         end
 
