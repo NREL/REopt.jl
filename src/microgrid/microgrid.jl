@@ -10,7 +10,9 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any}; JuMP_Model="", l
 
     Microgrid_Inputs = REopt.MicrogridInputs(; REopt.dictkeys_tosymbols(Microgrid_Settings)...)
     cd(Microgrid_Inputs.folder_location)
-    CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
+    if Microgrid_Inputs.generate_CSV_of_outputs || Microgrid_Inputs.generate_results_plots
+        CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
+    end
     PrepareElectricLoads(Microgrid_Inputs)
     REopt_dictionary = PrepareREoptInputs(Microgrid_Inputs)    
     m_outagesimulator = "empty"
@@ -732,12 +734,17 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
     
     if Microgrid_Inputs.optimizer == Xpress.Optimizer
         set_optimizer_attribute(m, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "OUTPUTLOG", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
     elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
-        set_optimizer_attributes(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "OutputFlag", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)  
+        set_optimizer_attribute(m, "LogToConsole", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
     elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
         set_optimizer_attribute(m, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "output_flag", false)
+        set_optimizer_attribute(m, "log_to_console", false)
     else
-        @info "The solver's default tolerance is being used for the optimization"
+        @info "The solver's default tolerance and log settings are being used for the optimization"
     end
     
     print("\n The optimization is starting\n")

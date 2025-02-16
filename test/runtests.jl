@@ -44,6 +44,17 @@ else  # run HiGHS tests
                 )
                 ) ≈ false
         end
+
+        @testset "Multinode with power flow" begin
+            inputs = JSON.parsefile("./scenarios/Multinode_Powerflow_Inputs.json")
+
+            results, model, model_BAU = REopt.Microgrid_Model(inputs)
+
+            @test results["REopt_results"][7]["ElectricStorage"]["size_kw"] ≈ 22.54 atol=0.01
+            @test results["REopt_results"][7]["ElectricStorage"]["size_kwh"] ≈ 55.34 atol=0.01
+            
+        end
+
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
                 blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
@@ -3247,5 +3258,8 @@ else  # run HiGHS tests
             @test s.cooling_load.loads_kw_thermal[end-24+1:end] == s.cooling_load.loads_kw_thermal[1:24]
         end
         
+
+
+
     end
 end

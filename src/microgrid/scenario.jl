@@ -14,6 +14,7 @@ const PMD = PowerModelsDistribution
     run_BAU_case::Bool=true,
     optimizer::Any, # Such as HiGHS.Optimizer
     optimizer_tolerance::Float64=0.001, # Only works for Xpress, HiGHS, and Gurobi
+    log_solver_output_to_console::Bool=true, # Log the output from the solver to the console
     PMD_time_steps::Any=[1:24], # By default, apply the PMD model to the first 24 timesteps of the model
     REopt_inputs_list::Array=[],
     bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
@@ -63,6 +64,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     run_BAU_case
     optimizer
     optimizer_tolerance
+    log_solver_output_to_console
     PMD_time_steps
     nonlinear_solver
     REopt_inputs_list
@@ -113,6 +115,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         run_BAU_case::Bool=true, 
         optimizer::Any, 
         optimizer_tolerance::Float64=0.001,
+        log_solver_output_to_console::Bool=true,
         PMD_time_steps::Any=[1:24],
         nonlinear_solver::Bool=false,
         REopt_inputs_list::Array=[],
@@ -191,7 +194,8 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         run_BAU_case,
         optimizer,
         optimizer_tolerance,
-        PMD_time_steps,  
+        log_solver_output_to_console,
+        PMD_time_steps,
         nonlinear_solver,
         REopt_inputs_list,
         bus_phase_voltage_lower_bound_per_unit,
