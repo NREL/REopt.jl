@@ -57,6 +57,7 @@ function levelization_factor(years::Int, rate_escalation::Real, rate_discount::R
         (except dvRatedProduction[t,ts] == dvSize[t] ∀ ts).
     This way the denominator is cancelled in reopt.jl when accounting for the value of energy produced
     since each value constraint uses pwf_e.
+
     :param analysis_period: years
     :param rate_escalation: escalation rate
     :param rate_discount: discount rate
@@ -276,6 +277,7 @@ end
 
 """
     per_hour_value_to_time_series(x::T, time_steps_per_hour::Int) where T <: Real
+
 Convert a per hour value (eg. dollars/kWh) to time series that matches the settings.time_steps_per_hour
 """
 function per_hour_value_to_time_series(x::T, time_steps_per_hour::Int, name::String) where T <: Real
@@ -285,6 +287,7 @@ end
 
 """
     per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per_hour::Int, name::String)
+
 Convert a monthly or time-sensitive per hour value (eg. dollars/kWh) to a time series that matches the 
 settings.time_steps_per_hour.
 """
@@ -308,8 +311,10 @@ end
 
 """
     generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
+
 This function creates a year-specific hourly (8760) profile with 1.0 value for time_steps which are defined in `consecutive_periods` based on
     relative (non-year specific) datetime metrics. All other values are 0.0. This functions uses the `Dates` package.
+
 - `year` applies the relative calendar-based `consecutive_periods` to the year's calendar and handles leap years by truncating the last day
 - `consecutive_periods` is a list of dictionaries where each dict defines a consecutive period of time which gets a value of 1.0
 -- keys for each dict must include "month", "start_week_of_month", "start_day_of_week", "start_hour", "duration_hours
@@ -324,7 +329,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     end
 
     dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
-
+    
     year_profile_hourly = zeros(8760)
 
     # Note, day = 1 is Monday, not Sunday
@@ -336,7 +341,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
         start_hour = convert(Int,consecutive_periods[i]["start_hour"])
         duration_hours = convert(Int,consecutive_periods[i]["duration_hours"])
         error_start_text = "Error in chp.unavailability_period $(i)."
-
+        
         try
             start_date_of_month_year = Date(Dates.Year(year), Dates.Month(start_month))
             start_date = Dates.firstdayofweek(start_date_of_month_year) + Dates.Week(start_week_of_month - 1) + Dates.Day(start_day_of_week - 1)
@@ -443,11 +448,10 @@ This calls the PVWatts API and returns both:
  - Ambient outdoor air dry bulb temperature profile [Celcius]
 """
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
-    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
-
+    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1,area::Real)
+    
     # Determine resource dataset to use for this location
     dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
-
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
         "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
@@ -466,6 +470,10 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         @info "PVWatts success."
         # Get both possible data of interest
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
+        # Print to terminal total watts
+        watts_tot = sum(watts) #kWhe per kW
+        
+        println("Maximum possible electrical energy collected by PV: " * string(round(watts_tot,digits=2)) * " kWhe per kW deployed.")
         tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
         # Validate outputs
         if length(watts) != 8760
@@ -527,6 +535,7 @@ end
 
 """
     get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+
 return Array{Array{Int64,1},1}, size = (12,)
 """
 function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
@@ -551,6 +560,7 @@ fuel_slope_and_intercept(;
                 electric_efficiency_half_load::Real, [kWhe/kWht]
                 fuel_higher_heating_value_kwh_per_unit::Real
             )
+
 return Tuple{<:Real,<:Real} where 
     first value is fuel burn slope [<fuel unit>/kWhe]
     second value is fuel burn intercept [<fuel unit>/hr]
@@ -566,7 +576,7 @@ function fuel_slope_and_intercept(;
     fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
     fuel_slope_unit_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/kWhe]
     fuel_intercept_unit_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/hr]
-
+    
     return fuel_slope_unit_per_kwhe, fuel_intercept_unit_per_hr
 end
 
@@ -580,3 +590,4 @@ function check_api_key()
                     Within your Julia environment, specify ENV['NREL_DEVELOPER_API_KEY']='your API key'
                     See https://nrel.github.io/REopt.jl/dev/ for more information."))
     end
+end
