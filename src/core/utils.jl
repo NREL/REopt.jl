@@ -471,9 +471,8 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         # Get both possible data of interest
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         # Print to terminal total watts
-        watts_tot = sum(watts) #kWhe per kW
-        
-        println("Maximum possible electrical energy collected by PV: " * string(round(watts_tot,digits=2)) * " kWhe per kW deployed.")
+        # watts_tot = sum(watts)
+        println("Total PV production: " * string(round(watts_tot,digits=2)) * " kWhe per kW deployed.")
         tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
         # Validate outputs
         if length(watts) != 8760
