@@ -266,9 +266,9 @@ function run_ssc(case_data::Dict)
             thermal_production_norm = thermal_production .* tcf ./ rated_power
         end
         if model in ["mst","ptc","lf"]
-            println("Total thermal energy collected: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
+            println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
         elseif model in ["swh_evactube","swh_flatplate"]
-            println("Total thermal energy collected: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
+            println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
         end
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         # R[k] = response_norm
