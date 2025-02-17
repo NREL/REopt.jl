@@ -53,9 +53,9 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
-                    if !v.allow_simultaneous_charge_discharge
-                        push!(elec_storage_no_simul_charge_discharge, k)
-                    end
+                    #if !v.allow_simultaneous_charge_discharge
+                    #    push!(elec_storage_no_simul_charge_discharge, k)
+                    #end
                 elseif typeof(v) <: HotThermalStorage
                     push!(hot_storage, k)
                 elseif typeof(v) <: ColdThermalStorage

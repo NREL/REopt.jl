@@ -48,7 +48,7 @@ else  # run HiGHS tests
 
         @testset "Multinode with power flow" begin
             inputs = JSON.parsefile("./scenarios/multinode_powerflow.json")
-            #inputs["PMD_network_input"] = PowerModelsDistribution.parse_file("./data/multinode_powerflow_network.dss")
+            inputs["PMD_network_input"] = PowerModelsDistribution.parse_file("./data/multinode_powerflow_network.dss")
 
             results, model, model_BAU = REopt.Microgrid_Model(inputs)
 

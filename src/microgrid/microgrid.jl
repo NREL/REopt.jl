@@ -351,10 +351,6 @@ function ApplyDataEngSettings(data_eng, Microgrid_Inputs)
     data_eng["voltage_source"]["source"]["bus"] = "sourcebus"
     data_eng["settings"]["name"] = "OptimizationModel" 
     
-    # Redefine the vbases_default entry so that it is of type Dict{Any, Real}
-    new_dict = Dict{Any, Real}(collect(keys(data_eng["settings"]["vbases_default"]))[1] => data_eng["settings"]["vbases_default"][collect(keys(data_eng["settings"]["vbases_default"]))[1]])
-    data_eng["settings"]["vbases_default"] = new_dict
-
     PMD.add_bus_absolute_vbounds!(
         data_eng,
         phase_lb_pu = Microgrid_Inputs.bus_phase_voltage_lower_bound_per_unit,
