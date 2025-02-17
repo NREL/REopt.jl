@@ -338,6 +338,11 @@ function SetTechSizesToZero(Microgrid_Settings)
     return Microgrid_Settings_No_Techs
 end
 
+# This function is a slight modification to the calc_voltage_bases function in PMD
+function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String, <:Any})::Tuple{Dict,Dict}
+    return ismath(data_model) ? calc_math_voltage_bases(data_model, vbase_sources) : calc_eng_voltage_bases(data_model, vbase_sources)
+end
+
 
 function ApplyDataEngSettings(data_eng, Microgrid_Inputs)
     # Apply several miscellaneous settings to the data_eng dictionary
@@ -346,6 +351,9 @@ function ApplyDataEngSettings(data_eng, Microgrid_Inputs)
     data_eng["voltage_source"]["source"]["bus"] = "sourcebus"
     data_eng["settings"]["name"] = "OptimizationModel" 
     
+    new_dict = Dict{Any, Real}(collect(keys(data_eng["settings"]["vbases_default"]))[1] => data_eng["settings"]["vbases_default"][collect(keys(data_eng["settings"]["vbases_default"]))[1]])
+    data_eng["settings"]["vbases_default"] = new_dict
+
     PMD.add_bus_absolute_vbounds!(
         data_eng,
         phase_lb_pu = Microgrid_Inputs.bus_phase_voltage_lower_bound_per_unit,
