@@ -52,9 +52,11 @@ else  # run HiGHS tests
             inputs["optimizer"] = HiGHS.Optimizer
 
             results, model, model_BAU = REopt.Microgrid_Model(inputs)
+            
+            print(results)
 
-            @test results["REopt_results"][7]["ElectricStorage"]["size_kw"] ≈ 22.54 atol=0.01
-            @test results["REopt_results"][7]["ElectricStorage"]["size_kwh"] ≈ 55.34 atol=0.01
+            @test results["REopt_results"][6]["ElectricStorage"]["size_kw"] ≈ 22.54 atol=0.01
+            @test results["REopt_results"][6]["ElectricStorage"]["size_kwh"] ≈ 55.34 atol=0.01
             
         end
 

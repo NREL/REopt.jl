@@ -662,9 +662,7 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
                     
                     @constraint(m, sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]) >= 0)
                                     
-                else
-                    @info "Not allowing export from the facility meter"
-                    
+                else                  
                     @constraint(m, sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]) == 0)
 
                     if timestep in PMDTimeSteps_InREoptTimes
@@ -746,16 +744,19 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
     set_optimizer(m, Microgrid_Inputs.optimizer) 
     
     if string(Microgrid_Inputs.optimizer) == "Xpress.Optimizer"
+        @info "Setting attributes for the Xpress solver"
         set_optimizer_attribute(m, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(m, "OUTPUTLOG", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
     elseif string(Microgrid_Inputs.optimizer) == "Gurobi.Optimizer"
+        @info "Setting attributes for the Gurobi solver"
         set_optimizer_attribute(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(m, "OutputFlag", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)  
         set_optimizer_attribute(m, "LogToConsole", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
     elseif string(Microgrid_Inputs.optimizer) == "HiGHS.Optimizer"
+        @info "Setting attributes for the HiGHS solver"
         set_optimizer_attribute(m, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
-        set_optimizer_attribute(m, "output_flag", false)
-        set_optimizer_attribute(m, "log_to_console", false)
+        set_optimizer_attribute(m, "output_flag", Microgrid_Inputs.log_solver_output_to_console)
+        set_optimizer_attribute(m, "log_to_console", Microgrid_Inputs.log_solver_output_to_console)
     else
         @info "The solver's default tolerance and log settings are being used for the optimization"
     end
