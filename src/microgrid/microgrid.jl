@@ -14,7 +14,7 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
         cd(Microgrid_Inputs.folder_location)
         CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
     end
-    
+
     PrepareElectricLoads(Microgrid_Inputs)
     REopt_dictionary = PrepareREoptInputs(Microgrid_Inputs)    
     m_outagesimulator = "empty"
@@ -745,14 +745,14 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
 
     set_optimizer(m, Microgrid_Inputs.optimizer) 
     
-    if Microgrid_Inputs.optimizer == Xpress.Optimizer
+    if string(Microgrid_Inputs.optimizer) == "Xpress.Optimizer"
         set_optimizer_attribute(m, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(m, "OUTPUTLOG", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
-    elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
+    elseif string(Microgrid_Inputs.optimizer) == "Gurobi.Optimizer"
         set_optimizer_attribute(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(m, "OutputFlag", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)  
         set_optimizer_attribute(m, "LogToConsole", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
-    elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
+    elseif string(Microgrid_Inputs.optimizer) == "HiGHS.Optimizer"
         set_optimizer_attribute(m, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(m, "output_flag", false)
         set_optimizer_attribute(m, "log_to_console", false)

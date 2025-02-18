@@ -470,14 +470,14 @@ end
 function PrepareOptimizer(pm, Microgrid_Inputs)
     set_optimizer(pm.model, Microgrid_Inputs.optimizer) 
     
-    if Microgrid_Inputs.optimizer == Xpress.Optimizer
+    if string(Microgrid_Inputs.optimizer) == "Xpress.Optimizer"
         set_optimizer_attribute(pm.model, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(pm.model, "OUTPUTLOG", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
-    elseif Microgrid_Inputs.optimizer == Gurobi.Optimizer
+    elseif string(Microgrid_Inputs.optimizer) == "Gurobi.Optimizer"
         set_optimizer_attribute(pm.model, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(pm.model, "OutputFlag", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)  
         set_optimizer_attribute(pm.model, "LogToConsole", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
-    elseif Microgrid_Inputs.optimizer == HiGHS.Optimizer
+    elseif string(Microgrid_Inputs.optimizer) == "HiGHS.Optimizer"
         set_optimizer_attribute(pm.model, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
         set_optimizer_attribute(pm.model, "output_flag", false)
         set_optimizer_attribute(pm.model, "log_to_console", false)
