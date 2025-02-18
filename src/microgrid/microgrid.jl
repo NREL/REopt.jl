@@ -9,10 +9,12 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
     TimeStamp = Dates.format(now(), "mm-dd-yyyy")*"_"*Dates.format(now(), "HH-MM")
 
     Microgrid_Inputs = REopt.MicrogridInputs(; REopt.dictkeys_tosymbols(Microgrid_Settings)...)
-    cd(Microgrid_Inputs.folder_location)
+    
     if Microgrid_Inputs.generate_CSV_of_outputs || Microgrid_Inputs.generate_results_plots
+        cd(Microgrid_Inputs.folder_location)
         CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
     end
+    
     PrepareElectricLoads(Microgrid_Inputs)
     REopt_dictionary = PrepareREoptInputs(Microgrid_Inputs)    
     m_outagesimulator = "empty"
