@@ -1887,9 +1887,11 @@ else  # run HiGHS tests
             @test r["Generator"]["annual_energy_produced_kwh"] ≈ 99.0
             @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
             @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
-            @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
-            @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
-            @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
+            other_offgrid_capex_before_tax = post["Financial"]["offgrid_other_capital_costs"]
+            other_offgrid_capex_after_tax = value(m[Symbol("OffgridOtherCapexAfterDepr")])
+            @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) + other_offgrid_capex_before_tax 
+            @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) + other_offgrid_capex_after_tax atol=0.1 # replacement in yr 10 is considered tax deductible
+            @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 + other_offgrid_capex_after_tax atol=0.1
             @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
             @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
 
@@ -2092,9 +2094,10 @@ else  # run HiGHS tests
             calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
             @test results["Financial"]["lifecycle_om_costs_after_tax"] - calc_om_cost_after_tax < 0.0001
 
-            @test abs(results["Financial"]["lifecycle_capital_costs_plus_om_after_tax"] - (calc_om_cost_after_tax + 0.7*results["Financial"]["initial_capital_costs"])) < 150.0
-
-            @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
+            ghx_residual_value = value(m2[Symbol("ResidualGHXCapCost")])
+            @test abs(results["Financial"]["lifecycle_capital_costs_plus_om_after_tax"] - (calc_om_cost_after_tax + 0.7*results["Financial"]["initial_capital_costs"] - ghx_residual_value)) < 150.0
+            
+            @test abs(results["Financial"]["lifecycle_capital_costs"] - (0.7*results["Financial"]["initial_capital_costs"] - ghx_residual_value)) < 150.0
 
             @test abs(results["Financial"]["npv"] - 840621) < 1.0
             @test abs(results["Financial"]["simple_payback_years"] - 3.59) < 0.1
@@ -2155,7 +2158,8 @@ else  # run HiGHS tests
 
             calculated_ghp_capex = (heating_hp_cost + cooling_hp_cost + ghx_cost) * (1 - capex_reduction_factor)
 
-            reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"]
+            ghx_residual_value = value(m3[Symbol("ResidualGHXCapCost")])
+            reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"] + ghx_residual_value
             @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
         end
 

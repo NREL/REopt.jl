@@ -91,7 +91,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
     
     r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)] +
-        m[Symbol("OffgridOtherCapexAfterDepr")] - m[Symbol("AvoidedCapexByGHP")] - m[Symbol("ResidualGHXCapCost")] - m[Symbol("AvoidedCapexByASHP")])
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)])
     
     r["lifecycle_capital_costs_plus_om_after_tax"] = r["lifecycle_capital_costs"] + r["lifecycle_om_costs_after_tax"]
 
@@ -132,7 +132,7 @@ Calculate and return the up-front capital costs for all technologies, in present
 incentives.
 """
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    initial_capex = 0
+    initial_capex = p.s.financial.offgrid_other_capital_costs - value(m[Symbol("AvoidedCapexByGHP"*_n)]) - value(m[Symbol("AvoidedCapexByASHP"*_n)])
 
     if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]

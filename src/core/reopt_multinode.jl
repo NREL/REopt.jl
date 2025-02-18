@@ -86,6 +86,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		m[Symbol(ex_name)] = 0
 	
 		add_elec_utility_expressions(m, p; _n=_n)
+
+		m[Symbol("OffgridOtherCapexAfterDepr"*_n)] = 0.0
+		m[Symbol("AvoidedCapexByGHP"*_n)] = 0.0
+		m[Symbol("AvoidedCapexByASHP"*_n)] = 0.0
+		m[Symbol("ResidualGHXCapCost"*_n)] = 0.0
 	
 		#################################  Objective Function   ########################################
 		m[Symbol("Costs"*_n)] = @expression(m,
