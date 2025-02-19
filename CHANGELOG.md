@@ -24,15 +24,8 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
-
-## reconcile-total-site-load
-### Added
-- Added new result **ElectricLoad** **annual_electric_load_with_thermal_conversions_kwh**` which calculates end-use electrical load after including electric consumption by heaters and chillers
-### Fixed
-- Updated the expression `m[:AnnualEleckWh]` to include electrified thermal loads
-- Updated expressions `m[AnnualREHeatkWh]` and `AnnualHeatkWh` so that only non-electrified thermal loads are included and storage losses are proportional to the contribution of fuel-burning technologies to charging storage
-  
-## gridRE-dev
+ 
+## v0.51.0
 ### Added 
 - Add the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
   - **ElectricUtility** **cambium_cef_metric** to utilize clean energy data from NREL's Cambium database
@@ -42,6 +35,7 @@ Classify the change according to the following categories:
   - **ElectricUtility** **annual_renewable_electricity_supplied_kwh**
   - **Site** **onsite_and_grid_renewable_electricity_fraction_of_elec_load**
   - **Site** **onsite_and_grid_renewable_energy_fraction_of_total_load**
+  - **ElectricLoad** **annual_electric_load_with_thermal_conversions_kwh** which calculates end-use electrical load after including electric consumption by heaters and chillers
 - Add input option **optimize_soc_init_fraction** (defaults to false) to **ElectricStorage**, which makes the optimization choose the inital SOC (equal to final SOC) instead of using soc_init_fraction. The initial SOC is also constrained to equal the final SOC, which eliminates the "free energy" issue. We currently do not fix SOC when soc_init_fraction is used because this has caused infeasibility.
 ### Changed
 - Change name of the following inputs: 
@@ -58,6 +52,8 @@ Classify the change according to the following categories:
 - Update Julia version
 ### Fixed
 - Make **ElectricTariff** **export_rate_beyond_net_metering_limit** and **wholesale_rate** with sub-hour time step work
+- Update the expression `m[:AnnualEleckWh]` to include electrified thermal loads
+- Update expressions `m[AnnualREHeatkWh]` and `AnnualHeatkWh` so that only non-electrified thermal loads are included and storage losses are proportional to the contribution of fuel-burning technologies to charging storage
 
 ## v0.50.0
 ### Added
