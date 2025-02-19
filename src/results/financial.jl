@@ -44,11 +44,23 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !(Symbol("TotalPerUnitHourOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
         m[Symbol("TotalPerUnitHourOMCosts"*_n)] = 0.0
     end
-    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
+    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
         m[Symbol("GHPOMCosts"*_n)] = 0.0
     end
     if !(Symbol("GHPCapCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
         m[Symbol("GHPCapCosts"*_n)] = 0.0
+    end
+    if !(Symbol("OffgridOtherCapexAfterDepr"*_n) in keys(m.obj_dict))
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] = 0.0
+    end
+    if !(Symbol("AvoidedCapexByGHP"*_n) in keys(m.obj_dict))
+        m[Symbol("AvoidedCapexByGHP"*_n)] = 0.0
+    end
+    if !(Symbol("ResidualGHXCapCost"*_n) in keys(m.obj_dict))
+        m[Symbol("ResidualGHXCapCost"*_n)] = 0.0
+    end    
+    if !(Symbol("AvoidedCapexByASHP"*_n) in keys(m.obj_dict))
+        m[Symbol("AvoidedCapexByASHP"*_n)] = 0.0
     end
 
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)])
