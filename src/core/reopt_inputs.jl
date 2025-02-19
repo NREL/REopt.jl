@@ -54,7 +54,7 @@ struct REoptInputs <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options    
-    tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
+    tech_renewable_energy_fraction::Dict{String, <:Real} # union(techs.elec, techs.fuel_burning)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
@@ -122,7 +122,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided (GHP)
     ghx_useful_life_years::Array{Float64,1} # GHX useful life years
     ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
-    tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
+    tech_renewable_energy_fraction::Dict{String, <:Real} # union(techs.elec, techs.fuel_burning)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
@@ -353,7 +353,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
-    tech_renewable_energy_fraction = Dict(t => 1.0 for t in techs.all)
+    tech_renewable_energy_fraction = Dict(t => 1.0 for t in union(techs.elec, techs.fuel_burning))
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
