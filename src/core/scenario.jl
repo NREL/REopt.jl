@@ -656,14 +656,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                 # If max_number_of_boreholes is specified, check if number of boreholes sized by GhpGhx.jl greater than user-specified max_number_of_boreholes,
                 # and if max_number_of_boreholes is less, reduce thermal load served by GHP until max_number_of_boreholes = number of boreholses sized by GhpGhx.jl                
-                if haskey(d["GHP"],"number_of_boreholes")
+                if haskey(d["GHP"],"max_number_of_boreholes")
                     determine_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
                     optimal_number_of_boreholes = determine_number_of_boreholes["number_of_boreholes"]
-                    if optimal_number_of_boreholes > d["GHP"]["number_of_boreholes"]
+                    if optimal_number_of_boreholes > d["GHP"]["max_number_of_boreholes"]
                         @info "Max number of boreholes specified less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
                         max_iter = 10
                         for iter = 1:max_iter
-                            borehole_ratio = d["GHP"]["number_of_boreholes"]/optimal_number_of_boreholes
+                            borehole_ratio = d["GHP"]["max_number_of_boreholes"]/optimal_number_of_boreholes
                             new_load_peak = heating_load_mmbtu*borehole_ratio
                             heating_load_mmbtu[heating_load_mmbtu .>=new_load_peak] .= new_load_peak
                             ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
@@ -674,10 +674,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             # Rerun GhpGhx.jl
                             results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                             determine_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
-                            optimal_number_of_boreholes = determine_number_of_boreholes["numbe_of_boreholes"]
+                            optimal_number_of_boreholes = determine_number_of_boreholes["number_of_boreholes"]
                             # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
                             # Otherwise, continue solving until reaching max iteration
-                            if -0.5 < new_optimal_number_of_boreholes-d["GHP"]["number_of_boreholes"] < 0.5
+                            if -0.5 < new_optimal_number_of_boreholes-d["GHP"]["max_number_of_boreholes"] < 0.5
                                 break
                             end
                             iter += 1

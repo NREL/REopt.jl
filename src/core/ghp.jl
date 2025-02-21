@@ -84,7 +84,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_process_heat::Bool = false
     can_supply_steam_turbine::Bool = false
     max_ton::Real = BIG_NUMBER
-    max_number_of_boreholes:Real = BIG_NUMBER
+    max_number_of_boreholes::Real = BIG_NUMBER
     load_served_by_ghp::String = "nonpeak"
 
     aux_heater_type::String = "electric"
