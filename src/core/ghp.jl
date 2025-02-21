@@ -24,7 +24,8 @@ struct with outer constructor:
     cooling_efficiency_thermal_factor::Float64 = NaN        # Default depends on building and location
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
-    max_ton::Real                                           # Maxium heat pump capacity size. Default at a big number
+    max_ton::Real                                           # Maximum heat pump capacity size. Default at a big number
+    max_borehole_number::Real                               # Maximum GHX size
     load_served_by_ghp::String                              # "scaled" or "nonpeak"
 
     macrs_option_years::Int = 5
@@ -83,6 +84,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_process_heat::Bool = false
     can_supply_steam_turbine::Bool = false
     max_ton::Real = BIG_NUMBER
+    max_borehole_number:Real = BIG_NUMBER
     load_served_by_ghp::String = "nonpeak"
 
     aux_heater_type::String = "electric"
