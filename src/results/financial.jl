@@ -44,11 +44,23 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !(Symbol("TotalPerUnitHourOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
         m[Symbol("TotalPerUnitHourOMCosts"*_n)] = 0.0
     end
-    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
+    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
         m[Symbol("GHPOMCosts"*_n)] = 0.0
     end
     if !(Symbol("GHPCapCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
         m[Symbol("GHPCapCosts"*_n)] = 0.0
+    end
+    if !(Symbol("OffgridOtherCapexAfterDepr"*_n) in keys(m.obj_dict))
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] = 0.0
+    end
+    if !(Symbol("AvoidedCapexByGHP"*_n) in keys(m.obj_dict))
+        m[Symbol("AvoidedCapexByGHP"*_n)] = 0.0
+    end
+    if !(Symbol("ResidualGHXCapCost"*_n) in keys(m.obj_dict))
+        m[Symbol("ResidualGHXCapCost"*_n)] = 0.0
+    end    
+    if !(Symbol("AvoidedCapexByASHP"*_n) in keys(m.obj_dict))
+        m[Symbol("AvoidedCapexByASHP"*_n)] = 0.0
     end
 
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)])
@@ -89,11 +101,12 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
+    
+    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)] +
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)])
+    
+    r["lifecycle_capital_costs_plus_om_after_tax"] = r["lifecycle_capital_costs"] + r["lifecycle_om_costs_after_tax"]
 
-    r["lifecycle_capital_costs_plus_om_after_tax"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)]) + r["lifecycle_om_costs_after_tax"]
-    
-    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)])
-    
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
@@ -131,7 +144,7 @@ Calculate and return the up-front capital costs for all technologies, in present
 incentives.
 """
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    initial_capex = 0
+    initial_capex = p.s.financial.offgrid_other_capital_costs
 
     if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
@@ -183,8 +196,10 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
             if option[2].heat_pump_configuration == "WSHP"
                 initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
+                initial_capex -= value(m[:AvoidedCapexByGHP])
             elseif option[2].heat_pump_configuration == "WWHP"
                 initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+                initial_capex -= value(m[:AvoidedCapexByGHP])
             else
                 @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
@@ -193,10 +208,12 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if "ASHPSpaceHeater" in p.techs.all
         initial_capex += p.s.ashp.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPSpaceHeater"]
+        initial_capex -= p.avoided_capex_by_ashp_present_value["ASHPSpaceHeater"]
     end
 
     if "ASHPWaterHeater" in p.techs.all
         initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
+        initial_capex -= p.avoided_capex_by_ashp_present_value["ASHPWaterHeater"]
     end    
 
     return initial_capex
@@ -356,7 +373,12 @@ function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,Abst
 
     federal_itc_fraction = 0.0
     try 
-        federal_itc_fraction = tech.federal_itc_fraction
+        # TODO add Hot/ColdThermalStorage.total_itc_fraction to struct; currently only in ElectricStorage
+        if typeof(tech) <: AbstractStorage
+            federal_itc_fraction = tech.total_itc_fraction
+        else
+            federal_itc_fraction = tech.federal_itc_fraction
+        end
     catch
         @warn "Did not find $(tech).federal_itc_fraction so using 0.0 in calculation of depreciation_schedule."
     end

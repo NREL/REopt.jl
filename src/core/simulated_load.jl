@@ -502,10 +502,7 @@ function simulated_load(d::Dict)
         end
         if !isempty(error_list)
             throw(@error("Invalid key(s) $error_list for load_type=cooling"))
-        end
-        if isnothing(doe_reference_name)
-            throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour)."))
-        end            
+        end          
 
         # First check if one of the "fraction" inputs were given, which supersedes doe_reference_name
         annual_fraction = get(d, "annual_fraction", nothing)

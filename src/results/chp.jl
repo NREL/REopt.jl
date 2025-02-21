@@ -128,10 +128,12 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(CHPToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
-	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
+	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)
+	r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * (1- p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	#Standby charges and hourly O&M
 	r["year_one_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
+	r["year_one_standby_cost_after_tax"] = r["year_one_standby_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["lifecycle_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=0)
 
 

@@ -111,6 +111,15 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "ASHPWaterHeater" in p.techs.ashp_wh
         add_ashp_wh_results(m, p, d; _n)
     end
+
+    d["Financial"]["year_one_fuel_cost_before_tax"] = 0.0
+    d["Financial"]["year_one_fuel_cost_after_tax"] = 0.0
+    for tech in p.techs.fuel_burning
+        if tech in keys(d)
+            d["Financial"]["year_one_fuel_cost_before_tax"] += d[tech]["year_one_fuel_cost_before_tax"]
+            d["Financial"]["year_one_fuel_cost_after_tax"] += d[tech]["year_one_fuel_cost_after_tax"]
+        end
+    end
     
     return d
 end
@@ -129,6 +138,9 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "lifecycle_om_costs_before_tax"),
         ("Financial", "lifecycle_om_costs_after_tax"),
         ("Financial", "year_one_om_costs_before_tax"),
+        ("Financial", "year_one_om_costs_after_tax"),
+        ("Financial", "year_one_fuel_cost_before_tax"),
+        ("Financial", "year_one_fuel_cost_after_tax"),        
         ("Financial", "lifecycle_fuel_costs_after_tax"),
         ("Financial", "lifecycle_chp_standby_cost_after_tax"),
         ("Financial", "lifecycle_elecbill_after_tax"),
@@ -145,7 +157,9 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricTariff", "lifecycle_min_charge_adder_after_tax"),
         ("ElectricTariff", "lifecycle_export_benefit_after_tax"),
         ("ElectricTariff", "year_one_bill_before_tax"),
+        ("ElectricTariff", "year_one_bill_after_tax"),
         ("ElectricTariff", "year_one_export_benefit_before_tax"),
+        ("ElectricTariff", "year_one_export_benefit_after_tax"),
         ("ElectricTariff", "year_one_coincident_peak_cost_before_tax"),
         ("ElectricTariff", "lifecycle_coincident_peak_cost_after_tax"),
         ("ElectricUtility", "electric_to_load_series_kw"),  
@@ -167,11 +181,13 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Generator", "lifecycle_variable_om_cost_after_tax"),
         ("Generator", "lifecycle_fuel_cost_after_tax"),
         ("Generator", "year_one_fuel_cost_before_tax"),
+        ("Generator", "year_one_fuel_cost_after_tax"),
         ("Generator", "year_one_variable_om_cost_before_tax"),
         ("Generator", "year_one_fixed_om_cost_before_tax"),
         ("FlexibleHVAC", "temperatures_degC_node_by_time"),
         ("ExistingBoiler", "lifecycle_fuel_cost_after_tax"),
         ("ExistingBoiler", "year_one_fuel_cost_before_tax"),
+        ("ExistingBoiler", "year_one_fuel_cost_after_tax"),
         ("ExistingBoiler", "annual_thermal_production_mmbtu"),
         ("ExistingBoiler", "annual_fuel_consumption_mmbtu"),
         ("ExistingChiller", "annual_thermal_production_tonhour"),
