@@ -139,38 +139,36 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     end
 end
 
-function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
+function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4f)-1b: SteamTurbineTechs
 	if !isempty(p.techs.steam_turbine)
-		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+		@constraint(m, SteamTurbineTechProductionFlowCon[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
 			m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
 			)
-        @constraint(m, StorageToTurbineProductionFlowCon[b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+        @constraint(m, StorageToTurbineProductionFlowCon[q in p.heating_loads, ts in p.time_steps],
             m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts] <= m[Symbol("dvHeatFromStorage"*_n)][b,q,ts]
         )
-        for b in p.s.storage.types.hot
-            if !p.s.storage.attr[b].can_supply_steam_turbine
-                for q in p.heating_loads
-                    for ts in p.time_steps
-                        fix(m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts], 0.0, force=true)
-                    end
+        if !p.s.storage.attr[b].can_supply_steam_turbine
+            for q in p.heating_loads
+                for ts in p.time_steps
+                    fix(m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts], 0.0, force=true)
                 end
-            elseif p.s.storage.attr[b].supply_turbine_only
-                @constraint(m, StorageOnlyToSteamTurbineCon[q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] ==  m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts]
-                    )
-                for t in p.techs.steam_turbine
-                    for ts in p.time_steps, q in p.heating_loads
-                        fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
-                    end
+            end
+        elseif p.s.storage.attr[b].supply_turbine_only
+            @constraint(m, StorageOnlyToSteamTurbineCon[q in p.heating_loads, ts in p.time_steps],
+                m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] ==  m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts]
+                )
+            for t in p.techs.steam_turbine
+                for ts in p.time_steps, q in p.heating_loads
+                    fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
                 end
             end
         end
 	end
 
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
-    if !isempty(setdiff(p.s.storage.types.hot, ["HotSensibleTes"]))
+    if b != "HotSensibleTes"
         @constraint(m, [b in setdiff(p.s.storage.types.hot, ["HotSensibleTes"]), ts in p.time_steps],
             m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (
                 p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
@@ -178,10 +176,8 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
                 p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
             )
         )
-    end
-    
-    if "HotSensibleTes" in p.s.storage.types.hot
-        @constraint(m, [b in intersect(p.s.storage.types.hot, ["HotSensibleTes"]), ts in p.time_steps],
+    else
+        @constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
             p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
             sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
@@ -206,10 +202,10 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         for q in p.heating_loads)
     )
 
-    if "HotSensibleTes" in p.s.storage.types.hot
+    if b == "HotSensibleTes"
         @constraint(m, [ts in p.time_steps],
-            m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"] / p.s.storage.attr["HotSensibleTes"].num_charge_hours >= 
-            sum(m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)
+            m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].num_charge_hours >= 
+            sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)
         )
         @constraint(m, [ts in p.time_steps],
         m[Symbol("dvStorageEnergy"*_n)]["HotSensibleTes"] / p.s.storage.attr["HotSensibleTes"].num_discharge_hours  >= 
@@ -232,26 +228,26 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         end
     end
 
-    if "HotSensibleTes" in p.s.storage.types.hot && p.s.storage.attr["HotSensibleTes"].one_direction_flow
+    if b =="HotSensibleTes" && p.s.storage.attr[b].one_direction_flow
         dv = "binStorageCharge"*_n
-        m[Symbol(dv)] = @variable(m, [p.s.storage.types.hot, p.time_steps], base_name=dv, binary=true)
+        m[Symbol(dv)] = @variable(m, [["HotSensibleTes"], p.time_steps], base_name=dv, binary=true)
         dv = "binStorageDischarge"*_n
-        m[Symbol(dv)] = @variable(m, [p.s.storage.types.hot, p.time_steps], base_name=dv, binary=true)
+        m[Symbol(dv)] = @variable(m, [["HotSensibleTes"], p.time_steps], base_name=dv, binary=true)
         
-        max_storage_power = min(p.s.storage.attr["HotSensibleTes"].max_kw, 
+        max_storage_power = min(p.s.storage.attr[b].max_kw, 
             100 * maximum(sum(p.heating_loads_kw[q][ts] for q in p.heating_loads) for ts in p.time_steps)    
         )
         
         @constraint(m, SensibleTesChargeMax[ts in p.time_steps],
-            sum(m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) <=
-            max_storage_power * m[Symbol("binStorageCharge"*_n)]["HotSensibleTes",ts]
+            sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) <=
+            max_storage_power * m[Symbol("binStorageCharge"*_n)][b,ts]
         )
         @constraint(m, SensibleTesDischargeMax[ts in p.time_steps],
-            sum(m[Symbol("dvHeatFromStorage"*_n)]["HotSensibleTes",q,ts] for q in p.heating_loads) <=
-            max_storage_power * m[Symbol("binStorageDischarge"*_n)]["HotSensibleTes",ts]
+            sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) <=
+            max_storage_power * m[Symbol("binStorageDischarge"*_n)][b,ts]
         )
         @constraint(m, SensibleTesFlowDirection[ts in p.time_steps],
-            m[Symbol("binStorageDischarge"*_n)]["HotSensibleTes",ts] + m[Symbol("binStorageCharge"*_n)]["HotSensibleTes",ts] <= 1
+            m[Symbol("binStorageDischarge"*_n)][b,ts] + m[Symbol("binStorageCharge"*_n)][b,ts] <= 1
         )
     end
 

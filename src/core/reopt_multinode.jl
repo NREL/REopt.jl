@@ -127,13 +127,13 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
 				elseif b in p.s.storage.types.cold
 					add_cold_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
+				elseif b in p.s.storage.types.hot
+					add_hot_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
+				else
+					throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 				end
             end
         end
-
-		if !isempty(p.s.storage.types.hot)
-			add_hot_thermal_storage_dispatch_constraints(m, p; _n=_n)
-		end
 
         if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
             add_storage_sum_grid_constraints(m, p; _n=_n)
