@@ -677,7 +677,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             optimal_number_of_boreholes = determine_number_of_boreholes["number_of_boreholes"]
                             # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
                             # Otherwise, continue solving until reaching max iteration
-                            if -0.5 < new_optimal_number_of_boreholes-d["GHP"]["max_number_of_boreholes"] < 0.5
+                            if -0.5 < optimal_number_of_boreholes-d["GHP"]["max_number_of_boreholes"] < 0.5
                                 break
                             end
                             iter += 1
