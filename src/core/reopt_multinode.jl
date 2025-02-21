@@ -136,7 +136,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 		end
 
         if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-            add_storage_sum_constraints(m, p; _n=_n)
+            add_storage_sum_grid_constraints(m, p; _n=_n)
         end
     
         add_production_constraints(m, p; _n=_n)

@@ -13,7 +13,7 @@
     location::String="both", # one of ["roof", "ground", "both"]
     existing_kw::Real=0,
     min_kw::Real=0,
-    max_kw::Real=1.0e9, # max new capacity (beyond existing_kw)
+    max_kw::Real=1.0e9, # max new DC capacity (beyond existing_kw)
     installed_cost_per_kw::Real=1790.0,
     om_cost_per_kw::Real=18.0,
     degradation_fraction::Real=0.005,
@@ -186,7 +186,9 @@ mutable struct PV <: AbstractTech
         if !(0.0 <= dc_ac_ratio <= 2.0)
             push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
-        # TODO validate additional args
+        if !isnothing(production_factor_series)
+            error_if_series_vals_not_0_to_1(production_factor_series, "PV", "production_factor_series")
+        end
         if length(invalid_args) > 0
             throw(@error("Invalid PV argument values: $(invalid_args)"))
         end

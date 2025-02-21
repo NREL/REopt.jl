@@ -9,12 +9,13 @@
         "fuel_type": "natural_gas",
         "fuel_cost_per_mmbtu": 5
     },
-    "ASHP_WaterHeater": {
+    "ASHPWaterHeater": {
         "min_ton": 0.0,
         "max_ton": 100000,
         "installed_cost_per_ton": 4050,
         "om_cost_per_ton": 0.0,
 		"macrs_option_years": 0,
+        "force_dispatch": false,
 		"macrs_bonus_fraction": 0.0
     },
     "Financial": {

@@ -65,7 +65,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         @debug "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 
-    if !isempty(union(p.techs.chp, p.techs.heating))
+    if !isempty(p.techs.heating)
         add_heating_load_results(m, p, d)
     end
 
@@ -111,11 +111,12 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "CST" in p.techs.electric_heater
         add_concentrating_solar_results(m, p, d; _n)
     end
-    if "ASHP_SpaceHeater" in p.techs.ashp
+
+    if "ASHPSpaceHeater" in p.techs.ashp
         add_ashp_results(m, p, d; _n)
     end
     
-    if "ASHP_WaterHeater" in p.techs.ashp_wh
+    if "ASHPWaterHeater" in p.techs.ashp_wh
         add_ashp_wh_results(m, p, d; _n)
     end
     #println("Here is the return of reopt_results:")
@@ -158,6 +159,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricTariff", "lifecycle_coincident_peak_cost_after_tax"),
         ("ElectricUtility", "electric_to_load_series_kw"),  
         ("ElectricUtility", "annual_energy_supplied_kwh"),
+        ("ElectricUtility","annual_renewable_electricity_supplied_kwh"),
         ("ElectricUtility", "annual_emissions_tonnes_CO2"),
         ("ElectricUtility", "annual_emissions_tonnes_NOx"),
         ("ElectricUtility", "annual_emissions_tonnes_SO2"),
@@ -183,9 +185,11 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ExistingBoiler", "annual_fuel_consumption_mmbtu"),
         ("ExistingChiller", "annual_thermal_production_tonhour"),
         ("ExistingChiller", "annual_electric_consumption_kwh"),
-        ("Site", "annual_renewable_electricity_kwh"),
-        ("Site", "renewable_electricity_fraction"),
-        ("Site", "total_renewable_energy_fraction"),
+        ("Site", "annual_onsite_renewable_electricity_kwh"),
+        ("Site", "onsite_renewable_electricity_fraction_of_elec_load"),
+        ("Site", "onsite_renewable_energy_fraction_of_total_load"),
+        ("Site", "onsite_and_grid_renewable_electricity_fraction_of_elec_load"),
+        ("Site", "onsite_and_grid_renewable_energy_fraction_of_total_load"),
         ("Site", "annual_emissions_tonnes_CO2"),
         ("Site", "annual_emissions_tonnes_NOx"),
         ("Site", "annual_emissions_tonnes_SO2"),
