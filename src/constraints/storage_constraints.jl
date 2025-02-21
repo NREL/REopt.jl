@@ -39,9 +39,14 @@ end
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
-    if (p.s.storage.attr[b] isa ElectricStorage) || (p.s.storage.attr[b] isa MPCElectricStorage) || (p.s.storage.attr[b] isa HydrogenStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal)
+    if (p.s.storage.attr[b] isa ElectricStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal) || (p.s.storage.attr[b] isa MPCElectricStorage) || (p.s.storage.attr[b] isa HydrogenStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal)
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+        )
+    end
+    if (p.s.storage.attr[b] isa ElectricStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal) || (p.s.storage.attr[b] isa HydrogenStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal)
+        @constraint(m,
+            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy][b, maximum(p.time_steps)]
         )
     end
     #Constraint (4n): State of charge upper bound is storage system size
@@ -280,12 +285,6 @@ function add_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
                    (8760. / p.hours_per_time_step)
         @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
-        )
-    end
-    
-    if p.s.storage.attr[b] isa HydrogenStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal
-        @constraint(m,
-            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy]["HydrogenStorage", maximum(p.time_steps)]
         )
     end
 end
