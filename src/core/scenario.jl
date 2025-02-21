@@ -663,7 +663,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         @info "Max number of boreholes specified less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
                         max_iter = 10
                         for iter = 1:max_iter
-                            borehole_ratio = d["GHP"]["max_number_of_boreholes"]/optimal_number_of_boreholes
+                            borehole_ratio = optimal_number_of_boreholes/d["GHP"]["max_number_of_boreholes"]
                             new_load_peak = maximum(heating_load_mmbtu)*borehole_ratio
                             heating_load_mmbtu[heating_load_mmbtu .>=new_load_peak] .= new_load_peak
                             ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
