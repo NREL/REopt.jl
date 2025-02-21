@@ -673,9 +673,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             end
                             # Rerun GhpGhx.jl
                             results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-                            determine_new_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
-                            new_optimal_number_of_boreholes = determine_new_number_of_boreholes["number_of_boreholes"]
-
+                            determine_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
+                            optimal_number_of_boreholes = determine_number_of_boreholes["numbe_of_boreholes"]
+                            # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
+                            # Otherwise, continue solving until reaching max iteration
+                            if -0.5 < new_optimal_number_of_boreholes-d["GHP"]["number_of_boreholes"] < 0.5
+                                break
+                            end
                             iter += 1
                         end
 
