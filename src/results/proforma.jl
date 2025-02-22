@@ -131,7 +131,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     # calculate ExistingBoiler o+m costs (just fuel, no non-fuel operating costs currently)
     # the optional installed_cost inputs assume net present cost so no option for MACRS or incentives
-    if "ExistingBoiler" in keys(d) && d["ExistingBoiler"]["size_mmbtu_per_hour"] > 0
+    if "ExistingBoiler" in keys(d)
         fuel_cost = d["ExistingBoiler"]["year_one_fuel_cost_before_tax"]
         m.fuel_cost_series += escalate_fuel(-1 * fuel_cost, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
         var_om = 0.0
