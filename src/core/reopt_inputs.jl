@@ -794,7 +794,7 @@ function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes
     existing_sizes["ExistingChiller"] = 0.0
     cap_cost_slope["ExistingChiller"] = 0.0
     cooling_cop["ExistingChiller"] .= s.existing_chiller.cop
-    cooling_cf["ExistingChiller"]  .= ones(8760*s.settings.time_steps_per_hour)
+    cooling_cf["ExistingChiller"]  = ones(8760*s.settings.time_steps_per_hour)
     # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
