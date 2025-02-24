@@ -175,7 +175,7 @@ function run_ssc(case_data::Dict)
         elseif Sys.iswindows()
             libfile = "ssc_new.dll"
         end
-        global hdl = joinpath(@__DIR__, "sam", libfile)
+        global hdl = joinpath(@__DIR__, "..", "sam", libfile)
         chmod(hdl, filemode(hdl) | 0o755) ### added just because I saw this in the wind module
         ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
