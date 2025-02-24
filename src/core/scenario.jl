@@ -96,8 +96,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     off_grid_flag = settings.off_grid_flag
     )
     
-    # Extract average electric load per time step and apply a 20% load factor
-    avg_electric_load_kw = (sum(electric_load.loads_kw) / length(electric_load.loads_kw)) * 1.20
+    # Extract average electric load per time step and apply a 100% load factor [FOR PV Size classes]
+    avg_electric_load_kw = (sum(electric_load.loads_kw) / length(electric_load.loads_kw)) * 2.0
     # @info "Average electric load" avg_electric_load_kw
 
     pvs = PV[]
