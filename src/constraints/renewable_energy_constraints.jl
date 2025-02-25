@@ -53,6 +53,10 @@ function add_re_elec_calcs(m,p)
 	# 		- (1-p.s.site.include_exported_renewable_electricity_in_total)*sum(m[:dvProductionToGrid][t,u,ts]*SteamTurbinePercentREEstimate for t in p.steam,  u in p.export_bins_by_tech[t], ts in p.time_steps) # minus exported RE from steam turbine, if RE accounting method = 0.
 	# 	))
 	# end
+	
+	if !isempty(p.techs.steam_turbine)
+		@warn("The presence of a steam turbine may cause the renewable energy fraction to be inaccurate.")
+	end
 
 	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
 	# 		onsite is counted so battery doesn't become a back door for RE to grid.
