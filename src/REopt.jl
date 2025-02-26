@@ -51,7 +51,6 @@ using DataFrames
 using Plots
 import Plots
 using PowerModelsDistribution
-using Gurobi
 using HiGHS
 
 function __init__()
