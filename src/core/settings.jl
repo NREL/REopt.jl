@@ -10,6 +10,7 @@ Captures high-level inputs affecting the optimization.
     include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
     include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
     solver_name::String = "HiGHS" # solver used to obtain a solution to model instance. available options: ["HiGHS", "Cbc", "CPLEX", "Xpress"]
+    facilitymeter_node::String = "1"
 ```
 """
 Base.@kwdef struct Settings
@@ -19,4 +20,5 @@ Base.@kwdef struct Settings
     include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
     include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
     solver_name::String = "HiGHS" # solver used to obtain a solution to model instance. available options: ["HiGHS", "Cbc", "CPLEX", "Xpress"]
+    facilitymeter_node::String = "1"
 end

@@ -25,45 +25,45 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     r = Dict{String, Any}()
 
-	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.gen))
+	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[Symbol("dvSize"*_n)][t] * p.om_cost_per_kw[t] for t in p.techs.gen))
 
 	GenPerUnitProdOMCosts = @expression(m, p.third_party_factor * p.pwf_om * p.hours_per_time_step *
-		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
+		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
 			for t in p.techs.gen, ts in p.time_steps)
 	)
-	r["size_kw"] = round(value(sum(m[:dvSize][t] for t in p.techs.gen)), digits=2)
+	r["size_kw"] = round(value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.gen)), digits=2)
 	r["lifecycle_fixed_om_cost_after_tax"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
-	r["lifecycle_variable_om_cost_after_tax"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
-	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalGenFuelCosts]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=2)
-	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_fuel["Generator"], digits=2)
+	r["lifecycle_variable_om_cost_after_tax"] = round(value(m[Symbol("TotalPerUnitProdOMCosts"*_n)]) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
+	r["lifecycle_fuel_cost_after_tax"] = round(value(m[Symbol("TotalGenFuelCosts"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=2)
+	r["year_one_fuel_cost_before_tax"] = round(value(m[Symbol("TotalGenFuelCosts"*_n)]) / p.pwf_fuel["Generator"], digits=2)
 	r["year_one_variable_om_cost_before_tax"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 	r["year_one_fixed_om_cost_before_tax"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	if !isempty(p.s.storage.types.elec)
 	generatorToBatt = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec, t in p.techs.gen))
+		sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec, t in p.techs.gen))
 	else
-		generatorToBatt = zeros(length(p.time_steps))
+		generatorToBatt = zeros(length(p.time_steps)) 
 	end
 	r["electric_to_storage_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToGrid][t, u, ts] for t in p.techs.gen, u in p.export_bins_by_tech[t])
+		sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for t in p.techs.gen, u in p.export_bins_by_tech[t])
 	)
 	r["electric_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
 
 	generatorToLoad = @expression(m, [ts in p.time_steps],
-		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.gen) -
 			generatorToBatt[ts] - generatorToGrid[ts]
 	)
 	r["electric_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
 
-    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / p.s.generator.fuel_higher_heating_value_kwh_per_gal)
+    GeneratorFuelUsed = @expression(m, sum(m[Symbol("dvFuelUsage"*_n)][t, ts] for t in p.techs.gen, ts in p.time_steps) / p.s.generator.fuel_higher_heating_value_kwh_per_gal)
 	r["annual_fuel_consumption_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	AverageGenProd = @expression(m,
-		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
+		p.hours_per_time_step * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t]
 			for t in p.techs.gen, ts in p.time_steps)
 	)

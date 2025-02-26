@@ -11,7 +11,6 @@ export
     simulate_outages,
     add_variables!,
     add_objective!,
-    LinDistFlow,
     MPCScenario,
     MPCInputs,
     run_mpc,
@@ -30,9 +29,6 @@ export
 
 import HTTP
 import JSON
-using LinDistFlow  # required to export LinDistFlow
-import LinDistFlow 
-const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
@@ -52,9 +48,15 @@ using CoolProp
 using LinearAlgebra
 using CSV
 using DataFrames
+using Plots
+import Plots
+using PowerModelsDistribution
+using HiGHS
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
+    @require PlotlyJS="f0f68f2c-4968-5e81-91da-67840de0976a" println("Using the PlotlyJS package")
+    @require Xpress="9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054" println("Using the Xpress package")
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
@@ -195,11 +197,14 @@ include("results/electric_heater.jl")
 include("results/ashp.jl")
 
 include("core/reopt.jl")
-include("core/reopt_multinode.jl")
 include("outagesim/outage_simulator.jl")
 include("outagesim/backup_reliability.jl")
 
-include("lindistflow/extend.jl")
+include("multinode/reopt_multinode.jl")
+include("multinode/multinode.jl")
+include("multinode/multinode_outage_simulator.jl")
+include("multinode/multinode_results_processing.jl")
+include("multinode/multinode_inputs.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")

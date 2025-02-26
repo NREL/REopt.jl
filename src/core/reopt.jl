@@ -213,6 +213,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid")][b, ts] == 0) 
 			elseif b in p.s.storage.types.hot
 				@constraint(m, [q in q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
 				if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
@@ -242,6 +243,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
+			end
+			if b in p.s.storage.types.elec_no_simultaneous_charge_discharge
+				#add_simultaneous_charge_discharge_constraint(m, p, b)
 			end
 		end
 	end
@@ -616,14 +620,20 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvProductionToStorage[p.s.storage.types.all, union(p.techs.ghp,p.techs.all), p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStorageToGrid[p.s.storage.types.elec, p.time_steps] >= 0 # export of energy from storage to the grid
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
+		#binBattCharging[p.s.storage.types.elec_no_simultaneous_charge_discharge, p.time_steps], Bin # Binary for battery charging (vs discharging)
 		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
+
+	#if !isempty(p.s.storage.types.elec_no_simultaneous_charge_discharge)
+	#	@warn "Adding binary variable to prevent simultaneous battery charge/discharge. Some solvers are very slow with integer variables."
+	#end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
