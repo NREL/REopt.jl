@@ -51,10 +51,8 @@ else  # run HiGHS tests
             inputs["PMD_network_input"] = PowerModelsDistribution.parse_file("./data/multinode_powerflow_network.dss")
             inputs["optimizer"] = HiGHS.Optimizer
 
-            results, model, model_BAU = REopt.Microgrid_Model(inputs)
+            results, model, model_BAU = REopt.Multinode_Model(inputs)
             
-            print(results)
-
             @test results["REopt_results"][6]["ElectricStorage"]["size_kw"] ≈ 22.54 atol=0.01
             @test results["REopt_results"][6]["ElectricStorage"]["size_kwh"] ≈ 55.34 atol=0.01
             
