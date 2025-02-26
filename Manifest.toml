@@ -2,7 +2,7 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "c0cd09065acb60c1e7a18d38275406dc2fc3e3dd"
+project_hash = "42f1dd5c6fc113b5a8bcdac3a900eedfba4d36a9"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
@@ -704,12 +704,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "5ee6203157c120d79034c748a2acba45b82b8807"
 uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
 version = "2.40.1+0"
-
-[[deps.LinDistFlow]]
-deps = ["JuMP", "LinearAlgebra", "Logging", "SparseArrays"]
-git-tree-sha1 = "ad15878e716a18b82325cacc02af4533bb9777e7"
-uuid = "bf674bac-ffe4-48d3-9f32-72124ffa9ede"
-version = "0.1.4"
 
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "libblastrampoline_jll"]
