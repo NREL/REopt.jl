@@ -151,6 +151,7 @@ mutable struct PV <: AbstractTech
         if dc_coupled_with_storage
             if existing_kw > 0
                 throw(@error("Existing PV cannot be DC coupled with storage. Set PV.dc_coupled_with_storage to false or PV.existing_kw to 0 for each PV."))
+            end
             @warn "PV inv_eff will be ignored because dc_coupled_with_storage=true. The inverter of the DC coupled PV and electric storage system will be defined by ElectricStorage inverter_efficiency_fraction and rectifier_efficiency_fraction."
         end
 
