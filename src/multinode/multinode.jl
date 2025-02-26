@@ -2,52 +2,52 @@
 
 const PMD = PowerModelsDistribution
 
-function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
-    # The main function to run all parts of the microgrid model
+function Multinode_Model(Multinode_Settings::Dict{String, Any})
+    # The main function to run all parts of the multinode model
 
     StartTime_EntireModel = now() # Record the start time for the computation
     TimeStamp = Dates.format(now(), "mm-dd-yyyy")*"_"*Dates.format(now(), "HH-MM")
 
-    Microgrid_Inputs = REopt.MicrogridInputs(; REopt.dictkeys_tosymbols(Microgrid_Settings)...)
+    Multinode_Inputs = REopt.MultinodeInputs(; REopt.dictkeys_tosymbols(Multinode_Settings)...)
     
-    if Microgrid_Inputs.generate_CSV_of_outputs || Microgrid_Inputs.generate_results_plots
-        cd(Microgrid_Inputs.folder_location)
-        CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
+    if Multinode_Inputs.generate_CSV_of_outputs || Multinode_Inputs.generate_results_plots
+        cd(Multinode_Inputs.folder_location)
+        CreateOutputsFolder(Multinode_Inputs, TimeStamp)
     end
 
-    PrepareElectricLoads(Microgrid_Inputs)
-    REopt_dictionary = PrepareREoptInputs(Microgrid_Inputs)    
+    PrepareElectricLoads(Multinode_Inputs)
+    REopt_dictionary = PrepareREoptInputs(Multinode_Inputs)    
     m_outagesimulator = "empty"
     model = "empty"
     model_BAU = "empty"
     
-    if Microgrid_Inputs.model_type == "PowerModelsDistribution"
+    if Multinode_Inputs.model_type == "PowerModelsDistribution"
                 
-        RunDataChecks(Microgrid_Inputs, REopt_dictionary)
+        RunDataChecks(Multinode_Inputs, REopt_dictionary)
         
-        PMD_number_of_timesteps = length(Microgrid_Inputs.PMD_time_steps)
+        PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)
 
-        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Microgrid_Inputs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
+        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
 
-        if Microgrid_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp, LineInfo_PMD)
+        if Multinode_Inputs.run_outage_simulator
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD)
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
             outage_simulator_time_milliseconds = "N/A"
         end 
 
-        if Microgrid_Inputs.run_BAU_case
-            Microgrid_Settings_No_Techs = SetTechSizesToZero(Microgrid_Settings)
-            Microgrid_Inputs_No_Techs = REopt.MicrogridInputs(; REopt.dictkeys_tosymbols(Microgrid_Settings_No_Techs)...)
-            PrepareElectricLoads(Microgrid_Inputs_No_Techs)
+        if Multinode_Inputs.run_BAU_case
+            Multinode_Settings_No_Techs = SetTechSizesToZero(Multinode_Settings)
+            Multinode_Inputs_No_Techs = REopt.MultinodeInputs(; REopt.dictkeys_tosymbols(Multinode_Settings_No_Techs)...)
+            PrepareElectricLoads(Multinode_Inputs_No_Techs)
             
             Outage_Results_No_Techs = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             
-            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Microgrid_Inputs_No_Techs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = false)
+            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = false)
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
-            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Microgrid_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
+            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
             
         else
             system_results_BAU = "none"
@@ -57,13 +57,13 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
 
         ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
         
-        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
+        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
                                 ("DataDictionaryForEachNode", DataDictionaryForEachNode),
-                                ("Microgrid_Inputs", Microgrid_Inputs), 
+                                ("Multinode_Inputs", Multinode_Inputs), 
                                 ("Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
                                 ("PMD_results", PMD_Results),
                                 ("PMD_data_eng", data_eng),
@@ -83,12 +83,12 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
                                 ])
     end
 
-    if Microgrid_Inputs.generate_results_plots == true 
-        Create_Voltage_Plot(CompiledResults, TimeStamp, Microgrid_Inputs.voltage_plot_time_step)
-        PlotPowerFlows(CompiledResults, TimeStamp, Microgrid_Inputs.time_steps_for_results_dashboard)
-        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Microgrid_Inputs, REoptInputs_Combined, model)
-        if Microgrid_Inputs.bus_coordinates != ""
-            CreateResultsMap(CompiledResults, Microgrid_Inputs, TimeStamp)
+    if Multinode_Inputs.generate_results_plots == true 
+        Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step)
+        PlotPowerFlows(CompiledResults, TimeStamp, Multinode_Inputs.time_steps_for_results_dashboard)
+        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model)
+        if Multinode_Inputs.bus_coordinates != ""
+            CreateResultsMap(CompiledResults, Multinode_Inputs, TimeStamp)
         end
     end
 
@@ -96,65 +96,65 @@ function Microgrid_Model(Microgrid_Settings::Dict{String, Any})
 end
 
 
-function PrepareElectricLoads(Microgrid_Inputs)
+function PrepareElectricLoads(Multinode_Inputs)
     # Prepare the electric loads
-    REopt_inputs_all_nodes = Microgrid_Inputs.REopt_inputs_list
+    REopt_inputs_all_nodes = Multinode_Inputs.REopt_inputs_list
 
     # Prepare loads for using with the outage simulator, if the fraction method is used for determining the critical load
-    if  Microgrid_Inputs.critical_load_method == "Fraction"
+    if  Multinode_Inputs.critical_load_method == "Fraction"
         load_profiles_for_outage_sim_if_using_the_fraction_method = Dict([])
         for REopt_inputs in REopt_inputs_all_nodes
             load_profiles_for_outage_sim_if_using_the_fraction_method[REopt_inputs["Site"]["node"]] = deepcopy( REopt_inputs["ElectricLoad"]["loads_kw"] )
         end
-        Microgrid_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method = load_profiles_for_outage_sim_if_using_the_fraction_method
+        Multinode_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method = load_profiles_for_outage_sim_if_using_the_fraction_method
     else
-        Microgrid_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method = ""
+        Multinode_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method = ""
     end
     
     # If outages are defined in the optimization, set the loads to the critical loads during the outages
-    if Microgrid_Inputs.model_outages_with_outages_vector
-        if Microgrid_Inputs.outages_vector != []
+    if Multinode_Inputs.model_outages_with_outages_vector
+        if Multinode_Inputs.outages_vector != []
 
-            for i in 1:length(Microgrid_Inputs.REopt_inputs_list)
-                if sum(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
+            for i in 1:length(Multinode_Inputs.REopt_inputs_list)
+                if sum(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
 
-                    node = Microgrid_Inputs.REopt_inputs_list[i]["Site"]["node"]
+                    node = Multinode_Inputs.REopt_inputs_list[i]["Site"]["node"]
                     
-                    load_segment_initial = deepcopy(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
-                    for outage_timestep in Microgrid_Inputs.outages_vector
-                        if Microgrid_Inputs.critical_load_method == "Fraction"
-                            Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"][outage_timestep] = Microgrid_Inputs.critical_load_fraction[string(node)] * load_segment_initial[outage_timestep]
-                        elseif Microgrid_Inputs.critical_load_method == "TimeSeries"
-                            Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"][outage_timestep] = Microgrid_Inputs.critical_load_timeseries[string(node)][outage_timestep]
+                    load_segment_initial = deepcopy(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
+                    for outage_timestep in Multinode_Inputs.outages_vector
+                        if Multinode_Inputs.critical_load_method == "Fraction"
+                            Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"][outage_timestep] = Multinode_Inputs.critical_load_fraction[string(node)] * load_segment_initial[outage_timestep]
+                        elseif Multinode_Inputs.critical_load_method == "TimeSeries"
+                            Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"][outage_timestep] = Multinode_Inputs.critical_load_timeseries[string(node)][outage_timestep]
                         end
                     end
                 end
             end
         end
-    elseif Microgrid_Inputs.single_outage_end_time_step - Microgrid_Inputs.single_outage_start_time_step > 0
+    elseif Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step > 0
         
-        OutageStart = Microgrid_Inputs.single_outage_start_time_step
-        OutageEnd = Microgrid_Inputs.single_outage_end_time_step
+        OutageStart = Multinode_Inputs.single_outage_start_time_step
+        OutageEnd = Multinode_Inputs.single_outage_end_time_step
 
-        for i in 1:length(Microgrid_Inputs.REopt_inputs_list)
+        for i in 1:length(Multinode_Inputs.REopt_inputs_list)
             
-            node = Microgrid_Inputs.REopt_inputs_list[i]["Site"]["node"]
+            node = Multinode_Inputs.REopt_inputs_list[i]["Site"]["node"]
 
-            if Microgrid_Inputs.critical_load_method == "Fraction"
-                if sum(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
-                    load_segment_initial = deepcopy(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
+            if Multinode_Inputs.critical_load_method == "Fraction"
+                if sum(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
+                    load_segment_initial = deepcopy(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
                     load_segment_modified = deepcopy(load_segment_initial)
-                    load_segment_modified[OutageStart:OutageEnd] = Microgrid_Inputs.critical_load_fraction[string(node)] * load_segment_initial[OutageStart:OutageEnd]                    
-                    delete!(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"],"loads_kw")
-                    Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"] = load_segment_modified
+                    load_segment_modified[OutageStart:OutageEnd] = Multinode_Inputs.critical_load_fraction[string(node)] * load_segment_initial[OutageStart:OutageEnd]                    
+                    delete!(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"],"loads_kw")
+                    Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"] = load_segment_modified
                 end 
-            elseif Microgrid_Inputs.critical_load_method == "TimeSeries"
-                if sum(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 
-                    load_segment_initial = deepcopy(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
+            elseif Multinode_Inputs.critical_load_method == "TimeSeries"
+                if sum(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 
+                    load_segment_initial = deepcopy(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
                     load_segment_modified = deepcopy(load_segment_initial)
-                    load_segment_modified[OutageStart:OutageEnd] = Microgrid_Inputs.critical_load_timeseries[string(node)][OutageStart:OutageEnd]                    
-                    delete!(Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"],"loads_kw")
-                    Microgrid_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"] = load_segment_modified
+                    load_segment_modified[OutageStart:OutageEnd] = Multinode_Inputs.critical_load_timeseries[string(node)][OutageStart:OutageEnd]                    
+                    delete!(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"],"loads_kw")
+                    Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"] = load_segment_modified
                 end
             end
         end
@@ -162,7 +162,7 @@ function PrepareElectricLoads(Microgrid_Inputs)
 end
 
 
-function build_run_and_process_results(Microgrid_Inputs, PMD_number_of_timesteps, timestamp; allow_upgrades=false)
+function build_run_and_process_results(Multinode_Inputs, PMD_number_of_timesteps, timestamp; allow_upgrades=false)
     # Function to build the model, run the model, and process results
 
     # Empty these variables from any previous contents
@@ -170,47 +170,47 @@ function build_run_and_process_results(Microgrid_Inputs, PMD_number_of_timesteps
     data_math_mn = nothing
     data_eng = nothing
 
-    pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_timesteps)
+    pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps)
         
-    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn)
+    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, data_math_mn)
     
     line_upgrade_options_each_line = "N/A"
     if allow_upgrades == true
-        if Microgrid_Inputs.model_line_upgrades == true
-            pm, line_upgrade_options_each_line = model_line_upgrades(pm, Microgrid_Inputs, LineInfo_PMD, data_eng)          
+        if Multinode_Inputs.model_line_upgrades == true
+            pm, line_upgrade_options_each_line = model_line_upgrades(pm, Multinode_Inputs, LineInfo_PMD, data_eng)          
         end
 
-        if Microgrid_Inputs.model_transformer_upgrades == true
-            #pm = model_transformer_upgrades(pm, Microgrid_Inputs)
+        if Multinode_Inputs.model_transformer_upgrades == true
+            #pm = model_transformer_upgrades(pm, Multinode_Inputs)
         end
 
     end
 
-    add_objective(pm, Microgrid_Inputs, REoptInputs_Combined)
+    add_objective(pm, Multinode_Inputs, REoptInputs_Combined)
 
-    results, TerminationStatus = Run_REopt_PMD_Model(pm, Microgrid_Inputs)
+    results, TerminationStatus = Run_REopt_PMD_Model(pm, Multinode_Inputs)
     
-    REopt_Results, PMD_Results, DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow_Summary, line_upgrade_results = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Microgrid_Inputs, timestamp; allow_upgrades=allow_upgrades, line_upgrade_options_each_line = line_upgrade_options_each_line)
+    REopt_Results, PMD_Results, DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow_Summary, line_upgrade_results = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp; allow_upgrades=allow_upgrades, line_upgrade_options_each_line = line_upgrade_options_each_line)
     
     return REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, pm.model, pm, line_upgrade_options_each_line, line_upgrade_results
 end
 
-function create_list_of_upgradable_lines(Microgrid_Inputs)
+function create_list_of_upgradable_lines(Multinode_Inputs)
     # Create a list lines that are upgradable
 
     lines_for_upgrades_temp = []
-    for i in keys(Microgrid_Inputs.line_upgrade_options)
-        push!(lines_for_upgrades_temp, Microgrid_Inputs.line_upgrade_options[i]["locations"]) 
+    for i in keys(Multinode_Inputs.line_upgrade_options)
+        push!(lines_for_upgrades_temp, Multinode_Inputs.line_upgrade_options[i]["locations"]) 
     end
     lines_for_upgrades = unique!(lines_for_upgrades_temp)[1]
 
     return lines_for_upgrades
 end
 
-function model_line_upgrades(pm, Microgrid_Inputs, LineInfo, data_eng)
+function model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)
     # Function for modeling line upgrades
 
-    lines_for_upgrades = create_list_of_upgradable_lines(Microgrid_Inputs)
+    lines_for_upgrades = create_list_of_upgradable_lines(Multinode_Inputs)
 
     print("\n The lines for upgrades are: $(lines_for_upgrades) ")
 
@@ -222,22 +222,22 @@ function model_line_upgrades(pm, Microgrid_Inputs, LineInfo, data_eng)
     line_upgrade_options_each_line = Dict([])
     for line in lines_for_upgrades
 
-        for i in keys(Microgrid_Inputs.line_upgrade_options), j in Microgrid_Inputs.line_upgrade_options[i]["locations"]
+        for i in keys(Multinode_Inputs.line_upgrade_options), j in Multinode_Inputs.line_upgrade_options[i]["locations"]
             if line == j
 
                 if line ∉ keys(line_upgrade_options_each_line) # create a new entry for that line if it is not in the line_upgrade_options_each_line dictionary
 
-                    line_upgrade_options_each_line[line] = Dict([("max_amperage", [Microgrid_Inputs.line_upgrade_options[i]["max_amps"]]),
-                                                                 ("cost_per_length", [Microgrid_Inputs.line_upgrade_options[i]["cost_per_meter"]]),
-                                                                 ("voltage_kv", Microgrid_Inputs.line_upgrade_options[i]["voltage_kv"]) # all upgrade options for a given line should have the same voltage
-                                                                 #("rvalues", [Microgrid_Inputs.line_upgrade_options[i]["rvalues"]]),
-                                                                 #("xvalues", [Microgrid_Inputs.line_upgrade_options[i]["xvalues"]])
+                    line_upgrade_options_each_line[line] = Dict([("max_amperage", [Multinode_Inputs.line_upgrade_options[i]["max_amps"]]),
+                                                                 ("cost_per_length", [Multinode_Inputs.line_upgrade_options[i]["cost_per_meter"]]),
+                                                                 ("voltage_kv", Multinode_Inputs.line_upgrade_options[i]["voltage_kv"]) # all upgrade options for a given line should have the same voltage
+                                                                 #("rvalues", [Multinode_Inputs.line_upgrade_options[i]["rvalues"]]),
+                                                                 #("xvalues", [Multinode_Inputs.line_upgrade_options[i]["xvalues"]])
                                                                             ])            
                 else
-                    push!(line_upgrade_options_each_line[line]["max_amperage"], Microgrid_Inputs.line_upgrade_options[i]["max_amps"])
-                    push!(line_upgrade_options_each_line[line]["cost_per_length"], Microgrid_Inputs.line_upgrade_options[i]["cost_per_meter"])
-                    #push!(line_upgrade_options_each_line[line_name]["rvalues"], Microgrid_Inputs.line_upgrade_options[i]["rvalues"])
-                    #push!(line_upgrade_options_each_line[line_name]["xvalues"], Microgrid_Inputs.line_upgrade_options[i]["xvalues"])
+                    push!(line_upgrade_options_each_line[line]["max_amperage"], Multinode_Inputs.line_upgrade_options[i]["max_amps"])
+                    push!(line_upgrade_options_each_line[line]["cost_per_length"], Multinode_Inputs.line_upgrade_options[i]["cost_per_meter"])
+                    #push!(line_upgrade_options_each_line[line_name]["rvalues"], Multinode_Inputs.line_upgrade_options[i]["rvalues"])
+                    #push!(line_upgrade_options_each_line[line_name]["xvalues"], Multinode_Inputs.line_upgrade_options[i]["xvalues"])
                 end
             end
         end
@@ -266,8 +266,8 @@ function model_line_upgrades(pm, Microgrid_Inputs, LineInfo, data_eng)
         print("\n The f_idx for line $(line) is $(f_idx)")
         print("\n The t_idx for line $(line) is $(t_idx)")
 
-        for timestep in Microgrid_Inputs.PMD_time_steps
-            PMD_time_step = findall(x -> x==timestep, Microgrid_Inputs.PMD_time_steps)[1] #use the [1] to convert the 1-element vector into an integer
+        for timestep in Multinode_Inputs.PMD_time_steps
+            PMD_time_step = findall(x -> x==timestep, Multinode_Inputs.PMD_time_steps)[1] #use the [1] to convert the 1-element vector into an integer
             
             p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
             p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
@@ -285,59 +285,59 @@ function model_line_upgrades(pm, Microgrid_Inputs, LineInfo, data_eng)
 end
 
 
-function model_transformer_upgrades(pm, Microgrid_Inputs)
+function model_transformer_upgrades(pm, Multinode_Inputs)
 
 
     return pm
 end
 
-function PrepareREoptInputs(Microgrid_Inputs)  
+function PrepareREoptInputs(Multinode_Inputs)  
     # Generate the scenarios, REoptInputs, and list of REoptInputs
     scenarios = Dict([])
-    for i in 1:length(Microgrid_Inputs.REopt_inputs_list)
-        scenarios[i] = Scenario(Microgrid_Inputs.REopt_inputs_list[i])
+    for i in 1:length(Multinode_Inputs.REopt_inputs_list)
+        scenarios[i] = Scenario(Multinode_Inputs.REopt_inputs_list[i])
     end
 
     REoptInputs_dictionary = Dict([])
-    for i in 1:length(Microgrid_Inputs.REopt_inputs_list)
+    for i in 1:length(Multinode_Inputs.REopt_inputs_list)
         REoptInputs_dictionary[i] = REoptInputs(scenarios[i])
     end
 
     REopt_dictionary = [REoptInputs_dictionary[1]]
-    for i in 2:length(Microgrid_Inputs.REopt_inputs_list)
+    for i in 2:length(Multinode_Inputs.REopt_inputs_list)
         push!(REopt_dictionary, REoptInputs_dictionary[i])
     end
 
     return REopt_dictionary
 end
 
-function SetTechSizesToZero(Microgrid_Settings)
+function SetTechSizesToZero(Multinode_Settings)
     
-    Microgrid_Settings_No_Techs = deepcopy(Microgrid_Settings)
+    Multinode_Settings_No_Techs = deepcopy(Multinode_Settings)
 
-    for i in 1:length(Microgrid_Settings_No_Techs["REopt_inputs_list"])
-        if ("PV" in keys(Microgrid_Settings_No_Techs["REopt_inputs_list"][i])) && (string(Microgrid_Settings_No_Techs["REopt_inputs_list"][i]["Site"]["node"]) != Microgrid_Settings["facility_meter_node"])
-            delete!(Microgrid_Settings_No_Techs["REopt_inputs_list"][i], "PV")
+    for i in 1:length(Multinode_Settings_No_Techs["REopt_inputs_list"])
+        if ("PV" in keys(Multinode_Settings_No_Techs["REopt_inputs_list"][i])) && (string(Multinode_Settings_No_Techs["REopt_inputs_list"][i]["Site"]["node"]) != Multinode_Settings["facility_meter_node"])
+            delete!(Multinode_Settings_No_Techs["REopt_inputs_list"][i], "PV")
         end
-        if "ElectricStorage" in keys(Microgrid_Settings_No_Techs["REopt_inputs_list"][i])
-            delete!(Microgrid_Settings_No_Techs["REopt_inputs_list"][i], "ElectricStorage")
+        if "ElectricStorage" in keys(Multinode_Settings_No_Techs["REopt_inputs_list"][i])
+            delete!(Multinode_Settings_No_Techs["REopt_inputs_list"][i], "ElectricStorage")
         end
-        if "Generator" in keys(Microgrid_Settings_No_Techs["REopt_inputs_list"][i])
-            delete!(Microgrid_Settings_No_Techs["REopt_inputs_list"][i], "Generator")
+        if "Generator" in keys(Multinode_Settings_No_Techs["REopt_inputs_list"][i])
+            delete!(Multinode_Settings_No_Techs["REopt_inputs_list"][i], "Generator")
         end
     end
     
-    Microgrid_Settings_No_Techs["single_outage_start_time_step"] = 0
-    Microgrid_Settings_No_Techs["single_outage_end_time_step"] = 0
-    Microgrid_Settings_No_Techs["outages_vector"] = []
-    Microgrid_Settings_No_Techs["run_outage_simulator"] = false
-    Microgrid_Settings_No_Techs["display_results"] = false
-    Microgrid_Settings_No_Techs["generate_results_plots"] = false
-    Microgrid_Settings_No_Techs["generate_CSV_of_outputs"] = false
-    Microgrid_Settings_No_Techs["model_line_upgrades"] = false
-    Microgrid_Settings_No_Techs["model_transformer_upgrades"] = false
+    Multinode_Settings_No_Techs["single_outage_start_time_step"] = 0
+    Multinode_Settings_No_Techs["single_outage_end_time_step"] = 0
+    Multinode_Settings_No_Techs["outages_vector"] = []
+    Multinode_Settings_No_Techs["run_outage_simulator"] = false
+    Multinode_Settings_No_Techs["display_results"] = false
+    Multinode_Settings_No_Techs["generate_results_plots"] = false
+    Multinode_Settings_No_Techs["generate_CSV_of_outputs"] = false
+    Multinode_Settings_No_Techs["model_line_upgrades"] = false
+    Multinode_Settings_No_Techs["model_transformer_upgrades"] = false
 
-    return Microgrid_Settings_No_Techs
+    return Multinode_Settings_No_Techs
 end
 
 # This function is a slight modification to the calc_voltage_bases function in PMD
@@ -346,7 +346,7 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
 end
 
 
-function ApplyDataEngSettings(data_eng, Microgrid_Inputs)
+function ApplyDataEngSettings(data_eng, Multinode_Inputs)
     # Apply several miscellaneous settings to the data_eng dictionary
 
     data_eng["settings"]["sbase_default"] = 1.0*1E3/data_eng["settings"]["power_scale_factor"] # Set the power base (sbase) equal to 1 kW
@@ -355,9 +355,9 @@ function ApplyDataEngSettings(data_eng, Microgrid_Inputs)
     
     PMD.add_bus_absolute_vbounds!(
         data_eng,
-        phase_lb_pu = Microgrid_Inputs.bus_phase_voltage_lower_bound_per_unit,
-        phase_ub_pu = Microgrid_Inputs.bus_phase_voltage_upper_bound_per_unit, 
-        neutral_ub_pu = Microgrid_Inputs.bus_neutral_voltage_upper_bound_per_unit
+        phase_lb_pu = Multinode_Inputs.bus_phase_voltage_lower_bound_per_unit,
+        phase_ub_pu = Multinode_Inputs.bus_phase_voltage_upper_bound_per_unit, 
+        neutral_ub_pu = Multinode_Inputs.bus_neutral_voltage_upper_bound_per_unit
     )
 
 end
@@ -397,20 +397,20 @@ function CreatePMDGenerators(data_eng, REopt_nodes)
 end
 
 
-function Create_PMD_Model_For_REopt_Integration(Microgrid_Inputs, PMD_number_of_timesteps)
+function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps)
     
     print("\n Parsing the network input file \n")
-    if typeof(Microgrid_Inputs.PMD_network_input) == String 
-        data_eng = PowerModelsDistribution.parse_file(Microgrid_Inputs.PMD_network_input)
-    elseif typeof(Microgrid_Inputs.PMD_network_input) == Dict{String, Any}
-        data_eng = Microgrid_Inputs.PMD_network_input
+    if typeof(Multinode_Inputs.PMD_network_input) == String 
+        data_eng = PowerModelsDistribution.parse_file(Multinode_Inputs.PMD_network_input)
+    elseif typeof(Multinode_Inputs.PMD_network_input) == Dict{String, Any}
+        data_eng = Multinode_Inputs.PMD_network_input
     else
         throw(@error("The PMD_network_input input format is not valid"))
     end 
 
-    REopt_nodes = REopt.GenerateREoptNodesList(Microgrid_Inputs) # Generate a list of the REopt nodes
+    REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs) # Generate a list of the REopt nodes
         
-    ApplyDataEngSettings(data_eng, Microgrid_Inputs)
+    ApplyDataEngSettings(data_eng, Multinode_Inputs)
     
     ApplyLoadProfileToPMDModel(data_eng, PMD_number_of_timesteps, REopt_nodes)
     
@@ -462,14 +462,14 @@ function CreateREoptTotalExportVariables(m, REoptInputs_Combined)
 end
 
     
-function LinkREoptAndPMD(pm, m, data_math_mn, Microgrid_Inputs, REopt_nodes)
+function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes)
     # Link the PMD and REopt variables through constraints
 
     gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"]);
     
     REopt_gen_ind_e = [gen_name2ind["REopt_gen_$e"] for e in REopt_nodes];
     
-    PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
+    PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
     PMDTimeSteps_Indeces = collect(1:length(PMDTimeSteps_InREoptTimes))
      
     PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces] 
@@ -492,38 +492,38 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Microgrid_Inputs, REopt_nodes)
 end
 
 
-function Build_REopt_and_Link_To_PMD(pm, Microgrid_Inputs, data_math_mn; OutageSimulator=false, OutageLength_Timesteps=0)
+function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, data_math_mn; OutageSimulator=false, OutageLength_Timesteps=0)
     
     m = pm.model   
-    REopt_nodes = REopt.GenerateREoptNodesList(Microgrid_Inputs)
-    REoptInputs_Combined = PrepareREoptInputs(Microgrid_Inputs)  
+    REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs)
+    REoptInputs_Combined = PrepareREoptInputs(Multinode_Inputs)  
     
     print("\n Building the REopt model\n")
     REopt.build_reopt!(m, REoptInputs_Combined) # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     
     CreateREoptTotalExportVariables(m, REoptInputs_Combined)
-    REopt_gen_ind_e = LinkREoptAndPMD(pm, m, data_math_mn, Microgrid_Inputs, REopt_nodes)
+    REopt_gen_ind_e = LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes)
     LineInfo = CreateLineInfoDictionary(pm)
-    REoptTimeSteps = collect(1:(Microgrid_Inputs.time_steps_per_hour * 8760))
-    ApplyGridImportAndExportConstraints(Microgrid_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
-    LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
-    Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Microgrid_Inputs, LineInfo)
+    REoptTimeSteps = collect(1:(Multinode_Inputs.time_steps_per_hour * 8760))
+    ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
+    LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
+    Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
 
-    if Microgrid_Inputs.generators_only_run_during_grid_outage == true
-        LimitGeneratorOperatingTimes(m, Microgrid_Inputs, REoptInputs_Combined)
+    if Multinode_Inputs.generators_only_run_during_grid_outage == true
+        LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
     end
 
     return LineInfo, data_math_mn, REoptInputs_Combined, pm;
 end
 
 
-function add_objective(pm, Microgrid_Inputs, REoptInputs_Combined)
+function add_objective(pm, Multinode_Inputs, REoptInputs_Combined)
 
     @expression(pm.model, Costs, sum(pm.model[Symbol(string("Costs_", p.s.site.node))] for p in REoptInputs_Combined) )
     
-    if Microgrid_Inputs.model_line_upgrades
+    if Multinode_Inputs.model_line_upgrades
         @info "Including the line upgrade costs in the Costs expression"
-        lines_for_upgrades = create_list_of_upgradable_lines(Microgrid_Inputs)
+        lines_for_upgrades = create_list_of_upgradable_lines(Multinode_Inputs)
 
         @variable(pm.model, total_line_upgrade_cost >= 0)
         @constraint(pm.model, pm.model[:total_line_upgrade_cost] == sum(pm.model[:line_cost][line] for line in lines_for_upgrades))
@@ -536,7 +536,7 @@ function add_objective(pm, Microgrid_Inputs, REoptInputs_Combined)
 end
 
 
-function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Microgrid_Inputs, LineInfo)
+function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
     # Apply basic constraints to limit export from and import to nodes
 
     # TODO: finish this function
@@ -548,64 +548,64 @@ function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Microgrid_Input
 end
 
 
-function ApplyGridImportAndExportConstraints(Microgrid_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
+function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
     # Apply a variety of grid import and/or export constraints:
     
-    # Restrict power flow from the substation if the microgrid type is offgrid
-    if Microgrid_Inputs.microgrid_type == "Offgrid" 
-        RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, REoptTimeSteps, LineInfo; Off_Grid=true)
+    # Restrict power flow from the substation if the multinode type is offgrid
+    if Multinode_Inputs.multinode_type == "Offgrid" 
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Off_Grid=true)
     end
     
     # Define limits on grid import and export
-    if Microgrid_Inputs.allow_export_beyond_substation == false # Prevent power from being exported to the grid beyond the facility meter:
+    if Multinode_Inputs.allow_export_beyond_substation == false # Prevent power from being exported to the grid beyond the facility meter:
         print("\n Prohibiting power export at the substation")
-        #RestrictLinePowerFlow(Microgrid_Inputs, pm, m, Microgrid_Inputs.substation_line, REoptTimeSteps, LineInfo; Prevent_Export=true) # This constraint is handled by other constraints below
-    elseif Microgrid_Inputs.substation_export_limit != ""
+        #RestrictLinePowerFlow(Multinode_Inputs, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Prevent_Export=true) # This constraint is handled by other constraints below
+    elseif Multinode_Inputs.substation_export_limit != ""
         print("\n Applying a limit to the power export at the substation")
-        RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, REoptTimeSteps, LineInfo; Substation_Export_Limit = Microgrid_Inputs.substation_export_limit)
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Substation_Export_Limit = Multinode_Inputs.substation_export_limit)
     end 
     
-    if Microgrid_Inputs.substation_import_limit != ""
+    if Multinode_Inputs.substation_import_limit != ""
         print("\n Applying a limit to the power import from the substation")
-        RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, REoptTimeSteps, LineInfo; Substation_Import_Limit = Microgrid_Inputs.substation_import_limit)
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Substation_Import_Limit = Multinode_Inputs.substation_import_limit)
     end 
     
     # Apply a grid outage to the model
-    if Microgrid_Inputs.model_outages_with_outages_vector
-        if Microgrid_Inputs.outages_vector != []
+    if Multinode_Inputs.model_outages_with_outages_vector
+        if Multinode_Inputs.outages_vector != []
             print("\n Applying a grid outages on the following timesteps: ")
-            print(Microgrid_Inputs.model_outages_with_outages_vector)
-            RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, Microgrid_Inputs.outages_vector, LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
+            print(Multinode_Inputs.model_outages_with_outages_vector)
+            RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, Multinode_Inputs.outages_vector, LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
         end    
-    elseif Microgrid_Inputs.single_outage_end_time_step - Microgrid_Inputs.single_outage_start_time_step > 0
-        print("\n Applying a grid outage from time step $(Microgrid_Inputs.single_outage_start_time_step) to $(Microgrid_Inputs.single_outage_end_time_step) ")
-        RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, Microgrid_Inputs.substation_line, collect(Microgrid_Inputs.single_outage_start_time_step:Microgrid_Inputs.single_outage_end_time_step), LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
+    elseif Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step > 0
+        print("\n Applying a grid outage from time step $(Multinode_Inputs.single_outage_start_time_step) to $(Multinode_Inputs.single_outage_end_time_step) ")
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, collect(Multinode_Inputs.single_outage_start_time_step:Multinode_Inputs.single_outage_end_time_step), LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
     end
     
     # Open switches if defined by the user
         # Note: the switch capability in PMD is not used currently in this model, but the switch openings are modeling with these constraints
-    if (Microgrid_Inputs.switch_open_timesteps != "") && (Microgrid_Inputs.model_switches == true)
+    if (Multinode_Inputs.switch_open_timesteps != "") && (Multinode_Inputs.model_switches == true)
         print("\n Switches modeled:")
-        for i in keys(Microgrid_Inputs.switch_open_timesteps)
-            #print("\n   Opening the switch on line $(i) from timesteps $(minimum(Microgrid_Inputs.switch_open_timesteps[i])) to $(maximum(Microgrid_Inputs.switch_open_timesteps[i])) \n")
-            RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, i, Microgrid_Inputs.switch_open_timesteps[i], LineInfo; Switches_Open=true)
+        for i in keys(Multinode_Inputs.switch_open_timesteps)
+            #print("\n   Opening the switch on line $(i) from timesteps $(minimum(Multinode_Inputs.switch_open_timesteps[i])) to $(maximum(Multinode_Inputs.switch_open_timesteps[i])) \n")
+            RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, i, Multinode_Inputs.switch_open_timesteps[i], LineInfo; Switches_Open=true)
         end
     end
     
 end
 
 
-function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
+function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
     # Link export through the substation to the utility tariff on the facility meter node
     
-    PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
+    PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
     buses = REopt_nodes
 
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
             #@info "The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"])"
             
-            i = LineInfo[Microgrid_Inputs.substation_line]["index"]
+            i = LineInfo[Multinode_Inputs.substation_line]["index"]
             # Based off of code in line 470 of PMD's src>core>constraint_template
                 timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
                 branch = ref(pm, timestep, :branch, i)
@@ -628,7 +628,7 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
                 @constraint(m, m[:dvSubstationPowerFlow][timestep] <= m[:binSubstationPositivePowerFlow][timestep] * 1000000 )
                 @constraint(m, m[:dvSubstationPowerFlow][timestep] >=  (1 - m[:binSubstationPositivePowerFlow][timestep]) * -1000000 )
 
-                if Microgrid_Inputs.allow_export_beyond_substation == true
+                if Multinode_Inputs.allow_export_beyond_substation == true
                     # Set the power flowing through the line from the substation to be the grid purchase minus the dvProductionToGrid for node 15
                     #TODO: make this compatible with three phase power- I believe p_fr[1] only refers to the first phase: might be able to say:  p_fr .>= 0   with the period
                     
@@ -654,9 +654,9 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
                     @constraint(m, m[:dvSubstationPowerFlow][timestep] == (sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
                                                                                 sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]))) 
             
-                    @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) <= Microgrid_Inputs.substation_import_limit * m[:binSubstationPositivePowerFlow][timestep])
+                    @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) <= Multinode_Inputs.substation_import_limit * m[:binSubstationPositivePowerFlow][timestep])
                     
-                    @constraint(m, sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]) <= Microgrid_Inputs.substation_export_limit * (1 - m[:binSubstationPositivePowerFlow][timestep]))
+                    @constraint(m, sum(m[Symbol("dvProductionToGrid_"*p.s.settings.facilitymeter_node)]["PV", u, timestep] for u in p.export_bins_by_tech["PV"]) <= Multinode_Inputs.substation_export_limit * (1 - m[:binSubstationPositivePowerFlow][timestep]))
                     
                     @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 0)
                     
@@ -697,15 +697,15 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Microgrid_Inputs, REoptIn
 end
 
 
-function LimitGeneratorOperatingTimes(m, Microgrid_Inputs, REoptInputs_Combined)
+function LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
     # Prevent the generators from generating power during times that aren't a grid outage
 
-    if Microgrid_Inputs.model_outages_with_outages_vector == false
-        NonOutageTimeSteps = vcat(collect(1:Microgrid_Inputs.single_outage_start_time_step), collect(Microgrid_Inputs.single_outage_end_time_step:(8760*Microgrid_Inputs.time_steps_per_hour)))
-    elseif Microgrid_Inputs.model_outages_with_outages_vector == true
+    if Multinode_Inputs.model_outages_with_outages_vector == false
+        NonOutageTimeSteps = vcat(collect(1:Multinode_Inputs.single_outage_start_time_step), collect(Multinode_Inputs.single_outage_end_time_step:(8760*Multinode_Inputs.time_steps_per_hour)))
+    elseif Multinode_Inputs.model_outages_with_outages_vector == true
         NonOutageTimeSteps = []
-        for i in 1:(8760*Microgrid_Inputs.time_steps_per_hour)
-            if !(i in Microgrid_Inputs.outages_vector) 
+        for i in 1:(8760*Multinode_Inputs.time_steps_per_hour)
+            if !(i in Multinode_Inputs.outages_vector) 
                 push!(NonOutageTimeSteps, i)
             end
         end
@@ -735,28 +735,28 @@ function CreateLineInfoDictionary(pm)
 end
 
 
-function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
+function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     # Run the optimization
     # Note: the "optimize_model!" function is a wrapper from PMD and it includes some organization of the results
     
     m = pm.model
 
-    set_optimizer(m, Microgrid_Inputs.optimizer) 
+    set_optimizer(m, Multinode_Inputs.optimizer) 
     
-    if string(Microgrid_Inputs.optimizer) == "Xpress.Optimizer"
+    if string(Multinode_Inputs.optimizer) == "Xpress.Optimizer"
         @info "Setting attributes for the Xpress solver"
-        set_optimizer_attribute(m, "MIPRELSTOP", Microgrid_Inputs.optimizer_tolerance)
-        set_optimizer_attribute(m, "OUTPUTLOG", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
-    elseif string(Microgrid_Inputs.optimizer) == "Gurobi.Optimizer"
+        set_optimizer_attribute(m, "MIPRELSTOP", Multinode_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "OUTPUTLOG", Multinode_Inputs.log_solver_output_to_console ? 1 : 0)
+    elseif string(Multinode_Inputs.optimizer) == "Gurobi.Optimizer"
         @info "Setting attributes for the Gurobi solver"
-        set_optimizer_attribute(m, "MIPGap", Microgrid_Inputs.optimizer_tolerance)
-        set_optimizer_attribute(m, "OutputFlag", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)  
-        set_optimizer_attribute(m, "LogToConsole", Microgrid_Inputs.log_solver_output_to_console ? 1 : 0)
-    elseif string(Microgrid_Inputs.optimizer) == "HiGHS.Optimizer"
+        set_optimizer_attribute(m, "MIPGap", Multinode_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "OutputFlag", Multinode_Inputs.log_solver_output_to_console ? 1 : 0)  
+        set_optimizer_attribute(m, "LogToConsole", Multinode_Inputs.log_solver_output_to_console ? 1 : 0)
+    elseif string(Multinode_Inputs.optimizer) == "HiGHS.Optimizer"
         @info "Setting attributes for the HiGHS solver"
-        set_optimizer_attribute(m, "mip_rel_gap", Microgrid_Inputs.optimizer_tolerance)
-        set_optimizer_attribute(m, "output_flag", Microgrid_Inputs.log_solver_output_to_console)
-        set_optimizer_attribute(m, "log_to_console", Microgrid_Inputs.log_solver_output_to_console)
+        set_optimizer_attribute(m, "mip_rel_gap", Multinode_Inputs.optimizer_tolerance)
+        set_optimizer_attribute(m, "output_flag", Multinode_Inputs.log_solver_output_to_console)
+        set_optimizer_attribute(m, "log_to_console", Multinode_Inputs.log_solver_output_to_console)
     else
         @info "The solver's default tolerance and log settings are being used for the optimization"
     end
@@ -774,7 +774,7 @@ function Run_REopt_PMD_Model(pm, Microgrid_Inputs)
 end
 
 
-function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
+function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
     # Function used for restricting power flow for grid outages, times when switches are opened, and substation import and export limits
     
     # Save the REopt Inputs for the site not to a variable
@@ -788,7 +788,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
 
     # Save to a variable the timesteps that the power models distribution model is applied to
     if OutageSimulator == false
-        PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
+        PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
         PMDTimeSteps_Indeces = collect(1:length(PMDTimeSteps_InREoptTimes))
     elseif OutageSimulator == true
         PMDTimeSteps_InREoptTimes = collect(1:OutageLength_Timesteps)
@@ -828,7 +828,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
             # But if the timesteps are not part of the PMD model, they use the REopt variables
             else
                 @constraint(m, 
-                        sum(m[Symbol("dvProductionToGrid_"*Microgrid_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
+                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
             end
         end
 
@@ -838,7 +838,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, q_fr[1] .>= -Substation_Export_Limit) # TODO apply power factor to the export limit for Q
             else
                 @constraint(m, 
-                        sum(m[Symbol("dvProductionToGrid_"*Microgrid_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) <= Substation_Export_Limit)
+                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) <= Substation_Export_Limit)
             end
         end
 
@@ -847,7 +847,7 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, p_fr[1] .<= Substation_Import_Limit)
                 JuMP.@constraint(m, q_fr[1] .<= Substation_Import_Limit) # TODO apply power factor to the import limit for Q
             else
-                @constraint(m, sum(m[Symbol("dvGridPurchase_"*Microgrid_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) <= Substation_Import_Limit)
+                @constraint(m, sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) <= Substation_Import_Limit)
             end
         end
 
@@ -860,9 +860,9 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, q_to .== 0)
             elseif Switches_Open==false
                 @constraint(m, 
-                        sum(m[Symbol("dvGridPurchase_"*Microgrid_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) == 0)
+                        sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) == 0)
                 @constraint(m, 
-                        sum(m[Symbol("dvProductionToGrid_"*Microgrid_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
+                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
             elseif Switches_Open==true
                 @warn "The switches were defined as open during a time period when the PMD model is not applied"
             end
@@ -871,10 +871,10 @@ function RestrictLinePowerFlow(Microgrid_Inputs, REoptInputs_Combined, pm, m, li
 end
 
 
-function GenerateREoptNodesList(Microgrid_Inputs)
+function GenerateREoptNodesList(Multinode_Inputs)
     REopt_nodes = []
-    for i in Microgrid_Inputs.REopt_inputs_list
-        if string(i["Site"]["node"]) != Microgrid_Inputs.facility_meter_node
+    for i in Multinode_Inputs.REopt_inputs_list
+        if string(i["Site"]["node"]) != Multinode_Inputs.facility_meter_node
             push!(REopt_nodes, i["Site"]["node"])
         end
     end
@@ -883,31 +883,31 @@ end
 
 
 # Function to check for errors in the data inputs for the model
-function RunDataChecks(Microgrid_Inputs,  REopt_dictionary)
+function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
 
     ps = REopt_dictionary
     
     for p in ps
         node_temp = p.s.site.node
 
-        if p.s.settings.facilitymeter_node != Microgrid_Inputs.facility_meter_node
-            throw(@error("The facilitymeter_node input for each REopt node must equal the facility_meter_node defined in the microgrid settings, which is $(Microgrid_Inputs.facility_meter_node)"))
+        if p.s.settings.facilitymeter_node != Multinode_Inputs.facility_meter_node
+            throw(@error("The facilitymeter_node input for each REopt node must equal the facility_meter_node defined in the multinode settings, which is $(Multinode_Inputs.facility_meter_node)"))
         end
 
-        if p.s.settings.time_steps_per_hour != Microgrid_Inputs.time_steps_per_hour
-            throw(@error("The time steps per hour for each REopt node must match the time steps per hour defined in the microgrid settings dictionary"))
+        if p.s.settings.time_steps_per_hour != Multinode_Inputs.time_steps_per_hour
+            throw(@error("The time steps per hour for each REopt node must match the time steps per hour defined in the multinode settings dictionary"))
         end
         
-        if Microgrid_Inputs.critical_load_method == "Fraction"
-            if string(p.s.site.node) ∉ keys(Microgrid_Inputs.critical_load_fraction)
+        if Multinode_Inputs.critical_load_method == "Fraction"
+            if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_fraction)
                 if sum(p.s.electric_load.loads_kw) > 0
                     throw(@error("The REopt node $(node_temp) does not have an assigned critical load fraction in the critical_load_fraction input dictionary"))
                 end
             end
         end
 
-        if Microgrid_Inputs.critical_load_method == "TimeSeries"
-            if string(p.s.site.node) ∉ keys(Microgrid_Inputs.critical_load_timeseries)
+        if Multinode_Inputs.critical_load_method == "TimeSeries"
+            if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_timeseries)
                 if sum(p.s.electric_load.loads_kw) > 0
                     throw(@error("The REopt node $(node_temp) does not have an assigned critical load timeseries profile in the critical_load_timeseries input dictionary"))
                 end
@@ -915,48 +915,48 @@ function RunDataChecks(Microgrid_Inputs,  REopt_dictionary)
         end
         # TODO: add data check to ensure that if a critical load method is defined, then there must be either a critical load fraction or a critical load timeseries dictionary   
         
-        if Int(length(p.s.electric_load.loads_kw)) != Int(8760 * Microgrid_Inputs.time_steps_per_hour)
-            throw(@error("At REopt node $(node_temp), the length of the electric loads vector does not correlate with the time steps per hour defined in the Microgrid_Inputs dictionary"))
+        if Int(length(p.s.electric_load.loads_kw)) != Int(8760 * Multinode_Inputs.time_steps_per_hour)
+            throw(@error("At REopt node $(node_temp), the length of the electric loads vector does not correlate with the time steps per hour defined in the Multinode_Inputs dictionary"))
         end
     end
     
-    if Microgrid_Inputs.microgrid_type ∉ ["CommunityDistrict", "BehindTheMeter", "OffGrid"]
-        throw(@error("An invalid microgrid type was provided in the inputs"))
+    if Multinode_Inputs.multinode_type ∉ ["CommunityDistrict", "BehindTheMeter", "OffGrid"]
+        throw(@error("An invalid multinode type was provided in the inputs"))
     end
 
-    if Microgrid_Inputs.microgrid_type != "CommunityDistrict"
-        @warn("For the community district microgrid type, the electricity tariff for the facility meter node should be 0")
+    if Multinode_Inputs.multinode_type != "CommunityDistrict"
+        @warn("For the community district multinode type, the electricity tariff for the facility meter node should be 0")
     end
 
-    if Microgrid_Inputs.generate_results_plots == true
-        for i in Microgrid_Inputs.run_numbers_for_plotting_outage_simulator_results
-            if i > Microgrid_Inputs.number_of_outages_to_simulate
-                throw(@error("In the Microgrid_Inputs dictionary, all values for the run_numbers_for_plotting_outage_simulator_results must be less than the number_of_outages_to_simulate"))
+    if Multinode_Inputs.generate_results_plots == true
+        for i in Multinode_Inputs.run_numbers_for_plotting_outage_simulator_results
+            if i > Multinode_Inputs.number_of_outages_to_simulate
+                throw(@error("In the Multinode_Inputs dictionary, all values for the run_numbers_for_plotting_outage_simulator_results must be less than the number_of_outages_to_simulate"))
             end
         end
 
-        for i in Microgrid_Inputs.time_steps_for_results_dashboard
-            if i ∉ Microgrid_Inputs.PMD_time_steps
+        for i in Multinode_Inputs.time_steps_for_results_dashboard
+            if i ∉ Multinode_Inputs.PMD_time_steps
                 throw(@error("Please adjust the following model inputs: Every time step for the results dashboard (time_steps_for_results_dashboard) must be in the PMD time steps (PMD_time_steps)."))
             end
         end
     end
 
-    if Microgrid_Inputs.critical_load_method == "Fraction"
-        for x in values(Microgrid_Inputs.critical_load_fraction)
+    if Multinode_Inputs.critical_load_method == "Fraction"
+        for x in values(Multinode_Inputs.critical_load_fraction)
             if x >= 5.0
                 throw(@error("The critical_load_fraction load fraction should be entered as a fraction, not a percent. The model currently limits the critical_load_fraction to 5.0 (or 500%) to reduce possibility of user error. "))
             end
         end
     end
 
-    if Microgrid_Inputs.single_outage_start_time_step > Microgrid_Inputs.single_outage_end_time_step
-        throw(@error("In the Microgrid_Inputs dictionary, the single outage start time must be a smaller value than the single outage stop time"))
+    if Multinode_Inputs.single_outage_start_time_step > Multinode_Inputs.single_outage_end_time_step
+        throw(@error("In the Multinode_Inputs dictionary, the single outage start time must be a smaller value than the single outage stop time"))
     end
 
-    if Microgrid_Inputs.single_outage_end_time_step > (8760 * Microgrid_Inputs.time_steps_per_hour)
-        TotalNumberOfTimeSteps = Int(8760 * Microgrid_Inputs.time_steps_per_hour)
-        throw(@error("In the Microgrid_Inputs dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
+    if Multinode_Inputs.single_outage_end_time_step > (8760 * Multinode_Inputs.time_steps_per_hour)
+        TotalNumberOfTimeSteps = Int(8760 * Multinode_Inputs.time_steps_per_hour)
+        throw(@error("In the Multinode_Inputs dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
     end
 end
 

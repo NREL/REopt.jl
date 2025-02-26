@@ -176,7 +176,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
             end
         end
 		
-		# Only apply the load balance constraint to nodes that aren't the facility meter node. The facility meter node may be used as a meter for the microgrid, so the "grid_import" is set to the power flow through the line upstream of that node
+		# Only apply the load balance constraint to nodes that aren't the facility meter node. The facility meter node may be used as a meter for the multinode network, so the "grid_import" is set to the power flow through the line upstream of that node
 		if string(p.s.site.node) != p.s.settings.facilitymeter_node  
 			add_elec_load_balance_constraints(m, p; _n=_n)
 			add_production_constraints(m, p; _n=_n)

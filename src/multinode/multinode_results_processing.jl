@@ -2,14 +2,14 @@
 
 const PMD = PowerModelsDistribution
 
-function CreateOutputsFolder(Microgrid_Inputs, TimeStamp)
+function CreateOutputsFolder(Multinode_Inputs, TimeStamp)
     # Create a folder for the outputs if saving results
-    if Microgrid_Inputs.generate_CSV_of_outputs == true || Microgrid_Inputs.generate_results_plots == true
+    if Multinode_Inputs.generate_CSV_of_outputs == true || Multinode_Inputs.generate_results_plots == true
         @info "Creating a folder for the results"
-        mkdir(Microgrid_Inputs.folder_location*"/results_"*TimeStamp)
+        mkdir(Multinode_Inputs.folder_location*"/results_"*TimeStamp)
     end
-    if (Microgrid_Inputs.generate_results_plots == true) && (Microgrid_Inputs.run_outage_simulator == true)
-        mkdir(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots") 
+    if (Multinode_Inputs.generate_results_plots == true) && (Multinode_Inputs.run_outage_simulator == true)
+        mkdir(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots") 
     end
 end
 
@@ -22,7 +22,7 @@ function CalculateComputationTime(StartTime_EntireModel)
 end
 
 
-function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInputs_Combined, Microgrid_Inputs, timestamp; allow_upgrades=false, line_upgrade_options_each_line ="")
+function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp; allow_upgrades=false, line_upgrade_options_each_line ="")
     # Extract the PMD results
     print("\n Reading the PMD results")
     sol_math = results["solution"]
@@ -33,13 +33,13 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     print("\n Reading the REopt results")
     REopt_results = reopt_results(m, REoptInputs_Combined)
 
-    if allow_upgrades == true && Microgrid_Inputs.model_line_upgrades == true
-        line_upgrades = Process_Line_Upgrades(m, line_upgrade_options_each_line, Microgrid_Inputs, timestamp)
+    if allow_upgrades == true && Multinode_Inputs.model_line_upgrades == true
+        line_upgrades = Process_Line_Upgrades(m, line_upgrade_options_each_line, Multinode_Inputs, timestamp)
     else
         line_upgrades = "N/A"
     end
 
-    DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Microgrid_Inputs, REopt_results)
+    DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
 
     # Compute values for each line and store line power flows in a dataframe and dictionary 
     DataLineFlow = zeros(7)
@@ -80,7 +80,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
 end
 
 
-function Process_Line_Upgrades(m, line_upgrade_options_each_line, Microgrid_Inputs, TimeStamp)
+function Process_Line_Upgrades(m, line_upgrade_options_each_line, Multinode_Inputs, TimeStamp)
 
     line_upgrade_results = DataFrame(fill(Any[], 4), [:Line, :Upgraded, :MaximumRatedAmps, :UpgradeCost])
     for line in keys(line_upgrade_options_each_line)
@@ -102,19 +102,19 @@ function Process_Line_Upgrades(m, line_upgrade_options_each_line, Microgrid_Inpu
     end
 
     # Save line upgrade results to a csv 
-    if Microgrid_Inputs.generate_CSV_of_outputs
-        CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Upgrade_Summary_"*TimeStamp*".csv", line_upgrade_results)
+    if Multinode_Inputs.generate_CSV_of_outputs
+        CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Upgrade_Summary_"*TimeStamp*".csv", line_upgrade_results)
     end
 
     return line_upgrade_results
 end
 
 
-function Results_Compilation(model, results, PMD_Results, Outage_Results, Microgrid_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
+function Results_Compilation(model, results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
     
     @info "Compiling the results"
 
-    InputsList = Microgrid_Inputs.REopt_inputs_list
+    InputsList = Multinode_Inputs.REopt_inputs_list
 
     # Compute system-level outputs
     system_results = Dict{String, Any}() # Float64}()
@@ -142,7 +142,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
         if "PV" in keys(results[node_temp])
             total_PV_size_kw = total_PV_size_kw + results[node_temp]["PV"]["size_kw"]
             total_PV_energy_produced_minus_curtailment_first_year = total_PV_energy_produced_minus_curtailment_first_year + 
-                                                                    (results[node_temp]["PV"]["year_one_energy_produced_kwh"] - sum(results[node_temp]["PV"]["electric_curtailed_series_kw"]/Microgrid_Inputs.time_steps_per_hour))
+                                                                    (results[node_temp]["PV"]["year_one_energy_produced_kwh"] - sum(results[node_temp]["PV"]["electric_curtailed_series_kw"]/Multinode_Inputs.time_steps_per_hour))
         end
         if "ElectricStorage" in keys(results[node_temp])
             total_electric_storage_size_kw = total_electric_storage_size_kw + results[node_temp]["ElectricStorage"]["size_kw"]
@@ -153,7 +153,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
         end
     end
 
-    if Microgrid_Inputs.model_line_upgrades
+    if Multinode_Inputs.model_line_upgrades
         line_upgrade_costs = value.(model[:total_line_upgrade_cost])
     else
         line_upgrade_costs = 0
@@ -181,13 +181,13 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
 
     # Generate a csv file with outputs from the model if the "generate_CSV_of_outputs" field is set to true
     if system_results_BAU != ""
-        if Microgrid_Inputs.generate_CSV_of_outputs == true
+        if Multinode_Inputs.generate_CSV_of_outputs == true
             @info "Generating CSV of outputs"
             DataLabels = []
             Data = []
             
-            if Microgrid_Inputs.model_type == "PowerModelsDistribution"
-                LineFromSubstationToFacilityMeter = "line"*Microgrid_Inputs.substation_node * "_" * Microgrid_Inputs.facility_meter_node
+            if Multinode_Inputs.model_type == "PowerModelsDistribution"
+                LineFromSubstationToFacilityMeter = "line"*Multinode_Inputs.substation_node * "_" * Multinode_Inputs.facility_meter_node
 
                 MaximumPowerOnsubstation_line_ActivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
                 MinimumPowerOnsubstation_line_ActivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
@@ -209,11 +209,11 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
             push!(DataLabels, "  Model solve time (minutes)" )
             push!(Data, round(JuMP.solve_time(model)/60, digits = 2))
             
-            if Microgrid_Inputs.run_BAU_case 
+            if Multinode_Inputs.run_BAU_case 
                 push!(DataLabels, "  BAU model solve time (minutes)" )
                 push!(Data, round(JuMP.solve_time(bau_model)/60, digits = 2))
             end
-            if Microgrid_Inputs.run_outage_simulator
+            if Multinode_Inputs.run_outage_simulator
                 push!(DataLabels, "  Total outage simulation time (minutes)")
                 push!(Data, round((Dates.value(outage_simulator_time)/(1000*60)), digits=2))
             end
@@ -226,7 +226,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
             push!(DataLabels,"  Total Lifecycle Capital Cost (LCCC)")
             push!(Data, round(system_results["total_lifecycle_capital_cost"], digits=0))
 
-            if Microgrid_Inputs.run_BAU_case 
+            if Multinode_Inputs.run_BAU_case 
                 push!(DataLabels,"  Net Present Value (NPV)")
                 push!(Data, round(system_results["net_present_value"], digits=0))
             end
@@ -274,12 +274,12 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
             push!(DataLabels,"  Average power flow on substation line, Reactive Power kVAR")
             push!(Data, AveragePowerOnsubstation_line_ReactivePower)
             
-            # Add the microgrid outage results to the dataframe
-            push!(DataLabels, "----Microgrid Outage Results----")
+            # Add the multinode outage results to the dataframe
+            push!(DataLabels, "----Multinode Outage Results----")
             push!(Data, "")
-            if Microgrid_Inputs.run_outage_simulator == true
-                for i in 1:length(Microgrid_Inputs.length_of_simulated_outages_time_steps)
-                    OutageLength = Microgrid_Inputs.length_of_simulated_outages_time_steps[i]
+            if Multinode_Inputs.run_outage_simulator == true
+                for i in 1:length(Multinode_Inputs.length_of_simulated_outages_time_steps)
+                    OutageLength = Multinode_Inputs.length_of_simulated_outages_time_steps[i]
                     push!(DataLabels, " --Outage Length: $(OutageLength) time steps--")
                     push!(Data, "")
                     push!(DataLabels, "  Percent of Outages Survived")
@@ -373,22 +373,22 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Microg
             
             # Save the results summary dataframe as a csv document
             dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
-            CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
             
             # Save the Line Flow summary to a different csv
-            CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
             
             # Save the bus voltage summary to a different csv
-            CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
             
             # Save the transformer upgrade results to a csv
-            if Microgrid_Inputs.model_transformer_upgrades
-                CSV.write(Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Transformer_Upgrade_Summary_"*TimeStamp*".csv", dataframe_transformer_upgrade_summary)
+            if Multinode_Inputs.model_transformer_upgrades
+                CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Transformer_Upgrade_Summary_"*TimeStamp*".csv", dataframe_transformer_upgrade_summary)
             end
         end 
 
         #Display results if the "display_results" input is set to true
-        if Microgrid_Inputs.display_results == true
+        if Multinode_Inputs.display_results == true
             print("\n-----")
             print("\nResults:") 
             print("\n   The computation time was: "*string(ComputationTime_EntireModel))
@@ -483,14 +483,14 @@ function VoltageResultsSummary(results)
 end
 
 
-function CollectMapInformation(results, Microgrid_Inputs)
+function CollectMapInformation(results, Multinode_Inputs)
 
-    if Microgrid_Inputs.model_type == "PowerModelsDistribution"
+    if Multinode_Inputs.model_type == "PowerModelsDistribution"
         lines = keys(results["Line_Info_PMD"])
     end
 
     # Extract the latitude and longitude for the busses
-    bus_coordinates_filename = Microgrid_Inputs.bus_coordinates
+    bus_coordinates_filename = Multinode_Inputs.bus_coordinates
     data_input = CSV.read(bus_coordinates_filename, DataFrame, header =1)
     latitudes = vec(Matrix(data_input[:,[:Latitude]]))
     longitudes = vec(Matrix(data_input[:,[:Longitude]]))
@@ -572,9 +572,9 @@ function CollectResultsByNode(results, busses)
     return results_by_node
 end
 
-function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
+function CreateResultsMap(results, Multinode_Inputs, TimeStamp)
 
-    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Microgrid_Inputs) 
+    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Multinode_Inputs) 
 
     results_by_node = CollectResultsByNode(results, busses)
 
@@ -613,17 +613,17 @@ function CreateResultsMap(results, Microgrid_Inputs, TimeStamp)
                 fitbounds = "locations",
                 subunitcolor = "rgb(255,255,255)",
                 countrycolor = "rgb(255,255,255)")
-    layout = PlotlyJS.Layout(; title="Microgrid Results and Layout", geo=geo,  showlegend = false)
+    layout = PlotlyJS.Layout(; title="Multinode Results and Layout", geo=geo,  showlegend = false)
     
     p = PlotlyJS.plot(traces,layout)
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/Results_and_Layout.html")
+    PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_and_Layout.html")
     display(p)
 
 end
 
 
 function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_suffix="")
-    Microgrid_Inputs = results["Microgrid_Inputs"]
+    Multinode_Inputs = results["Multinode_Inputs"]
     # Generate list of lengths from the node to the substation
     DistancesToSourcebus, lengths_dict, paths_dict = DetermineDistanceFromSourcebus(results)
 
@@ -658,23 +658,23 @@ function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_su
 
     p = PlotlyJS.plot(traces, layout)
     display(p)
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/VoltagePlot_InteractivePlot"*file_suffix*".html")
+    PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/VoltagePlot_InteractivePlot"*file_suffix*".html")
 
 end
 
 
-function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptInputs_Combined, model)
+function Aggregated_PowerFlows_Plot(results, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model)
     # Function to create additional plots using PlotlyJS
     
-    OutageStartTimeStep = Microgrid_Inputs.single_outage_start_time_step
-    OutageStopTimeStep = Microgrid_Inputs.single_outage_end_time_step
+    OutageStartTimeStep = Multinode_Inputs.single_outage_start_time_step
+    OutageStopTimeStep = Multinode_Inputs.single_outage_end_time_step
 
     NodeList = []
-    for i in Microgrid_Inputs.REopt_inputs_list
+    for i in Multinode_Inputs.REopt_inputs_list
         push!(NodeList, i["Site"]["node"])
     end
 
-    TotalLoad_series = zeros(Microgrid_Inputs.time_steps_per_hour * 8760) # initiate the total load as 0
+    TotalLoad_series = zeros(Multinode_Inputs.time_steps_per_hour * 8760) # initiate the total load as 0
     for n in NodeList
         TotalLoad_series = TotalLoad_series + results["REopt_results"][n]["ElectricLoad"]["load_series_kw"] 
     end
@@ -690,7 +690,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
     #print(NodesWithPV)
 
     # TODO: account for the situation where one node might be exporting PV and then another node might use that power to charge a battery
-    PVOutput = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
+    PVOutput = zeros(Multinode_Inputs.time_steps_per_hour * 8760)
     for NodeNumberTemp in NodesWithPV
         PVOutput = PVOutput + results["REopt_results"][NodeNumberTemp]["PV"]["electric_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["PV"]["electric_to_grid_series_kw"]
     end
@@ -702,7 +702,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
             push!(NodesWithBattery, i)
         end
     end
-    BatteryOutput = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
+    BatteryOutput = zeros(Multinode_Inputs.time_steps_per_hour * 8760)
     for NodeNumberTemp in NodesWithBattery
         if results["REopt_results"][NodeNumberTemp]["ElectricStorage"]["size_kw"] > 0  # include this if statement to prevent trying to add in empty electric storage time series vectors
             BatteryOutput = BatteryOutput + results["REopt_results"][NodeNumberTemp]["ElectricStorage"]["storage_to_load_series_kw"] + results["REopt_results"][NodeNumberTemp]["ElectricStorage"]["storage_to_grid_series_kw"] 
@@ -716,7 +716,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
             push!(NodesWithGenerator, i)
         end
     end
-    GeneratorOutput = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
+    GeneratorOutput = zeros(Multinode_Inputs.time_steps_per_hour * 8760)
     for NodeNumberTemp in NodesWithGenerator
         GeneratorOutput = GeneratorOutput + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_load_series_kw"].data + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_grid_series_kw"].data  # + results["REopt_results"][NodeNumberTemp]["Generator"]["electric_to_storage_series_kw"].data 
     end
@@ -732,8 +732,8 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
     print("\n The facility meter node REopt inputs have been recorded")
     
     # Save power input from the grid to a variable for plotting
-    PowerFromGrid = zeros(Microgrid_Inputs.time_steps_per_hour * 8760)
-    if Microgrid_Inputs.model_type == "PowerModelsDistribution"    
+    PowerFromGrid = zeros(Multinode_Inputs.time_steps_per_hour * 8760)
+    if Multinode_Inputs.model_type == "PowerModelsDistribution"    
         PowerFromGrid = value.(model[Symbol("dvSubstationPowerFlow")]).data  
     end 
     print("\n The grid power has been recorded")
@@ -743,14 +743,14 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
     print("\n Making the static plot")
     
     # Static plot
-    days = collect(1:(Microgrid_Inputs.time_steps_per_hour * 8760))/(Microgrid_Inputs.time_steps_per_hour * 24)
+    days = collect(1:(Multinode_Inputs.time_steps_per_hour * 8760))/(Multinode_Inputs.time_steps_per_hour * 24)
     Plots.plot(days, TotalLoad_series, label="Total Load")
     Plots.plot!(days, PVOutput, label="Combined PV Output")
     Plots.plot!(days, BatteryOutput, label = "Combined Battery Output")
     Plots.plot!(days, GeneratorOutput, label = "Combined Generator Output")
     Plots.plot!(days, PowerFromGrid, label = "Grid Power")
-    if Microgrid_Inputs.model_outages_with_outages_vector
-        if Microgrid_Inputs.outages_vector != []
+    if Multinode_Inputs.model_outages_with_outages_vector
+        if Multinode_Inputs.outages_vector != []
             # TODO: model the multiple outages in the static plot
         end
     elseif (OutageStopTimeStep - OutageStartTimeStep) > 0
@@ -760,7 +760,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         Plots.plot!([OutageStop_Line, OutageStop_Line],[0,maximum(TotalLoad_series)], label= "Outage End")
         Plots.xlims!(OutageStartTimeStep-12, OutageStopTimeStep+12)
     else
-        Plots.xlims!(0,7*Microgrid_Inputs.time_steps_per_hour) # Show the first week of results
+        Plots.xlims!(0,7*Multinode_Inputs.time_steps_per_hour) # Show the first week of results
     end
     display(Plots.title!("System Wide Power Demand and Generation"))
     print("\n The static plot has been generated")
@@ -769,7 +769,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
     traces = PlotlyJS.GenericTrace[]
     layout = PlotlyJS.Layout(title_text = "System Wide Power Demand and Generation", xaxis_title_text = "Day", yaxis_title_text = "Power (kW)")
     
-    if Microgrid_Inputs.model_type == "PowerModelsDistribution"
+    if Multinode_Inputs.model_type == "PowerModelsDistribution"
         
         max = 1.1 * maximum([maximum(TotalLoad_series), maximum(PVOutput), maximum(BatteryOutput), maximum(GeneratorOutput), maximum(PowerFromGrid)])
         min = 1.1 * minimum([minimum(TotalLoad_series), minimum(PVOutput), minimum(BatteryOutput), minimum(GeneratorOutput), minimum(PowerFromGrid)])
@@ -777,7 +777,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         start_values = []
         end_values = []
     
-        PMD_TimeSteps_inREoptTime =  Microgrid_Inputs.PMD_time_steps
+        PMD_TimeSteps_inREoptTime =  Multinode_Inputs.PMD_time_steps
 
         for i in collect(1:length(PMD_TimeSteps_inREoptTime))
             if i == 1
@@ -793,8 +793,8 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         end
 
         for i in collect(1:length(start_values))
-            start_temp = start_values[i] / (24* Microgrid_Inputs.time_steps_per_hour)
-            end_temp = end_values[i] / (24* Microgrid_Inputs.time_steps_per_hour)
+            start_temp = start_values[i] / (24* Multinode_Inputs.time_steps_per_hour)
+            end_temp = end_values[i] / (24* Multinode_Inputs.time_steps_per_hour)
             
             if i == 1
                 legend = true
@@ -833,10 +833,10 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
         y = PowerFromGrid
     ))  
     
-    if Microgrid_Inputs.model_outages_with_outages_vector
-        if Microgrid_Inputs.outages_vector != []
+    if Multinode_Inputs.model_outages_with_outages_vector
+        if Multinode_Inputs.outages_vector != []
             
-            outage_starts, outage_ends = DetermineOutageStartsAndEnds(Microgrid_Inputs, Microgrid_Inputs.outages_vector)
+            outage_starts, outage_ends = DetermineOutageStartsAndEnds(Multinode_Inputs, Multinode_Inputs.outages_vector)
             
             for i in outage_starts
                 if i == outage_starts[1]
@@ -864,8 +864,8 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
 
         end
     elseif (OutageStopTimeStep - OutageStartTimeStep) > 0
-        OutageStart_Line = OutageStartTimeStep/(24 * Microgrid_Inputs.time_steps_per_hour)
-        OutageStop_Line = OutageStopTimeStep/(24 * Microgrid_Inputs.time_steps_per_hour)
+        OutageStart_Line = OutageStartTimeStep/(24 * Multinode_Inputs.time_steps_per_hour)
+        OutageStop_Line = OutageStopTimeStep/(24 * Multinode_Inputs.time_steps_per_hour)
         push!(traces, PlotlyJS.scatter(name = "Outage Start", showlegend = true, fill = "none", line = PlotlyJS.attr(width = 3, color="red", dash="dot"),
             x = [OutageStart_Line, OutageStart_Line],
             y = [0,maximum(TotalLoad_series)]
@@ -878,21 +878,21 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Microgrid_Inputs, REoptI
 
     p = PlotlyJS.plot(traces, layout)
     display(p)
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/CombinedResults_PowerOutput_InteractivePlot.html")
+    PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/CombinedResults_PowerOutput_InteractivePlot.html")
 end
  
 
 function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREoptTimes; file_suffix="")
     # This function plots the power flows through the network
 
-    Microgrid_Inputs = results["Microgrid_Inputs"]
-    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Microgrid_Inputs) 
+    Multinode_Inputs = results["Multinode_Inputs"]
+    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Multinode_Inputs) 
     results_by_node = CollectResultsByNode(results, busses)
 
     # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
-    PMDTimeSteps_InREoptTimes = Microgrid_Inputs.PMD_time_steps
+    PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
 
     PMDTimeSteps_for_dashboard_InPMDTimes = []
     PMD_dashboard_InPMDTimes_toREoptTimes = Dict([])
@@ -975,8 +975,8 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         y1[i] = miny + (i * stepsize)
     end
 
-    start_day = round(minimum_timestep/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
-    end_day = round(maximum_timestep/(24*Microgrid_Inputs.time_steps_per_hour), digits=2)
+    start_day = round(minimum_timestep/(24*Multinode_Inputs.time_steps_per_hour), digits=2)
+    end_day = round(maximum_timestep/(24*Multinode_Inputs.time_steps_per_hour), digits=2)
     Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx, scaleratio_input)
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
@@ -1004,7 +1004,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
-            label = "$(round(PMD_dashboard_InPMDTimes_toREoptTimes[i]/(24*Microgrid_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
+            label = "$(round(PMD_dashboard_InPMDTimes_toREoptTimes[i]/(24*Multinode_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
     
     layout = PlotlyJS.Layout(
         showlegend=false,
@@ -1038,7 +1038,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
             
     p = PlotlyJS.Plot(data, layout, frames)
 
-    PlotlyJS.savefig(p, Microgrid_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation"*file_suffix*".html")
+    PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PowerFlowAnimation"*file_suffix*".html")
     
     #display(p) # do not display because this plot does not work in VScode
     return frames, layout, steps, line_cords, bus_cords, data,  bus_key_values, line_key_values, line_colors, timesteps, powerflow, Symbol_data_inputs
@@ -1110,7 +1110,7 @@ function SymbolData(results, line_cords, timesteps_PMD, minx, maxx, scaleratio_i
 end
 
 
-function DetermineOutageStartsAndEnds(Microgrid_Inputs, outages_vector)
+function DetermineOutageStartsAndEnds(Multinode_Inputs, outages_vector)
     # From the list of outage timesteps, construct an array for the outage start times and outage end times by identifying groups of values
 
     outage_starts = [outages_vector[1]]
@@ -1128,8 +1128,8 @@ function DetermineOutageStartsAndEnds(Microgrid_Inputs, outages_vector)
         push!(outage_ends, outages_vector[length(outages_vector)])
     end
     # Convert to days:
-    outage_starts = outage_starts / (24 * Microgrid_Inputs.time_steps_per_hour)
-    outage_ends = outage_ends / (24 * Microgrid_Inputs.time_steps_per_hour)
+    outage_starts = outage_starts / (24 * Multinode_Inputs.time_steps_per_hour)
+    outage_ends = outage_ends / (24 * Multinode_Inputs.time_steps_per_hour)
     return outage_starts, outage_ends
 end
 
@@ -1138,7 +1138,7 @@ function DetermineDistanceFromSourcebus(results)
     neighbors = REopt.modified_calc_connected_components_eng(results["PMD_data_eng"])
     paths = REopt.DeterminePathToSourcebus(neighbors)
 
-    Microgrid_Inputs = results["Microgrid_Inputs"]
+    Multinode_Inputs = results["Multinode_Inputs"]
 
     line_names_to_sourcebus_dict = Dict()
     lengths_to_sourcebus_dict = Dict()
@@ -1151,7 +1151,7 @@ function DetermineDistanceFromSourcebus(results)
         for j in collect(1:(length(path)-1))
             firstnode = path[j]
             if path[j] == "sourcebus"
-                firstnode = string(Microgrid_Inputs.substation_node)
+                firstnode = string(Multinode_Inputs.substation_node)
             end
             line_name = string("line"*firstnode*"_"*path[j+1])
             if haskey(results["PMD_data_eng"]["line"], line_name)

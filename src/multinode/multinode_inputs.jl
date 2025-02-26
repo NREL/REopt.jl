@@ -1,14 +1,12 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
-const PMD = PowerModelsDistribution
-
 """
-`microgrid` is an optional input with the following keys and default values:
+`multinode` is an optional input with the following keys and default values:
 ```julia
     folder_location::String="",
     bus_coordinates::String="",  # Location of the csv document with the bus coordinates
     PMD_network_input::Any,
-    microgrid_type::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
+    multinode_type::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
     nonlinear_solver::Bool=false,
     model_type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution",
     run_BAU_case::Bool=true,
@@ -55,11 +53,11 @@ const PMD = PowerModelsDistribution
     display_results::Bool=true
 """
 
-mutable struct MicrogridInputs <: AbstractMicrogrid
+mutable struct MultinodeInputs <: AbstractMultinode
     folder_location
     bus_coordinates
     PMD_network_input
-    microgrid_type
+    multinode_type
     model_type
     run_BAU_case
     optimizer
@@ -106,11 +104,11 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
     display_results
     load_profiles_for_outage_sim_if_using_the_fraction_method
 
-    function MicrogridInputs(;
+    function MultinodeInputs(;
         folder_location::String="",
         bus_coordinates::String="",  
         PMD_network_input::Any,
-        microgrid_type::String="BehindTheMeter", 
+        multinode_type::String="BehindTheMeter", 
         model_type::String="PowerModelsDistribution",
         run_BAU_case::Bool=true, 
         optimizer::Any, 
@@ -189,7 +187,7 @@ mutable struct MicrogridInputs <: AbstractMicrogrid
         folder_location,
         bus_coordinates,
         PMD_network_input,
-        microgrid_type,
+        multinode_type,
         model_type,
         run_BAU_case,
         optimizer,
