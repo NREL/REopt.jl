@@ -174,10 +174,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_dict = Dict(:max_kw => 0.0) 
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
-    for pv in pvs
-        if pv.dc_coupled_with_storage && (!storage_structs["ElectricStorage"].dc_coupled || storage_structs["ElectricStorage"].max_kw <= 0)
-            throw(@error("To model PV that is DC coupled with storage (PV input dc_coupled_with_storage = true), you must also model a non-zero DC coupled storage (set ElectricStorage input dc_coupled = true)"))
-        end
+
+    dc_coupled_pv = any([pv.dc_coupled_with_storage && pv.max_kw > 0 for pv in pvs])
+    if dc_coupled_pv && !(storage_structs["ElectricStorage"].dc_coupled && storage_structs["ElectricStorage"].max_kw > 0)
+        throw(@error("To model PV that is DC coupled with storage (PV input dc_coupled_with_storage = true), you must also model a non-zero DC coupled storage system (set ElectricStorage input dc_coupled = true)"))
+    end
+    if storage_structs["ElectricStorage"].dc_coupled && storage_structs["ElectricStorage"].max_kw > 0 && !dc_coupled_pv
+        throw(@error("To model storage that is DC coupled with PV (ElectricStorage input dc_coupled = true), you must also model a non-zero DC coupled PV system (set PV input dc_coupled_with_storage = true)"))
     end
 
     # TODO stop building ElectricStorage when it is not modeled by user 
