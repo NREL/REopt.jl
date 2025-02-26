@@ -70,12 +70,12 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		dv = "binGenIsOnInTS"*_n
 		m[Symbol(dv)] = @variable(m, [p.techs.gen, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 		
-		if !isempty(p.s.storage.types.elec_no_simultaneous_charge_discharge)
-			@warn "Adding binary variable to prevent simultaneous battery charge/discharge. Some solvers are very slow with integer variables."
-		end
+		#if !isempty(p.s.storage.types.elec_no_simultaneous_charge_discharge)
+		#	@warn "Adding binary variable to prevent simultaneous battery charge/discharge. Some solvers are very slow with integer variables."
+		#end
 
-		dv = "binBattCharging"*_n
-		m[Symbol(dv)] = @variable(m, [p.s.storage.types.elec_no_simultaneous_charge_discharge, p.time_steps], base_name=dv, Bin)
+		#dv = "binBattCharging"*_n
+		#m[Symbol(dv)] = @variable(m, [p.s.storage.types.elec_no_simultaneous_charge_discharge, p.time_steps], base_name=dv, Bin)
 		
 		if !isempty(p.s.electric_tariff.export_bins)
             dv = "dvProductionToGrid"*_n

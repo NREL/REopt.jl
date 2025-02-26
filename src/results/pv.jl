@@ -45,7 +45,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["annual_energy_exported_kwh"] = 0.0
         if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
-                    sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]))  # TODO: replace the _10 with _n 
+                    sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t])) 
             r["electric_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
 
             r["annual_energy_exported_kwh"] = round(

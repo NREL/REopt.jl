@@ -2,7 +2,7 @@
 function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export and curtailment no greater than production
-    if string(p.s.site.node) != p.s.settings.facilitymeter_node
+    if (_n != "") && (string(p.s.site.node) != p.s.settings.facilitymeter_node)
         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
             p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
             >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) +
@@ -25,7 +25,7 @@ function add_export_constraints(m, p; _n="")
     if !isempty(NEM_techs)
         # Constraint (9c): Net metering only -- can't sell more than you purchase
         # hours_per_time_step is cancelled on both sides, but used for unit consistency (convert power to energy)
-        if string(p.s.site.node) != p.s.settings.facilitymeter_node
+        if (_n != "") && (string(p.s.site.node) != p.s.settings.facilitymeter_node)
             @constraint(m,
                 p.hours_per_time_step * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
                 for t in NEM_techs, ts in p.time_steps)
@@ -155,10 +155,6 @@ function add_export_constraints(m, p; _n="")
                     sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                          for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
                   )
-                # original code:
-                    #WHL_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
-                    #          sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                    #            for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
             )
         else
             binWHL = @variable(m, binary = true)
@@ -187,8 +183,6 @@ function add_export_constraints(m, p; _n="")
     end
 
     # register the benefits in the model
-    #println("Checking NEM Benefit for"*string(_n))
-    #println("NEM_benefit is: "*string(NEM_benefit))
     m[Symbol("NEM_benefit"*_n)] = NEM_benefit
     m[Symbol("EXC_benefit"*_n)] = EXC_benefit
     m[Symbol("WHL_benefit"*_n)] = WHL_benefit
@@ -401,7 +395,6 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.s.electric_tariff.export_bins) && !isempty(p.techs.all)
         # NOTE: levelization_factor is baked into dvProductionToGrid
-        #println("TESTING*****************************************************")
         m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEM_benefit"*_n)] + m[Symbol("WHL_benefit"*_n)] +
                                              m[Symbol("EXC_benefit"*_n)]
     else
