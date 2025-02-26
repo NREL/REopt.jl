@@ -1920,7 +1920,7 @@ else  # run HiGHS tests
             r = run_reopt(m, post)
 
             # Test generator outputs
-            @test typeof(r) == Model # this is true when the model is infeasible
+            @test typeof(r) == JuMP.Model # this is true when the model is infeasible
 
             ### Scenario 3: Indonesia. Wind (custom prod) and Generator only
             m = JuMP.Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
