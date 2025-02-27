@@ -440,12 +440,12 @@ function PrepareInputsForOutageSimulator(Multinode_Inputs, OutageLength_TimeStep
     outage_start_timesteps_checked = outage_start_timesteps_filtered[1:RunNumber]
  
     if Multinode_Inputs.model_type == "PowerModelsDistribution" 
-        OutageSimulator_LineFromSubstationToFacilityMeter = Multinode_Inputs.substation_node*"-"*Multinode_Inputs.facility_meter_node
+        OutageSimulator_LineFromSubstationToFacilityMeter = Multinode_Inputs.substation_node*"-"*Multinode_Inputs.facilitymeter_node
     end
 
     return OutageSimulator_LineFromSubstationToFacilityMeter, RunNumber, outage_start_timesteps_checked
 end
-
+ 
 
 function InterpretResult(TerminationStatus, SuccessfullySolved, Multinode_Inputs, x, i, m_outagesimulator, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList)
     if TerminationStatus == "OPTIMAL"

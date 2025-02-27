@@ -316,7 +316,7 @@ function SetTechSizesToZero(Multinode_Settings)
     Multinode_Settings_No_Techs = deepcopy(Multinode_Settings)
 
     for i in 1:length(Multinode_Settings_No_Techs["REopt_inputs_list"])
-        if ("PV" in keys(Multinode_Settings_No_Techs["REopt_inputs_list"][i])) && (string(Multinode_Settings_No_Techs["REopt_inputs_list"][i]["Site"]["node"]) != Multinode_Settings["facility_meter_node"])
+        if ("PV" in keys(Multinode_Settings_No_Techs["REopt_inputs_list"][i])) && (string(Multinode_Settings_No_Techs["REopt_inputs_list"][i]["Site"]["node"]) != Multinode_Settings["facilitymeter_node"])
             delete!(Multinode_Settings_No_Techs["REopt_inputs_list"][i], "PV")
         end
         if "ElectricStorage" in keys(Multinode_Settings_No_Techs["REopt_inputs_list"][i])
@@ -828,7 +828,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             # But if the timesteps are not part of the PMD model, they use the REopt variables
             else
                 @constraint(m, 
-                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
+                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
             end
         end
 
@@ -838,7 +838,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, q_fr[1] .>= -Substation_Export_Limit) # TODO apply power factor to the export limit for Q
             else
                 @constraint(m, 
-                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) <= Substation_Export_Limit)
+                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) <= Substation_Export_Limit)
             end
         end
 
@@ -847,7 +847,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, p_fr[1] .<= Substation_Import_Limit)
                 JuMP.@constraint(m, q_fr[1] .<= Substation_Import_Limit) # TODO apply power factor to the import limit for Q
             else
-                @constraint(m, sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) <= Substation_Import_Limit)
+                @constraint(m, sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facilitymeter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) <= Substation_Import_Limit)
             end
         end
 
@@ -860,9 +860,9 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, q_to .== 0)
             elseif Switches_Open==false
                 @constraint(m, 
-                        sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facility_meter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) == 0)
+                        sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facilitymeter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) == 0)
                 @constraint(m, 
-                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facility_meter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
+                        sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
             elseif Switches_Open==true
                 @warn "The switches were defined as open during a time period when the PMD model is not applied"
             end
@@ -874,7 +874,7 @@ end
 function GenerateREoptNodesList(Multinode_Inputs)
     REopt_nodes = []
     for i in Multinode_Inputs.REopt_inputs_list
-        if string(i["Site"]["node"]) != Multinode_Inputs.facility_meter_node
+        if string(i["Site"]["node"]) != Multinode_Inputs.facilitymeter_node
             push!(REopt_nodes, i["Site"]["node"])
         end
     end
@@ -890,8 +890,8 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
     for p in ps
         node_temp = p.s.site.node
 
-        if p.s.settings.facilitymeter_node != Multinode_Inputs.facility_meter_node
-            throw(@error("The facilitymeter_node input for each REopt node must equal the facility_meter_node defined in the multinode settings, which is $(Multinode_Inputs.facility_meter_node)"))
+        if p.s.settings.facilitymeter_node != Multinode_Inputs.facilitymeter_node
+            throw(@error("The facilitymeter_node input for each REopt node must equal the facilitymeter_node defined in the multinode settings, which is $(Multinode_Inputs.facilitymeter_node)"))
         end
 
         if p.s.settings.time_steps_per_hour != Multinode_Inputs.time_steps_per_hour

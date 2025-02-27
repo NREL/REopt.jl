@@ -1,5 +1,5 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-
+ 
 """
 `multinode` is an optional input with the following keys and default values:
 ```julia
@@ -18,7 +18,7 @@
     bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
     bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
     bus_neutral_voltage_upper_bound_per_unit::Float64=0.1, 
-    facility_meter_node::String="",
+    facilitymeter_node::String="",
     substation_node::String="",
     substation_line::String="",
     allow_export_beyond_substation::Bool=false,
@@ -69,7 +69,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     bus_phase_voltage_lower_bound_per_unit
     bus_phase_voltage_upper_bound_per_unit
     bus_neutral_voltage_upper_bound_per_unit
-    facility_meter_node
+    facilitymeter_node
     substation_node
     substation_line
     allow_export_beyond_substation
@@ -120,7 +120,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
         bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
         bus_neutral_voltage_upper_bound_per_unit::Float64=0.1,
-        facility_meter_node::String="",
+        facilitymeter_node::String="",
         substation_node::String="",
         substation_line::String="",
         allow_export_beyond_substation::Bool=false,
@@ -199,7 +199,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         bus_phase_voltage_lower_bound_per_unit,
         bus_phase_voltage_upper_bound_per_unit,
         bus_neutral_voltage_upper_bound_per_unit,
-        facility_meter_node,
+        facilitymeter_node,
         substation_node,
         substation_line,
         allow_export_beyond_substation,
