@@ -65,12 +65,12 @@ function BAUInputs(p::REoptInputs)
         cap_cost_slope[pvname] = 0.0
         tech_renewable_energy_fraction[pvname] = 1.0
         if pvname in p.techs.pbi
-            push!(pbi_techs, pvname)
+            push!(techs.pbi, pvname)
         end
         pv = get_pv_by_name(pvname, p.s.pvs)
-        fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
+        fillin_techs_by_exportbin(techs_by_exportbin, pv, pvname)
         if !pv.can_curtail
-            push!(techs.no_curtail, pv.name)
+            push!(techs.no_curtail, pvname)
         end
     end
 
@@ -83,7 +83,7 @@ function BAUInputs(p::REoptInputs)
         production_factor["Generator", :] = p.production_factor["Generator", :]
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
         if "Generator" in p.techs.pbi
-            push!(pbi_techs, "Generator")
+            push!(techs.pbi, "Generator")
         end
         if !p.s.generator.can_curtail
             push!(techs.no_curtail, "Generator")
@@ -200,7 +200,7 @@ function BAUInputs(p::REoptInputs)
         seg_min_size,
         seg_max_size,
         seg_yint,
-        p.pbi_pwf, 
+        p.pbi_pwf, # Same pbi dict as optimal case
         p.pbi_max_benefit, 
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh,

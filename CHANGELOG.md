@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
  
+## fix-pbi
+### Fixed
+- Fix implementation of production-based incentives
+
 ## v0.51.0
 ### Added 
 - Add the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
