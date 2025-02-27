@@ -46,18 +46,6 @@ else  # run HiGHS tests
                 ) ≈ false
         end
 
-        @testset "Multinode with power flow" begin
-            inputs = JSON.parsefile("./scenarios/multinode_powerflow.json")
-            inputs["PMD_network_input"] = PowerModelsDistribution.parse_file("./data/multinode_powerflow_network.dss")
-            inputs["optimizer"] = HiGHS.Optimizer
-
-            results, model, model_BAU = REopt.Multinode_Model(inputs)
-            
-            @test results["REopt_results"][6]["ElectricStorage"]["size_kw"] ≈ 22.54 atol=0.01
-            @test results["REopt_results"][6]["ElectricStorage"]["size_kwh"] ≈ 55.34 atol=0.01
-            
-        end
-
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
                 blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
@@ -195,6 +183,18 @@ else  # run HiGHS tests
             push!(ps, MPCInputs("./scenarios/mpc_multinode2.json"));
             r = run_mpc(model, ps)
             @test r[1]["Costs"] ≈ r[2]["Costs"]
+        end
+
+        @testset "Multinode with power flow" begin
+            inputs = JSON.parsefile("./scenarios/multinode_powerflow.json")
+            inputs["PMD_network_input"] = PowerModelsDistribution.parse_file("./data/multinode_powerflow_network.dss")
+            inputs["optimizer"] = HiGHS.Optimizer
+
+            results, model, model_BAU = REopt.Multinode_Model(inputs)
+            
+            @test results["REopt_results"][6]["ElectricStorage"]["size_kw"] ≈ 22.54 atol=0.01
+            @test results["REopt_results"][6]["ElectricStorage"]["size_kwh"] ≈ 55.34 atol=0.01
+            
         end
 
         @testset "Complex Incentives" begin
