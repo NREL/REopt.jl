@@ -194,6 +194,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		for t in p.s.storage.types.elec
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
+			fix(m[:dvStorageToGrid][t, ts], 0.0, force=true)
 		end
 
         if !isempty(p.s.electric_tariff.export_bins)

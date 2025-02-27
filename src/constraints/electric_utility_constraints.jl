@@ -1,8 +1,7 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_export_constraints(m, p; _n="")
-
     ##Constraint (8e): Production export and curtailment no greater than production
-    if (_n == "") || (string(p.s.site.node) != p.s.settings.facilitymeter_node)
+    if (_n == "") || (p.s.settings.facilitymeter_node != "")
         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
             p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
             >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) +
@@ -25,7 +24,7 @@ function add_export_constraints(m, p; _n="")
     if !isempty(NEM_techs)
         # Constraint (9c): Net metering only -- can't sell more than you purchase
         # hours_per_time_step is cancelled on both sides, but used for unit consistency (convert power to energy)
-        if (_n == "") || (string(p.s.site.node) != p.s.settings.facilitymeter_node)
+        if (_n == "") || (p.s.settings.facilitymeter_node != "")
             @constraint(m,
                 p.hours_per_time_step * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
                 for t in NEM_techs, ts in p.time_steps)
@@ -150,7 +149,7 @@ function add_export_constraints(m, p; _n="")
             WHL_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
                   (
                     sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvStorageToGrid"*_n)][b, ts] 
-                        for b in p.s.storage.types.all) for ts in p.time_steps) + 
+                        for b in p.s.storage.types.elec) for ts in p.time_steps) + 
                    
                     sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                          for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
