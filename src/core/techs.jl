@@ -337,11 +337,6 @@ function Techs(s::Scenario)
         append!(providing_oper_res, pvtechs)
     end
 
-    if s.settings.off_grid_flag
-        append!(requiring_oper_res, pvtechs)
-        append!(providing_oper_res, pvtechs)
-    end
-
     if sum(s.dhw_load.loads_kw) == 0.0
         techs_can_serve_dhw = String[]
     end
