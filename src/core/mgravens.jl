@@ -78,7 +78,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         site_name = ""  # Only one, assumed to be the site location of the first ProposedAssetOption
         load_group_names = []  # May be one or more than one, e.g. ["ResidentialGroup", "IndustrialGroup"]
         energy_consumer_names = []  # One set (1+) for each LoadGroup, e.g. ["670a_residential2", "670b_residential2"]
-        load_forecast_names = []  # One-to-one with energy_consumer_names
+        load_profile_data = Dict()  # One-to-one with energy_consumer_names
         length_load_input = 0
         region_name = ""
         lmp_name = ""
@@ -110,17 +110,32 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 end
             end
             for energy_consumer_name in energy_consumer_names
-                append!(load_forecast_names, [replace(split(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"][energy_consumer_name]["EnergyConsumer.LoadProfile"], "::")[2], "'" => "")])
+                load_profile_data[energy_consumer_name] = Dict()
+                load_profile_data[energy_consumer_name]["name"] = replace(split(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"][energy_consumer_name]["EnergyConsumer.LoadProfile"], "::")[2], "'" => "")
+                if !isnothing(get(load_profile_data[energy_consumer_name], "EnergyConsumer.p", nothing))    
+                    load_profile_data[energy_consumer_name]["p"] = load_profile_data[energy_consumer_name]["EnergyConsumer.p"]
+                elseif !isnothing(get(load_profile_data[energy_consumer_name], "EnergyConsumer.EnergyConsumerPhase", nothing))
+                    load_profile_data[energy_consumer_name]["p"] = 0.0
+                    # Add up real power p for all phases
+                    for phase in load_profile_data[energy_consumer_name]["EnergyConsumer.EnergyConsumerPhase"]
+                        load_profile_data[energy_consumer_name]["p"] += phase["EnergyConsumerPhase.pfixed"]
+                    end
+                else
+                    @warn "No real power p found for EnergyConsumer $energy_consumer_name, so assuming LoadProfile is power values and not normalized"
+                end
             end
-            # ElectricLoad.loads_kw electric load profile - loop across all load_forecast_names and sum/aggregate/total them together
+            # ElectricLoad.loads_kw electric load profile - loop across all load_profile_data and sum/aggregate/total them together
             # Need timestep_sec from ONE forecast for initializing loads_kw, but we do validation of timestep_sec and length of EACH load profile in the loop below
-            timestep_sec = mgravens["BasicIntervalSchedule"][load_forecast_names[1]]["EnergyConsumerSchedule.timeStep"]
+            timestep_sec = mgravens["BasicIntervalSchedule"][load_profile_data[1]]["EnergyConsumerSchedule.timeStep"]
             reopt_inputs["Settings"]["time_steps_per_hour"] = 3600 / timestep_sec
             # Sum up the loads in all load forecasts to aggregate into a single load profile
             # This may only matter if relying on a URDB rate structure but this is not currently being used in REopt:
             # "670a_residential2_shape": {
             #     "EnergyConsumerSchedule.startDay": "Monday",
-            for load_forecast_name in load_forecast_names
+
+            # TODO left off here on 2/27/2025 - TWO different ways to build the load profile depending on if the LoadProfile is normalized or power values
+            
+            for load_forecast_name in collect(keys(load_profile_data))
                 load_forecast_dict = get(mgravens["BasicIntervalSchedule"], load_forecast_name, nothing)
                 if !isnothing(load_forecast_dict)
                     # Currently allowing 15-min and hourly intervals with length of N timesteps and scaling to 1-year if not the full year
@@ -191,20 +206,13 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # Coincident peak prices (monthly)
             # TODO allow EnergyPrices.CoincidentPeakPrices to be optional 
             # TODO allow multiple prices with different times for each; also consider more than one consecutive hour
+            #  Currently, we can only have one active time step for each month because we can't distinguish from the Ravens schema
+            #   Also, we must past an array of length 12 of the same prices for REopt to calculate monthly CP charges; otherwise it's more like "yearly" or "per unique price"
             coincident_peak_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CoincidentPeakPrices"], "::")[2], "'" => "")
             coincident_peak_dict = get(mgravens["EnergyPrices"]["CoincidentPeakPrices"], coincident_peak_prices_name, nothing)
             if !isnothing(coincident_peak_dict)
                 coincident_peak_list_of_dict = coincident_peak_dict["CoincidentPeakPrices.CoincidentPeakPriceCurve"]["PriceCurve.CurveDatas"]
-                # prices, ts_array = [], [[]]
-                # for (i, price) in enumerate(coincident_peak_list_of_dict)
-                #     append!(prices, [price["CurveData.y1value"]])
-                #     if !(price in prices)
-                #         append!(ts_array, [[price["CurveData.xvalue"]]])
-                #     else
-                #         append!(ts_array[i], [price["CurveData.xvalue"]])
-                #     end
-                # end
-                prices = [coincident_peak_list_of_dict[1]["CurveData.y1value"]]
+                prices = [coincident_peak_list_of_dict[i]["CurveData.y1value"] for i in eachindex(coincident_peak_list_of_dict)]
                 ts_array = [[coincident_peak_list_of_dict[i]["CurveData.xvalue"]] for i in eachindex(coincident_peak_list_of_dict)]
                 reopt_inputs["ElectricTariff"]["coincident_peak_load_charge_per_kw"] = prices
                 reopt_inputs["ElectricTariff"]["coincident_peak_load_active_time_steps"] = ts_array
@@ -217,7 +225,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # println("site_name = $site_name")
             # println("load_group_names = $load_group_names")
             # println("energy_consumer_names = $energy_consumer_names")
-            # println("load_forecast_names = $load_forecast_names")
+            # println("load_profile_data = $load_profile_data")
             # println("subregion_name = $subregion_name")
             # println("region_name = $region_name")
             # println("lmp_name = $lmp_name")
