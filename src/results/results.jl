@@ -119,8 +119,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "ASHPWaterHeater" in p.techs.ashp_wh
         add_ashp_wh_results(m, p, d; _n)
     end
-    #println("Here is the return of reopt_results:")
-    #println(d)
+
     return d
 end
 

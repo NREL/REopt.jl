@@ -144,10 +144,6 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
-		println(string("Type of rs[1]:",string(typeof(rs[1]))))
-		println(string("Type of rs[2]:",string(typeof(rs[2]))))
-		println(string("rs[1] status:",rs[1]["status"]))
-		println(string("rs[2] status:",rs[2]["status"]))
 		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
@@ -240,10 +236,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
-			elseif b in p.s.storage.types.cold
-				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.hot
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
+			elseif b in p.s.storage.types.cold
+				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
@@ -347,10 +343,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
-			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
-			# @constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
-			# 	m[:dvProductionToWaste][t,q,ts] == 0.0
-			# )
         end
 
         if !isempty(p.techs.pbi)
