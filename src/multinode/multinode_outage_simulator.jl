@@ -323,7 +323,7 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
     end 
 
     if "PV" in keys(results[parse(Int,NodeList[1])])
-        if results[parse(Int,NodeList[i])]["PV"]["size_kw"] > 0
+        if results[parse(Int,NodeList[1])]["PV"]["size_kw"] > 0
             PVProductionProfile_results = round.(((results[parse(Int,NodeList[1])]["PV"]["production_factor_series"])*results[parse(Int,NodeList[1])]["PV"]["size_kw"]), digits = 3)
         else
             PVProductionProfile_results_B = zeros(length(TimeSteps))
