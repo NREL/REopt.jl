@@ -2,7 +2,7 @@
 
 #const PMD = PowerModelsDistribution
 
-function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD)
+function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results)
     
     Outage_Results = Dict([])
     outage_simulator_time_start = now()
@@ -22,7 +22,9 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
         OutageLength_TimeSteps_Input, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived, single_model_outage_simulator, outage_survival_results, outage_start_timesteps = Multinode_OutageSimulator(DataDictionaryForEachNode, 
                                                                                                                                                                                                     REopt_dictionary, 
                                                                                                                                                                                                     Multinode_Inputs, 
-                                                                                                                                                                                                    TimeStamp;
+                                                                                                                                                                                                    TimeStamp,
+                                                                                                                                                                                                    line_upgrade_options_each_line,
+                                                                                                                                                                                                    line_upgrade_results;
                                                                                                                                                                                                     LineInfo_PMD = LineInfo_PMD,
                                                                                                                                                                                                     NumberOfOutagesToTest = Multinode_Inputs.number_of_outages_to_simulate, 
                                                                                                                                                                                                     OutageLength_TimeSteps_Input = OutageLength)
@@ -38,7 +40,7 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
 end
 
 
-function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp;
+function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, line_upgrade_options_each_line, line_upgrade_results;
                                    NumberOfOutagesToTest = 15, OutageLength_TimeSteps_Input = 1, LineInfo_PMD="")
     # This function runs the outage simulator for a particular outage length
     
@@ -74,6 +76,14 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         
         if Multinode_Inputs.model_type == "PowerModelsDistribution"
             Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_TimeSteps_Input, LineInfo_PMD)
+        end
+
+        if Multinode_Inputs.model_line_upgrades
+            AddConstraintsFromLineUpgrades(pm, OutageLength_TimeSteps_Input, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results)
+        end
+
+        if Multinode_Inputs.model_transformer_upgrades
+            AddConstraintsFromTransformerUpgrades() # TODO: finish this function once transformer upgrades are implemented in the code
         end
 
         @objective(pm.model, Max, sum(sum(pm.model[Symbol(string("dvPVToLoad_", n))]) for n in NodesWithPV)) # The objective is to maximize the PV power that is used to meet the load
@@ -277,6 +287,58 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
 end
 
 
+function AddConstraintsFromLineUpgrades(pm, OutageLength_TimeSteps_Input, LineInfo, line_upgrade_options_each_line, line_upgrade_results)
+    
+    outage_timesteps = collect(1:OutageLength_TimeSteps_Input)
+    max_amps = Dict()
+
+    for line in keys(line_upgrade_options_each_line)
+
+        #number_of_entries = length(line_upgrade_options_each_line[line]["max_amperage"])
+        #dv = "Bin"*line
+        #model[Symbol(dv)] = @variable(model, [1:number_of_entries], base_name=dv, Bin)
+        #line_length = data_eng["line"][line]["length"] 
+
+        max_amps_temp = Dict(line => line_upgrade_results[findfirst(x -> x == line, line_upgrade_results.Line), :MaximumRatedAmps])
+        merge!(max_amps, max_amps_temp)
+
+        #@constraint(pm.model, pm.model[:line_max_amps][line] == line_upgrade_results) # sum(pm.model[Symbol(dv)][i]*line_upgrade_options_each_line[line]["max_amperage"][i] for i in 1:number_of_entries))
+        i = LineInfo[line]["index"]
+
+        # Based off of code in line 470 of PMD's src>core>constraint_template
+        timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
+        branch = ref(pm, timestep, :branch, i)
+        f_bus = branch["f_bus"]
+        t_bus = branch["t_bus"]
+        f_connections = branch["f_connections"]
+        t_connections = branch["t_connections"]
+        f_idx = (i, f_bus, t_bus)
+        t_idx = (i, t_bus, f_bus)
+
+        for PMD_time_step in outage_timesteps
+            #PMD_time_step = findall(x -> x==timestep, Multinode_Inputs.PMD_time_steps)[1] #use the [1] to convert the 1-element vector into an integer
+            
+            p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+            p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+            
+            @constraint(pm.model, p_fr[1] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
+            @constraint(pm.model, p_fr[1] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
+
+            @constraint(pm.model, p_to[1] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"]) 
+            @constraint(pm.model, p_to[1] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"]) 
+            
+        end
+
+    end
+end
+
+
+function AddConstraintsFromTransformerUpgrades()
+    # TODO: finish this function
+
+end
+
+
 function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
     results = REopt_results
                         
@@ -455,7 +517,7 @@ function InterpretResult(TerminationStatus, SuccessfullySolved, Multinode_Inputs
         # TODO: calculate the amount of generator fuel that remains, for example: RemainingFuel = value.(m_outagesimulator[Symbol("FuelLeft_3")]) + value.(m_outagesimulator[Symbol("FuelLeft_10")])
                 
         if Multinode_Inputs.generate_results_plots
-            if x in Multinode_Inputs.run_numbers_for_plotting_outage_simulator_results
+            if SuccessfullySolved <= Multinode_Inputs.number_of_plots_from_outage_simulator
                 CreatePlotsForOutageSimulatorModel(Multinode_Inputs, m_outagesimulator, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList, x, i)
             end 
         end

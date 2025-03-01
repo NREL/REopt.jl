@@ -30,7 +30,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
 
         if Multinode_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD)
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results)
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
@@ -929,10 +929,8 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
     end
 
     if Multinode_Inputs.generate_results_plots == true
-        for i in Multinode_Inputs.run_numbers_for_plotting_outage_simulator_results
-            if i > Multinode_Inputs.number_of_outages_to_simulate
-                throw(@error("In the Multinode_Inputs dictionary, all values for the run_numbers_for_plotting_outage_simulator_results must be less than the number_of_outages_to_simulate"))
-            end
+        if Multinode_Inputs.number_of_plots_from_outage_simulator > Multinode_Inputs.number_of_outages_to_simulate
+           @warn("In the Multinode_Inputs dictionary, the number_of_plots_from_outage_simulator is larger than the number_of_outages_to_simulate, so fewer plots than indicated by number_of_plots_from_outage_simulator will be generated.")
         end
 
         for i in Multinode_Inputs.time_steps_for_results_dashboard

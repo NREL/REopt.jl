@@ -40,7 +40,7 @@
     critical_load_fraction::Real=0.0,
     critical_load_timeseries::Array=[],
     number_of_outages_to_simulate::Real=0,
-    run_numbers_for_plotting_outage_simulator_results::Array=[], 
+    number_of_plots_from_outage_simulator::Real=1, 
     time_steps_per_hour::Real=0,
     generator_fuel_gallon_available::Dict=Dict(),
     generators_only_run_during_grid_outage::Bool=false,
@@ -91,7 +91,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     critical_load_fraction
     critical_load_timeseries
     number_of_outages_to_simulate
-    run_numbers_for_plotting_outage_simulator_results
+    number_of_plots_from_outage_simulator
     time_steps_per_hour
     generator_fuel_gallon_available
     generators_only_run_during_grid_outage
@@ -142,7 +142,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         critical_load_fraction::Dict=Dict(),
         critical_load_timeseries::Dict=Dict(),
         number_of_outages_to_simulate::Real=0,
-        run_numbers_for_plotting_outage_simulator_results::Array=[], 
+        number_of_plots_from_outage_simulator::Real=1, 
         time_steps_per_hour::Real=0,
         generator_fuel_gallon_available::Dict=Dict(),
         generators_only_run_during_grid_outage::Bool=false,
@@ -221,7 +221,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         critical_load_fraction,
         critical_load_timeseries,
         number_of_outages_to_simulate,
-        run_numbers_for_plotting_outage_simulator_results,
+        number_of_plots_from_outage_simulator,
         time_steps_per_hour,
         generator_fuel_gallon_available,
         generators_only_run_during_grid_outage,
