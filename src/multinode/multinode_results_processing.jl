@@ -177,7 +177,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
         system_results["net_present_value"] = "Not calculated"
     end
 
-    DataFrame_BusVoltages_Summary, per_unit_voltages, average_voltage = VoltageResultsSummary(PMD_Results)
+    DataFrame_BusVoltages_Summary, per_unit_voltages, minimum_voltage, average_voltage, maximum_voltage = VoltageResultsSummary(PMD_Results)
 
     # Generate a csv file with outputs from the model if the "generate_CSV_of_outputs" field is set to true
     if system_results_BAU != ""
@@ -256,10 +256,16 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             
             push!(DataLabels, "----Power Flow Model Results----")
             push!(Data, "")
+            
             push!(DataLabels,"  Total Number of PMD timesteps, based on the user input")
             push!(Data, length(PMD_Results["nw"]) )
+            push!(DataLabels,"  Minimum per unit bus voltage")
+            push!(Data, minimum_voltage)
             push!(DataLabels,"  Average per unit bus voltage")
             push!(Data, average_voltage)
+            push!(DataLabels,"  Maximum per unit bus voltage")
+            push!(Data, maximum_voltage)
+            
             push!(DataLabels,"  Maximum power flow on substation line, Active Power kW")
             push!(Data, MaximumPowerOnsubstation_line_ActivePower)
             push!(DataLabels,"  Minimum power flow on substation line, Active Power kW")
@@ -459,7 +465,9 @@ function VoltageResultsSummary(results)
 
     DataFrame_BusVoltages = DataFrame(fill(Any[],4), [:Bus, :minimum_pu_voltage, :Average_pu_voltage, :maximum_pu_voltage ])
     per_unit_voltages = Dict([])
+    bus_voltage_minimums = []
     bus_voltage_averages = []
+    bus_voltage_maximums = []
     for bus in keys(results["nw"]["1"]["bus"]) # read all of the line names from the first time step
         Data_BusVoltages = zeros(3)
         per_unit_voltages[bus] = []
@@ -471,15 +479,19 @@ function VoltageResultsSummary(results)
         Data_BusVoltages[2] = round(mean(per_unit_voltages[bus][:]), digits = 6)
         Data_BusVoltages[3] = round(maximum(per_unit_voltages[bus][:]), digits = 6)
         
+        bus_voltage_minimums = push!(bus_voltage_minimums, Data_BusVoltages[1])
         bus_voltage_averages = push!(bus_voltage_averages, Data_BusVoltages[2])
+        bus_voltage_maximums = push!(bus_voltage_maximums, Data_BusVoltages[3])
 
         DataFrame_BusVoltages_temp = DataFrame([("Bus "*string(bus)) Data_BusVoltages[1] Data_BusVoltages[2] Data_BusVoltages[3] ], [:Bus, :minimum_pu_voltage, :Average_pu_voltage, :maximum_pu_voltage])
         DataFrame_BusVoltages = append!(DataFrame_BusVoltages, DataFrame_BusVoltages_temp)
     end
 
+    minimum_voltage = round(minimum(bus_voltage_minimums), digits=6)
     average_voltage = round(mean(bus_voltage_averages), digits=6)
+    maximum_voltage = round(maximum(bus_voltage_maximums), digits=6)
 
-    return DataFrame_BusVoltages, per_unit_voltages, average_voltage
+    return DataFrame_BusVoltages, per_unit_voltages, minimum_voltage, average_voltage, maximum_voltage
 end
 
 
@@ -503,11 +515,19 @@ function CollectMapInformation(results, Multinode_Inputs)
     end
 
     # Create a dictionary of the line segment start and end coordinates
+    substation_cords = "N/A"
     line_cords = Dict([])
     for i in keys(bus_cords)
         for x in keys(bus_cords)
             if i != x
-                if "line"*i*"_"*x in lines
+                if ("line"*i*"_"*x in lines) && (i == Multinode_Inputs.substation_node || x == Multinode_Inputs.substation_node)
+                    line_cords["line"*i*"_"*x] = [bus_cords[i],bus_cords[x]]
+                    if i == Multinode_Inputs.substation_node
+                        substation_cords = bus_cords[i]
+                    elseif x == Multinode_Inputs.substation_node
+                        substation_cords = bus_cords[x]
+                    end
+                elseif "line"*i*"_"*x in lines
                     line_cords["line"*i*"_"*x] = [bus_cords[i],bus_cords[x]]
                 end
             end
@@ -517,7 +537,7 @@ function CollectMapInformation(results, Multinode_Inputs)
     bus_key_values = collect(keys(bus_cords))
     line_key_values = collect(keys(line_cords))
 
-return bus_key_values, line_key_values, bus_cords, line_cords, busses
+return bus_key_values, line_key_values, bus_cords, line_cords, busses, substation_cords
 
 end
 
@@ -886,9 +906,9 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     # This function plots the power flows through the network
 
     Multinode_Inputs = results["Multinode_Inputs"]
-    bus_key_values, line_key_values, bus_cords, line_cords, busses = CollectMapInformation(results, Multinode_Inputs) 
+    bus_key_values, line_key_values, bus_cords, line_cords, busses, substation_cords = CollectMapInformation(results, Multinode_Inputs) 
     results_by_node = CollectResultsByNode(results, busses)
-
+    print("\n The substation coordinates are: $(substation_cords)")
     # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
@@ -900,6 +920,28 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         PMD_time_step_IndecesForDashboard = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
         push!(PMDTimeSteps_for_dashboard_InPMDTimes, PMD_time_step_IndecesForDashboard)
         PMD_dashboard_InPMDTimes_toREoptTimes[PMD_time_step_IndecesForDashboard] = timestep
+    end
+
+    if Multinode_Inputs.model_outages_with_outages_vector 
+        PowerOutageIndicator = Array{String}(undef, 8760)
+        for i in PMDTimeSteps_for_dashboard_InPMDTimes
+            if PMD_dashboard_InPMDTimes_toREoptTimes[i] in  Multinode_Inputs.outages_vector
+                PowerOutageIndicator[i] = "  Grid Outage"
+            else
+                PowerOutageIndicator[i] = ""
+            end
+        end
+    elseif (Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step) > 0
+        PowerOutageIndicator = Array{String}(undef, 8760)
+        for i in PMDTimeSteps_for_dashboard_InPMDTimes
+            if (PMD_dashboard_InPMDTimes_toREoptTimes[i] >= Multinode_Inputs.single_outage_start_time_step) || (PMD_dashboard_InPMDTimes_toREoptTimes[i] >= Multinode_Inputs.single_outage_end_time_step)
+                PowerOutageIndicator[i] = "  Grid Outage"
+            else
+                PowerOutageIndicator[i] = ""
+            end
+        end
+    else
+        PowerOutageIndicator = repeat([""], 8760)
     end
 
     print("\n Timesteps for dashboard in the PMD times are: ")
@@ -985,6 +1027,11 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
             layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation, from day $(start_day) to day $(end_day)", 
                                  xaxis_title_text = "",
                                  yaxis_title_text = "",
+                                 annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], 
+                                                    [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="left", yanchor="bottom", showarrow=false)],
+                                                    [PlotlyJS.attr(x=substation_cords[2], y=substation_cords[1], text=PowerOutageIndicator[j], font = PlotlyJS.attr(color="red", size = 16), xanchor="left", yanchor="bottom", showarrow=false)],
+                                                    [PlotlyJS.attr(x=bus_cords[bus_key_values[j]][2], y=bus_cords[bus_key_values[j]][1], text=bus_key_values[j]*results_by_node[bus_key_values[j]], xanchor="left", yanchor="bottom", showarrow=false) for j in 1:length(bus_key_values) ]),
+             
                                  shapes = vcat([PlotlyJS.line(xref='x', yref='y', 
                                                          x0= Symbol_data_inputs[line_key_values[k]][1][1], 
                                                          y0= Symbol_data_inputs[line_key_values[k]][1][2], 
@@ -1010,9 +1057,9 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         showlegend=false,
         xaxis = PlotlyJS.attr(showticklabels=false, scaleanchor='y', scaleratio = scaleratio_input),
         yaxis = PlotlyJS.attr(showticklabels=false, scaleanchor='x'),
-        annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], 
-                           [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)],
-                           [PlotlyJS.attr(x=bus_cords[bus_key_values[j]][2], y=bus_cords[bus_key_values[j]][1], text=bus_key_values[j]*results_by_node[bus_key_values[j]], xanchor="left", yanchor="bottom", showarrow=false) for j in 1:length(bus_key_values) ]),
+        #annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], 
+        #                   [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)],
+        #                   [PlotlyJS.attr(x=bus_cords[bus_key_values[j]][2], y=bus_cords[bus_key_values[j]][1], text=bus_key_values[j]*results_by_node[bus_key_values[j]], xanchor="left", yanchor="bottom", showarrow=false) for j in 1:length(bus_key_values) ]),
                           
                         
         sliders=[PlotlyJS.attr(yanchor="top", 
