@@ -232,13 +232,17 @@ function proforma_results(p::REoptInputs, d::Dict)
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
     export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
+    standby_charges_series = zeros(years)
+    if !isnothing(get(d, "CHP", nothing))
+        standby_charges_series = escalate_elec(d["CHP"]["year_one_standby_cost_before_tax"])
+    end
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
         total_operating_expenses = m.om_series
         tax_rate_fraction = p.s.financial.owner_tax_rate_fraction
     else
-        total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series + m.fuel_cost_series
+        total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series + m.fuel_cost_series + standby_charges_series
         tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
 
@@ -290,7 +294,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
         r["offtaker_annual_free_cashflows"] = append!([0.0], 
-            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series + m.om_series_bau
+            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series + m.om_series_bau + standby_charges_series
         )
         r["offtaker_annual_free_cashflows_bau"] = append!([0.0], 
             electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau + m.om_series_bau
