@@ -3250,6 +3250,44 @@ else  # run HiGHS tests
             @test s.space_heating_load.loads_kw[end-24+1:end] == s.space_heating_load.loads_kw[1:24]
             @test s.cooling_load.loads_kw_thermal[end-24+1:end] == s.cooling_load.loads_kw_thermal[1:24]
         end
-        
+
+        @testset "After-tax savings and capital cost metric for alternative payback calculation" begin
+            """
+            Check alignment between REopt simple_payback_years and a simple X/Y payback metric with
+            after-tax savings and a capital cost metric with non-discounted incentives to get simple X/Y payback 
+            The REopt simple_payback_years output metric is after-tax, with no discounting, but it uses escalated and 
+            inflated cashflows and it includes out-year, non-discounted battery replacement cost which is only included 
+            in the payback calulcation if the replacement happens before the payback period.
+            This scenario includes export benefits and CHP standby charges which are additive to the electricity bill for total electricity costs.
+            """
+
+            input_data = JSON.parsefile("./scenarios/after_tax_payback.json")
+            # First test with battery replacement within the payback period, but zero discount rate, so simple_payback_years should be equal to the X/Y payback metric
+            #  which discounts the future-year battery replacement back to present value so that it can be included in the payback calculation
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+            # Total operating (energy, fuel, O&M) cost savings output (available only with BAU scenario included)
+            savings = results["Financial"]["year_one_total_cost_savings_after_tax"]
+            # Net cost with non-discounted future capital-based incentives, including present value of battery replacement costs
+            capital_costs_after_non_discounted_incentives = results["Financial"]["capital_costs_after_non_discounted_incentives"]
+            # Calculated payback from above-two metrics
+            payback = capital_costs_after_non_discounted_incentives / savings
+            @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
+
+            # Test that with a non-zero discount rate, as long as the battery replacement cost is zero, these payback periods should also align
+            input_data["Financial"]["offtaker_discount_rate_fraction"] = 0.1
+            input_data["ElectricStorage"]["replace_cost_per_kw"] = 0.0
+            input_data["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+            payback = results["Financial"]["capital_costs_after_non_discounted_incentives"] / results["Financial"]["year_one_total_cost_savings_after_tax"]
+            @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
+        end        
     end
 end
