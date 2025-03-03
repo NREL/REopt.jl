@@ -196,10 +196,10 @@ else  # run HiGHS tests
             results = run_reopt(model, "./scenarios/incentives.json")
             @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
         end
-
-        @testset "Production Based Incentvies" begin
+        @testset "Production Based Incentives" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(model, "./scenarios/pbi.json")
+            d = JSON.parsefile("scenarios/pbi.json")
+            results = run_reopt(model, d)
             s = Scenario(post)
             i = REoptInputs(s)
             @test i.pbi_benefit_per_kwh["Wind"] == 0.05
@@ -207,7 +207,7 @@ else  # run HiGHS tests
             @test i.pbi_max_benefit["Wind"] == 10000
 
             # No generator production, so just testing against wind prod
-            @test results["Financial"]["lifecycle_production_incentive_after_tax"] ≈ i.pbi_pwf["Wind"]*post["Wind"]["production_incentive_per_kwh"]*results["Wind"]["annual_energy_produced_kwh"]
+            @test results["Financial"]["lifecycle_production_incentive_after_tax"] ≈ i.pbi_pwf["Wind"]*d["Wind"]["production_incentive_per_kwh"]*results["Wind"]["annual_energy_produced_kwh"]
         end
 
         @testset "Fifteen minute load" begin
