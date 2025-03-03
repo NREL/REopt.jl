@@ -121,6 +121,9 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
     
+    d["Financial"]["year_one_total_cost_before_tax"] = d["ElectricTariff"]["year_one_bill_before_tax"] - d["ElectricTariff"]["year_one_export_benefit_before_tax"] + d["Financial"]["year_one_chp_standby_cost_before_tax"] + d["Financial"]["year_one_fuel_cost_before_tax"] + d["Financial"]["year_one_om_costs_before_tax"]
+    d["Financial"]["year_one_total_cost_after_tax"] = d["ElectricTariff"]["year_one_bill_after_tax"] - d["ElectricTariff"]["year_one_export_benefit_after_tax"] + d["Financial"]["year_one_chp_standby_cost_after_tax"] + d["Financial"]["year_one_fuel_cost_after_tax"] + d["Financial"]["year_one_om_costs_after_tax"]
+    
     return d
 end
 
@@ -140,7 +143,9 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "year_one_om_costs_before_tax"),
         ("Financial", "year_one_om_costs_after_tax"),
         ("Financial", "year_one_fuel_cost_before_tax"),
-        ("Financial", "year_one_fuel_cost_after_tax"),        
+        ("Financial", "year_one_fuel_cost_after_tax"),
+        ("Financial", "year_one_total_cost_before_tax"),
+        ("Financial", "year_one_total_cost_after_tax"),
         ("Financial", "lifecycle_fuel_costs_after_tax"),
         ("Financial", "lifecycle_chp_standby_cost_after_tax"),
         ("Financial", "lifecycle_elecbill_after_tax"),
@@ -260,6 +265,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         end
     end
         
+    opt["Financial"]["year_one_total_cost_savings_before_tax"] = bau["Financial"]["year_one_total_cost_before_tax"] - opt["Financial"]["year_one_total_cost_before_tax"]
+    opt["Financial"]["year_one_total_cost_savings_after_tax"] = bau["Financial"]["year_one_total_cost_after_tax"] - opt["Financial"]["year_one_total_cost_after_tax"]
     # TODO add FlexibleHVAC opex savings
 
     return opt

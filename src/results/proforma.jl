@@ -232,10 +232,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
     export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
-    standby_charges_series = zeros(years)
-    if !isnothing(get(d, "CHP", nothing))
-        standby_charges_series = escalate_elec(d["CHP"]["year_one_standby_cost_before_tax"])
-    end
+    standby_charges_series = escalate_elec(d["Financial"]["year_one_chp_standby_cost_before_tax"])
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
