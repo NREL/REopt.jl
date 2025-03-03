@@ -16,6 +16,8 @@
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
+- `year_one_chp_standby_cost_after_tax` Year one CHP standby costs, after tax.
+- `year_one_chp_standby_cost_before_tax` Year one CHP standby costs, before tax.
 - `lifecycle_capital_costs_plus_om_after_tax` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. This value does not include offgrid_other_capital_costs.
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. This value does not include offgrid_other_capital_costs.

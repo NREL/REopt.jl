@@ -8,6 +8,7 @@
 - `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
 - `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits
+- `year_one_fuel_cost_after_tax` Fuel cost over the first year, after considering tax benefits
 - `annual_fuel_consumption_gal` Gallons of fuel used in each year
 - `electric_to_storage_series_kw` Vector of power sent to battery in an average year
 - `electric_to_grid_series_kw` Vector of power sent to grid in an average year

@@ -1,16 +1,17 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ExistingBoiler` results keys:
-- `size_mmbtu_per_hour`
-- `fuel_consumption_series_mmbtu_per_hour` 
-- `annual_fuel_consumption_mmbtu`
-- `thermal_production_series_mmbtu_per_hour`
-- `annual_thermal_production_mmbtu`
+- `size_mmbtu_per_hour`  # Thermal production capacity size of the Boiler [MMBtu/hr]
+- `fuel_consumption_series_mmbtu_per_hour`  # Fuel consumption series [MMBtu/hr] 
+- `annual_fuel_consumption_mmbtu`  # Fuel consumed in a year [MMBtu]
+- `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
+- `annual_thermal_production_mmbtu`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_storage_series_mmbtu_per_hour` # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
-- `thermal_to_steamturbine_series_mmbtu_per_hour`
-- `thermal_to_load_series_mmbtu_per_hour`
-- `lifecycle_fuel_cost_after_tax`
-- `year_one_fuel_cost_before_tax`
+- `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
+- `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
+- `lifecycle_fuel_cost_after_tax`  # Life cycle fuel cost [\$]
+- `year_one_fuel_cost_before_tax`  # Year one fuel cost, before tax [\$]
+- `year_one_fuel_cost_after_tax`  # Year one fuel cost, after tax [\$]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 

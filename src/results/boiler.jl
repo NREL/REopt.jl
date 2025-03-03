@@ -10,7 +10,8 @@
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
 - `lifecycle_fuel_cost_after_tax`  # Life cycle fuel cost [\$]
-- `year_one_fuel_cost_before_tax`  # Year one fuel cost [\$]
+- `year_one_fuel_cost_before_tax`  # Year one fuel cost, before tax [\$]
+- `year_one_fuel_cost_after_tax`  # Year one fuel cost, after tax [\$]
 - `lifecycle_per_unit_prod_om_costs`  # Life cycle production-based O&M cost [\$]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"

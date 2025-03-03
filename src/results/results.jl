@@ -267,6 +267,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         
     opt["Financial"]["year_one_total_cost_savings_before_tax"] = bau["Financial"]["year_one_total_cost_before_tax"] - opt["Financial"]["year_one_total_cost_before_tax"]
     opt["Financial"]["year_one_total_cost_savings_after_tax"] = bau["Financial"]["year_one_total_cost_after_tax"] - opt["Financial"]["year_one_total_cost_after_tax"]
+    
     # TODO add FlexibleHVAC opex savings
 
     return opt

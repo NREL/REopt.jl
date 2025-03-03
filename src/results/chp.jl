@@ -14,9 +14,11 @@
 - `thermal_curtailed_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour` Thermal (steam) power to steam turbine time-series array [MMBtu/hr]
-- `year_one_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one [\$]
+- `year_one_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one, before tax [\$]
+- `year_one_fuel_cost_after_tax` Cost of fuel consumed by the CHP system in year one, after tax
 - `lifecycle_fuel_cost_after_tax` Present value of cost of fuel consumed by the CHP system, after tax [\$]
-- `year_one_standby_cost_before_tax` CHP standby charges in year one [\$] 
+- `year_one_standby_cost_before_tax` CHP standby charges in year one, before tax [\$]
+- `year_one_standby_cost_after_tax` CHP standby charges in year one, after tax
 - `lifecycle_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
 - `thermal_production_series_mmbtu_per_hour`  
 

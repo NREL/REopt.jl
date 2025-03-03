@@ -9,6 +9,7 @@ GHP results:
 - `ghp_option_chosen` Integer option # chosen by model, possible 0 for no GHP
 - `ghpghx_chosen_outputs` Dict of all outputs from GhpGhx.jl results of the chosen GhpGhx system
 - `size_heat_pump_ton` Total heat pump capacity [ton]
+- `avoided_capex_by_ghp_present_value` Present value of avoided capital cost by choosing GHP
 - `space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour`
 - `cooling_thermal_load_reduction_with_ghp_ton`
 - `thermal_to_space_heating_load_series_mmbtu_per_hour`
