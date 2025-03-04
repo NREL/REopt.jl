@@ -41,6 +41,16 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             r["installed_cost_per_kw"] = get_pv_initial_capex(p, pv_tech, r["size_kw"]) / r["size_kw"]
         end
 
+        if !isnothing(pv_tech.size_class) && !isempty(pv_tech.tech_sizes_for_cost_curve)
+            optimal_size = r["size_kw"] - pv_tech.existing_kw  # New capacity only
+            min_size = minimum(pv_tech.tech_sizes_for_cost_curve)
+            max_size = maximum(pv_tech.tech_sizes_for_cost_curve)
+            
+            if optimal_size < min_size || optimal_size > max_siz
+                @warn "PV $(t): Optimal size ($(round(optimal_size, digits=1)) kW) doesn't match size class $(pv_tech.size_class) range ($(round(min_size, digits=1))-$(round(max_size, digits=1)) kW). For more accurate results, rerun with an appropriate size class or define the pv installed cost. Ignore if using custom costs instead of default size class costs."            
+            end
+        end
+		
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
 		if !isempty(p.s.storage.types.elec)
 			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
