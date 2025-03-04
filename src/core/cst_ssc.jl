@@ -167,6 +167,7 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
             user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
             user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
+        end
     end
     R = Dict()
     error = ""
@@ -297,6 +298,5 @@ function run_ssc(case_data::Dict)
         #return R
         
     end
-    println("no errors were found")
     return R
 end
