@@ -166,7 +166,7 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
             user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
             user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
-            user_defined_inputs["lat"] = case_data["CST"]["Site"]["latitude"]
+            user_defined_inputs["lat"] = lat
             user_defined_inputs["Fluid"] = 21
             user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
             user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
