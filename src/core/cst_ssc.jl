@@ -137,7 +137,7 @@ function run_ssc(case_data::Dict)
     user_defined_inputs_list = Dict(
         "swh_flatplate" => ["T_set","fluid","ncoll","tilt"],
         "swh_evactube" => ["T_set","fluid","ncoll","tilt"],
-        "ptc" => ["Fluid","q_pb_design","T_loop_in_des","T_loop_out","specified_total_aperture","T_tank_hot_inlet_min","use_solar_mult_or_aperture_area","hot_tank_Thtr","cold_tank_Thtr","lat"], # need to add "store_fluid",
+        "ptc" => ["Fluid","q_pb_design","specified_total_aperture","use_solar_mult_or_aperture_area","lat"], # need to add "store_fluid",
         "lf" => [],
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
@@ -155,9 +155,17 @@ function run_ssc(case_data::Dict)
         user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
     end
     if model == "ptc"
+        # TO DO: Update temperature inputs for PTC using inlet_temp and outlet_temp here
+        inlet_temp = case_data["CST"]["inlet_temp"]
+        outlet_temp = case_data["CST"]["outlet_temp"]
         user_defined_inputs["h_tank_in"] = defaults["h_tank"]
         user_defined_inputs["f_htfmin"] = 0.0
         user_defined_inputs["f_htfmax"] = 1.0
+        user_defined_inputs["T_loop_in_des"] = inlet_temp
+        user_defined_inputs["T_loop_out"] = outlet_temp
+        user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
+        user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
+        user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
     end
     R = Dict()
     error = ""
@@ -220,6 +228,7 @@ function run_ssc(case_data::Dict)
             "swh_evactube" => 1           
         ) 
         outputs = outputs_dict[model]
+        println("retrieved outputs")
         
         len = 8760
         len_ref = Ref(len)
@@ -287,5 +296,6 @@ function run_ssc(case_data::Dict)
         #return R
         
     end
+    println("no errors were found")
     return R
 end
