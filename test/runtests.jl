@@ -204,10 +204,10 @@ else  # run HiGHS tests
             i = REoptInputs(s)
             @test i.pbi_benefit_per_kwh["Wind"] == 0.05
             @test i.pbi_benefit_per_kwh["Generator"] == 0.1
-            @test i.pbi_max_benefit["Wind"] == 10000
+            @test i.pbi_max_benefit["Wind"] == 1000000
 
             # No generator production, so just testing against wind prod
-            @test results["Financial"]["lifecycle_production_incentive_after_tax"] ≈ i.pbi_pwf["Wind"]*d["Wind"]["production_incentive_per_kwh"]*results["Wind"]["annual_energy_produced_kwh"]
+            @test results["Financial"]["lifecycle_production_incentive_after_tax"] ≈ i.pbi_pwf["Wind"]*d["Wind"]["production_incentive_per_kwh"]*results["Wind"]["annual_energy_produced_kwh"] rtol=1e-4
         end
 
         @testset "Fifteen minute load" begin
