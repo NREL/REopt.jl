@@ -156,17 +156,17 @@ function run_ssc(case_data::Dict)
     end
     if model == "ptc"
         # TO DO: Update temperature inputs for PTC using inlet_temp and outlet_temp here
-        println("CST case data: " * string(case_data["CST"]))
-        inlet_temp = case_data["CST"]["inlet_temp"]
-        outlet_temp = case_data["CST"]["outlet_temp"]
-        user_defined_inputs["h_tank_in"] = defaults["h_tank"]
-        user_defined_inputs["f_htfmin"] = 0.0
-        user_defined_inputs["f_htfmax"] = 1.0
-        user_defined_inputs["T_loop_in_des"] = inlet_temp
-        user_defined_inputs["T_loop_out"] = outlet_temp
-        user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
-        user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
-        user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
+        if haskey(case_data["CST"], "inlet_temp") && haskey(case_data["CST"], "outlet_temp")
+            inlet_temp = case_data["CST"]["inlet_temp"]
+            outlet_temp = case_data["CST"]["outlet_temp"]
+            user_defined_inputs["h_tank_in"] = defaults["h_tank"]
+            user_defined_inputs["f_htfmin"] = 0.0
+            user_defined_inputs["f_htfmax"] = 1.0
+            user_defined_inputs["T_loop_in_des"] = inlet_temp
+            user_defined_inputs["T_loop_out"] = outlet_temp
+            user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
+            user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
+            user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
     end
     R = Dict()
     error = ""

@@ -11,7 +11,7 @@ end
 data = JSON.parse(data_str)
 
 # Modify CST by adding new parameters
-data["CST"]["input_temp"] = 250
+data["CST"]["inlet_temp"] = 250
 data["CST"]["outlet_temp"] = 350
 
 # Remove parameters from CST["SSC_inputs"]
