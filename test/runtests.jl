@@ -200,7 +200,7 @@ else  # run HiGHS tests
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             d = JSON.parsefile("scenarios/pbi.json")
             results = run_reopt(model, d)
-            s = Scenario(post)
+            s = Scenario(d)
             i = REoptInputs(s)
             @test i.pbi_benefit_per_kwh["Wind"] == 0.05
             @test i.pbi_benefit_per_kwh["Generator"] == 0.1
