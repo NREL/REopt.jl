@@ -1,99 +1,57 @@
 {
-  "ground": {
-    "size_classes": [
-      {
-        "size_class": 1,
-        "name": "Residential",
-        "tech_sizes_for_cost_curve": [0, 25],
-        "representative_size_kw": 7.9,
-        "installed_cost_per_kw": 2813,
-        "om_cost_per_kw": 29.56,
-        "notes": "Based on 7.9kW residential system with 5% premium for ground mounting"
-      },
-      {
-        "size_class": 2,
-        "name": "Small Commercial",
-        "tech_sizes_for_cost_curve": [25, 250],
-        "representative_size_kw": 150,
-        "installed_cost_per_kw": 2471,
-        "om_cost_per_kw": 18.50,
-        "notes": "Based on average of 100-200kW commercial ground mount systems"
-      },
-      {
-        "size_class": 3,
-        "name": "Large Commercial",
-        "tech_sizes_for_cost_curve": [250, 750],
-        "representative_size_kw": 350,
-        "installed_cost_per_kw": 2072,
-        "om_cost_per_kw": 18.50,
-        "notes": "Based on average of 250-500kW commercial ground mount systems"
-      },
-      {
-        "size_class": 4,
-        "name": "Industrial",
-        "tech_sizes_for_cost_curve": [750, 5000],
-        "representative_size_kw": 1500,
-        "installed_cost_per_kw": 1774,
-        "om_cost_per_kw": 18.50,
-        "notes": "Based on average of 750-2000kW commercial ground mount systems"
-      },
-      {
-        "size_class": 5,
-        "name": "Utility",
-        "tech_sizes_for_cost_curve": [5000, 100000],
-        "representative_size_kw": 30000,
-        "installed_cost_per_kw": 1413,
-        "om_cost_per_kw": 22.05,
-        "notes": "Based on average of 10000-50000kW utility scale one-axis tracking systems"
-      }
-    ]
-  },
   "roof": {
     "size_classes": [
       {
         "size_class": 1,
         "name": "Residential",
-        "tech_sizes_for_cost_curve": [0, 25],
-        "representative_size_kw": 7.9,
-        "installed_cost_per_kw": 2679,
-        "om_cost_per_kw": 29.56,
-        "notes": "Based on standard 7.9kW residential roof system"
+        "tech_sizes_for_cost_curve": [0, 11],
+        "installed_cost_per_kw": 3112,
+        "om_cost_per_kw": 39.60,
+        "notes": "Based on ATB 3-11kW"
       },
       {
         "size_class": 2,
-        "name": "Small Commercial",
-        "tech_sizes_for_cost_curve": [25, 250],
-        "representative_size_kw": 150,
-        "installed_cost_per_kw": 1938,
-        "om_cost_per_kw": 18.50,
-        "notes": "Based on average of 100-200kW commercial rooftop systems"
+        "name": "Commercial",
+        "tech_sizes_for_cost_curve": [11, 2000],
+        "installed_cost_per_kw": 1800,
+        "om_cost_per_kw": 23.76,
+        "notes": "Based on ATB 100-2000 kW"
       },
       {
         "size_class": 3,
-        "name": "Large Commercial",
-        "tech_sizes_for_cost_curve": [250, 750],
-        "representative_size_kw": 350,
-        "installed_cost_per_kw": 1730,
-        "om_cost_per_kw": 18.50,
-        "notes": "Based on 500kW commercial rooftop systems"
+        "name": "Utility",
+        "tech_sizes_for_cost_curve": [2000, 100000],
+        "installed_cost_per_kw": 1077,
+        "om_cost_per_kw": 26.42,
+        "notes": "Based on ATB 5000-100000 kW"
+      }
+    ]
+  },
+  "ground": {
+    "size_classes": [
+      {
+        "size_class": 1,
+        "name": "Residential",
+        "tech_sizes_for_cost_curve": [0, 11],
+        "installed_cost_per_kw": 3579,
+        "om_cost_per_kw": 37.79,
+        "notes": "Based on ATB 3-11kW [Applied a 15% cost increase from roof]"
       },
       {
-        "size_class": 4,
-        "name": "Industrial",
-        "tech_sizes_for_cost_curve": [750, 5000],
-        "representative_size_kw": 1500,
-        "installed_cost_per_kw": 1689,
-        "om_cost_per_kw": 18.50,
-        "notes": "Based on average of 1000-2000kW commercial rooftop systems"
+        "size_class": 2,
+        "name": "Commercial",
+        "tech_sizes_for_cost_curve": [11, 2000],
+        "installed_cost_per_kw": 2047,
+        "om_cost_per_kw": 22.67,
+        "notes": "Based on ATB 100-2000 kW"
       },
       {
-        "size_class": 5,
-        "name": "Mega-Rooftop",
-        "tech_sizes_for_cost_curve": [5000, 35000],
-        "representative_size_kw": 10000,
-        "installed_cost_per_kw": 1150,
-        "om_cost_per_kw": 22.05,
-        "notes": "Based on utility-scale fixed-tilt systems adapted for large rooftops"
+        "size_class": 3,
+        "name": "Utility",
+        "tech_sizes_for_cost_curve": [2000, 100000],
+        "installed_cost_per_kw": 1077,
+        "om_cost_per_kw": 26.42,
+        "notes": "Based on ATB 5000-100000 kW"
       }
     ]
   }

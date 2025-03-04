@@ -581,7 +581,51 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
+    # First pass: Calculate space constraints for all PVs
     for pv in s.pvs
+        if pv.location == "both"
+            both_existing_pv_kw += pv.existing_kw
+            if !(s.site.roof_squarefeet === nothing) && !(s.site.land_acres === nothing)
+                roof_max_kw = s.site.roof_squarefeet * pv.kw_per_square_foot
+                land_max_kw = s.site.land_acres / pv.acres_per_kw
+                pv_space_limited = true
+            end
+        elseif pv.location == "roof"
+            roof_existing_pv_kw += pv.existing_kw
+            if !(s.site.roof_squarefeet === nothing)
+                roof_max_kw = s.site.roof_squarefeet * pv.kw_per_square_foot
+                pv_roof_limited = true
+            end
+        elseif pv.location == "ground"
+            ground_existing_pv_kw += pv.existing_kw
+            if !(s.site.land_acres === nothing)
+                land_max_kw = s.site.land_acres / pv.acres_per_kw
+                pv_ground_limited = true
+            end
+        end
+    end
+
+    # Second pass: Setup each PV with the constraint information
+    for pv in s.pvs
+        # Start with the user-specified max_kw
+        beyond_existing_kw = pv.max_kw
+        
+        # Apply space constraints only if they're specified and more restrictive
+        if pv.location == "both"
+            if pv_space_limited
+                space_constrained_max = roof_max_kw + land_max_kw
+                beyond_existing_kw = min(beyond_existing_kw, space_constrained_max)
+            end
+        elseif pv.location == "roof"
+            if pv_roof_limited
+                beyond_existing_kw = min(beyond_existing_kw, roof_max_kw)
+            end
+        elseif pv.location == "ground"
+            if pv_ground_limited
+                beyond_existing_kw = min(beyond_existing_kw, land_max_kw)
+            end
+        end
+
         # Get defaults if needed based on size class
         if isnothing(pv.size_class) || isempty(pv.installed_cost_per_kw) || isempty(pv.om_cost_per_kw)
             array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
@@ -589,11 +633,12 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             defaults = pv_defaults_all[array_category]["size_classes"]
             
             if isnothing(pv.size_class)
+                # Use the space-constrained max in get_pv_size_class
                 pv.size_class = get_pv_size_class(
                     pv.avg_electric_load_kw,
                     [c["tech_sizes_for_cost_curve"] for c in defaults],
                     min_kw=pv.min_kw,
-                    max_kw=pv.max_kw,
+                    max_kw=beyond_existing_kw,  #space-constrained max
                     existing_kw=pv.existing_kw
                 )
             end
@@ -601,7 +646,14 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             class_defaults = defaults[pv.size_class]
             
             if isempty(pv.installed_cost_per_kw)
-                pv.installed_cost_per_kw = convert(Vector{Float64}, class_defaults["installed_cost_per_kw"])
+                # Handle both scalar and vector cost data
+                installed_cost_data = class_defaults["installed_cost_per_kw"]
+                if installed_cost_data isa Number
+                    # Keep scalar as scalar (not vector) to match user behavior
+                    pv.installed_cost_per_kw = convert(Float64, installed_cost_data)
+                else
+                    pv.installed_cost_per_kw = convert(Vector{Float64}, installed_cost_data)
+                end
             end
             
             if isempty(pv.om_cost_per_kw)
@@ -621,31 +673,6 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
                 pv_to_location[pv.name][location] = 1
             else
                 pv_to_location[pv.name][location] = 0
-            end
-        end
-
-        beyond_existing_kw = pv.max_kw
-        if pv.location == "both"
-            both_existing_pv_kw += pv.existing_kw
-            if !(s.site.roof_squarefeet === nothing) && !(s.site.land_acres === nothing)
-                roof_max_kw = s.site.roof_squarefeet * pv.kw_per_square_foot
-                land_max_kw = s.site.land_acres / pv.acres_per_kw
-                beyond_existing_kw = min(roof_max_kw + land_max_kw, beyond_existing_kw)
-                pv_space_limited = true
-            end
-        elseif pv.location == "roof"
-            roof_existing_pv_kw += pv.existing_kw
-            if !(s.site.roof_squarefeet === nothing)
-                roof_max_kw = s.site.roof_squarefeet * pv.kw_per_square_foot
-                beyond_existing_kw = min(roof_max_kw, beyond_existing_kw)
-                pv_roof_limited = true
-            end
-        elseif pv.location == "ground"
-            ground_existing_pv_kw += pv.existing_kw
-            if !(s.site.land_acres === nothing)
-                land_max_kw = s.site.land_acres / pv.acres_per_kw
-                beyond_existing_kw = min(land_max_kw, beyond_existing_kw)
-                pv_ground_limited = true
             end
         end
 
@@ -678,7 +705,6 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     end
     
     return nothing
-
 end
 
 """

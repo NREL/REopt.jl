@@ -286,8 +286,15 @@ mutable struct PV <: AbstractTech
             # Multiple costs provided
             convert(Vector{Float64}, installed_cost_per_kw)
         elseif !isnothing(class_defaults)
-            # Use defaults from size class
-            convert(Vector{Float64}, class_defaults["installed_cost_per_kw"])
+            # Use defaults from size class - carefully handle both formats
+            default_cost = class_defaults["installed_cost_per_kw"]
+            if typeof(default_cost) <: Number
+                # Single value in defaults
+                convert(Float64, default_cost)
+            else
+                # Vector in defaults
+                convert(Vector{Float64}, default_cost)
+            end
         else
             throw(ErrorException("No installed costs provided and no size class determined"))
         end
