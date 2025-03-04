@@ -156,6 +156,7 @@ function run_ssc(case_data::Dict)
     end
     if model == "ptc"
         # TO DO: Update temperature inputs for PTC using inlet_temp and outlet_temp here
+        println("CST case data: " * string(case_data["CST"]))
         inlet_temp = case_data["CST"]["inlet_temp"]
         outlet_temp = case_data["CST"]["outlet_temp"]
         user_defined_inputs["h_tank_in"] = defaults["h_tank"]
