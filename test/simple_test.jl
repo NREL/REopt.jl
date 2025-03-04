@@ -8,5 +8,5 @@ results = run_reopt([m1,m2], "./scenarios/pv_cst_tes.json")
 
 # Save results to JSON
 open("./outputs/pv_cst_tes.json","w") do f
-    JSON.print(f, results)
+    JSON.print(f, results, 2)
 end

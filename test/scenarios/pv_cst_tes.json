@@ -17582,13 +17582,9 @@
     "installed_cost_per_kw": 950,
     "SSC_Inputs": {
       "use_solar_mult_or_aperture_area": 1,
-      "fluid_id": 7,
       "q_pb_design": 10.210454585721903,
-      "specified_total_aperture": 4.04608092e6,
-      "n_coll": 5,
-      "store_fluid": 7
-    },
-    "input_temp": 250
+      "specified_total_aperture": 4.04608092e6
+    }
   },
   "HotSensibleTes": {
     "installed_cost_per_kwh": 100,

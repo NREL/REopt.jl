@@ -137,7 +137,7 @@ function run_ssc(case_data::Dict)
     user_defined_inputs_list = Dict(
         "swh_flatplate" => ["T_set","fluid","ncoll","tilt"],
         "swh_evactube" => ["T_set","fluid","ncoll","tilt"],
-        "ptc" => ["Fluid","q_pb_design","specified_total_aperture","use_solar_mult_or_aperture_area","lat"], # need to add "store_fluid",
+        "ptc" => [], # need to add "store_fluid",
         "lf" => [],
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
@@ -146,16 +146,15 @@ function run_ssc(case_data::Dict)
     println("loaded defaults")
     defaults = JSON.parsefile(defaults_file)
     defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
-    for i in user_defined_inputs_list[model]
-        if (i == "tilt") || (i == "lat")
-            user_defined_inputs[i] = lat
-        end
-    end
-    for i in keys(case_data["CST"]["SSC_Inputs"])
-        user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
-    end
+    # for i in user_defined_inputs_list[model]
+    #     if (i == "tilt") || (i == "lat")
+    #         user_defined_inputs[i] = lat
+    #     end
+    # end
+    # for i in keys(case_data["CST"]["SSC_Inputs"])
+    #     user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
+    # end
     if model == "ptc"
-        # TO DO: Update temperature inputs for PTC using inlet_temp and outlet_temp here
         if haskey(case_data["CST"], "inlet_temp") && haskey(case_data["CST"], "outlet_temp")
             inlet_temp = case_data["CST"]["inlet_temp"]
             outlet_temp = case_data["CST"]["outlet_temp"]
@@ -167,6 +166,11 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
             user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
             user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
+            user_defined_inputs["lat"] = case_data["CST"]["Site"]["latitude"]
+            user_defined_inputs["Fluid"] = 21
+            user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
+            user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
+            user_defined_inputs["specified_total_aperture"] = case_data["Site"]["land_acres"] * 4046.85642
         end
     end
     R = Dict()
@@ -296,7 +300,6 @@ function run_ssc(case_data::Dict)
         end
         R["error"] = error
         #return R
-        
     end
     return R
 end
