@@ -81,6 +81,7 @@ function BAUInputs(p::REoptInputs)
         cap_cost_slope["Generator"] = 0.0
         om_cost_per_kw["Generator"] = p.s.generator.om_cost_per_kw
         production_factor["Generator", :] = p.production_factor["Generator", :]
+        tech_renewable_energy_fraction["Generator"] = p.s.generator.fuel_renewable_energy_fraction
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
         if "Generator" in p.techs.pbi
             push!(pbi_techs, "Generator")
