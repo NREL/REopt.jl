@@ -753,7 +753,6 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing
     min_sizes["Boiler"] = s.boiler.min_kw
     existing_sizes["Boiler"] = 0.0
     boiler_efficiency["Boiler"] = s.boiler.efficiency
-    production_factor["Boiler", :] = ones(8760*s.settings.time_steps_per_hour)
     tech_renewable_energy_fraction["Boiler"] = s.boiler.fuel_renewable_energy_fraction
     
     # The Boiler only has a MACRS benefit, no ITC etc.
