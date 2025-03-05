@@ -32,6 +32,10 @@ Classify the change according to the following categories:
 ### Fixed
 - Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies). 
 
+## docs-update-march25
+### Changed
+- Updated and fixed some `docs` pages: improved setup, using HiGHS solver, fixed docstrings 
+ 
 ## v0.51.0
 ### Added 
 - Add the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
