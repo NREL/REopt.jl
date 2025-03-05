@@ -28,6 +28,7 @@ Classify the change according to the following categories:
 ## fix-tech-set-for-re-fraction
 ### Added
 - Add a warning so that when **SteamTurbine** is included, renewable energy fractions may not be accurate.
+- Added new attribute **fuel_renewable_energy_fraction** to the technology **Boiler**.
 
 ### Fixed
 - Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies). 
