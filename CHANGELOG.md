@@ -24,6 +24,10 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+
+## docs-update-march25
+### Changed
+- Updated and fixed some `docs` pages: improved setup, using HiGHS solver, fixed docstrings 
  
 ## fix-pbi
 ### Fixed

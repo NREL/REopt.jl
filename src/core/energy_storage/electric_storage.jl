@@ -144,7 +144,6 @@ The following shows how one would use the degradation model in REopt via the [Sc
 ```
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
-
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
     cycle_fade_coefficient::Real = 9.83E-05
