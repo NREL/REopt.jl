@@ -25,7 +25,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## docs-update-march25
+## Develop
 ### Changed
 - Updated and fixed some `docs` pages: improved setup, using HiGHS solver, fixed docstrings 
  
