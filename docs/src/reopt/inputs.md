@@ -1,11 +1,11 @@
 # REopt Inputs
-Inputs to `run_reopt()` can be provided in one of four formats:
+Inputs to the `run_reopt` function can be provided in one of four formats:
 1. a file path (string) to a JSON file,
 2. a `Dict`, 
 3. using the `Scenario` struct, or
 4. using the `REoptInputs` struct
 
-Any one of these types can be passed to the [run_reopt()](@ref) method as shown in [Examples](@ref).
+Any one of these types can be passed to the [run_reopt](@ref) method as shown in [Examples](@ref).
 
 The first option is perhaps the most straightforward. For example, the minimum requirements for a JSON scenario file would look like:
 ```javascript
