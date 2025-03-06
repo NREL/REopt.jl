@@ -712,7 +712,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         convert(Float64, pv.om_cost_per_kw) : convert(Float64, first(pv.om_cost_per_kw))
         
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
-        @info "PV Cost Passed to Optimizer" pv.name om_cost_per_kw[pv.name] typeof(pv.installed_cost_per_kw) pv.installed_cost_per_kw
+        # @info "PV Cost Passed to Optimizer" pv.name om_cost_per_kw[pv.name] typeof(pv.installed_cost_per_kw) pv.installed_cost_per_kw
 
         if !pv.can_curtail
             push!(techs.no_curtail, pv.name)
