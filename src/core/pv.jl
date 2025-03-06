@@ -44,6 +44,10 @@
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
+    size_class::Union{Int, Nothing} = nothing, # Size class for cost curve selection
+    tech_sizes_for_cost_curve::AbstractVector = Float64[], # System sizes for detailed cost curve
+    avg_electric_load_kw::Real = 0.0, # Average electric load for size class determination
+    use_detailed_cost_curve::Bool = false # Use detailed cost curve instead of average cost
 ```
 
 !!! note "Multiple PV types" 
@@ -52,6 +56,11 @@
 !!! note "PV tilt and aziumth"
     If `tilt` is not provided, then it is set to the absolute value of `Site.latitude` for ground-mount systems and is set to 10 degrees for rooftop systems.
     If `azimuth` is not provided, then it is set to 180 if the site is in the northern hemisphere and 0 if in the southern hemisphere.
+
+!!! note "Cost curves and size classes"
+When using 'use_detailed_cost_curve' is set to `true`, and providing specific values for `tech_sizes_for_cost_curve` and `installed_cost_per_kw`, both `tech_sizes_for_cost_curve` and `installed_cost_per_kw` must have the same length.
+Size class is automatically determined based on average load if not specified, which affects default costs.
+Ground-mount('array_type' = 0,2,3,4) systems have different cost structures than rooftop ('array_type' = 1) systems when using default values.
 
 """
 mutable struct PV <: AbstractTech
@@ -199,11 +208,12 @@ mutable struct PV <: AbstractTech
         if length(invalid_args) > 0
             throw(ErrorException("Invalid PV argument values: $(invalid_args)"))
         end
-        # Get defaults structure
+
+        # Get defaults and determine mount type
         defaults = get_pv_defaults_size_class()
         mount_type = array_type in [0, 2, 3, 4] ? "ground" : "roof"
 
-        # Initialize variables we'll need
+        # Initialize variables needed for processing
         local determined_size_class
         local final_tech_sizes
         local final_installed_cost
@@ -211,21 +221,21 @@ mutable struct PV <: AbstractTech
 
         # STEP 1: Determine size class
         determined_size_class = if !isnothing(size_class)
-            # Case 1: User explicitly set size class
+            # User explicitly set size class - validate boundaries
             if size_class < 1
                 @warn "Size class $size_class is less than 1, using size class 1 instead"
                 1
             elseif size_class > length(defaults)
-                @warn "Size class $size_class is greater than maximum available ($(length(defaults))), using largest size class $(length(defaults)) instead"
+                @warn "Size class $size_class exceeds maximum ($(length(defaults))), using largest size class instead"
                 length(defaults)
             else
                 size_class
             end
         elseif typeof(installed_cost_per_kw) <: Number || (installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1)
-            # Case 2: Single cost value provided - size class not needed
+            # Single cost value provided - size class not needed
             size_class
         elseif !isempty(tech_sizes_for_cost_curve) && isempty(installed_cost_per_kw)
-            # Case 4: User provided tech curves but no costs, need size class for installed costs
+            # User provided tech curves but no costs, need size class for costs
             if isnothing(size_class)
                 tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
                 get_pv_size_class(
@@ -239,7 +249,7 @@ mutable struct PV <: AbstractTech
                 size_class
             end
         elseif !isempty(installed_cost_per_kw)
-            # Case 3: Vector of costs provided
+            # Vector of costs provided
             if isnothing(size_class)
                 tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
                 get_pv_size_class(
@@ -264,8 +274,8 @@ mutable struct PV <: AbstractTech
             )
         end
 
+        # Get default data for determined size class
         class_defaults = if !isnothing(determined_size_class)            
-            # Julia is 1-based indexed but we want to match the size_class numbers
             matching_default = findfirst(d -> d["size_class"] == determined_size_class, defaults)            
             if isnothing(matching_default)
                 throw(ErrorException("Could not find matching defaults for size class $(determined_size_class)"))
@@ -286,14 +296,13 @@ mutable struct PV <: AbstractTech
         elseif !isnothing(class_defaults)
             # Get from roof data
             if use_detailed_cost_curve && haskey(class_defaults["roof"], "installed_cost_per_kw")
-                # Use the two-point cost curve
+                # Use the detailed cost curve
                 convert(Vector{Float64}, class_defaults["roof"]["installed_cost_per_kw"])
             else
-                # Use average value
+                # Use average value or calculate it
                 if haskey(class_defaults["roof"], "avg_installed_cost_per_kw")
                     convert(Float64, class_defaults["roof"]["avg_installed_cost_per_kw"])
                 else
-                    # Calculate average from curve points
                     costs = class_defaults["roof"]["installed_cost_per_kw"]
                     sum(costs) / length(costs)
                 end
@@ -309,10 +318,8 @@ mutable struct PV <: AbstractTech
                                 haskey(class_defaults["mount_premiums"], mount_type) &&
                                 haskey(class_defaults["mount_premiums"][mount_type], "cost_premium") &&
                                 isempty(installed_cost_per_kw)  # Only apply if user didn't specify
-            # Get premium factor
             premium = class_defaults["mount_premiums"][mount_type]["cost_premium"]
             
-            # Apply to base cost
             if base_installed_cost isa Vector
                 [cost * premium for cost in base_installed_cost]
             else
@@ -322,24 +329,24 @@ mutable struct PV <: AbstractTech
             base_installed_cost
         end
 
-        # STEP 3: Handle tech sizes - simplified approach with clear user messaging
+        # STEP 3: Handle tech sizes for cost curve
         final_tech_sizes = if typeof(final_installed_cost) <: Number
             # Single cost value - no tech sizes needed
             Float64[]
         elseif !isempty(tech_sizes_for_cost_curve)
-            # User provided tech sizes
+            # User provided tech sizes - check length match
             if final_installed_cost isa Vector && length(tech_sizes_for_cost_curve) != length(final_installed_cost)
-                throw(ErrorException("Length mismatch: installed_cost_per_kw (length $(length(final_installed_cost))) and tech_sizes_for_cost_curve (length $(length(tech_sizes_for_cost_curve))) must be the same length"))
+                throw(ErrorException("Length mismatch: installed_cost_per_kw ($(length(final_installed_cost))) and tech_sizes_for_cost_curve ($(length(tech_sizes_for_cost_curve))) must match"))
             end
             convert(Vector{Float64}, tech_sizes_for_cost_curve)
         elseif final_installed_cost isa Vector 
-            # User provided a cost vector but no tech sizes
+            # User provided cost vector but no tech sizes
             if length(final_installed_cost) == 2 && !isnothing(class_defaults)
-                # For 2-point cost curves, we can use the size class defaults
+                # For 2-point cost curves, use size class defaults
                 convert(Vector{Float64}, class_defaults["tech_sizes_for_cost_curve"])
             else
-                # For other lengths, inform the user clearly
-                throw(ErrorException("When providing a $(length(final_installed_cost))-point cost curve, you must also provide matching tech_sizes_for_cost_curve with the same number of points"))
+                # For other lengths, inform the user
+                throw(ErrorException("When providing a $(length(final_installed_cost))-point cost curve, matching tech_sizes_for_cost_curve is required"))
             end
         elseif !isnothing(class_defaults)
             # Use defaults from size class
@@ -366,18 +373,18 @@ mutable struct PV <: AbstractTech
                         haskey(class_defaults["mount_premiums"], mount_type) &&
                         haskey(class_defaults["mount_premiums"][mount_type], "om_premium") &&
                         isempty(om_cost_per_kw)  # Only apply if user didn't specify
-            # Get O&M premium
             om_premium = class_defaults["mount_premiums"][mount_type]["om_premium"]
             base_om_cost * om_premium
         else
             base_om_cost
         end
 
-        # Update the original variables with the calculated values for compatibility
+        # Update variables with calculated values
         installed_cost_per_kw = final_installed_cost
         om_cost_per_kw = final_om_cost
         size_class = determined_size_class
         tech_sizes_for_cost_curve = final_tech_sizes
+
         # Instantiate the PV struct
         new(
             tilt,
@@ -429,12 +436,12 @@ mutable struct PV <: AbstractTech
         )
     end
 end
-
+# Get a specific PV by name from an array of PVs
 function get_pv_by_name(name::String, pvs::AbstractArray{PV, 1})
     pvs[findfirst(pv -> pv.name == name, pvs)]
 end
 
-# Helper functions
+# Load PV default size class data from JSON file
 function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw::Real = 0.0)
     pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
     if !isfile(pv_defaults_path)
@@ -445,21 +452,21 @@ function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw:
     return pv_defaults_all["size_classes"]
 end
 
+# Determine appropriate size class based on system parameters
 function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
                           min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
     
-    effective_size = if max_kw != 1.0e9 
-        min(avg_electric_load_kw, max_kw)
-    else
-        avg_electric_load_kw
+    # Apply constraints to determine effective size
+    effective_size = avg_electric_load_kw
+    if max_kw != 1.0e9 
+        effective_size = min(effective_size, max_kw)
     end
     
-    effective_size = if min_kw != 0.0
-        max(effective_size, min_kw)
-    else
-        effective_size
+    if min_kw != 0.0
+        effective_size = max(effective_size, min_kw)
     end
     
+    # Find the appropriate size class for the effective size
     for (i, size_range) in enumerate(tech_sizes_for_cost_curve)
         min_size = convert(Float64, size_range[1])
         max_size = convert(Float64, size_range[2])
@@ -469,9 +476,10 @@ function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve
         end
     end
     
+    # Handle edge cases
     if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
         return length(tech_sizes_for_cost_curve)
     end
     
-    return 1
+    return 1  # Default to smallest size class
 end
