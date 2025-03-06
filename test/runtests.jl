@@ -3246,6 +3246,74 @@ else  # run HiGHS tests
             @test s.space_heating_load.loads_kw[end-24+1:end] == s.space_heating_load.loads_kw[1:24]
             @test s.cooling_load.loads_kw_thermal[end-24+1:end] == s.cooling_load.loads_kw_thermal[1:24]
         end
-        
+
+        @testset "PV size classes and cost-scaling" begin
+            """
+            PV size class determination, assigning defaults based on size-class and PV type, and cost-scaling within the model
+            TODO roof/land space-based limit on size_class
+            TODO installed_cost is input but O&M is not, that it still uses the size_class O&M cost
+            """
+            # Get active PV defaults for checking
+            pv_defaults_path = joinpath(@__DIR__, "..", "data", "pv", "pv_defaults.json")
+            pv_defaults_all = JSON.parsefile(pv_defaults_path)
+
+            # Test that the size_class is one based on max_kw input
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["PV"]["max_kw"] = 7.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            print_pv_info(s, inputs)
+            @test s.pvs[1].size_class == 1
+
+            # Test that size_class is 2 based on the load and ground-mount data is used
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            # input_data["PV"]["array_type"] = 1  # This is the default - STRANGE that webtool default is ground, but REopt.jl is roof
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            print_pv_info(s, inputs)
+            @test s.pvs[1].size_class == 2
+            @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["roof"]["size_classes"][s.pvs[1].size_class]["installed_cost_per_kw"] 
+
+            # Test that the roof default data is grabbed when array_type=1
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["PV"]["array_type"] = 0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            print_pv_info(s, inputs)
+            @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["ground"]["size_classes"][s.pvs[1].size_class]["installed_cost_per_kw"] 
+
+            # Test that the output installed_cost_per_kw and om_cost_per_kw is as expected based on the input
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["installed_cost_per_kw"] = 2500.0
+            input_data["PV"]["om_cost_per_kw"] = 2500.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            print_pv_info(s, inputs)
+            @test s.pvs[1].installed_cost_per_kw == input_data["PV"]["installed_cost_per_kw"]
+            @test s.pvs[1].om_cost_per_kw == input_data["PV"]["om_cost_per_kw"]
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+            @test results["PV"]["installed_cost_per_kw"] == input_data["PV"]["installed_cost_per_kw"]
+
+
+            # Test that cost curve input behaves as expected
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["min_kw"] = 400.0
+            input_data["PV"]["max_kw"] = 400.0
+            input_data["PV"]["tech_sizes_for_cost_curve"] = [100.0, 2000.0]
+            input_data["PV"]["installed_cost_per_kw"] = [1710.0, 1420.0]
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            print_pv_info(s, inputs)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+            @test results["Financial"]["lifecycle_capital_costs"] >= results["PV"]["size_kw"] * input_data["PV"]["installed_cost_per_kw"][2]
+            @test results["Financial"]["lifecycle_capital_costs"] <= results["PV"]["size_kw"] * input_data["PV"]["installed_cost_per_kw"][1]
+        end
     end
 end
