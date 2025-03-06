@@ -97,6 +97,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     )
     
     # Extract average electric load per time step and apply a 100% load factor [FOR PV Size classes]
+    # TODO this 2x factor should not be applied here, especially since this avg load may be used elsewhere too
+    # TODO also, change to sizing based on annual_kwh and an assumed capacity factor of 20%
     avg_electric_load_kw = (sum(electric_load.loads_kw) / length(electric_load.loads_kw)) * 2.0
     # @info "Average electric load" avg_electric_load_kw
 
