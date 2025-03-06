@@ -38,7 +38,7 @@
         "om_cost_per_kw": 0.0,
         "om_cost_per_kwh": 0.009,
         "can_wholesale": false,
-		"can_curtail": true
+		"can_curtail": false
       },
     "Financial": {
         "om_cost_escalation_rate_fraction": 0.025,
