@@ -626,20 +626,18 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             end
         end
 
-        if isnothing(pv.size_class) || isempty(pv.installed_cost_per_kw) || isempty(pv.om_cost_per_kw)
+        if beyond_existing_kw < pv.max_kw
             array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
             defaults = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.avg_electric_load_kw)
             
-            if isnothing(pv.size_class)
-                # Use the space-constrained max in get_pv_size_class
-                pv.size_class = get_pv_size_class(
-                    pv.avg_electric_load_kw,
-                    [c["tech_sizes_for_cost_curve"] for c in defaults],
-                    min_kw=pv.min_kw,
-                    max_kw=beyond_existing_kw,  #space-constrained max
-                    existing_kw=pv.existing_kw
-                )
-            end
+            # Use the space-constrained max in get_pv_size_class
+            pv.size_class = get_pv_size_class(
+                pv.avg_electric_load_kw,
+                [c["tech_sizes_for_cost_curve"] for c in defaults],
+                min_kw=pv.min_kw,
+                max_kw=beyond_existing_kw,  #space-constrained max
+                existing_kw=pv.existing_kw
+            )
             
             # Directly access by size class number as in your working version
             class_defaults = defaults[pv.size_class]

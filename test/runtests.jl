@@ -3253,6 +3253,7 @@ else  # run HiGHS tests
             TODO roof/land space-based limit on size_class
             TODO installed_cost is input but O&M is not, that it still uses the size_class O&M cost
             """
+
             # Get active PV defaults for checking
             pv_defaults_path = joinpath(@__DIR__, "..", "data", "pv", "pv_defaults.json")
             pv_defaults_all = JSON.parsefile(pv_defaults_path)
@@ -3274,7 +3275,7 @@ else  # run HiGHS tests
             inputs = REoptInputs(s)
             print_pv_info(s, inputs)
             @test s.pvs[1].size_class == 2
-            @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["roof"]["size_classes"][s.pvs[1].size_class]["installed_cost_per_kw"] 
+            @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
 
             # Test that the roof default data is grabbed when array_type=1
             input_data = JSON.parsefile("scenarios/pv_cost.json")
@@ -3283,7 +3284,9 @@ else  # run HiGHS tests
             s = Scenario(input_data)
             inputs = REoptInputs(s)
             print_pv_info(s, inputs)
-            @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["ground"]["size_classes"][s.pvs[1].size_class]["installed_cost_per_kw"] 
+            roof_cost_expected = pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
+            cost_factor = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["cost_premium"] 
+            @test s.pvs[1].installed_cost_per_kw == roof_cost_expected * cost_factor
 
             # Test that the output installed_cost_per_kw and om_cost_per_kw is as expected based on the input
             input_data = JSON.parsefile("scenarios/pv_cost.json")
@@ -3299,7 +3302,6 @@ else  # run HiGHS tests
             results = run_reopt([m1,m2], inputs)
             @test results["PV"]["installed_cost_per_kw"] == input_data["PV"]["installed_cost_per_kw"]
 
-
             # Test that cost curve input behaves as expected
             input_data = JSON.parsefile("scenarios/pv_cost.json")
             input_data["PV"]["min_kw"] = 400.0
@@ -3314,6 +3316,19 @@ else  # run HiGHS tests
             results = run_reopt([m1,m2], inputs)
             @test results["Financial"]["lifecycle_capital_costs"] >= results["PV"]["size_kw"] * input_data["PV"]["installed_cost_per_kw"][2]
             @test results["Financial"]["lifecycle_capital_costs"] <= results["PV"]["size_kw"] * input_data["PV"]["installed_cost_per_kw"][1]
+
+            # Test that size_class is 1 based on Site.roof_squarefeet
+            kw_per_square_foot = 0.01
+            acres_per_kw = 6e-3
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["array_type"] = 1  # roof
+            input_data["PV"]["location"] = "roof"
+            input_data["Site"]["roof_squarefeet"] = 9 / kw_per_square_foot
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            print_pv_info(s, inputs)
+            @test s.pvs[1].size_class == 1
         end
     end
 end
