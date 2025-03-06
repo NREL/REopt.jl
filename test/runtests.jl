@@ -3264,7 +3264,6 @@ else  # run HiGHS tests
             input_data["PV"]["max_kw"] = 7.0
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            print_pv_info(s, inputs)
             @test s.pvs[1].size_class == 1
 
             # Test that size_class is 2 based on the load and ground-mount data is used
@@ -3273,7 +3272,6 @@ else  # run HiGHS tests
             # input_data["PV"]["array_type"] = 1  # This is the default - STRANGE that webtool default is ground, but REopt.jl is roof
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            print_pv_info(s, inputs)
             @test s.pvs[1].size_class == 2
             @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
 
@@ -3283,7 +3281,6 @@ else  # run HiGHS tests
             input_data["PV"]["array_type"] = 0
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            print_pv_info(s, inputs)
             roof_cost_expected = pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
             cost_factor = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["cost_premium"] 
             @test s.pvs[1].installed_cost_per_kw == roof_cost_expected * cost_factor
@@ -3294,7 +3291,6 @@ else  # run HiGHS tests
             input_data["PV"]["om_cost_per_kw"] = 2500.0
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            print_pv_info(s, inputs)
             @test s.pvs[1].installed_cost_per_kw == input_data["PV"]["installed_cost_per_kw"]
             @test s.pvs[1].om_cost_per_kw == input_data["PV"]["om_cost_per_kw"]
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
@@ -3310,7 +3306,6 @@ else  # run HiGHS tests
             input_data["PV"]["installed_cost_per_kw"] = [1710.0, 1420.0]
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            print_pv_info(s, inputs)
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
             results = run_reopt([m1,m2], inputs)
@@ -3327,7 +3322,6 @@ else  # run HiGHS tests
             input_data["ElectricLoad"]["annual_kwh"] = 500*8760
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            print_pv_info(s, inputs)
             @test s.pvs[1].size_class == 1
         end
     end
