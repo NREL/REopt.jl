@@ -626,11 +626,9 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             end
         end
 
-        # Get defaults if needed based on size class
         if isnothing(pv.size_class) || isempty(pv.installed_cost_per_kw) || isempty(pv.om_cost_per_kw)
             array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
-            pv_defaults_all = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.avg_electric_load_kw)
-            defaults = pv_defaults_all[array_category]["size_classes"]
+            defaults = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.avg_electric_load_kw)
             
             if isnothing(pv.size_class)
                 # Use the space-constrained max in get_pv_size_class
@@ -643,13 +641,29 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
                 )
             end
             
+            # Directly access by size class number as in your working version
             class_defaults = defaults[pv.size_class]
             
             if isempty(pv.installed_cost_per_kw)
                 # Handle both scalar and vector cost data
-                installed_cost_data = class_defaults["installed_cost_per_kw"]
+                installed_cost_data = class_defaults["roof"]["installed_cost_per_kw"]
+                
+                # Apply ground mount premium if needed
+                if array_category == "ground" && 
+                   haskey(class_defaults, "mount_premiums") &&
+                   haskey(class_defaults["mount_premiums"], "ground") &&
+                   haskey(class_defaults["mount_premiums"]["ground"], "cost_premium")
+                    
+                    premium = class_defaults["mount_premiums"]["ground"]["cost_premium"]
+                    
+                    if installed_cost_data isa Number
+                        installed_cost_data *= premium
+                    else
+                        installed_cost_data = [cost * premium for cost in installed_cost_data]
+                    end
+                end
+                
                 if installed_cost_data isa Number
-                    # Keep scalar as scalar (not vector) to match user behavior
                     pv.installed_cost_per_kw = convert(Float64, installed_cost_data)
                 else
                     pv.installed_cost_per_kw = convert(Vector{Float64}, installed_cost_data)
@@ -657,7 +671,19 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             end
             
             if isempty(pv.om_cost_per_kw)
-                pv.om_cost_per_kw = convert(Float64, class_defaults["om_cost_per_kw"])
+                om_cost = class_defaults["roof"]["om_cost_per_kw"]
+                
+                # Apply ground mount premium if needed
+                if array_category == "ground" && 
+                   haskey(class_defaults, "mount_premiums") &&
+                   haskey(class_defaults["mount_premiums"], "ground") &&
+                   haskey(class_defaults["mount_premiums"]["ground"], "om_premium")
+                    
+                    om_premium = class_defaults["mount_premiums"]["ground"]["om_premium"]
+                    om_cost *= om_premium
+                end
+                
+                pv.om_cost_per_kw = convert(Float64, om_cost)
             end
             
             if isempty(pv.tech_sizes_for_cost_curve) && length(pv.installed_cost_per_kw) > 1
@@ -688,6 +714,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         convert(Float64, pv.om_cost_per_kw) : convert(Float64, first(pv.om_cost_per_kw))
         
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
+        @info "PV Cost Passed to Optimizer" pv.name om_cost_per_kw[pv.name] typeof(pv.installed_cost_per_kw) pv.installed_cost_per_kw
 
         if !pv.can_curtail
             push!(techs.no_curtail, pv.name)
@@ -703,7 +730,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     if pv_space_limited
         maxsize_pv_locations[:both] = float(both_existing_pv_kw + roof_max_kw + land_max_kw)
     end
-    
+
     return nothing
 end
 

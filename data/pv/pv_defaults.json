@@ -1,122 +1,55 @@
 {
-  "roof": {
-    "size_classes": [
-      {
-        "size_class": 1,
-        "name": "Small Residential",
-        "tech_sizes_for_cost_curve": [0, 5],
-        "installed_cost_per_kw": 4206,
-        "om_cost_per_kw": 40,
-        "notes": "Based on ATB 3-5kW systems, direct data points available"
+  "size_classes": [
+    {
+      "size_class": 1,
+      "name": "Residential",
+      "tech_sizes_for_cost_curve": [0, 11],
+      "roof": {
+        "installed_cost_per_kw": [5137, 2369],
+        "avg_installed_cost_per_kw": 3753,
+        "om_cost_per_kw": 32.00
       },
-      {
-        "size_class": 2,
-        "name": "Large Residential",
-        "tech_sizes_for_cost_curve": [5, 11],
-        "installed_cost_per_kw": 2567,
-        "om_cost_per_kw": 40,
-        "notes": "Based on ATB 5-11kW, average of multiple data points (5kW, 7.15kW, 7.9kW, 9kW, 11kW)"
+      "mount_premiums": {
+        "ground": {
+          "cost_premium": 1.30,
+          "om_premium": 0.95
+        }
       },
-      {
-        "size_class": 3,
-        "name": "Small Commercial",
-        "tech_sizes_for_cost_curve": [11, 200],
-        "installed_cost_per_kw": 1942,
-        "om_cost_per_kw": 24,
-        "notes": "Gap between 11-100kW filled by linear interpolation, then averaged with 100-200kW data points"
+      "notes": "Based on ATB 2024 Residential 3-11kW"
+    },
+    {
+      "size_class": 2,
+      "name": "Commercial",
+      "tech_sizes_for_cost_curve": [11, 2000],
+      "roof": {
+        "installed_cost_per_kw": [2369, 1756],
+        "avg_installed_cost_per_kw": 2062,
+        "om_cost_per_kw": 19.00
       },
-      {
-        "size_class": 4,
-        "name": "Medium Commercial",
-        "tech_sizes_for_cost_curve": [200, 1000],
-        "installed_cost_per_kw": 1716,
-        "om_cost_per_kw": 24,
-        "notes": "Based on ATB 200-1000kW, direct data points available"
+      "mount_premiums": {
+        "ground": {
+          "cost_premium": 1.15,
+          "om_premium": 0.95
+        }
       },
-      {
-        "size_class": 5,
-        "name": "Large Commercial",
-        "tech_sizes_for_cost_curve": [1000, 2000],
-        "installed_cost_per_kw": 1686,
-        "om_cost_per_kw": 24,
-        "notes": "Based on ATB 1000-2000kW, direct data points available"
+      "notes": "Based on ATB 2024 Commercial 100-2000 kW"
+    },
+    {
+      "size_class": 3,
+      "name": "Utility",
+      "tech_sizes_for_cost_curve": [2000, 10000],
+      "roof": {
+        "installed_cost_per_kw": [1756, 1439],
+        "avg_installed_cost_per_kw": 1597,
+        "om_cost_per_kw": 21.00
       },
-      {
-        "size_class": 6,
-        "name": "Small Utility",
-        "tech_sizes_for_cost_curve": [2000, 10000],
-        "installed_cost_per_kw": 1193,
-        "om_cost_per_kw": 26,
-        "notes": "Gap between 2000-5000kW filled by linear interpolation, then averaged with 5000-10000kW data"
+      "mount_premiums": {
+        "ground": {
+          "cost_premium": 1.0,
+          "om_premium": 1.0
+        }
       },
-      {
-        "size_class": 7,
-        "name": "Large Utility",
-        "tech_sizes_for_cost_curve": [10000, 100000],
-        "installed_cost_per_kw": 961,
-        "om_cost_per_kw": 26,
-        "notes": "Based on ATB 10000-100000kW, weighted average of 10000kW, 50000kW and 100000kW data points"
-      }
-    ]
-  },
-  "ground": {
-    "size_classes": [
-      {
-        "size_class": 1,
-        "name": "Small Residential",
-        "tech_sizes_for_cost_curve": [0, 5],
-        "installed_cost_per_kw": 4837,
-        "om_cost_per_kw": 38,
-        "notes": "Based on ATB 3-5kW ground-mounted systems, direct data points available"
-      },
-      {
-        "size_class": 2,
-        "name": "Large Residential",
-        "tech_sizes_for_cost_curve": [5, 11],
-        "installed_cost_per_kw": 2951,
-        "om_cost_per_kw": 38,
-        "notes": "Based on ATB 5-11kW, average of multiple data points (5kW, 7.15kW, 7.9kW, 9kW, 11kW)"
-      },
-      {
-        "size_class": 3,
-        "name": "Small Commercial",
-        "tech_sizes_for_cost_curve": [11, 200],
-        "installed_cost_per_kw": 2446,
-        "om_cost_per_kw": 23,
-        "notes": "Gap between 11-100kW filled by assuming similar price premium as roof systems, then averaged with 100-200kW data"
-      },
-      {
-        "size_class": 4,
-        "name": "Medium Commercial",
-        "tech_sizes_for_cost_curve": [200, 1000],
-        "installed_cost_per_kw": 1841,
-        "om_cost_per_kw": 23,
-        "notes": "Based on ATB 200-1000kW ground-mounted systems, direct data points available"
-      },
-      {
-        "size_class": 5,
-        "name": "Large Commercial",
-        "tech_sizes_for_cost_curve": [1000, 2000],
-        "installed_cost_per_kw": 1665,
-        "om_cost_per_kw": 23,
-        "notes": "Based on ATB 1000-2000kW ground-mounted systems, direct data points available"
-      },
-      {
-        "size_class": 6,
-        "name": "Small Utility",
-        "tech_sizes_for_cost_curve": [2000, 10000],
-        "installed_cost_per_kw": 1193,
-        "om_cost_per_kw": 26,
-        "notes": "Gap between 2000-5000kW filled by linear interpolation, then averaged with 5000-10000kW data"
-      },
-      {
-        "size_class": 7,
-        "name": "Large Utility",
-        "tech_sizes_for_cost_curve": [10000, 100000],
-        "installed_cost_per_kw": 961,
-        "om_cost_per_kw": 26,
-        "notes": "Based on ATB 10000-100000kW, weighted average of 10000kW, 50000kW and 100000kW data points"
-      }
-    ]
-  }
+      "notes": "Based on ATB 2024 Utility Fixed-Tilt 2000-10000 kW"
+    }
+  ]
 }
