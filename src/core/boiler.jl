@@ -48,7 +48,7 @@ function Boiler(;
     can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If Boiler can supply heat to the process heating load
     fuel_renewable_energy_fraction::Real = FUEL_DEFAULTS["fuel_renewable_energy_fraction"][fuel_type] # fraction of renewable-sourced fuel input to boiler
-    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
@@ -71,7 +71,7 @@ function Boiler(;
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
         can_serve_process_heat::Bool = true,
-        fuel_renewable_energy_fraction::Real = FUEL_DEFAULTS["fuel_renewable_energy_fraction"][fuel_type,0],
+        fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
         emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
         emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
         emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
