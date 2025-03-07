@@ -58,9 +58,6 @@ struct with outer constructor:
     om_cost_year_one::Float64 = NaN
 ```
 """
-
-
-
 Base.@kwdef mutable struct GHP <: AbstractGHP
     require_ghp_purchase::Union{Bool, Int64} = false  # 0 = false, 1 = true
     installed_cost_heatpump_per_ton::Float64 = 1075.0
