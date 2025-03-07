@@ -7,7 +7,6 @@ struct Scenario <: AbstractScenario
     storage::Storage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
-    avg_electric_load_kw::Float64
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
@@ -96,13 +95,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     off_grid_flag = settings.off_grid_flag
     )
     
-    # Extract average electric load per time step and apply a 100% load factor [FOR PV Size classes]
-    # TODO this 2x factor should not be applied here, especially since this avg load may be used elsewhere too
-    # TODO also, change to sizing based on annual_kwh and an assumed capacity factor of 20%
-    avg_electric_load_kw = (sum(electric_load.loads_kw) / length(electric_load.loads_kw)) * 2.0
-    # @info "Average electric load" avg_electric_load_kw
-
     pvs = PV[]
+    electric_load_annual_kwh = sum(electric_load.loads_kw) / settings.time_steps_per_hour
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
             for (i, pv) in enumerate(d["PV"])
@@ -113,7 +107,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     ; dictkeys_tosymbols(pv)...,
                     off_grid_flag = settings.off_grid_flag, 
                     latitude = site.latitude,
-                    avg_electric_load_kw = avg_electric_load_kw  # Pass the avg_electric_load_kw
+                    electric_load_annual_kwh = electric_load_annual_kwh
                 ))
             end
         elseif typeof(d["PV"]) <: AbstractDict
@@ -121,7 +115,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 ; dictkeys_tosymbols(d["PV"])..., 
                 off_grid_flag = settings.off_grid_flag, 
                 latitude = site.latitude,
-                avg_electric_load_kw = avg_electric_load_kw  # Pass the avg_electric_load_kw
+                electric_load_annual_kwh = electric_load_annual_kwh
             ))
         else
             throw(@error("PV input must be Dict or Dict[]."))
@@ -782,7 +776,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage,
         electric_tariff, 
         electric_load,
-        avg_electric_load_kw,
         electric_utility, 
         financial,
         generator,

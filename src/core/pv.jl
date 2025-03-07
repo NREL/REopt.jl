@@ -46,7 +46,7 @@
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
     size_class::Union{Int, Nothing} = nothing, # Size class for cost curve selection
     tech_sizes_for_cost_curve::AbstractVector = Float64[], # System sizes for detailed cost curve
-    avg_electric_load_kw::Real = 0.0, # Average electric load for size class determination
+    electric_load_annual_kwh::Real = 0.0, # Annual electric load (kWh) for size class determination
     use_detailed_cost_curve::Bool = false # Use detailed cost curve instead of average cost
 ```
 
@@ -108,13 +108,13 @@ mutable struct PV <: AbstractTech
     operating_reserve_required_fraction
     size_class
     tech_sizes_for_cost_curve
-    avg_electric_load_kw
+    electric_load_annual_kwh
     use_detailed_cost_curve
 
     function PV(;
         off_grid_flag::Bool = false,
         latitude::Real,
-        avg_electric_load_kw::Real = 0.0,
+        electric_load_annual_kwh::Real = 0.0,
         array_type::Int=1,
         tilt::Real = (array_type == 0 || array_type == 1) ? 20 : 0,
         module_type::Int=0,
@@ -231,15 +231,15 @@ mutable struct PV <: AbstractTech
             else
                 size_class
             end
-        elseif typeof(installed_cost_per_kw) <: Number || (installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1)
+        elseif typeof(installed_cost_per_kw) <: Real || (installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1)
             # Single cost value provided - size class not needed
             size_class
         elseif !isempty(tech_sizes_for_cost_curve) && isempty(installed_cost_per_kw)
-            # User provided tech curves but no costs, need size class for costs
+            # User provided tech sizes but no costs, need size class for costs
             if isnothing(size_class)
                 tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
                 get_pv_size_class(
-                    avg_electric_load_kw,
+                    electric_load_annual_kwh,
                     tech_sizes,
                     min_kw=min_kw,
                     max_kw=max_kw,
@@ -253,7 +253,7 @@ mutable struct PV <: AbstractTech
             if isnothing(size_class)
                 tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
                 get_pv_size_class(
-                    avg_electric_load_kw,
+                    electric_load_annual_kwh,
                     tech_sizes,
                     min_kw=min_kw,
                     max_kw=max_kw,
@@ -266,7 +266,7 @@ mutable struct PV <: AbstractTech
             # Default case: Calculate based on average load
             tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
             get_pv_size_class(
-                avg_electric_load_kw,
+                electric_load_annual_kwh,
                 tech_sizes,
                 min_kw=min_kw,
                 max_kw=max_kw,
@@ -284,7 +284,7 @@ mutable struct PV <: AbstractTech
         end
 
         # STEP 2: Handle installed costs
-        base_installed_cost = if typeof(installed_cost_per_kw) <: Number
+        base_installed_cost = if typeof(installed_cost_per_kw) <: Real
             # Single cost value provided by user
             convert(Float64, installed_cost_per_kw)
         elseif installed_cost_per_kw isa AbstractVector && length(installed_cost_per_kw) == 1
@@ -330,7 +330,7 @@ mutable struct PV <: AbstractTech
         end
 
         # STEP 3: Handle tech sizes for cost curve
-        final_tech_sizes = if typeof(final_installed_cost) <: Number
+        final_tech_sizes = if typeof(final_installed_cost) <: Real
             # Single cost value - no tech sizes needed
             Float64[]
         elseif !isempty(tech_sizes_for_cost_curve)
@@ -356,7 +356,7 @@ mutable struct PV <: AbstractTech
         end
 
         # STEP 4: Handle O&M costs
-        base_om_cost = if typeof(om_cost_per_kw) <: Number
+        base_om_cost = if typeof(om_cost_per_kw) <: Real
             convert(Float64, om_cost_per_kw)
         elseif isempty(om_cost_per_kw) && !isnothing(class_defaults)
             convert(Float64, class_defaults["roof"]["om_cost_per_kw"])
@@ -431,7 +431,7 @@ mutable struct PV <: AbstractTech
             operating_reserve_required_fraction,
             size_class,
             tech_sizes_for_cost_curve,
-            avg_electric_load_kw,
+            electric_load_annual_kwh,
             use_detailed_cost_curve
         )
     end
@@ -442,7 +442,7 @@ function get_pv_by_name(name::String, pvs::AbstractArray{PV, 1})
 end
 
 # Load PV default size class data from JSON file
-function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw::Real = 0.0)
+function get_pv_defaults_size_class()
     pv_defaults_path = joinpath(@__DIR__, "..", "..", "data", "pv", "pv_defaults.json")
     if !isfile(pv_defaults_path)
         throw(ErrorException("pv_defaults.json not found at path: $pv_defaults_path"))
@@ -453,11 +453,13 @@ function get_pv_defaults_size_class(; array_type::Int = 1, avg_electric_load_kw:
 end
 
 # Determine appropriate size class based on system parameters
-function get_pv_size_class(avg_electric_load_kw::Real, tech_sizes_for_cost_curve::AbstractVector;
+function get_pv_size_class(electric_load_annual_kwh::Real, tech_sizes_for_cost_curve::AbstractVector;
                           min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
     
-    # Apply constraints to determine effective size
-    effective_size = avg_electric_load_kw
+    # Estimate size based on electric load and estimated PV capacity factor
+    capacity_factor_estimate = 0.2
+    fraction_of_annual_kwh_to_size_pv = 0.5
+    effective_size = electric_load_annual_kwh * fraction_of_annual_kwh_to_size_pv / (8760.0* capacity_factor_estimate)
     if max_kw != 1.0e9 
         effective_size = min(effective_size, max_kw)
     end

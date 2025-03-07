@@ -606,6 +606,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     end
 
     # Second pass: Setup each PV with the constraint information
+    electric_load_annual_kwh = sum(s.electric_load.loads_kw) / s.settings.time_steps_per_hour
     for pv in s.pvs
         # Start with the user-specified max_kw
         beyond_existing_kw = pv.max_kw
@@ -628,11 +629,11 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
 
         if beyond_existing_kw < pv.max_kw
             array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
-            defaults = get_pv_defaults_size_class(array_type=pv.array_type, avg_electric_load_kw=pv.avg_electric_load_kw)
+            defaults = get_pv_defaults_size_class()
             
             # Use the space-constrained max in get_pv_size_class
             pv.size_class = get_pv_size_class(
-                pv.avg_electric_load_kw,
+                electric_load_annual_kwh,
                 [c["tech_sizes_for_cost_curve"] for c in defaults],
                 min_kw=pv.min_kw,
                 max_kw=beyond_existing_kw,  #space-constrained max
