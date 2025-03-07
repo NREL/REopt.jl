@@ -35,7 +35,7 @@
     utility_ibi_max::Real = 1.0e10,
     utility_rebate_per_kw::Real = 0.0,
     utility_rebate_max::Real = 1.0e10,
-    production_incentive_per_kwh::Real = 0.0,
+    production_incentive_per_kwh::Real = 0.0, # Applies to total estimated production, including curtailed energy.
     production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 1,
     production_incentive_max_kw::Real = 1.0e9,
