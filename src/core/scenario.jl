@@ -45,9 +45,7 @@ A Scenario struct can contain the following keys:
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Generator](@ref) (optional)
-- [DomesticHotWaterLoad](@ref) (optional)
-- [SpaceHeatingLoad](@ref) (optional)
-- [ProcessHeatLoad](@ref) (optional)
+- [HeatingLoad](@ref) (optional)
 - [CoolingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [Boiler](@ref) (optional)
@@ -58,8 +56,7 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
-- [ASHPSpaceHeater](@ref) (optional)
-- [ASHPWaterHeater](@ref) (optional)
+- [ASHP](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -162,7 +159,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             emissions_factor_series_lb_CO2_per_kwh = 0,
                                             emissions_factor_series_lb_NOx_per_kwh = 0,
                                             emissions_factor_series_lb_SO2_per_kwh = 0,
-                                            emissions_factor_series_lb_PM25_per_kwh = 0
+                                            emissions_factor_series_lb_PM25_per_kwh = 0,
+                                            renewable_energy_fraction_series = 0
                                         ) 
     end
         

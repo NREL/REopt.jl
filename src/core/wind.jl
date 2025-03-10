@@ -26,7 +26,7 @@
     utility_ibi_max = 1.0e10,
     utility_rebate_per_kw = 0.0,
     utility_rebate_max = 1.0e10,
-    production_incentive_per_kwh = 0.0,
+    production_incentive_per_kwh = 0.0, # Applies to total estimated production, including curtailed energy.
     production_incentive_max_benefit = 1.0e9,
     production_incentive_years = 1,
     production_incentive_max_kw = 1.0e9,

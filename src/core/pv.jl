@@ -35,7 +35,7 @@
     utility_ibi_max::Real = 1.0e10,
     utility_rebate_per_kw::Real = 0.0,
     utility_rebate_max::Real = 1.0e10,
-    production_incentive_per_kwh::Real = 0.0,
+    production_incentive_per_kwh::Real = 0.0, # Applies to total estimated production, including curtailed energy.
     production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 1,
     production_incentive_max_kw::Real = 1.0e9,
@@ -196,7 +196,9 @@ mutable struct PV <: AbstractTech
         if !(0.0 <= dc_ac_ratio <= 2.0)
             push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
-        # TODO validate additional args
+        if !isnothing(production_factor_series)
+            error_if_series_vals_not_0_to_1(production_factor_series, "PV", "production_factor_series")
+        end
         if length(invalid_args) > 0
             throw(@error("Invalid PV argument values: $(invalid_args)"))
         end
