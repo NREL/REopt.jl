@@ -235,6 +235,7 @@ mutable struct PV <: AbstractTech
             # Single cost value provided - size class not needed
             size_class
         elseif !isempty(tech_sizes_for_cost_curve) && isempty(installed_cost_per_kw)
+            # TODO I'd say just ignore tech_sizes_for_cost_curve in this case, and find default (avg_)installed_cost_per_kw
             # User provided tech sizes but no costs, need size class for costs
             if isnothing(size_class)
                 tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
@@ -456,6 +457,8 @@ end
 function get_pv_size_class(electric_load_annual_kwh::Real, tech_sizes_for_cost_curve::AbstractVector;
                           min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
     
+    # TODO pass in Site.[land and roof space] to include that in the size class determination
+
     # Estimate size based on electric load and estimated PV capacity factor
     capacity_factor_estimate = 0.2
     fraction_of_annual_kwh_to_size_pv = 0.5

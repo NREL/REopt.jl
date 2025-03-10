@@ -627,6 +627,8 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             end
         end
 
+        # TODO need to know if a USER input the size_class or cost to avoid overwriting user-input Values
+        # We should instead just bring this into pv.jl along with site.[roof and land space] and use that to calculate the max_kw 
         if beyond_existing_kw < pv.max_kw
             array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
             defaults = get_pv_defaults_size_class()
