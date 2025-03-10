@@ -230,7 +230,7 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
-    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
+    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}} = nothing
 end
 ```
 """
@@ -246,7 +246,7 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
-    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
+    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}} = nothing
 end
 
 

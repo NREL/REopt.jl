@@ -190,7 +190,7 @@ end
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
-    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing # TODO: add description
+    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}} = nothing # TODO: add description
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -227,7 +227,7 @@ Base.@kwdef struct ElectricStorageDefaults
     optimize_soc_init_fraction::Bool = false
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
-    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
+    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -272,7 +272,7 @@ struct ElectricStorage <: AbstractElectricStorage
     optimize_soc_init_fraction::Bool
     min_duration_hours::Real
     max_duration_hours::Real
-    fixed_dispatch_series::Union{Nothing, Array{Real,1}}
+    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}}
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -300,7 +300,7 @@ struct ElectricStorage <: AbstractElectricStorage
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
 
-        # TODO: add a check on fixed_dispatch_series
+        # TODO: add a check on fixed_soc_series_fraction
 
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
@@ -369,7 +369,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.optimize_soc_init_fraction,
             s.min_duration_hours,
             s.max_duration_hours,
-            s.fixed_dispatch_series
+            s.fixed_soc_series_fraction
         )
     end
 end
