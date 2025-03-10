@@ -24,6 +24,18 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+
+## fix-tech-set-for-re-fraction
+### Added
+- Add a warning so that when **SteamTurbine** is included, renewable energy fractions may not be accurate.
+- Added new attribute **fuel_renewable_energy_fraction** to the technology **Boiler**.
+
+### Fixed
+- Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies). 
+
+## docs-update-march25
+### Changed
+- Updated and fixed some `docs` pages: improved setup, using HiGHS solver, fixed docstrings 
  
 ## v0.51.0
 ### Added 
@@ -53,7 +65,7 @@ Classify the change according to the following categories:
 ### Fixed
 - Make **ElectricTariff** **export_rate_beyond_net_metering_limit** and **wholesale_rate** with sub-hour time step work
 - Update the expression `m[:AnnualEleckWh]` to include electrified thermal loads
-- Update expressions `m[AnnualREHeatkWh]` and `AnnualHeatkWh` so that only non-electrified thermal loads are included and storage losses are proportional to the contribution of fuel-burning technologies to charging storage
+- Update expressions `m[:AnnualREHeatkWh]` and `m[:AnnualHeatkWh]` so that only non-electrified thermal loads are included and storage losses are proportional to the contribution of fuel-burning technologies to charging storage
 
 ## v0.50.0
 ### Added
