@@ -137,6 +137,12 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )
     end
+
+    if (p.s.storage.attr[b] isa ElectricStorage || p.s.storage.attr[b] isa MPCElectricStorage) && !isnothing(p.s.storage.attr[b].fixed_dispatch_series)      
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] == p.s.storage.attr[b].fixed_dispatch_series[ts] * m[Symbol("dvStorageEnergy"*_n)][b]
+        )
+    end
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
