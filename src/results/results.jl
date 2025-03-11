@@ -135,7 +135,7 @@ Combine two results dictionaries into one using BAU and optimal scenario results
 New fields added to the Financial output/results:
 - `npv`: Net Present Value of the optimal scenario
 - `year_one_total_cost_savings_before_tax`: Total cost savings in year 1 before tax
-- `year_one_total_cost_savings_after_tax`: Total cost savings in year 1 after tax
+- `year_one_total_operating_cost_savings_after_tax`: Total cost savings in year 1 after tax
 - `breakeven_cost_of_emissions_reduction_per_tonne_CO2`: Breakeven cost of CO2 (usd per tonne) that would yield an npv of 0, holding all other inputs constant
 - `lifecycle_emissions_reduction_CO2_fraction`: Fraction of CO2 emissions reduced in the optimal scenario compared to the BAU scenario
 """
@@ -274,8 +274,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         end
     end
         
-    opt["Financial"]["year_one_total_cost_savings_before_tax"] = bau["Financial"]["year_one_total_cost_before_tax"] - opt["Financial"]["year_one_total_cost_before_tax"]
-    opt["Financial"]["year_one_total_cost_savings_after_tax"] = bau["Financial"]["year_one_total_cost_after_tax"] - opt["Financial"]["year_one_total_cost_after_tax"]
+    opt["Financial"]["year_one_total_operating_cost_savings_before_tax"] = bau["Financial"]["year_one_total_operating_cost_before_tax"] - opt["Financial"]["year_one_total_operating_cost_before_tax"]
+    opt["Financial"]["year_one_total_operating_cost_savings_after_tax"] = bau["Financial"]["year_one_total_operating_cost_after_tax"] - opt["Financial"]["year_one_total_operating_cost_after_tax"]
     
     # TODO add FlexibleHVAC opex savings
 
