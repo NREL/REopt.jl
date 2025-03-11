@@ -25,6 +25,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## after-tax-savings
+### Added
+- Added the following fields: `year_one_fuel_cost_after_tax` for `ExistingBoiler`, `CHP`, `Generator`, and `Boiler`; `ElectricTariff`: `year_one_bill_after_tax` and `year_one_export_benefit_after_tax`, `Financial`: `capital_costs_after_non_discounted_incentives`, `year_one_total_operating_cost_savings_before_tax`, `year_one_total_operating_cost_savings_after_tax`, `year_one_total_operating_cost_before_tax`, `year_one_total_operating_cost_after_tax`, `year_one_fuel_cost_before_tax`, `year_one_fuel_cost_after_tax`, `year_one_chp_standby_cost_after_tax`, `year_one_chp_standby_cost_after_tax`, `GHP.avoided_capex_by_ghp_present_value`
+### Changed
+- Changed the name of the following fields: `Financial.capital_costs_after_incentives_without_macrs` to `Financial.capital_costs_after_non_discounted_incentives_without_macrs`
+### Fixed
+- Included the following in the `Financial.lifecycle_capital_costs` and `Financial.initial_capital_costs`: `m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)]`
+
 ## fix-tech-set-for-re-fraction
 ### Added
 - Add a warning so that when **SteamTurbine** is included, renewable energy fractions may not be accurate.
