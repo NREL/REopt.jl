@@ -63,13 +63,13 @@ function Techs(p::REoptInputs, s::BAUScenario)
     thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
 
     dc_coupled_with_storage = String[pv.name for pv in s.pvs if pv.dc_coupled_with_storage]
-    ac_couple_with_stor = setdiff(elec, dc_coupled_with_storage)
+    ac_coupled_with_storage = setdiff(elec, dc_coupled_with_storage)
 
     Techs(
         all_techs,
         elec,
         dc_coupled_with_storage,
-        ac_couple_with_stor,
+        ac_coupled_with_storage,
         pvtechs,
         gentechs,
         pbi_techs,
@@ -346,13 +346,13 @@ function Techs(s::Scenario)
     end
     
     dc_coupled_with_storage = String[pv.name for pv in s.pvs if pv.dc_coupled_with_storage]
-    ac_couple_with_stor = setdiff(elec, dc_coupled_with_storage)
+    ac_coupled_with_storage = setdiff(elec, dc_coupled_with_storage)
 
     Techs(
         all_techs,
         elec,
         dc_coupled_with_storage,
-        ac_couple_with_stor,
+        ac_coupled_with_storage,
         pvtechs,
         gentechs,
         pbi_techs,
