@@ -152,7 +152,7 @@ Calculate and return the up-front capital costs for all technologies, in present
 incentives.
 """
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    initial_capex = p.s.financial.offgrid_other_capital_costs - value(m[:AvoidedCapexByASHP]) - value(m[:AvoidedCapexByGHP])
+    initial_capex = p.s.financial.offgrid_other_capital_costs - value(m[Symbol("AvoidedCapexByASHP"*_n)]) - value(m[Symbol("AvoidedCapexByGHP"*_n)])
 
     if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
