@@ -14,6 +14,10 @@
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
 - `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus expected microgrid fuel costs, assuming outages occur in first year with specified probabilities.
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
+- `year_one_total_operating_cost_before_tax` Year one total operating costs, before tax.
+- `year_one_total_operating_cost_after_tax` Year one total operating costs, after tax.
+- `year_one_fuel_cost_before_tax` Year one fuel costs, before tax.
+- `year_one_fuel_cost_after_tax` Year one fuel costs, after tax.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
 - `year_one_chp_standby_cost_after_tax` Year one CHP standby costs, after tax.

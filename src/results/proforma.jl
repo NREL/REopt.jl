@@ -33,7 +33,7 @@ return Dict(
     "offtaker_discounted_annual_free_cashflows" => Float64[],
     "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
     "developer_annual_free_cashflows" => Float64[],
-    "capital_costs_after_incentives_without_macrs" => 0.0 # Capital costs after ibi, cbi, and ITC incentives, including present value of replacement costs
+    "capital_costs_after_non_discounted_incentives_without_macrs" => 0.0 # Capital costs after ibi, cbi, and ITC incentives, including present value of replacement costs
     "capital_costs_after_non_discounted_incentives" => 0.0 # Capital costs after ibi, cbi, ITC, and MACRS incentives but without discounting out-year ITC and MACRS
 )
 """
@@ -48,7 +48,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         "offtaker_discounted_annual_free_cashflows" => Float64[],
         "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
         "developer_annual_free_cashflows" => Float64[],
-        "capital_costs_after_incentives_without_macrs" => 0.0,
+        "capital_costs_after_non_discounted_incentives_without_macrs" => 0.0,
         "capital_costs_after_non_discounted_incentives" => 0.0
     )
     years = p.s.financial.analysis_years
@@ -258,8 +258,8 @@ function proforma_results(p::REoptInputs, d::Dict)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
     battery_replacement_net_present_cost = -1*battery_replacement_cost * (1 - tax_rate_fraction) / (1 + discount_rate_for_battery_replacement_pv) ^ battery_replacement_year  # battery_replacement_cost is negative, from above
-    r["capital_costs_after_incentives_without_macrs"] = d["Financial"]["initial_capital_costs"] - m.total_ibi_and_cbi - m.federal_itc + battery_replacement_net_present_cost
-    r["capital_costs_after_non_discounted_incentives"] = r["capital_costs_after_incentives_without_macrs"] - sum(m.total_depreciation * tax_rate_fraction)
+    r["capital_costs_after_non_discounted_incentives_without_macrs"] = d["Financial"]["initial_capital_costs"] - m.total_ibi_and_cbi - m.federal_itc + battery_replacement_net_present_cost
+    r["capital_costs_after_non_discounted_incentives"] = r["capital_costs_after_non_discounted_incentives_without_macrs"] - sum(m.total_depreciation * tax_rate_fraction)
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
     # At this point the logic branches based on third-party ownership or not - see comments    

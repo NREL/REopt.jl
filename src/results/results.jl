@@ -121,8 +121,8 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
     
-    d["Financial"]["year_one_total_cost_before_tax"] = d["ElectricTariff"]["year_one_bill_before_tax"] - d["ElectricTariff"]["year_one_export_benefit_before_tax"] + d["Financial"]["year_one_chp_standby_cost_before_tax"] + d["Financial"]["year_one_fuel_cost_before_tax"] + d["Financial"]["year_one_om_costs_before_tax"]
-    d["Financial"]["year_one_total_cost_after_tax"] = d["ElectricTariff"]["year_one_bill_after_tax"] - d["ElectricTariff"]["year_one_export_benefit_after_tax"] + d["Financial"]["year_one_chp_standby_cost_after_tax"] + d["Financial"]["year_one_fuel_cost_after_tax"] + d["Financial"]["year_one_om_costs_after_tax"]
+    d["Financial"]["year_one_total_operating_cost_before_tax"] = d["ElectricTariff"]["year_one_bill_before_tax"] - d["ElectricTariff"]["year_one_export_benefit_before_tax"] + d["Financial"]["year_one_chp_standby_cost_before_tax"] + d["Financial"]["year_one_fuel_cost_before_tax"] + d["Financial"]["year_one_om_costs_before_tax"]
+    d["Financial"]["year_one_total_operating_cost_after_tax"] = d["ElectricTariff"]["year_one_bill_after_tax"] - d["ElectricTariff"]["year_one_export_benefit_after_tax"] + d["Financial"]["year_one_chp_standby_cost_after_tax"] + d["Financial"]["year_one_fuel_cost_after_tax"] + d["Financial"]["year_one_om_costs_after_tax"]
     
     return d
 end
@@ -132,6 +132,12 @@ end
     combine_results(bau::Dict, opt::Dict)
     
 Combine two results dictionaries into one using BAU and optimal scenario results.
+New fields added to the Financial output/results:
+- `npv`: Net Present Value of the optimal scenario
+- `year_one_total_cost_savings_before_tax`: Total cost savings in year 1 before tax
+- `year_one_total_cost_savings_after_tax`: Total cost savings in year 1 after tax
+- `breakeven_cost_of_emissions_reduction_per_tonne_CO2`: Breakeven cost of CO2 (usd per tonne) that would yield an npv of 0, holding all other inputs constant
+- `lifecycle_emissions_reduction_CO2_fraction`: Fraction of CO2 emissions reduced in the optimal scenario compared to the BAU scenario
 """
 function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAUScenario)
     bau_outputs = (
@@ -144,8 +150,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "year_one_om_costs_after_tax"),
         ("Financial", "year_one_fuel_cost_before_tax"),
         ("Financial", "year_one_fuel_cost_after_tax"),
-        ("Financial", "year_one_total_cost_before_tax"),
-        ("Financial", "year_one_total_cost_after_tax"),
+        ("Financial", "year_one_total_operating_cost_before_tax"),
+        ("Financial", "year_one_total_operating_cost_after_tax"),
         ("Financial", "lifecycle_fuel_costs_after_tax"),
         ("Financial", "lifecycle_chp_standby_cost_after_tax"),
         ("Financial", "lifecycle_elecbill_after_tax"),
