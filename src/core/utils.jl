@@ -464,6 +464,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
     
     # Determine resource dataset to use for this location
     dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
+
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
         "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
@@ -599,7 +600,6 @@ function check_api_key()
                     See https://nrel.github.io/REopt.jl/dev/ for more information."))
     end
 end
-
 function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
     if any(x -> x < 0 || x > 1, series)
         throw(@error("All values in the provided $(input_struct_name) $(input_name) must be between 0 and 1."))
