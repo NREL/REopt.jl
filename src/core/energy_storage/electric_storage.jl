@@ -158,6 +158,7 @@ end
 `ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
+    dc_coupled::Bool = false
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -168,7 +169,7 @@ end
     soc_min_fraction::Float64 = 0.2
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
-    can_grid_charge::Bool = off_grid_flag ? false : true
+    can_grid_charge::Bool = off_grid_flag || dc_coupled ? false : true
     installed_cost_per_kw::Real = 910.0
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
@@ -192,11 +193,11 @@ end
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
-    dc_coupled::Bool = false
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
+    dc_coupled::Bool = false
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -231,7 +232,6 @@ Base.@kwdef struct ElectricStorageDefaults
     optimize_soc_init_fraction::Bool = false
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
-    dc_coupled::Bool = false
 end
 
 
@@ -242,6 +242,7 @@ Construct ElectricStorage struct from Dict with keys-val pairs from the
 REopt ElectricStorage and Financial inputs.
 """
 struct ElectricStorage <: AbstractElectricStorage
+    dc_coupled::Bool
     min_kw::Real
     max_kw::Real
     min_kwh::Real
@@ -278,7 +279,6 @@ struct ElectricStorage <: AbstractElectricStorage
     optimize_soc_init_fraction::Bool
     min_duration_hours::Real
     max_duration_hours::Real
-    dc_coupled::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -339,6 +339,7 @@ struct ElectricStorage <: AbstractElectricStorage
         end
     
         return new(
+            s.dc_coupled,
             s.min_kw,
             s.max_kw,
             s.min_kwh,
@@ -374,8 +375,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.minimum_avg_soc_fraction,
             s.optimize_soc_init_fraction,
             s.min_duration_hours,
-            s.max_duration_hours,
-            s.dc_coupled
+            s.max_duration_hours
         )
     end
 end
