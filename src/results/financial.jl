@@ -25,7 +25,7 @@
 - `lifecycle_capital_costs_plus_om_after_tax` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. 
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. 
 - `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. 
-- `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives.
+- `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives. Note: the ITC and MACRS are discounted by 1 year, and 1-7 years, respectively, to obtain the present value. 
 - `replacements_future_cost_after_tax` Future cost of replacing storage and/or generator systems, after tax.
 - `replacements_present_cost_after_tax` Present value cost of replacing storage and/or generator systems, after tax.
 - `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
