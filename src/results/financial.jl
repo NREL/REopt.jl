@@ -14,8 +14,8 @@
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
 - `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus expected microgrid fuel costs, assuming outages occur in first year with specified probabilities.
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
-- `year_one_total_operating_cost_before_tax` Year one total operating costs, before tax.
-- `year_one_total_operating_cost_after_tax` Year one total operating costs, after tax.
+- `year_one_total_operating_cost_before_tax` Year one total operating costs, before tax. Includes energy costs, export value, O&M, fuel, and standby costs.
+- `year_one_total_operating_cost_after_tax` Year one total operating costs, after tax. Includes energy costs, export value, O&M, fuel, and standby costs.
 - `year_one_fuel_cost_before_tax` Year one fuel costs, before tax. Does not include fuel use during outages if using multiple outage modeling.
 - `year_one_fuel_cost_after_tax` Year one fuel costs, after tax. Does not include fuel use during outages if using multiple outage modeling.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
@@ -40,6 +40,11 @@ calculated in combine_results function if BAU scenario is run:
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
+
+!!! note "Two Methods for Simple Payback"
+	REopt Financial outputs include a comprehensive `simple_payback_years` calculation. This is the year in which cumulative net free cashflows become positive. For a third party analysis, the SPP is for the developer.
+    A simplified payback period can also be calculated as: `capital_costs_after_non_discounted_incentives` divided by `year_one_total_operating_cost_savings_after_tax`.
 
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
