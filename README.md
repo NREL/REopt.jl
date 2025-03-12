@@ -9,7 +9,7 @@ For more information about REopt.jl please see the Julia documentation:
 
 
 ## Quick Start
-Evaluating simple `PV` and `Storage` scenarios requires a linear program solver. Evaluating net-metering, generator, multiple outages, or other more complex scenario makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with , `HiGHS`, `Cbc`, `SCIP`, `Xpress` (commercial), and `CPLEX` (commercial).
+Evaluating simple `PV` and `ElectricStorage` scenarios requires a linear program solver. Evaluating net-metering, `Generator`, multiple outages, or other more complex scenario makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with , `HiGHS`, `Cbc`, `SCIP`, `Xpress` (commercial), and `CPLEX` (commercial).
 
 ### Example
 ```
