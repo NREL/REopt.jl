@@ -33,15 +33,12 @@ Classify the change according to the following categories:
 ### Fixed
 - Included the following in the `Financial.lifecycle_capital_costs` and `Financial.initial_capital_costs`: `m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)]`
 
-## fix-tech-set-for-re-fraction
+## Develop
 ### Added
 - Add a warning so that when **SteamTurbine** is included, renewable energy fractions may not be accurate.
 - Added new attribute **fuel_renewable_energy_fraction** to the technology **Boiler**.
-
 ### Fixed
 - Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies). 
-
-## docs-update-march25
 ### Changed
 - Updated and fixed some `docs` pages: improved setup, using HiGHS solver, fixed docstrings 
  
