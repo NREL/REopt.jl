@@ -149,6 +149,9 @@ mutable struct PV <: AbstractTech
         )
 
         if dc_coupled_with_storage
+            if off_grid_flag
+                throw(@error("Modeling DC-coupled PV + ElectricStorage is not yet available for off-grid analyses."))
+            end
             if existing_kw > 0
                 throw(@error("Existing PV cannot be DC coupled with storage. Set PV.dc_coupled_with_storage to false or PV.existing_kw to 0 for each PV."))
             end

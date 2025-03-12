@@ -283,6 +283,10 @@ struct ElectricStorage <: AbstractElectricStorage
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
 
+        if s.dc_coupled && s.off_grid_flag
+            throw(@error("Modeling DC-coupled PV + ElectricStorage is not yet available for off-grid analyses."))
+        end
+
         if s.inverter_replacement_year >= f.analysis_years
             @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."
         end
