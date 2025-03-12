@@ -16,8 +16,8 @@
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
 - `year_one_total_operating_cost_before_tax` Year one total operating costs, before tax.
 - `year_one_total_operating_cost_after_tax` Year one total operating costs, after tax.
-- `year_one_fuel_cost_before_tax` Year one fuel costs, before tax.
-- `year_one_fuel_cost_after_tax` Year one fuel costs, after tax.
+- `year_one_fuel_cost_before_tax` Year one fuel costs, before tax. Does not include fuel use during outages if using multiple outage modeling.
+- `year_one_fuel_cost_after_tax` Year one fuel costs, after tax. Does not include fuel use during outages if using multiple outage modeling.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
 - `year_one_chp_standby_cost_after_tax` Year one CHP standby costs, after tax.
