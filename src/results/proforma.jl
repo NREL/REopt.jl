@@ -33,7 +33,7 @@ return Dict(
     "offtaker_discounted_annual_free_cashflows" => Float64[],
     "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
     "developer_annual_free_cashflows" => Float64[],
-    "capital_costs_after_non_discounted_incentives_without_macrs" => 0.0 # Capital costs after ibi, cbi, and ITC incentives, including present value of replacement costs
+    "capital_costs_after_non_discounted_incentives_without_macrs" => 0.0 # Capital costs after (non-discounted) ibi, cbi, and ITC incentives, including present value of replacement costs
     "capital_costs_after_non_discounted_incentives" => 0.0 # Capital costs after ibi, cbi, ITC, and MACRS incentives but without discounting out-year ITC and MACRS
 )
 """
