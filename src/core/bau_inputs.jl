@@ -32,7 +32,7 @@ function BAUInputs(p::REoptInputs)
     cooling_cf = Dict{String, Array{Float64,1}}() 
     avoided_capex_by_ashp_present_value = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
-    tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
+    tech_renewable_energy_fraction = Dict(t => 0.0 for t in union(techs.fuel_burning, techs.elec))
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
@@ -81,6 +81,7 @@ function BAUInputs(p::REoptInputs)
         cap_cost_slope["Generator"] = 0.0
         om_cost_per_kw["Generator"] = p.s.generator.om_cost_per_kw
         production_factor["Generator", :] = p.production_factor["Generator", :]
+        tech_renewable_energy_fraction["Generator"] = p.s.generator.fuel_renewable_energy_fraction
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
         if "Generator" in p.techs.pbi
             push!(pbi_techs, "Generator")
@@ -287,7 +288,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
         bau_grid_to_load = [max(i,0) for i in bau_grid_to_load]
     end
 
-    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
+    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) * p.hours_per_time_step
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
     ## Generator emissions (during outages)

@@ -42,7 +42,7 @@
         "annual_kwh": 87600.0
     },
     "ProcessHeatLoad": {
-        "industry_reference_name": "FlatLoad"
+        "industrial_reference_name": "FlatLoad"
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "FlatLoad"

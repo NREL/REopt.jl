@@ -18,7 +18,6 @@
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
 
 """
-
 function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["Boiler"]) / KWH_PER_MMBTU, digits=3)
@@ -27,8 +26,8 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     r["annual_fuel_consumption_mmbtu"] = round(sum(r["fuel_consumption_series_mmbtu_per_hour"]), digits=3)
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
-        round.(sum(value.(m[:dvHeatingProduction]["Boiler", q, ts] for ts in p.time_steps) for q in p.heating_loads) / KWH_PER_MMBTU, digits=5)
-	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
+        round.(sum(value.(m[:dvHeatingProduction]["Boiler", q, ts] for ts in p.time_steps) for q in p.heating_loads) ./ KWH_PER_MMBTU, digits=5)
+    r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
 
 	if !isempty(p.s.storage.types.hot)
         @expression(m, NewBoilerToHotTESKW[ts in p.time_steps],
