@@ -200,7 +200,7 @@ function run_ssc(case_data::Dict)
         ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
             "mst" => ["Q_thermal","P_tower_pump",0.0,"q_pb_design","solarm"],         # Q_thermal = [MWt] (confirmed 1/14/2025)
-            "lf" => ["q_dot_to_heat_sink","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
+            "lf" => ["q_dot_htf_sf_out","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
             "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # q_dot_htf_sf_out = [MWt] (confirmed 1/14/2025)
             "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # Q_useful = [kWt] confirmed 1/14/2025)
             "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # Q_useful = [kWt] confirmed 1/14/2025), kW, kW, kW
