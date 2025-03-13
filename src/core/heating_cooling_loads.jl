@@ -289,7 +289,6 @@ one only needs to provide an empty Dict in the scenario JSON to add a `CoolingLo
 In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
 `blended_doe_reference_percents` are copied from the `ElectricLoad` to the `CoolingLoad`.
 """
-
 struct CoolingLoad
     loads_kw_thermal::Array{Real, 1}
     existing_chiller_cop::Real
