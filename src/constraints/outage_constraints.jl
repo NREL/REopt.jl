@@ -349,8 +349,32 @@ function add_MG_storage_dispatch_constraints(m,p)
             m[:dvMGDischargeFromStorage][s, tz, ts] <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
         )
     end
-end
 
+    if "ElectricStorage" in p.s.storage.types.dc_coupled
+        # Don't let AC coupled elec techs charge DC coupled battery. 
+        # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_coupled_with_storage
+        for ts in 1:p.s.site.min_resil_time_steps
+            for tz in p.s.electric_utility.outage_start_time_steps
+                for s in p.s.electric_utility.scenarios
+                    for t in p.techs.ac_coupled_with_storage
+                        fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
+                    end
+                end
+            end
+        end
+    else
+        # Don't let DC coupled elec techs charge AC coupled battery. 
+        for ts in 1:p.s.site.min_resil_time_steps
+            for tz in p.s.electric_utility.outage_start_time_steps
+                for s in p.s.electric_utility.scenarios
+                    for t in p.techs.dc_coupled_with_storage
+                        fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
+                    end
+                end
+            end
+        end
+    end
+end
 
 function fix_MG_storage_variables(m, p)
     fix(m[:dvMGStorageUpgradeCost], 0.0, force=true)
@@ -415,16 +439,4 @@ function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
         # (rectifier direction, though currently dvMGProductionToStorage for AC coupled techs must be 0)
         + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage) * p.s.storage.attr["ElectricStorage"].rectifier_efficiency_fraction
     )
-
-    # Don't let AC coupled elec techs charge battery. 
-    # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_coupled_with_storage
-    for ts in 1:p.s.site.min_resil_time_steps
-        for tz in p.s.electric_utility.outage_start_time_steps
-            for s in p.s.electric_utility.scenarios
-                for t in p.techs.ac_coupled_with_storage
-                    fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
-                end
-            end
-        end
-    end
 end
