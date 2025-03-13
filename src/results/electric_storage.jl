@@ -23,7 +23,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     r = Dict{String, Any}()
     r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
     r["size_kw"] = round(value(m[Symbol("dvStoragePower"*_n)][b]), digits=2)
-    if p.s.storage.attr[b].dc_coupled
+    if b in p.s.storage.types.dc_coupled
         r["dc_couple_inverter_size_kw"] = round(value(m[:dvDCCoupledTechStorageInverterSizeDC][b]), digits=2)
     end
     
@@ -35,7 +35,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
         r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
 
         r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
-            (p.s.storage.attr[b].dc_coupled ? 
+            (b in p.s.storage.types.dc_coupled ? 
                 r["dc_couple_inverter_size_kw"] : r["size_kw"]
             ) * p.s.storage.attr[b].installed_cost_per_kw
 
