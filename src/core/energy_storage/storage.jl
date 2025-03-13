@@ -57,10 +57,10 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
-                    if v.dc_coupled
-                        push!(dc_coupled, k)
-                    else
+                    if typeof(v) <: MPCElectricStorage || !v.dc_coupled
                         push!(ac_coupled, k)
+                    else
+                        push!(dc_coupled, k)
                     end
                 elseif typeof(v) <: HotThermalStorage
                     push!(hot_storage, k)
