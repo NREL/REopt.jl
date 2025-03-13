@@ -127,7 +127,7 @@ function run_ssc(case_data::Dict)
         "mst" => "mspt_iph",
         "swh_flatplate" => "swh",
         "swh_evactube" => "swh",
-        "lf" => "linear_fresnel_dsg_iph",
+        "lf" => "fresnel_physical_iph",
         "ptc" => "trough_physical_iph" #
     ) # relates internal names to specific models in SAM (for example, there are multiple molten salt tower models to pick from in the SSC)
     lat = case_data["Site"]["latitude"]
