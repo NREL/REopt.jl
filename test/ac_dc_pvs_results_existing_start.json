@@ -89,7 +89,7 @@
         "size_kw": 100.0,
         "size_kwh": 597.92,
         "initial_capital_cost": 363053.6,
-        "dc_couple_inverter_size_kw": 100.0,
+        "dc_coupled_inverter_size_kw": 100.0,
         "soc_series_fraction": [
             0.5,
             0.5,
