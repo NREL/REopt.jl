@@ -17618,7 +17618,7 @@
         ]
     },
     "status": "optimal",
-    "solver_seconds": 7.299,
+    "solver_seconds": 7.296,
     "ElectricUtility": {
         "annual_renewable_electricity_supplied_kwh": 324797.924,
         "lifecycle_emissions_tonnes_PM25": 0.1,
@@ -52711,7 +52711,7 @@
                 ]
             ],
             [
-                "core_pv.jl_155",
+                "core_pv.jl_158",
                 [
                     "PV inv_eff will be ignored because dc_coupled_with_storage=true. The inverter of the DC coupled PV and electric storage system will be defined by ElectricStorage inverter_efficiency_fraction and rectifier_efficiency_fraction."
                 ]
