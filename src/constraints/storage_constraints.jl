@@ -121,7 +121,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m, [ts in p.time_steps],
             m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
                 + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_coupled_with_storage)
-                + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.dc_coupled_with_storage) * p.s.storage.attr[b].inverter_efficiency_fraction #TODO: remove term or leave for future flexibility?
                 + m[Symbol("dvGridToStorage"*_n)][b, ts]
         )
     end
