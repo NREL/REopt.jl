@@ -140,6 +140,23 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )
     end
+
+    if b in p.s.storage.types.dc_coupled
+        # Constraint (4d)-2: Don't let AC coupled elec techs charge DC coupled battery. 
+        # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_coupled_with_storage
+        for ts in p.time_steps
+            for t in p.techs.ac_coupled_with_storage
+                fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)
+            end
+        end
+    else
+        # Constraint (4d)-3: Don't let DC coupled elec techs charge AC coupled battery. 
+        for ts in p.time_steps
+            for t in p.techs.dc_coupled_with_storage
+                fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)
+            end
+        end
+    end
 end
 
 function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
@@ -161,14 +178,6 @@ function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
             + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_coupled_with_storage)
         )
     )
-
-    # Constraint (4d)-2: Don't let AC coupled elec techs charge battery. 
-    # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_coupled_with_storage
-    for ts in p.time_steps
-        for t in p.techs.ac_coupled_with_storage
-            fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)
-        end
-    end
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
