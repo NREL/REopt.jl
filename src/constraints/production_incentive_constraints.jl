@@ -15,11 +15,11 @@ function add_prod_incent_vars_and_constraints(m, p)
 		m[:dvProdIncent][t] <= m[:binProdIncent][t] * p.pbi_max_benefit[t] * p.pbi_pwf[t] * p.third_party_factor)
 
 	##Constraint (6a)-2: Production Incentive According to Production
-	@constraint(m, IncentByProductionCon1[t in union(p.techs.pbi, p.techs.ac_coupled_with_storage)],
+	@constraint(m, IncentByProductionCon1[t in intersect(p.techs.pbi, p.techs.ac_coupled_with_storage)],
 		m[:dvProdIncent][t] <= p.hours_per_time_step * p.pbi_benefit_per_kwh[t] * p.pbi_pwf[t] * p.third_party_factor *
 			sum(p.production_factor[t, ts] * m[:dvRatedProduction][t,ts] for ts in p.time_steps)
 	)
-	@constraint(m, IncentByProductionCon2[t in union(p.techs.pbi, p.techs.dc_coupled_with_storage)],
+	@constraint(m, IncentByProductionCon2[t in intersect(p.techs.pbi, p.techs.dc_coupled_with_storage)],
 		m[:dvProdIncent][t] <= p.hours_per_time_step * p.pbi_benefit_per_kwh[t] * p.pbi_pwf[t] * p.third_party_factor *
 			sum(p.production_factor[t, ts] * m[:dvRatedProduction][t,ts] * p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction for ts in p.time_steps)
 	)
