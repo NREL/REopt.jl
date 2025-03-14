@@ -6,12 +6,12 @@ function add_elec_load_balance_constraints(m, p; _n="")
     if isempty(p.s.electric_tariff.export_bins)
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.ac_coupled)
                 - m[Symbol("dvCurtail"*_n)][t, ts] 
                 for t in p.techs.ac_coupled_with_storage) 
             + sum(p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
                     p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.dc_coupled)
                     - m[Symbol("dvCurtail"*_n)][t, ts])
                 for t in p.techs.dc_coupled_with_storage)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec) 
@@ -27,12 +27,12 @@ function add_elec_load_balance_constraints(m, p; _n="")
     else
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.ac_coupled)
                 - m[Symbol("dvCurtail"*_n)][t, ts] 
                 for t in p.techs.ac_coupled_with_storage)
             + sum(p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
                     p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.dc_coupled)
                     - m[Symbol("dvCurtail"*_n)][t, ts])
                 for t in p.techs.dc_coupled_with_storage) 
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )
@@ -56,12 +56,12 @@ function add_elec_load_balance_constraints(m, p; _n="")
 	if !p.s.settings.off_grid_flag # load balancing constraint for grid-connected runs
         @constraint(m, [ts in p.time_steps_without_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.ac_coupled)
                 - m[Symbol("dvCurtail"*_n)][t, ts]
                 for t in p.techs.ac_coupled_with_storage)
             + sum(p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
                     p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.dc_coupled)
                     - m[Symbol("dvCurtail"*_n)][t, ts])
                 for t in p.techs.dc_coupled_with_storage)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec)
@@ -71,12 +71,12 @@ function add_elec_load_balance_constraints(m, p; _n="")
     else # load balancing constraint for off-grid runs 
         @constraint(m, [ts in p.time_steps_without_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.ac_coupled)
                 - m[Symbol("dvCurtail"*_n)][t, ts]
                 for t in p.techs.ac_coupled_with_storage)
             + sum(p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
                     p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
-                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                    - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.dc_coupled)
                     - m[Symbol("dvCurtail"*_n)][t, ts])
                 for t in p.techs.dc_coupled_with_storage)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec)

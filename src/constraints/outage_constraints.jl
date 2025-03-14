@@ -350,9 +350,9 @@ function add_MG_storage_dispatch_constraints(m,p)
         )
     end
 
+    # Future development could make this an option by adding bool inputs an updating load balance/battery dispatch constraints to include these flows
     if "ElectricStorage" in p.s.storage.types.dc_coupled
         # Don't let AC coupled elec techs charge DC coupled battery. 
-        # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_coupled_with_storage
         for ts in 1:p.s.site.min_resil_time_steps
             for tz in p.s.electric_utility.outage_start_time_steps
                 for s in p.s.electric_utility.scenarios

@@ -140,9 +140,9 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         )
     end
 
+    # Future development could make this an option by adding bool inputs an updating load balance/battery dispatch constraints to include these flows
     if b in p.s.storage.types.dc_coupled
         # Constraint (4d)-2: Don't let AC coupled elec techs charge DC coupled battery. 
-        # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_coupled_with_storage
         for ts in p.time_steps
             for t in p.techs.ac_coupled_with_storage
                 fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)

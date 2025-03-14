@@ -65,7 +65,7 @@ function add_re_elec_calcs(m,p)
 				- m[:dvCurtail][t,ts] #minus curtailment
 				- sum(m[:dvProductionToStorage][b,t,ts]
 					*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency)
-					for b in p.s.storage.types.elec)) #minus battery efficiency losses
+					for b in p.s.storage.types.ac_coupled)) #minus battery efficiency losses
 				* p.tech_renewable_energy_fraction[t]
 				for t in setdiff(p.techs.ac_coupled_with_storage, p.techs.steam_turbine), ts in p.time_steps
 			)
@@ -73,7 +73,7 @@ function add_re_elec_calcs(m,p)
 				- m[:dvCurtail][t,ts] #minus curtailment
 				- sum(m[:dvProductionToStorage][b,t,ts]
 					*(1-p.s.storage.attr[b].dc_charge_efficiency*p.s.storage.attr[b].dc_discharge_efficiency)
-					for b in p.s.storage.types.elec)) #minus battery efficiency losses
+					for b in p.s.storage.types.dc_coupled)) #minus battery efficiency losses
 				* p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction #converted to AC
 				* p.tech_renewable_energy_fraction[t]
 				for t in setdiff(p.techs.dc_coupled_with_storage, p.techs.steam_turbine), ts in p.time_steps
