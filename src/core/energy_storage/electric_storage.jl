@@ -182,11 +182,6 @@ end
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
-    charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
-    discharge_efficiency::Float64 = inverter_efficiency_fraction * internal_efficiency_fraction^0.5
-    dc_charge_efficiency::Float64 = internal_efficiency_fraction^0.5
-    dc_discharge_efficiency::Float64 = internal_efficiency_fraction^0.5
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
@@ -221,11 +216,6 @@ Base.@kwdef struct ElectricStorageDefaults
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
-    charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
-    discharge_efficiency::Float64 = inverter_efficiency_fraction * internal_efficiency_fraction^0.5
-    dc_charge_efficiency::Float64 = internal_efficiency_fraction^0.5
-    dc_discharge_efficiency::Float64 = internal_efficiency_fraction^0.5
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
@@ -342,6 +332,12 @@ struct ElectricStorage <: AbstractElectricStorage
             degr = Degradation()
         end
     
+        charge_efficiency = s.rectifier_efficiency_fraction * s.internal_efficiency_fraction^0.5
+        discharge_efficiency = s.inverter_efficiency_fraction * s.internal_efficiency_fraction^0.5
+        dc_charge_efficiency = s.internal_efficiency_fraction^0.5
+        dc_discharge_efficiency = s.internal_efficiency_fraction^0.5
+        grid_charge_efficiency = s.can_grid_charge ? charge_efficiency : 0.0
+
         return new(
             s.dc_coupled,
             s.min_kw,
@@ -367,11 +363,11 @@ struct ElectricStorage <: AbstractElectricStorage
             s.total_itc_fraction,
             s.total_rebate_per_kw,
             s.total_rebate_per_kwh,
-            s.charge_efficiency,
-            s.discharge_efficiency,
-            s.dc_charge_efficiency,
-            s.dc_discharge_efficiency,
-            s.grid_charge_efficiency,
+            charge_efficiency,
+            discharge_efficiency,
+            dc_charge_efficiency,
+            dc_discharge_efficiency,
+            grid_charge_efficiency,
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
             s.model_degradation,

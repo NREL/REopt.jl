@@ -174,7 +174,7 @@ function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
         # (rectifier direction)
         + p.s.storage.attr[b].rectifier_efficiency_fraction * (
             m[Symbol("dvGridToStorage"*_n)][b,ts]
-            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_coupled_with_storage)
+            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_coupled_with_storage) #currently fixed to 0
         )
     )
 end
