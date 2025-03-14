@@ -1,0 +1,70 @@
+{
+    "Messages": {
+        "errors": [
+            [
+                "KeyError(\"Generator\")",
+                [
+                    "getindex at dict.jl:477 [inlined]",
+                    "getindex at DenseAxisArray.jl:51 [inlined]",
+                    "_getindex_recurse at DenseAxisArray.jl:375 [inlined]",
+                    "to_index at DenseAxisArray.jl:384 [inlined]",
+                    "_getindex_inner at DenseAxisArray.jl:415 [inlined]",
+                    "#getindex#26 at DenseAxisArray.jl:411 [inlined]",
+                    "getindex(A::JuMP.Containers.DenseAxisArray{VariableRef, 1, Tuple{Vector{String}}, Tuple{JuMP.Containers._AxisLookup{Dict{String, Int64}}}}, args::String) at DenseAxisArray.jl:404",
+                    "macro expansion at rewrite.jl:371 [inlined]",
+                    "macro expansion at macros.jl:264 [inlined]",
+                    "macro expansion at @constraint.jl:171 [inlined]",
+                    "(::REopt.var\"#599#605\"{REoptInputs{Scenario}, Model})(t::String) at macro.jl:550",
+                    "#87 at container.jl:124 [inlined]",
+                    "iterate at generator.jl:48 [inlined]",
+                    "collect_to!(dest::Vector{ConstraintRef{Model, MathOptInterface.ConstraintIndex{MathOptInterface.ScalarAffineFunction{Float64}, MathOptInterface.LessThan{Float64}}, ScalarShape}}, itr::Base.Generator{JuMP.Containers.VectorizedProductIterator{Tuple{Vector{String}}}, JuMP.Containers.var\"#87#89\"{REopt.var\"#599#605\"{REoptInputs{Scenario}, Model}}}, offs::Int64, st::Tuple{Tuple{String, Int64}}) at array.jl:849",
+                    "collect_to_with_first!(dest::Vector{ConstraintRef{Model, MathOptInterface.ConstraintIndex{MathOptInterface.ScalarAffineFunction{Float64}, MathOptInterface.LessThan{Float64}}, ScalarShape}}, v1::ConstraintRef{Model, MathOptInterface.ConstraintIndex{MathOptInterface.ScalarAffineFunction{Float64}, MathOptInterface.LessThan{Float64}}, ScalarShape}, itr::Base.Generator{JuMP.Containers.VectorizedProductIterator{Tuple{Vector{String}}}, JuMP.Containers.var\"#87#89\"{REopt.var\"#599#605\"{REoptInputs{Scenario}, Model}}}, st::Tuple{Tuple{String, Int64}}) at array.jl:827",
+                    "collect(itr::Base.Generator{JuMP.Containers.VectorizedProductIterator{Tuple{Vector{String}}}, JuMP.Containers.var\"#87#89\"{REopt.var\"#599#605\"{REoptInputs{Scenario}, Model}}}) at array.jl:801",
+                    "map(f::Function, A::JuMP.Containers.VectorizedProductIterator{Tuple{Vector{String}}}) at abstractarray.jl:3399",
+                    "container(f::Function, indices::JuMP.Containers.VectorizedProductIterator{Tuple{Vector{String}}}, ::Type{JuMP.Containers.DenseAxisArray}, names::Vector{Any}) at container.jl:123",
+                    "container at container.jl:75 [inlined]",
+                    "macro expansion at macros.jl:400 [inlined]",
+                    "add_prod_incent_vars_and_constraints(m::Model, p::REoptInputs{Scenario}) at production_incentive_constraints.jl:18",
+                    "build_reopt!(m::Model, p::REoptInputs{Scenario}) at reopt.jl:357",
+                    "run_reopt(m::Model, p::REoptInputs{Scenario}; organize_pvs::Bool) at reopt.jl:568",
+                    "run_reopt at reopt.jl:565 [inlined]",
+                    "run_reopt(m::Model, s::Scenario) at reopt.jl:74",
+                    "macro expansion at debugging_tests.jl:11 [inlined]",
+                    "macro expansion at Test.jl:1704 [inlined]",
+                    "top-level scope at debugging_tests.jl:7",
+                    "eval at boot.jl:430 [inlined]",
+                    "include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String) at loading.jl:2734",
+                    "_include(mapexpr::Function, mod::Module, _path::String) at loading.jl:2794",
+                    "include(fname::String) at sysimg.jl:38",
+                    "macro expansion at runtests.jl:18 [inlined]",
+                    "macro expansion at Test.jl:1704 [inlined]",
+                    "top-level scope at runtests.jl:18",
+                    "eval at boot.jl:430 [inlined]",
+                    "include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String) at loading.jl:2734",
+                    "_include(mapexpr::Function, mod::Module, _path::String) at loading.jl:2794",
+                    "include(fname::String) at sysimg.jl:38",
+                    "top-level scope at none:6",
+                    "eval at boot.jl:430 [inlined]",
+                    "exec_options(opts::Base.JLOptions) at client.jl:296",
+                    "_start() at client.jl:531"
+                ]
+            ]
+        ],
+        "has_stacktrace": true,
+        "warnings": [
+            [
+                "core_reopt.jl_640",
+                [
+                    "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
+                ]
+            ],
+            [
+                "core_reopt.jl_356",
+                [
+                    "Adding binary variable(s) to model production based incentives"
+                ]
+            ]
+        ]
+    },
+    "status": "error"
+}
