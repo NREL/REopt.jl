@@ -23,6 +23,8 @@ abstract type AbstractSteamTurbine <: AbstractTech end
 mutable struct Techs
     all::Vector{String}
     elec::Vector{String}
+    dc_coupled_with_storage::Vector{String}
+    ac_coupled_with_storage::Vector{String}
     pv::Vector{String}
     gen::Vector{String}
     pbi::Vector{String}
@@ -53,6 +55,8 @@ end
 mutable struct Techs
     all::Vector{String}
     elec::Vector{String}
+    dc_coupled_with_storage::Vector{String}
+    ac_coupled_with_storage::Vector{String}
     pv::Vector{String}
     gen::Vector{String}
     pbi::Vector{String}

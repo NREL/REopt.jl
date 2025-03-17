@@ -1,13 +1,6 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_export_constraints(m, p; _n="")
 
-    ##Constraint (8e): Production export and curtailment no greater than production
-    @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
-        p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
-        >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) +
-           m[Symbol("dvCurtail"*_n)][t, ts]
-    )
-
     binNEM = 0
     binWHL = 0
     NEM_benefit = 0

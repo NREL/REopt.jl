@@ -719,6 +719,9 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         !haskey(d, "Outages") ||
         Bool(get(d["Outages"], "electric_storage_microgrid_upgraded", false))
     )
+        if get(d["ElectricStorage"], "dc_coupled", false)
+            @warn("Simulating scenarios with technologies DC-coupled to ElectricStorage is not yet available in backup_reliability. Treating as if AC-coupled.")
+        end
         r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
         r2[:battery_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency
         r2[:battery_size_kw] = get(d["ElectricStorage"], "size_kw", 0)
