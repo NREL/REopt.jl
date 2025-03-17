@@ -274,10 +274,7 @@ struct ElectricStorage <: AbstractElectricStorage
     max_duration_hours::Real
     fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} 
     
-    function ElectricStorage(d::Dict, f::Financial) 
-        
-        #println(typeof(d["fixed_soc_series_fraction"]))
-        #println(d["fixed_soc_series_fraction"])
+    function ElectricStorage(d::Dict, f::Financial)
 
         s = ElectricStorageDefaults(;d...)
 
@@ -304,7 +301,16 @@ struct ElectricStorage <: AbstractElectricStorage
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
 
-        # TODO: add a check on fixed_soc_series_fraction
+        # Copy SOC input in case we need to change them
+        soc_min_fraction = s.soc_min_fraction
+        optimize_soc_init_fraction = s.optimize_soc_init_fraction
+        soc_init_fraction = s.soc_init_fraction
+        if !isnothing(s.fixed_soc_series_fraction) 
+            @warn "Fixing ElectricStorage soc_series_fraction to the provided fixed_soc_series_fraction."
+            soc_min_fraction = 0.0
+            optimize_soc_init_fraction = false
+            soc_init_fraction = s.fixed_soc_series_fraction[1]
+        end
 
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
@@ -346,9 +352,9 @@ struct ElectricStorage <: AbstractElectricStorage
             s.internal_efficiency_fraction,
             s.inverter_efficiency_fraction,
             s.rectifier_efficiency_fraction,
-            s.soc_min_fraction,
+            soc_min_fraction,
             s.soc_min_applies_during_outages,
-            s.soc_init_fraction,
+            soc_init_fraction,
             s.can_grid_charge,
             s.installed_cost_per_kw,
             s.installed_cost_per_kwh,
@@ -370,7 +376,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
-            s.optimize_soc_init_fraction,
+            optimize_soc_init_fraction,
             s.min_duration_hours,
             s.max_duration_hours,
             s.fixed_soc_series_fraction
