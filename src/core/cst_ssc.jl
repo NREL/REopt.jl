@@ -157,7 +157,7 @@ function run_ssc(case_data::Dict)
         end
     else
         if model != "ptc"
-            R['error'] = 'SSC_Inputs must be provided for your provided CST tech type'
+            R["error"] = "SSC_Inputs must be provided for your provided CST tech type"
             return R
         end
     end
