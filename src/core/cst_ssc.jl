@@ -155,7 +155,7 @@ function run_ssc(case_data::Dict)
         for i in keys(case_data["CST"]["SSC_Inputs"])
             user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
         end
-    else:
+    else
         if model != "ptc"
             R['error'] = 'SSC_Inputs must be provided for your provided CST tech type'
             return R
