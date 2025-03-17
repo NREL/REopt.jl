@@ -66,8 +66,6 @@ All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which ca
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
 
-    println("Here!!!!")
-
     instantiate_logger()
 
     d = deepcopy(d)
@@ -173,7 +171,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         storage_dict = Dict(:max_kw => 0.0) 
     end
-    println("Here!!!!")
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)

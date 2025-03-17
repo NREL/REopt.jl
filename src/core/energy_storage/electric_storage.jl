@@ -273,11 +273,11 @@ struct ElectricStorage <: AbstractElectricStorage
     min_duration_hours::Real
     max_duration_hours::Real
     fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} 
-    prinln("Here!!")
+    
     function ElectricStorage(d::Dict, f::Financial) 
         
-        println(typeof(d["fixed_soc_series_fraction"]))
-        println(d["fixed_soc_series_fraction"])
+        #println(typeof(d["fixed_soc_series_fraction"]))
+        #println(d["fixed_soc_series_fraction"])
 
         s = ElectricStorageDefaults(;d...)
 
