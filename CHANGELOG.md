@@ -35,15 +35,17 @@ Classify the change according to the following categories:
 ### Removed
 - Don't expose **ElectricStorage** fields **charge_efficiency**, **discharge_efficiency**, and **grid_charge_efficiency**. It can lead to unexpected behavior when users provide these instead of the inputs they are calculated from (**inverter_efficiency_fraction**, **rectifier_efficiency_fraction**, and **internal_efficiency_fraction**).
 
-
-## Develop
+## v0.51.1
 ### Added
+- Added the following output fields: `year_one_fuel_cost_after_tax` for `ExistingBoiler`, `CHP`, `Generator`, and `Boiler`; `ElectricTariff`: `year_one_bill_after_tax` and `year_one_export_benefit_after_tax`, `Financial`: `capital_costs_after_non_discounted_incentives`, `year_one_total_operating_cost_savings_before_tax`, `year_one_total_operating_cost_savings_after_tax`, `year_one_total_operating_cost_before_tax`, `year_one_total_operating_cost_after_tax`, `year_one_fuel_cost_before_tax`, `year_one_fuel_cost_after_tax`, `year_one_chp_standby_cost_after_tax`, `year_one_chp_standby_cost_after_tax`, `GHP.avoided_capex_by_ghp_present_value`
 - Add a warning so that when **SteamTurbine** is included, renewable energy fractions may not be accurate.
 - Added new attribute **fuel_renewable_energy_fraction** to the technology **Boiler**.
-### Fixed
-- Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies). 
 ### Changed
 - Updated and fixed some `docs` pages: improved setup, using HiGHS solver, fixed docstrings 
+- Changed the name of the following output fields: `Financial.capital_costs_after_incentives_without_macrs` to `Financial.capital_costs_after_non_discounted_incentives_without_macrs`
+### Fixed
+- Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies).
+- Included the following in the `Financial.lifecycle_capital_costs` and `Financial.initial_capital_costs`: `m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)]`
  
 ## v0.51.0
 ### Added 

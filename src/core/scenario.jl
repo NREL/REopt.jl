@@ -427,6 +427,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         year = get!(d["CoolingLoad"], "year", electric_load.year)
         validate_load_year_consistency(electric_load.year, year, "CoolingLoad")
+        # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
+        cooling_type_convert = ["monthly_fractions_of_electric_load", "per_time_step_fractions_of_electric_load", 
+                                "blended_doe_reference_percents", "monthly_tonhour", "thermal_loads_ton"]
+        for (k,v) in d["CoolingLoad"]
+            if typeof(v) <: AbstractVector{Any} && k in cooling_type_convert
+                d["CoolingLoad"][k] = convert(Vector{Float64}, v)
+            end
+        end
         cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
                                     latitude=site.latitude, longitude=site.longitude, 
                                     time_steps_per_hour=settings.time_steps_per_hour
