@@ -190,7 +190,7 @@ end
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
-    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}} = nothing # TODO: add description
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} = nothing # TODO: add description
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -227,7 +227,7 @@ Base.@kwdef struct ElectricStorageDefaults
     optimize_soc_init_fraction::Bool = false
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
-    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}} = nothing
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} = nothing
 end
 
 
@@ -272,9 +272,13 @@ struct ElectricStorage <: AbstractElectricStorage
     optimize_soc_init_fraction::Bool
     min_duration_hours::Real
     max_duration_hours::Real
-    fixed_soc_series_fraction::Union{Nothing, Array{Real,1}}
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} 
+    prinln("Here!!")
+    function ElectricStorage(d::Dict, f::Financial) 
+        
+        println(typeof(d["fixed_soc_series_fraction"]))
+        println(d["fixed_soc_series_fraction"])
 
-    function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
