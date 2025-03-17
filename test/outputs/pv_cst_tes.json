@@ -4,9 +4,8 @@
       [
         "KeyError(\"SSC_Inputs\")",
         [
-          "getindex(h::Dict{String, Any}, key::String) at dict.jl:498",
-          "run_ssc(case_data::Dict{String, Any}) at cst_ssc.jl:168",
-          "Scenario(d::Dict{String, Any}; flex_hvac_from_json::Bool) at scenario.jl:668",
+          "pop!(h::Dict{String, Any}, key::String) at dict.jl:604",
+          "Scenario(d::Dict{String, Any}; flex_hvac_from_json::Bool) at scenario.jl:671",
           "Scenario at scenario.jl:68 [inlined]",
           "run_reopt(ms::Vector{Model}, d::Dict{String, Any}) at reopt.jl:116",
           "run_reopt(ms::Vector{Model}, fp::String) at reopt.jl:104",

@@ -668,7 +668,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cst_ssc_response = run_ssc(d)
         d["CST"]["capacity_factor_series"] = cst_ssc_response["thermal_production_series"]
         d["CST"]["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption_series"]
-        pop!(d["CST"],"SSC_Inputs")
+        if haskey(d["CST"], "SSC_Inputs")
+            pop!(d["CST"],"SSC_Inputs")
+        end
         cst = CST(;dictkeys_tosymbols(d["CST"])...)
     end
 
