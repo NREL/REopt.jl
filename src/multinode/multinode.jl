@@ -101,7 +101,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     if (Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel") && (Multinode_Inputs.generate_CSV_of_outputs == true)
         FilePathAndName = Multinode_Inputs.folder_location*"/Results.json"
         open(FilePathAndName,"w") do x
-        JSON.print(x, CompiledResults)
+            JSON.print(x, PMD_Results)
         end
     end
 
