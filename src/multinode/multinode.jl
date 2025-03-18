@@ -439,8 +439,7 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
         pm = instantiate_mc_model(data_math_mn, ACRUPowerModel, build_mn_mc_opf)
     elseif Multinode_Inputs.model_subtype == "IVRUPowerModel"
         pm = instantiate_mc_model(data_math_mn, IVRUPowerModel, build_mn_mc_opf)
-    elseif Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel"
-                                                
+    elseif Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel"                                      
         pm = instantiate_mc_model(data_math_mn, SOCNLPUBFPowerModel, build_mn_mc_opf)
     elseif Multinode_Inputs.model_subtype == "SOCConicUBFPowerModel"
         pm = instantiate_mc_model(data_math_mn, SOCConicUBFPowerModel, build_mn_mc_opf)
