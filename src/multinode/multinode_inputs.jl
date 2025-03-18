@@ -8,7 +8,8 @@
     PMD_network_input::Any,
     multinode_type::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
     nonlinear_solver::Bool=false,
-    model_type::String="BasicLinear",  #Options: "BasicLinear", "PowerModelsDistribution",
+    model_type::String="PowerModelsDistribution",  #Options: "PowerModelsDistribution",
+    model_subtype::String="LPUBFDiagPowerModel", # Options: "LPUBFDiagPowerModel", "ACPUPowerModel"
     run_BAU_case::Bool=true,
     optimizer::Any, # Such as HiGHS.Optimizer
     optimizer_tolerance::Float64=0.001, # Only works for Xpress, HiGHS, and Gurobi
@@ -59,6 +60,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     PMD_network_input
     multinode_type
     model_type
+    model_subtype
     run_BAU_case
     optimizer
     optimizer_tolerance
@@ -110,6 +112,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         PMD_network_input::Any,
         multinode_type::String="BehindTheMeter", 
         model_type::String="PowerModelsDistribution",
+        model_subtype::String="LPUBFDiagPowerModel",
         run_BAU_case::Bool=true, 
         optimizer::Any, 
         optimizer_tolerance::Float64=0.001,
@@ -189,6 +192,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         PMD_network_input,
         multinode_type,
         model_type,
+        model_subtype,
         run_BAU_case,
         optimizer,
         optimizer_tolerance,

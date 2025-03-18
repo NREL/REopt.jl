@@ -430,7 +430,15 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     
     print("\n Instantiating the PMD model (this may take a few minutes for large models)\n")
     Start_instantiate = now()
-    pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf) # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
+
+    if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel"
+        pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf) # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
+    elseif Multinode_Inputs.model_subtype == "ACPUPowerModel"
+        pm = instantiate_mc_model(data_math_mn, ACPUPowerModel, build_mn_mc_opf)
+    else
+        throw(@error("The PMD subtype is not valid"))
+    end
+    
     End_instantiate = now()
     
     PMD_instantiate_time = End_instantiate - Start_instantiate
@@ -760,6 +768,9 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     else
         @info "The solver's default tolerance and log settings are being used for the optimization"
     end
+    print("\n The model type is: ")
+    print(pm.model)
+    print("\n")
     
     print("\n The optimization is starting\n")
     results = PMD.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=HiGHS.Optimizer) # The default in PMD for relax_integrality is false
