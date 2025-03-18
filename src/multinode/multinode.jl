@@ -102,6 +102,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         FilePathAndName = Multinode_Inputs.folder_location*"/Results.json"
         open(FilePathAndName,"w") do x
         JSON.print(x, CompiledResults)
+        end
     end
 
     return CompiledResults, model, model_BAU, m_outagesimulator;  
