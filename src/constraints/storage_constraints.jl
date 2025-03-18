@@ -140,7 +140,11 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 
     if (p.s.storage.attr[b] isa ElectricStorage || p.s.storage.attr[b] isa MPCElectricStorage) && !isnothing(p.s.storage.attr[b].fixed_soc_series_fraction)      
         @constraint(m, [ts in p.time_steps],
-            m[Symbol("dvStoredEnergy"*_n)][b, ts] == p.s.storage.attr[b].fixed_soc_series_fraction[ts] * m[Symbol("dvStorageEnergy"*_n)][b]
+        # Allow for a 2% buffer on user-provided fixed_soc_series_fraction
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] <= (0.02 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
+        )
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] >= (-0.02 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     end
 end
