@@ -480,7 +480,13 @@ function VoltageResultsSummary(results)
         Data_BusVoltages = zeros(3)
         per_unit_voltages[bus] = []
         for timestep in collect(keys(results["nw"]))
-            per_unit_voltages[bus] = push!(per_unit_voltages[bus], sqrt(results["nw"][string(timestep)]["bus"][bus]["w"][1]))
+            if "w" in keys(results["nw"][string(timestep)]["bus"][bus])
+                per_unit_voltages[bus] = push!(per_unit_voltages[bus], sqrt(results["nw"][string(timestep)]["bus"][bus]["w"][1]))
+            elseif "Wr" in keys(results["nw"][string(timestep)]["bus"][bus])
+                per_unit_voltages[bus] = push!(per_unit_voltages[bus], sqrt(results["nw"][string(timestep)]["bus"][bus]["Wr"][1][1])) # TODO: figure out what "Wi" is in the results when using the SOCNLPUBFPowerModel model
+            else
+                throw(@error("Bus voltage results data is not available"))            
+            end
         end
 
         Data_BusVoltages[1] = round(minimum(per_unit_voltages[bus][:]), digits = 6)
@@ -660,8 +666,14 @@ function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_su
     
     per_unit_voltage = Dict([])
     for bus in keys(DistancesToSourcebus)
-        per_unit_voltage[bus] = sqrt(results["PMD_results"]["nw"][string(timestep)]["bus"][bus]["w"][1])
-    end
+        if "w" in keys(results["nw"][string(timestep)]["bus"][bus])
+            per_unit_voltage[bus] = sqrt(results["PMD_results"]["nw"][string(timestep)]["bus"][bus]["w"][1])
+        elseif "Wr" in keys(results["nw"][string(timestep)]["bus"][bus])
+            per_unit_voltage[bus] = sqrt(results["PMD_results"]["nw"][string(timestep)]["bus"][bus]["Wr"][1][1]) # TODO: figure out what "Wi" is in the results when using the SOCNLPUBFPowerModel formulation
+        else
+            throw(@error("Bus voltage results data is not available"))
+        end
+     end
 
     # Interactive plot using PlotlyJS
     traces = PlotlyJS.GenericTrace[]
