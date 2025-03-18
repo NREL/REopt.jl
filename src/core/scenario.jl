@@ -555,33 +555,63 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if hybrid_ghx_sizing_method == "Automatic"
 
-                # Call GhpGhx.jl to size GHP and GHX
-                determine_heat_cool_results_resp_dict = Dict()
+                # Call GhpGhx.jl to size GHP and GHX in non-hybrid mode
+                nonhybrid_results_resp_dict = Dict()
                 try
-                    ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = true
-
+                    ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = false
+                    ghpghx_inputs["hybrid_sizing_flag"] = 1.0
                     # Call GhpGhx.jl to size GHP and GHX
-                    @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                    @info "Starting GhpGhx.jl for non-hybrid GHX sizing"
                     # Call GhpGhx.jl to size GHP and GHX
-                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                    results_nonhybrid, inputs_params_nonhybrid = GhpGhx.ghp_model(ghpghx_inputs)
                     # Create a dictionary of the results data needed for REopt
-                    determine_heat_cool_results_resp_dict = GhpGhx.get_results_for_reopt(results, inputs_params)
-                    @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+                    nonhybrid_results_resp_dict = GhpGhx.get_results_for_reopt(results_nonhybrid, inputs_params_nonhybrid)
+                    @info "Non-hybrid GHX sizing complete using GhpGhx.jl"
                 catch e
                     @info e
                     throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
                         loaded (using GhpGhx) to the active Julia environment"))
                 end
+                d["GHP"]["number_of_boreholes_nonhybrid"] = nonhybrid_results_resp_dict["number_of_boreholes"]
+                d["GHP"]["iterations_nonhybrid"] = nonhybrid_results_resp_dict["ghx_soln_number_of_iterations"]
 
-                temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
-                - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+                # # Call GhpGhx.jl to size GHP and GHX
+                # determine_heat_cool_results_resp_dict = Dict()
+                # try
+                #     ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = true
+
+                #     # Call GhpGhx.jl to size GHP and GHX
+                #     @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                #     # Call GhpGhx.jl to size GHP and GHX
+                #     results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                #     # Create a dictionary of the results data needed for REopt
+                #     determine_heat_cool_results_resp_dict = GhpGhx.get_results_for_reopt(results, inputs_params)
+                #     @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+                # catch e
+                #     @info e
+                #     throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                #         loaded (using GhpGhx) to the active Julia environment"))
+                # end
+
+                # temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
+                # - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+
+                # ORIGINAL GUESS
+                temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] \
+                - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1]
+
+                # FLIPPED GUESS
+                # temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1] - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])]
 
                 hybrid_sizing_flag = 1.0 # non hybrid
+                hybrid_sizing_flag_opposite_guess = 1.0 # non hybrid
                 if temp_diff > 0
                     hybrid_sizing_flag = -2.0 #heating
+                    hybrid_sizing_flag_opposite_guess = -1.0 #cooling
                     is_ghx_hybrid = true
                 elseif temp_diff < 0
                     hybrid_sizing_flag = -1.0 #cooling
+                    hybrid_sizing_flag_opposite_guess = -2.0 #heating
                     is_ghx_hybrid = true
                 else
                     # non hybrid if exactly 0.
@@ -589,14 +619,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 end
                 ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = false
 
-            elseif hybrid_ghx_sizing_method == "Heater"
-                is_ghx_hybrid = true
-                hybrid_sizing_flag = -2.0 #heating
-                @info "Sizing an auxiliary heating unit for hybrid GHX"
-            elseif hybrid_ghx_sizing_method == "Cooler"
-                is_ghx_hybrid = true
-                hybrid_sizing_flag = -1.0 #cooling
-                @info "Sizing an auxiliary cooling unit for hybrid GHX"
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
                 hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
@@ -622,11 +644,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
 
             ghpghx_results = Dict()
+            max_ghx_sizing_interations = 0
             try
                 # Call GhpGhx.jl to size GHP and GHX
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                max_ghx_sizing_interations = inputs_params.max_sizing_iterations
+
                 # Create a dictionary of the results data needed for REopt
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
@@ -637,6 +662,49 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     to the GhpGhx.jl package."))
             end
 
+            if is_ghx_hybrid
+                
+                d["GHP"]["number_of_boreholes_auto_guess"] = ghpghx_results["number_of_boreholes"]
+                d["GHP"]["iterations_auto_guess"] = ghpghx_results["ghx_soln_number_of_iterations"]
+                
+                # Invalid hybrid results
+                if (ghpghx_results["number_of_boreholes"] >= nonhybrid_results_resp_dict["number_of_boreholes"]) || (ghpghx_results["ghx_soln_number_of_iterations"] == max_ghx_sizing_interations)
+                    new_hybrid_ghpghx_results = Dict()
+                    max_ghx_sizing_interations = 0
+                    try
+                        ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag_opposite_guess
+
+                        # Call GhpGhx.jl to size GHP and GHX
+                        @info "Initial guess for hybrid GHP auxiliary unit was incorrect. Starting GhpGhx.jl for new hybrid GHX sizing"
+                        # Call GhpGhx.jl to size GHP and GHX
+                        results_new_hybrid, inputs_params_new_hybrid = GhpGhx.ghp_model(ghpghx_inputs)
+                        max_ghx_sizing_interations = inputs_params_new_hybrid.max_sizing_iterations
+                        # Create a dictionary of the results data needed for REopt
+                        new_hybrid_ghpghx_results = GhpGhx.get_results_for_reopt(results_new_hybrid, inputs_params_new_hybrid)
+                        @info "New hybrid GHX sizing complete using GhpGhx.jl"
+                    catch e
+                        @info e
+                        throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                            loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
+                            to the GhpGhx.jl package."))
+                    end
+                    d["GHP"]["number_of_boreholes_flipped_guess"] = new_hybrid_ghpghx_results["number_of_boreholes"]
+                    d["GHP"]["iterations_flipped_guess"] = new_hybrid_ghpghx_results["ghx_soln_number_of_iterations"]
+
+                    if (new_hybrid_ghpghx_results["number_of_boreholes"] >= nonhybrid_results_resp_dict["number_of_boreholes"]) || (new_hybrid_ghpghx_results["ghx_soln_number_of_iterations"] == max_ghx_sizing_interations)
+                        @info "Hybrid GHX results are unavailable for this scenario. Returning non-hybrid results"
+                        is_ghx_hybrid = false
+                        ghpghx_results = nonhybrid_results_resp_dict
+                        d["GHP"]["test_hybrid_case"] = "nonhybrid_solution"
+                    else
+                        ghpghx_results = new_hybrid_ghpghx_results
+                        d["GHP"]["test_hybrid_case"] = "flipped_guess"
+                    end
+                else
+                    d["GHP"]["test_hybrid_case"] = "automatic_guess_correct"
+                end
+            end
+                        
             ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
             ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
             for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
