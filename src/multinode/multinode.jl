@@ -57,7 +57,12 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
 
         ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
         
-        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
+        # TODO: make results compilation compatible with non-linear model (the only thing to do should be to generate the line power flow summaries)
+        if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel" 
+            system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
+        else
+            system_results = "N/A"
+        end
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
@@ -73,7 +78,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                                 ("ComputationTime_EntireModel", ComputationTime_EntireModel),
                                 ("Line_Info_PMD", LineInfo_PMD),
-                                #("pm", pm), # This can be a very large variable and it can be slow to load
+                                ("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
                                 ("single_outage_simulator_model", single_model_outage_simulator)
@@ -83,13 +88,20 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ])
     end
 
-    if Multinode_Inputs.generate_results_plots == true 
+    if (Multinode_Inputs.generate_results_plots == true) && (Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel")
         Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step)
         PlotPowerFlows(CompiledResults, TimeStamp, Multinode_Inputs.time_steps_for_results_dashboard)
         Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model)
         if Multinode_Inputs.bus_coordinates != ""
             CreateResultsMap(CompiledResults, Multinode_Inputs, TimeStamp)
         end
+    end
+
+    # Temporary code for understanding the outputs from the SOCNLPUBFPowerModel model
+    if (Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel") && (Multinode_Inputs.generate_CSV_of_outputs == true)
+        FilePathAndName = Multinode_Inputs.folder_location*"/Results.json"
+        open(FilePathAndName,"w") do x
+        JSON.print(x, CompiledResults)
     end
 
     return CompiledResults, model, model_BAU, m_outagesimulator;  
