@@ -666,9 +666,9 @@ function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_su
     
     per_unit_voltage = Dict([])
     for bus in keys(DistancesToSourcebus)
-        if "w" in keys(results["nw"][string(timestep)]["bus"][bus])
+        if "w" in keys(results["PMD_results"]["nw"][string(timestep)]["bus"][bus])
             per_unit_voltage[bus] = sqrt(results["PMD_results"]["nw"][string(timestep)]["bus"][bus]["w"][1])
-        elseif "Wr" in keys(results["nw"][string(timestep)]["bus"][bus])
+        elseif "Wr" in keys(results["PMD_results"]["nw"][string(timestep)]["bus"][bus])
             per_unit_voltage[bus] = sqrt(results["PMD_results"]["nw"][string(timestep)]["bus"][bus]["Wr"][1][1]) # TODO: figure out what "Wi" is in the results when using the SOCNLPUBFPowerModel formulation
         else
             throw(@error("Bus voltage results data is not available"))
