@@ -42,45 +42,46 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
 
     if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel" 
-        # Compute values for each line and store line power flows in a dataframe and dictionary 
-        DataLineFlow = zeros(7)
-        DataFrame_LineFlow = DataFrame(fill(Any[],7), [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR ])
-        Dictionary_LineFlow_Power_Series = Dict([])
+        pf_name = "pf"
+        qf_name = "qf"
+    elseif Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel" 
+        pf_name = "Pf"
+        qf_name = "Qf"
+    end
 
-        for line in keys(sol_eng["nw"]["1"]["line"]) # read all of the line names from the first time step
-            
-            #Phase = 1
-            ActivePowerFlow_line_temp = []
-            ReactivePowerFlow_line_temp = []
-            for i in 1:length(sol_eng["nw"])
-                push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line]["pf"][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line]["pf"])) )
-                push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line]["qf"][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line]["qf"])) )
-            end
+    # Compute values for each line and store line power flows in a dataframe and dictionary 
+    DataLineFlow = zeros(7)
+    DataFrame_LineFlow = DataFrame(fill(Any[],7), [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR ])
+    Dictionary_LineFlow_Power_Series = Dict([])
 
-            DataLineFlow[1] = round(minimum(ActivePowerFlow_line_temp[:]), digits = 5)
-            DataLineFlow[2] = round(maximum(ActivePowerFlow_line_temp[:]), digits = 5)
-            DataLineFlow[3] = round(mean(ActivePowerFlow_line_temp[:]), digits = 5)
-            DataLineFlow[4] = round(minimum(ReactivePowerFlow_line_temp[:]), digits = 5)
-            DataLineFlow[5] = round(maximum(ReactivePowerFlow_line_temp[:]), digits = 5)
-            DataLineFlow[6] = round(mean(ReactivePowerFlow_line_temp[:]), digits = 5)
-
-            DataFrame_LineFlow_temp = DataFrame([("Line "*string(line)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR])
-            DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
-            
-            # Also create a dictionary of the line power flows
-            Dictionary_LineFlow_Power_Series_temp = Dict([(line, Dict([
-                                                                ("ActiveLineFlow", ActivePowerFlow_line_temp),
-                                                                ("ReactiveLineFlow", ReactivePowerFlow_line_temp)
-                                                            ]))
-                                                            ])
-            merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
-
+    for line in keys(sol_eng["nw"]["1"]["line"]) # read all of the line names from the first time step
+        
+        #Phase = 1
+        ActivePowerFlow_line_temp = []
+        ReactivePowerFlow_line_temp = []
+        for i in 1:length(sol_eng["nw"])
+            push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][pf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][pf_name])) )
+            push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][qf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][qf_name])) )
         end
-    #elseif Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel" 
-        # TODO: add processing of line flow for the non-linear model
-    else
-        Dictionary_LineFlow_Power_Series = "Not post-processed"
-        DataFrame_LineFlow = "Not post-processed"
+
+        DataLineFlow[1] = round(minimum(ActivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[2] = round(maximum(ActivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[3] = round(mean(ActivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[4] = round(minimum(ReactivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[5] = round(maximum(ReactivePowerFlow_line_temp[:]), digits = 5)
+        DataLineFlow[6] = round(mean(ReactivePowerFlow_line_temp[:]), digits = 5)
+
+        DataFrame_LineFlow_temp = DataFrame([("Line "*string(line)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR])
+        DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
+        
+        # Also create a dictionary of the line power flows
+        Dictionary_LineFlow_Power_Series_temp = Dict([(line, Dict([
+                                                            ("ActiveLineFlow", ActivePowerFlow_line_temp),
+                                                            ("ReactiveLineFlow", ReactivePowerFlow_line_temp)
+                                                        ]))
+                                                        ])
+        merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
+
     end
 
     return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow, line_upgrades
@@ -1336,7 +1337,7 @@ function Check_REopt_PMD_Alignment(m, PMD_results, node, line, phase)
     # Save the power injection data from PMD into a vector for the line
     PowerFlow_line = []
     for i in 1:length(PMD_results["nw"])
-        push!(PowerFlow_line, PMD_results["nw"][string(i)]["line"][Line]["pf"][Phase])
+        push!(PowerFlow_line, PMD_results["nw"][string(i)]["line"][Line]["pf"][Phase]) # for other PMD formulations, the "pf" might be "Pf" instead
     end
 
     # This calculation compares the power flow through the Line (From PMD), to the power injection into the Node (From REopt). If the PMD and REopt models are connected, this should be zero or very close to zero.
