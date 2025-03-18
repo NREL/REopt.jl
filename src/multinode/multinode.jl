@@ -435,6 +435,14 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
         pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf) # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
     elseif Multinode_Inputs.model_subtype == "ACPUPowerModel"
         pm = instantiate_mc_model(data_math_mn, ACPUPowerModel, build_mn_mc_opf)
+    elseif Multinode_Inputs.model_subtype == "ACRUPowerModel"
+        pm = instantiate_mc_model(data_math_mn, ACRUPowerModel, build_mn_mc_opf)
+    elseif Multinode_Inputs.model_subtype == "IVRUPowerModel"
+        pm = instantiate_mc_model(data_math_mn, IVRUPowerModel, build_mn_mc_opf)
+    elseif Multinode_Inputs.model_subtype == "SOCUBFNLPMCPowerModel"
+        pm = instantiate_mc_model(data_math_mn, SOCUBFNLPMCPowerModel, build_mn_mc_opf)
+    elseif Multinode_Inputs.model_subtype == "SOCUBFConicMCPowerModel"
+        pm = instantiate_mc_model(data_math_mn, SOCUBFConicMCPowerModel, build_mn_mc_opf)
     else
         throw(@error("The PMD subtype is not valid"))
     end
@@ -771,7 +779,7 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     print("\n The model type is: ")
     print(pm.model)
     print("\n")
-    
+
     print("\n The optimization is starting\n")
     results = PMD.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=HiGHS.Optimizer) # The default in PMD for relax_integrality is false
     print("\n The optimization is complete\n")
