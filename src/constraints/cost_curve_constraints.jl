@@ -66,3 +66,70 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
         m[Symbol("dvPurchaseSize"*_n)][t] == m[Symbol("dvSize"*_n)][t] - p.existing_sizes[t]
     )
 end
+
+function add_capex_constraints(m, p; _n="")
+    present_replacement_cost = replacement_costs_present(m, p)
+    
+    lifecycle_capital_costs = @expression(m,
+			m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)] 
+            + m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] 
+            - m[Symbol("AvoidedCapexByASHP"*_n)]
+		)
+    #TODO: Should lifecycle_capital_costs include m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost]?	
+    
+    initial_capital_costs_after_incentives = @expression(m,
+        lifecycle_capital_costs / p.third_party_factor - present_replacement_cost
+    )
+    if !isnothing(p.s.financial.min_initial_capital_costs_after_incentives)
+        @constraint(m,
+            initial_capital_costs_after_incentives >= p.s.financial.min_initial_capital_costs_after_incentives
+        )
+    end
+    if !isnothing(p.s.financial.max_initial_capital_costs_after_incentives)
+        @constraint(m,
+            initial_capital_costs_after_incentives <= p.s.financial.max_initial_capital_costs_after_incentives
+        )
+    end
+end
+
+function replacement_costs_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    future_cost = 0
+    present_cost = 0
+
+    for b in p.s.storage.types.all # Storage replacement
+
+        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
+            continue
+        end
+
+        if p.s.storage.attr[b].inverter_replacement_year >= p.s.financial.analysis_years
+            future_cost_inverter = 0
+        else
+            future_cost_inverter = p.s.storage.attr[b].replace_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b]
+        end
+        if p.s.storage.attr[b].battery_replacement_year >= p.s.financial.analysis_years
+            future_cost_storage = 0
+        else
+            future_cost_storage = p.s.storage.attr[b].replace_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+        end
+        future_cost += future_cost_inverter + future_cost_storage
+
+        present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_rate_fraction) / 
+            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].inverter_replacement_year)
+        present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_rate_fraction) / 
+            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].battery_replacement_year)
+    end
+
+    if !isempty(p.techs.gen) # Generator replacement 
+        if p.s.generator.replacement_year >= p.s.financial.analysis_years 
+            future_cost_generator = 0.0
+        else 
+            future_cost_generator = p.s.generator.replace_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Generator"]
+        end
+        future_cost += future_cost_generator
+        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_rate_fraction) / 
+            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.generator.replacement_year)
+    end
+
+    return present_cost
+end
