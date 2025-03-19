@@ -3315,7 +3315,7 @@ else  # run HiGHS tests
         end
         
         @testset "Fixed ElectricStorage state of charge" begin
-            post_name = "pv_bess" 
+            post_name = "fixed_pv_bess" 
             post = JSON.parsefile("./scenarios/$post_name.json")
             
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
