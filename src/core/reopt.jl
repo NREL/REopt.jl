@@ -477,7 +477,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if !isnothing(p.s.financial.min_initial_capital_costs_after_incentives) || !isnothing(p.s.financial.max_initial_capital_costs_after_incentives)
+	if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives) || !isnothing(p.s.financial.max_initial_capital_costs_before_incentives)
 		add_capex_constraints(m, p)
 	end
 

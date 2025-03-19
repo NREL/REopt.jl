@@ -68,68 +68,87 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
 end
 
 function add_capex_constraints(m, p; _n="")
-    present_replacement_cost = replacement_costs_present(m, p)
-    
-    lifecycle_capital_costs = @expression(m,
-			m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)] 
-            + m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] 
-            - m[Symbol("AvoidedCapexByASHP"*_n)]
-		)
-    #TODO: Should lifecycle_capital_costs include m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost]?	
-    
-    initial_capital_costs_after_incentives = @expression(m,
-        lifecycle_capital_costs / p.third_party_factor - present_replacement_cost
-    )
-    if !isnothing(p.s.financial.min_initial_capital_costs_after_incentives)
+    initial_capex = initial_capex_opt(m, p)
+    if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives)
         @constraint(m,
-            initial_capital_costs_after_incentives >= p.s.financial.min_initial_capital_costs_after_incentives
+            initial_capex >= p.s.financial.min_initial_capital_costs_before_incentives
         )
     end
-    if !isnothing(p.s.financial.max_initial_capital_costs_after_incentives)
+    if !isnothing(p.s.financial.max_initial_capital_costs_before_incentives)
         @constraint(m,
-            initial_capital_costs_after_incentives <= p.s.financial.max_initial_capital_costs_after_incentives
+            initial_capex <= p.s.financial.max_initial_capital_costs_before_incentives
         )
     end
 end
 
-function replacement_costs_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    future_cost = 0
-    present_cost = 0
+function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    initial_capex = p.s.financial.offgrid_other_capital_costs - m[Symbol("AvoidedCapexByASHP"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)]
 
-    for b in p.s.storage.types.all # Storage replacement
-
-        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
-            continue
-        end
-
-        if p.s.storage.attr[b].inverter_replacement_year >= p.s.financial.analysis_years
-            future_cost_inverter = 0
-        else
-            future_cost_inverter = p.s.storage.attr[b].replace_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b]
-        end
-        if p.s.storage.attr[b].battery_replacement_year >= p.s.financial.analysis_years
-            future_cost_storage = 0
-        else
-            future_cost_storage = p.s.storage.attr[b].replace_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
-        end
-        future_cost += future_cost_inverter + future_cost_storage
-
-        present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_rate_fraction) / 
-            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].inverter_replacement_year)
-        present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_rate_fraction) / 
-            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].battery_replacement_year)
+    if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
+        initial_capex += p.s.generator.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Generator"]
     end
 
-    if !isempty(p.techs.gen) # Generator replacement 
-        if p.s.generator.replacement_year >= p.s.financial.analysis_years 
-            future_cost_generator = 0.0
-        else 
-            future_cost_generator = p.s.generator.replace_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Generator"]
+    if !isempty(p.techs.pv)
+        for pv in p.s.pvs
+            initial_capex += pv.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)][pv.name]
         end
-        future_cost += future_cost_generator
-        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_rate_fraction) / 
-            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.generator.replacement_year)
     end
 
-    return present_cost
+    for b in p.s.storage.types.elec
+        if p.s.storage.attr[b].max_kw > 0
+            initial_capex += p.s.storage.attr[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] + 
+                p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+        end
+    end
+
+    for b in p.s.storage.types.thermal
+        if p.s.storage.attr[b].max_kw > 0
+            initial_capex += p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+        end
+    end
+
+    if "Wind" in p.techs.all
+        initial_capex += p.s.wind.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Wind"]
+    end
+
+    if "CHP" in p.techs.all
+        chp_size_kw = m[Symbol("dvPurchaseSize"*_n)]["CHP"]
+        initial_capex += get_chp_initial_capex(p, chp_size_kw)
+    end
+
+    if "SteamTurbine" in p.techs.all
+        initial_capex += p.s.steam_turbine.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["SteamTurbine"]
+    end
+
+    if "Boiler" in p.techs.all
+        initial_capex += p.s.boiler.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Boiler"]
+    end
+
+    if "AbsorptionChiller" in p.techs.all
+        initial_capex += p.s.absorption_chiller.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["AbsorptionChiller"]
+    end
+
+    if !isempty(p.s.ghp_option_list)
+
+        for option in enumerate(p.s.ghp_option_list)
+
+            if option[2].heat_pump_configuration == "WSHP"
+                initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*m[Symbol("binGHP"*_n)][option[1]]
+            elseif option[2].heat_pump_configuration == "WWHP"
+                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*m[Symbol("binGHP"*_n)][option[1]]
+            else
+                @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
+            end
+        end
+    end
+
+    if "ASHPSpaceHeater" in p.techs.all
+        initial_capex += p.s.ashp.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPSpaceHeater"]
+    end
+
+    if "ASHPWaterHeater" in p.techs.all
+        initial_capex += p.s.ashp_wh.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPWaterHeater"]
+    end
+
+    return initial_capex
 end
