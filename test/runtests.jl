@@ -2798,7 +2798,7 @@ else  # run HiGHS tests
             
                 s = Scenario(d)
                 p = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.05))
                 results = run_reopt(m, p)
             
                 #Case 3: ASHP present but does not run because dispatch is not forced and boiler fuel is cheap
@@ -2931,8 +2931,8 @@ else  # run HiGHS tests
             # Throw a handled error
             d = JSON.parsefile("./scenarios/logger.json")
 
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([m1,m2], d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2942,7 +2942,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["warnings"]) > 0
             @test r["Messages"]["has_stacktrace"] == false
 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(m, d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2955,8 +2955,8 @@ else  # run HiGHS tests
             @test isa(REoptInputs(d), Dict)
 
             # Using filepath
-            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([n1,n2], "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2965,7 +2965,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
 
-            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(n, "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2978,8 +2978,8 @@ else  # run HiGHS tests
             d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
             d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387x"
 
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([m1,m2], d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2988,7 +2988,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(m, d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -3001,8 +3001,8 @@ else  # run HiGHS tests
             @test isa(REoptInputs(d), Dict)
 
             # Using filepath
-            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([n1,n2], "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -3011,7 +3011,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
 
-            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(n, "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -3168,7 +3168,7 @@ else  # run HiGHS tests
                 input_data["ElectricLoad"]["loads_kw"][31*24+29*24+3*24+16] = peak_load
                 s = Scenario(input_data)
                 inputs = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.05, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, inputs)
 
                 # TOU Energy charges
@@ -3227,7 +3227,7 @@ else  # run HiGHS tests
         
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.1, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, inputs)
         
             electric_load = results["ElectricLoad"]["load_series_kw"]
