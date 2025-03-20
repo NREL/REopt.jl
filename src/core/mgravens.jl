@@ -54,6 +54,21 @@ function build_timeseries_array(list_of_dict, y_value_name, timestep_sec)
     return reopt_array
 end
 
+function get_value_in_kw(object)
+    value = NaN
+    power_conversion = 1000.0  # Assume Watts ("W") to divide W by 1000 to get kW
+    if typeof(object) <: Dict
+        if object["multiplier"] == "k"
+            power_conversion = 1.0  # Preserve kW
+        end
+        value = object["value"] / power_conversion
+    else
+        value = object / power_conversion
+    end
+    return value
+end
+
+
 function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     reopt_inputs = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "mgravens_fields_defaults.json"))
 
@@ -150,7 +165,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 year = 2024
             end
             reopt_inputs["ElectricLoad"]["year"] = year
-            reopt_inputs["Settings"]["time_steps_per_hour"] = 3600 / timestep_sec
+            reopt_inputs["Settings"]["time_steps_per_hour"] = convert(Int64, 3600 / timestep_sec)
 
             # This is intended to handle both/combo absolute power load profiles or normalized profiles with their respective "p" load allocations
             all_interval_data = mgravens["BasicIntervalSchedule"]
@@ -301,21 +316,20 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         end
 
         # Technology specific input parameters
-        # TODO check if all power/energy related inputs 1) need units with a dict input, like costs have, and 2) need to be in Watts or can be specified in kW
-        # TODO if no units or dictionary, assume SI units of W, Wh, m^2 for land area?, etc
+        # TODO are we sure that the cost inputs can be handled as "per/kW" vs "per/W"? what about units for land area, or other non power/energy/money unit?
         if tech_data["Ravens.cimObjectType"] == "ProposedPhotovoltaicUnitOption"
             # PV inputs
             append!(techs_to_include, ["PV"])
             # Optional inputs for PV; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityFixed", nothing))
-                reopt_inputs["PV"]["min_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityFixed"]
-                reopt_inputs["PV"]["max_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityFixed"]
+                reopt_inputs["PV"]["min_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityFixed"])
+                reopt_inputs["PV"]["max_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityFixed"])
             else
                 if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityMin", nothing))
-                    reopt_inputs["PV"]["min_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityMin"]
+                    reopt_inputs["PV"]["min_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityMin"])
                 end
                 if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityMax", nothing))
-                    reopt_inputs["PV"]["max_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityMax"]
+                    reopt_inputs["PV"]["max_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityMax"])
                 end
             end
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.variablePrice", nothing))
@@ -334,25 +348,25 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             append!(techs_to_include, ["ElectricStorage"])
             # Optional inputs for ElectricStorage; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
             if !isnothing(get(tech_data, "ProposedBatteryUnitOption.energyCapacityFixed", nothing))
-                reopt_inputs["ElectricStorage"]["min_kwh"] = tech_data["ProposedBatteryUnitOption.energyCapacityFixed"]
-                reopt_inputs["ElectricStorage"]["max_kwh"] = tech_data["ProposedBatteryUnitOption.energyCapacityFixed"]
+                reopt_inputs["ElectricStorage"]["min_kwh"] = get_value_in_kw(tech_data["ProposedBatteryUnitOption.energyCapacityFixed"])
+                reopt_inputs["ElectricStorage"]["max_kwh"] = get_value_in_kw(tech_data["ProposedBatteryUnitOption.energyCapacityFixed"])
             else
                 if !isnothing(get(tech_data, "ProposedBatteryUnitOption.energyCapacityMin", nothing))
-                    reopt_inputs["ElectricStorage"]["min_kwh"] = tech_data["ProposedBatteryUnitOption.energyCapacityMin"]
+                    reopt_inputs["ElectricStorage"]["min_kwh"] = get_value_in_kw(tech_data["ProposedBatteryUnitOption.energyCapacityMin"])
                 end
                 if !isnothing(get(tech_data, "ProposedBatteryUnitOption.energyCapacityMax", nothing))
-                    reopt_inputs["ElectricStorage"]["max_kwh"] = tech_data["ProposedBatteryUnitOption.energyCapacityMax"]
+                    reopt_inputs["ElectricStorage"]["max_kwh"] = get_value_in_kw(tech_data["ProposedBatteryUnitOption.energyCapacityMax"])
                 end
             end
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityFixed", nothing))
-                reopt_inputs["ElectricStorage"]["min_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityFixed"]
-                reopt_inputs["ElectricStorage"]["max_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityFixed"]
+                reopt_inputs["ElectricStorage"]["min_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityFixed"])
+                reopt_inputs["ElectricStorage"]["max_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityFixed"])
             else
                 if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityMin", nothing))
-                    reopt_inputs["ElectricStorage"]["min_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityMin"]
+                    reopt_inputs["ElectricStorage"]["min_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityMin"])
                 end
                 if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityMax", nothing))
-                    reopt_inputs["ElectricStorage"]["max_kw"] = tech_data["ProposedEnergyProducerOption.powerCapacityMax"]
+                    reopt_inputs["ElectricStorage"]["max_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityMax"])
                 end
             end          
             if !isnothing(get(tech_data, "ProposedAssetOption.variablePrice", nothing))
@@ -395,6 +409,29 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
 end
 
 
+"""
+    update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict)
+
+Update the MG-Ravens data structure with results from REopt.
+
+# Arguments
+- `reopt_results::Dict`: Dictionary containing the results from REopt optimization.
+- `mgravens::Dict`: Dictionary representing the MG-Ravens data structure to be updated.
+
+# Description
+This function updates the MG-Ravens data structure with REopt results by:
+1. Adding warning and error messages to the "Message" section.
+2. Creating or updating the "Group.ProposedAssetSet" and "Group.EstimatedCosts" sections for both Business-As-Usual (BAU) and Optimal scenarios.
+3. Populating technology-specific outputs for PV and ElectricStorage, including their capacities, costs, and dispatch curves.
+
+# Notes
+- The function assumes that the MG-Ravens data structure follows a specific schema.
+- It handles both BAU and Optimal scenarios, ensuring that lifecycle costs and other financial metrics are correctly mapped.
+- Technology-specific outputs are added only for technologies included in the REopt results.
+
+# Returns
+- The `mgravens` dictionary is updated in-place.
+"""
 function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict)
     # Convert from REopt --> MG-Ravens outputs and update or add fields to MG-Ravens data .json
     # We are NOT creating a separate mgravens.json - only adding or maybe updating values (but mostly adding)
