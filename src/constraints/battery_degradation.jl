@@ -42,6 +42,95 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
     )
 end
 
+## Charging and discharging power for each ts for each segment
+function add_segmented_cycle_fade_variables(m, p; b="ElectricStorage")
+
+    days = 1:365*p.s.financial.analysis_years
+    J = length(p.s.storage.attr[b].degradation.segment_energy_capacity); # Number of segments
+
+    @variable(m, p_c[p.time_steps, 1:J] >= 0) # charge power for each ts for each segment 
+    @variable(m, p_d[p.time_steps, 1:J] >= 0); # discharge power for each ts for each segment
+
+    @variable(m, e_plus[days, 1:J] >= 0); # energy added for each day for each segment level
+    @variable(m, e_minus[days, 1:J] >= 0); # energy discharged for each day for each segment level
+end
+
+## Charging and discharging power for each ts for each segment
+function constrain_segmented_cycle_fade_variables(m, p; b="ElectricStorage")
+    days = 1:365*p.s.financial.analysis_years
+    ts_per_day = 24 / p.hours_per_time_step
+    ts_per_year = ts_per_day * 365
+    ts0 = Dict()
+    tsF = Dict()
+    for d in days
+        ts0[d] = Int((ts_per_day * (d - 1) + 1) % ts_per_year)
+        tsF[d] = Int(ts_per_day * d % ts_per_year)
+        if tsF[d] == 0
+            tsF[d] = Int(ts_per_day * 365)
+        end
+    end
+
+    days = 1:365*p.s.financial.analysis_years
+    J = length(p.s.storage.attr[b].degradation.segment_energy_capacity); # Number of segments
+
+    # Power in equals power into storage from grid or local production. (question)
+    @constraint(m, [ts in p.time_steps],
+    sum(m[:p_c][ts, j] for j in 1:J) == sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec) 
+            + sum(m[:dvGridToStorage][b, ts]))   
+            #[az] last term in RHS is not a sum, it's a single element since b is defined and the constraint is indexed on ts.
+
+    # Power out equals power discharged from storage to any destination
+    @constraint(m, [ts in p.time_steps], sum(m[:p_d][ts, j] for j in 1:J) == sum(m[:dvDischargeFromStorage][b, ts]));
+    #[az] RHS is not a sum, it's a single element since b is defined and the constraint is indexed on ts.
+
+    # Balance charging with daily e_plus, here is only collect all power across the day, so don't need to times efficiency
+    @constraint(m, [d in days, j in 1:J], m[:e_plus][d, j] == sum(m[:p_c][ts0[d]:tsF[d], j])*p.hours_per_time_step)
+    @constraint(m, [d in days, j in 1:J], m[:e_minus][d, j] == sum(m[:p_d][ts0[d]:tsF[d], j])*p.hours_per_time_step);
+    #[az] we may want to adjust the notation to "ts, j for ts in ts0[d]:tsF[d] so it reads the same as the other constraints in REopt
+
+    # energy limit, replace SOC limitation
+    @constraint(
+        m,
+        [ts in p.time_steps, j in 1:J],
+        m[:p_c][ts, j]*p.hours_per_time_step <= p.s.storage.attr[b].degradation.segment_energy_capacity[j]*m[:dvStorageEnergy][b]
+    )
+
+    @constraint(
+        m,
+        [ts in p.time_steps, j in 1:J],
+        m[:p_d][ts, j]*p.hours_per_time_step <= p.s.storage.attr[b].degradation.segment_energy_capacity[j]*m[:dvStorageEnergy][b]
+    )
+
+    @constraint(m, [d in days], m[:Eplus_sum][d] - sum(m[:e_plus][d,j] for j in 1:J)*p.hours_per_time_step == 0) # for each day across segments: energy charge balance
+    @constraint(m, [d in days], m[:Eminus_sum][d] - sum(m[:e_minus][d,j] for j in 1:J)*p.hours_per_time_step == 0) # for each day across segments: energy discharge balance
+end
+
+
+## Coefficient calcualtion
+function Coefficient(BatType::Int64, Eseg::Vector{<:Float64},  discharge_efficiency::Real)
+
+    # Dictates BESS chemistry type
+    if BatType == 0
+        Ncyc = [8700 7200 6400]; # LFP, cycle counts! how many cycles in the fisrt segment
+    elseif BatType == 1
+        Ncyc = [2200 1600 400]; # NMC
+    else
+        Ncyc = [1400 600 350]; # NCA
+    end
+    # (qiestion ))
+    n = discharge_efficiency;
+    E_rate = 1; # storage capacity in kW
+    R = 1; #battery cell replacement cost # $/MW  now change to KW, hour times when the SOH calculation ------------------  with cost
+    
+    # Eseg = [0.2 0.4 0.4]; # max energy in each segment (cycle depth segment)
+    # This c is calculated by the \phi, cycle depth stress function of polynomial form
+    c_pu = zeros(3);
+    c_pu[1] = 1/(n*E_rate) * R * 0.2/Ncyc[1]; #so each cycle cost how much, because Ncyc is the number of cycle, 0.2 is for segment sepration, together with Eseg
+    c_pu[2] = 1/(n*E_rate) * R * (0.2/Ncyc[2] * sum(Eseg[1:2]) - 0.2/Ncyc[1] * Eseg[1])/Eseg[2];
+    c_pu[3] = 1/(n*E_rate) * R * (0.2/Ncyc[3] * sum(Eseg[1:3]) - 0.2/Ncyc[2] * sum(Eseg[1:2]))/Eseg[3]; #Eseg[3] is J, E_rate is 1, 
+    return c_pu
+end
+
 
 """
     add_degradation(m, p; b="ElectricStorage")
@@ -77,14 +166,37 @@ function add_degradation(m, p; b="ElectricStorage")
     add_degradation_variables(m, p)
     constrain_degradation_variables(m, p, b=b)
 
-    @constraint(m, [d in 2:days[end]],
-        m[:SOH][d] == m[:SOH][d-1] - p.hours_per_time_step * (
-            p.s.storage.attr[b].degradation.calendar_fade_coefficient * 
-            p.s.storage.attr[b].degradation.time_exponent * 
-            m[:Eavg][d-1] * d^(p.s.storage.attr[b].degradation.time_exponent-1) + 
-            p.s.storage.attr[b].degradation.cycle_fade_coefficient * m[:EFC][d-1]
+    if !isnothing(p.s.storage.attr[b].degradation.segmented_cycle_degr_bess_type) && !isnothing(p.s.storage.attr[b].degradation.segment_energy_capacity) && strategy == "augmentation"
+
+        add_segmented_cycle_fade_variables(m, p)
+        constrain_segmented_cycle_fade_variables(m, p)
+
+        segmented_cycle_fade_coefficient = Coefficient(
+            p.s.storage.attr[b].degradation.segmented_cycle_degr_bess_type,
+            p.s.storage.attr[b].degradation.segment_energy_capacity,
+            p.s.storage.attr[b].discharge_efficiency
         )
-    )
+
+        J = length(p.s.storage.attr[b].degradation.segment_energy_capacity); # Number of segments
+        @constraint(m, [d in 2:days[end]],
+            m[:SOH][d] == m[:SOH][d-1] - p.hours_per_time_step * (
+                p.s.storage.attr[b].degradation.calendar_fade_coefficient * 
+                p.s.storage.attr[b].degradation.time_exponent * 
+                m[:Eavg][d-1] * d^(p.s.storage.attr[b].degradation.time_exponent-1) + 
+                sum(segmented_cycle_fade_coefficient[j] * m[:e_minus][d-1,j] for j in 1:J)
+            )
+        )
+    else # single cycle fade parameter augmentation strategy, no segments
+        @constraint(m, [d in 2:days[end]],
+            m[:SOH][d] == m[:SOH][d-1] - p.hours_per_time_step * (
+                p.s.storage.attr[b].degradation.calendar_fade_coefficient * 
+                p.s.storage.attr[b].degradation.time_exponent * 
+                m[:Eavg][d-1] * d^(p.s.storage.attr[b].degradation.time_exponent-1) + 
+                p.s.storage.attr[b].degradation.cycle_fade_coefficient * m[:EFC][d-1]
+            )
+        )
+    end
+
     # NOTE SOH can be negative
 
     @constraint(m, m[:SOH][1] == m[:dvStorageEnergy][b])

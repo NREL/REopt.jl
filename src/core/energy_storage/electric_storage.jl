@@ -151,6 +151,8 @@ Base.@kwdef mutable struct Degradation
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
+    segmented_cycle_degr_bess_type::Union{Int, Nothing} = nothing
+    segment_energy_capacity::Union{Vector{<:Float64}, Nothing} = nothing
 end
 
 
@@ -325,6 +327,10 @@ struct ElectricStorage <: AbstractElectricStorage
 
         if haskey(d, :degradation)
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
+            
+            if !isnothing(degr.segmented_cycle_degr_bess_type) && !isnothing(degr.segment_energy_capacity)
+                @info "Modeling segmented cycle fade coefficients under battery degradation costing"
+            end
         else
             degr = Degradation()
         end
