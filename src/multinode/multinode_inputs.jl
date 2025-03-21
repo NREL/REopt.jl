@@ -7,7 +7,6 @@
     bus_coordinates::String="",  # Location of the csv document with the bus coordinates
     PMD_network_input::Any,
     multinode_type::String="BehindTheMeter",  # Options: "BehindTheMeter", "CommunityDistrict", or "Offgrid"
-    nonlinear_solver::Bool=false,
     model_type::String="PowerModelsDistribution",  #Options: "PowerModelsDistribution",
     model_subtype::String="LPUBFDiagPowerModel", # Options: "LPUBFDiagPowerModel", "ACPUPowerModel"
     run_BAU_case::Bool=true,
@@ -36,6 +35,8 @@
     model_outages_with_outages_vector::Bool=false,
     outages_vector::Array=[],
     run_outage_simulator::Bool=false,
+    allow_dropped_load::Bool=false,
+    outage_simulator_generator_gallons_per_kwh::Real=0.02457,
     length_of_simulated_outages_time_steps::Array=[],
     critical_load_method::String="Fraction",
     critical_load_fraction::Real=0.0,
@@ -51,7 +52,8 @@
     voltage_plot_time_step::Real=0,
     generate_same_pv_production_profile_for_each_node::Bool=false,
     pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
-    display_results::Bool=true
+    display_results::Bool=true,
+    fault_analysis::Dict=Dict()
 """
 
 mutable struct MultinodeInputs <: AbstractMultinode
@@ -66,7 +68,6 @@ mutable struct MultinodeInputs <: AbstractMultinode
     optimizer_tolerance
     log_solver_output_to_console
     PMD_time_steps
-    nonlinear_solver
     REopt_inputs_list
     bus_phase_voltage_lower_bound_per_unit
     bus_phase_voltage_upper_bound_per_unit
@@ -88,6 +89,8 @@ mutable struct MultinodeInputs <: AbstractMultinode
     model_outages_with_outages_vector
     outages_vector
     run_outage_simulator
+    allow_dropped_load
+    outage_simulator_generator_gallons_per_kwh
     length_of_simulated_outages_time_steps
     critical_load_method
     critical_load_fraction
@@ -105,6 +108,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     pv_inputs_for_standardized_pv_production_profile 
     display_results
     load_profiles_for_outage_sim_if_using_the_fraction_method
+    fault_analysis
 
     function MultinodeInputs(;
         folder_location::String="",
@@ -118,7 +122,6 @@ mutable struct MultinodeInputs <: AbstractMultinode
         optimizer_tolerance::Float64=0.001,
         log_solver_output_to_console::Bool=true,
         PMD_time_steps::Any=[1:24],
-        nonlinear_solver::Bool=false,
         REopt_inputs_list::Array=[],
         bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
         bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
@@ -140,6 +143,8 @@ mutable struct MultinodeInputs <: AbstractMultinode
         model_outages_with_outages_vector::Bool=false,
         outages_vector::Array=[],
         run_outage_simulator::Bool=false,
+        allow_dropped_load::Bool=false,
+        outage_simulator_generator_gallons_per_kwh::Real=0.02457,
         length_of_simulated_outages_time_steps::Array=[],
         critical_load_method::String="Fraction",
         critical_load_fraction::Dict=Dict(),
@@ -156,6 +161,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         generate_same_pv_production_profile_for_each_node::Bool=false,
         pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
         display_results::Bool=true,
+        fault_analysis::Dict=Dict(),
         load_profiles_for_outage_sim_if_using_the_fraction_method::Array=[]
         )
     
@@ -198,7 +204,6 @@ mutable struct MultinodeInputs <: AbstractMultinode
         optimizer_tolerance,
         log_solver_output_to_console,
         PMD_time_steps,
-        nonlinear_solver,
         REopt_inputs_list,
         bus_phase_voltage_lower_bound_per_unit,
         bus_phase_voltage_upper_bound_per_unit,
@@ -220,6 +225,8 @@ mutable struct MultinodeInputs <: AbstractMultinode
         model_outages_with_outages_vector,
         outages_vector,
         run_outage_simulator,
+        allow_dropped_load,
+        outage_simulator_generator_gallons_per_kwh,
         length_of_simulated_outages_time_steps,
         critical_load_method,
         critical_load_fraction,
@@ -236,6 +243,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         generate_same_pv_production_profile_for_each_node,
         pv_inputs_for_standardized_pv_production_profile, 
         display_results,
+        fault_analysis,
         load_profiles_for_outage_sim_if_using_the_fraction_method
     )
    
