@@ -160,6 +160,15 @@ else  # run HiGHS tests
             @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
             @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
             @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+
+            # Test constrained CAPEX 
+            initial_capex_no_incentives = r["Financial"]["initial_capital_costs"]
+            max_capex = initial_capex_no_incentives * 0.60
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data = JSON.parsefile("./scenarios/pv_storage.json")
+            data["Financial"]["max_initial_capital_costs_before_incentives"] = max_capex
+            r = run_reopt(model, data)
+            @test r["Financial"]["initial_capital_cost"] ≈ max_capex rtol=1e-5
         end
 
         # TODO test MPC with outages
@@ -737,6 +746,14 @@ else  # run HiGHS tests
             
                 @test round(results["CHP"]["size_kw"], digits=0) ≈ 263.0 atol=50.0
                 @test round(results["Financial"]["lcc"], digits=0) ≈ 1.11e7 rtol=0.05
+
+                # Test constrained CAPEX
+                initial_capex_no_incentives = results["Financial"]["initial_capital_costs"]
+                min_capex = initial_capex_no_incentives * 1.3
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                data_sizing["Financial"]["min_initial_capital_costs_before_incentives"] = min_capex
+                results = run_reopt(model, data)
+                @test results["Financial"]["initial_capital_cost"] ≈ min_capex rtol=1e-5
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
@@ -3312,6 +3329,6 @@ else  # run HiGHS tests
             results = run_reopt([m1,m2], inputs)
             payback = results["Financial"]["capital_costs_after_non_discounted_incentives"] / results["Financial"]["year_one_total_operating_cost_savings_after_tax"]
             @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
-        end        
+        end
     end
 end
