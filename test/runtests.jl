@@ -168,7 +168,7 @@ else  # run HiGHS tests
             data = JSON.parsefile("./scenarios/pv_storage.json")
             data["Financial"]["max_initial_capital_costs_before_incentives"] = max_capex
             r = run_reopt(model, data)
-            @test r["Financial"]["initial_capital_cost"] ≈ max_capex rtol=1e-5
+            @test r["Financial"]["initial_capital_costs"] ≈ max_capex rtol=1e-5
         end
 
         # TODO test MPC with outages
@@ -753,7 +753,7 @@ else  # run HiGHS tests
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 data_sizing["Financial"]["min_initial_capital_costs_before_incentives"] = min_capex
                 results = run_reopt(model, data)
-                @test results["Financial"]["initial_capital_cost"] ≈ min_capex rtol=1e-5
+                @test results["Financial"]["initial_capital_costs"] ≈ min_capex rtol=1e-5
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
