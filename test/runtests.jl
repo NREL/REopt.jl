@@ -752,7 +752,7 @@ else  # run HiGHS tests
                 min_capex = initial_capex_no_incentives * 1.3
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 data_sizing["Financial"]["min_initial_capital_costs_before_incentives"] = min_capex
-                results = run_reopt(model, data)
+                results = run_reopt(model, data_sizing)
                 @test results["Financial"]["initial_capital_costs"] ≈ min_capex rtol=1e-5
             end
         
