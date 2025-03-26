@@ -68,6 +68,7 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
 end
 
 function add_capex_constraints(m, p; _n="")
+    @warn "Adding capital costs constraints. These may cause an infeasible problem in some cases, particularly for resilience runs."
     initial_capex = initial_capex_opt(m, p)
     if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives)
         @constraint(m,
