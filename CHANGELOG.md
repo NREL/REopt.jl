@@ -29,7 +29,7 @@ Classify the change according to the following categories:
 ### Added
 - Add option to model DC-coupled **PV** and **ElectricStorage**
     - Add **PV** input **dc_coupled_with_storage** and **ElectricStorage** input **dc_coupled**, which both default to _false_
-    - **ElectricStorage** inputs **inverter_efficiency_fraction** and **rectifier_efficiency_fraction** define the DC-coupled inverter and **PV** input **inf_eff** is ignored
+    - **ElectricStorage** inputs **inverter_efficiency_fraction** and **rectifier_efficiency_fraction** define the DC-coupled inverter and **PV** input **inv_eff** is ignored
     - Add sets in **Techs** struct (**dc_coupled_with_storage** and **ac_coupled_with_storage**) and **StorageTypes** struct (**dc_coupled** and **ac_coupled**)
     - Modify constraints to account for AC and DC coupling
 ### Removed
