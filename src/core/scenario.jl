@@ -645,11 +645,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton*peak_ratio
                         end
                     elseif d["GHP"]["load_served_by_ghp"] == "nonpeak"
-                        @info "GHP serves all thermal load below thermal peak load"
+                        @info "GHP serves all thermal load below peak"
                         heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]                     
                         #ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"][ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] .>= d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
+                        # print heating_load_mmbtu as csv
+                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu.csv",  Tables.table(heating_load_mmbtu), writeheader=false)
                         heating_load_mmbtu[heating_load_mmbtu .>=d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
-                        ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu    
+                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu2.csv",  Tables.table(heating_load_mmbtu), writeheader=false)
+                        ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
+                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu3.csv",  Tables.table(ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]), writeheader=false)    
                         if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                             cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]  
                             cooling_load_ton[cooling_load_ton .>=d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
