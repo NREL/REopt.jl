@@ -160,22 +160,21 @@ end
 
 function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
     @constraint(m,
-        m[Symbol("dvDCCoupledTechStorageInverterSizeDC"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b]
+        m[Symbol("dvDCCoupledTechStorageInverterSizeAC"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b]
     )
 
     # Constraint (4d)-1: Lower bounds on DC coupled PV and battery inverter power capacity 
     @constraint(m, [ts in p.time_steps],
-        m[Symbol("dvDCCoupledTechStorageInverterSizeDC"*_n)][b] >= 
+        m[Symbol("dvDCCoupledTechStorageInverterSizeAC"*_n)][b] >= 
         # (inverter direction)
-        m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].inverter_efficiency_fraction
-        + sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
+        m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+        + p.s.storage.attr[b].inverter_efficiency_fraction * sum(
+            p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
             - m[Symbol("dvProductionToStorage"*_n)][b, t, ts]
             - m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.dc_coupled_with_storage)
         # (rectifier direction)
-        + p.s.storage.attr[b].rectifier_efficiency_fraction * (
-            m[Symbol("dvGridToStorage"*_n)][b,ts]
-            + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_coupled_with_storage) #currently fixed to 0
-        )
+        + m[Symbol("dvGridToStorage"*_n)][b,ts]
+        + sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.ac_coupled_with_storage) #currently fixed to 0
     )
 end
 

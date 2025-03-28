@@ -172,7 +172,7 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     for b in p.s.storage.types.elec
         if p.s.storage.attr[b].max_kw > 0
             initial_capex += p.s.storage.attr[b].installed_cost_per_kw * (
-                            b in p.s.storage.types.dc_coupled ? value.(m[Symbol("dvDCCoupledTechStorageInverterSizeDC"*_n)])[b] : value.(m[Symbol("dvStoragePower"*_n)])[b]
+                            b in p.s.storage.types.dc_coupled ? value.(m[Symbol("dvDCCoupledTechStorageInverterSizeAC"*_n)])[b] : value.(m[Symbol("dvStoragePower"*_n)])[b]
                         ) + p.s.storage.attr[b].installed_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
         end
     end
