@@ -190,13 +190,23 @@ function run_ssc(case_data::Dict)
                 user_defined_inputs["Fluid"] = 21
             end
             if !haskey(user_defined_inputs, "q_pb_design")
-                user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
+                if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
+                    user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
+                end
             end
             if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
-                user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
+                if haskey(case_data["Site"], "land_acres")
+                    user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
+                else
+                    user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
+                end
             end
             if !haskey(user_defined_inputs, "specified_total_aperture")
-                user_defined_inputs["specified_total_aperture"] = case_data["Site"]["land_acres"] * 4046.85642
+                if haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
+                    if user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
+                        user_defined_inputs["specified_total_aperture"] = case_data["Site"]["land_acres"] * 4046.85642
+                    end
+                end
             end
         end
     end
