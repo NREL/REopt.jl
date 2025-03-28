@@ -72,7 +72,7 @@ function add_re_elec_calcs(m,p)
 			+ sum((p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] #total elec generation, excl steam turbine
 				- m[:dvCurtail][t,ts] #minus curtailment
 				- sum(m[:dvProductionToStorage][b,t,ts]
-					*(1-p.s.storage.attr[b].dc_charge_efficiency*p.s.storage.attr[b].dc_discharge_efficiency)
+					*(1-p.s.storage.attr[b].internal_efficiency_fraction)
 					for b in p.s.storage.types.dc_coupled)) #minus battery efficiency losses
 				* p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction #converted to AC
 				* p.tech_renewable_energy_fraction[t]

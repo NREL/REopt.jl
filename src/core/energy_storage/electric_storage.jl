@@ -259,7 +259,6 @@ struct ElectricStorage <: AbstractElectricStorage
     charge_efficiency::Float64
     discharge_efficiency::Float64
     dc_charge_efficiency::Float64
-    dc_discharge_efficiency::Float64
     grid_charge_efficiency::Float64
     net_present_cost_per_kw::Real
     net_present_cost_per_kwh::Real
@@ -335,7 +334,6 @@ struct ElectricStorage <: AbstractElectricStorage
         charge_efficiency = s.rectifier_efficiency_fraction * s.internal_efficiency_fraction^0.5
         discharge_efficiency = s.inverter_efficiency_fraction * s.internal_efficiency_fraction^0.5
         dc_charge_efficiency = s.internal_efficiency_fraction^0.5
-        dc_discharge_efficiency = s.internal_efficiency_fraction^0.5
         grid_charge_efficiency = s.can_grid_charge ? charge_efficiency : 0.0
 
         return new(
@@ -366,7 +364,6 @@ struct ElectricStorage <: AbstractElectricStorage
             charge_efficiency,
             discharge_efficiency,
             dc_charge_efficiency,
-            dc_discharge_efficiency,
             grid_charge_efficiency,
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
