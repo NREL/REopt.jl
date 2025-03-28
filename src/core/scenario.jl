@@ -173,14 +173,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
 
-    dc_coupled_pv = any([pv.dc_coupled_with_storage && pv.max_kw > 0 for pv in pvs])
-    if dc_coupled_pv && !(storage_structs["ElectricStorage"].dc_coupled && storage_structs["ElectricStorage"].max_kw > 0)
-        throw(@error("To model PV that is DC coupled with storage (PV input dc_coupled_with_storage = true), you must also model a non-zero DC coupled storage system (set ElectricStorage input dc_coupled = true)"))
-    end
-    if storage_structs["ElectricStorage"].dc_coupled && storage_structs["ElectricStorage"].max_kw > 0 && !dc_coupled_pv
-        throw(@error("To model storage that is DC coupled with PV (ElectricStorage input dc_coupled = true), you must also model a non-zero DC coupled PV system (set PV input dc_coupled_with_storage = true)"))
-    end
-
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
@@ -192,6 +184,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
+    dc_coupled_pv = any([pv.dc_coupled_with_storage && pv.max_kw > 0 for pv in pvs])
+    if dc_coupled_pv && isempty(storage.types.dc_coupled)
+        throw(@error("To model PV that is DC coupled with storage (PV input dc_coupled_with_storage = true), you must also model a non-zero DC coupled storage system (set ElectricStorage input dc_coupled = true)"))
+    end
+    if !isempty(storage.types.dc_coupled) && !dc_coupled_pv
+        throw(@error("To model storage that is DC coupled with PV (ElectricStorage input dc_coupled = true), you must also model a non-zero DC coupled PV system (set PV input dc_coupled_with_storage = true)"))
+    end
 
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
