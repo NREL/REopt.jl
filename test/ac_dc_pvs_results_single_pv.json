@@ -17618,7 +17618,7 @@
         ]
     },
     "status": "optimal",
-    "solver_seconds": 4.73,
+    "solver_seconds": 6.692,
     "ElectricUtility": {
         "annual_renewable_electricity_supplied_kwh": 325352.786,
         "lifecycle_emissions_tonnes_PM25": 0.1,
@@ -35163,6 +35163,8 @@
         "year_one_min_charge_adder_before_tax": 0.0,
         "lifecycle_demand_cost_after_tax": 0.0,
         "lifecycle_export_benefit_after_tax": -0.0,
+        "year_one_bill_after_tax": 57877.1686,
+        "year_one_export_benefit_after_tax": -0.0,
         "year_one_export_benefit_before_tax": -0.0,
         "year_one_bill_before_tax": 78212.39,
         "lifecycle_min_charge_adder_after_tax": 0.0,
@@ -96546,12 +96548,15 @@
         }
     ],
     "Financial": {
+        "year_one_fuel_cost_before_tax": 0.0,
         "lcc": 1.3760857267e6,
         "lifecycle_om_costs_after_tax": 50970.2827,
         "year_one_om_costs_before_tax": 5214.5878,
         "lifecycle_capital_costs_plus_om_after_tax": 626641.7983,
+        "year_one_total_operating_cost_after_tax": 61735.963599999995,
         "lifecycle_generation_tech_capital_costs": 287356.0537,
         "lifecycle_offgrid_other_annual_costs_after_tax": 0.0,
+        "year_one_chp_standby_cost_after_tax": 0.0,
         "replacements_present_cost_after_tax": 89558.3259,
         "lifecycle_emissions_cost_health": 11196.26,
         "lifecycle_outage_cost": 0.0,
@@ -96565,9 +96570,12 @@
         "lifecycle_fuel_costs_after_tax": 0.0,
         "lifecycle_capital_costs": 575671.5156,
         "lifecycle_production_incentive_after_tax": 0.0,
+        "year_one_fuel_cost_after_tax": 0.0,
         "lifecycle_offgrid_other_capital_costs": 0.0,
         "om_and_replacement_present_cost_after_tax": 140528.6085,
+        "year_one_chp_standby_cost_before_tax": 0.0,
         "replacements_future_cost_after_tax": 268632.6604,
+        "year_one_total_operating_cost_before_tax": 83426.9778,
         "developer_om_and_replacement_present_cost_after_tax": 140528.6085,
         "year_one_om_costs_after_tax": 3858.795,
         "lifecycle_chp_standby_cost_after_tax": 0.0
