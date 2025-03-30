@@ -15,6 +15,7 @@
     log_solver_output_to_console::Bool=true, # Log the output from the solver to the console
     PMD_time_steps::Any=[1:24], # By default, apply the PMD model to the first 24 timesteps of the model
     REopt_inputs_list::Array=[],
+    number_of_phases::Real=1,
     bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
     bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
     bus_neutral_voltage_upper_bound_per_unit::Float64=0.1, 
@@ -69,6 +70,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     log_solver_output_to_console
     PMD_time_steps
     REopt_inputs_list
+    number_of_phases
     bus_phase_voltage_lower_bound_per_unit
     bus_phase_voltage_upper_bound_per_unit
     bus_neutral_voltage_upper_bound_per_unit
@@ -123,6 +125,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         log_solver_output_to_console::Bool=true,
         PMD_time_steps::Any=[1:24],
         REopt_inputs_list::Array=[],
+        number_of_phases::Real=1,
         bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
         bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
         bus_neutral_voltage_upper_bound_per_unit::Float64=0.1,
@@ -205,6 +208,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         log_solver_output_to_console,
         PMD_time_steps,
         REopt_inputs_list,
+        number_of_phases,
         bus_phase_voltage_lower_bound_per_unit,
         bus_phase_voltage_upper_bound_per_unit,
         bus_neutral_voltage_upper_bound_per_unit,

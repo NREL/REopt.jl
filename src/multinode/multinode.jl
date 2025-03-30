@@ -16,21 +16,21 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     end
 
     PrepareElectricLoads(Multinode_Inputs)
-    REopt_dictionary = PrepareREoptInputs(Multinode_Inputs)    
+    REopt_inputs_combined = PrepareREoptInputs(Multinode_Inputs)    
     m_outagesimulator = "empty"
     model = "empty"
     model_BAU = "empty"
     
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
                 
-        RunDataChecks(Multinode_Inputs, REopt_dictionary)
+        RunDataChecks(Multinode_Inputs, REopt_inputs_combined)
         
         PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)
 
-        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
+        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
 
         if Multinode_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results)
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_inputs_combined, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REoptInputs_Combined)
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
@@ -44,7 +44,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             
             Outage_Results_No_Techs = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             
-            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, PMD_number_of_timesteps, TimeStamp; allow_upgrades = false)
+            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp; allow_upgrades = false)
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
             system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
@@ -57,12 +57,8 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
 
         ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
         
-        #if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel" 
         system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
-        #else
-        #    system_results = "N/A"
-        #end
-
+        
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
@@ -80,7 +76,8 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
-                                ("single_outage_simulator_model", single_model_outage_simulator)
+                                ("single_outage_simulator_model", single_model_outage_simulator),
+                                ("data_math_mn", data_math_mn)
                                 #("transformer_upgrade_options", transformer_upgrade_options_output),
                                 #("transformer_upgrade_results", transformer_upgrade_results_output)
                                 #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series) 
@@ -96,7 +93,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         end
     end
 
-    # Temporary code for understanding the outputs from the SOCNLPUBFPowerModel model
+    # Optional code for saving the outputs from the SOCNLPUBFPowerModel model
     #if (Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel") && (Multinode_Inputs.generate_CSV_of_outputs == true)
     #    FilePathAndName = Multinode_Inputs.folder_location*"/Results.json"
     #    open(FilePathAndName,"w") do x
@@ -174,7 +171,7 @@ function PrepareElectricLoads(Multinode_Inputs)
 end
 
 
-function build_run_and_process_results(Multinode_Inputs, PMD_number_of_timesteps, timestamp; allow_upgrades=false)
+function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, timestamp; allow_upgrades=false)
     # Function to build the model, run the model, and process results
 
     # Empty these variables from any previous contents
@@ -182,9 +179,11 @@ function build_run_and_process_results(Multinode_Inputs, PMD_number_of_timesteps
     data_math_mn = nothing
     data_eng = nothing
 
-    pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps)
+    combined_REopt_inputs = REopt_inputs_combined
+
+    pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps; combined_REopt_inputs = combined_REopt_inputs)
         
-    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, data_math_mn)
+    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn)
     
     line_upgrade_options_each_line = "N/A"
     if allow_upgrades == true
@@ -298,7 +297,7 @@ end
 
 
 function model_transformer_upgrades(pm, Multinode_Inputs)
-
+    # TODO: add this capability
 
     return pm
 end
@@ -339,8 +338,8 @@ function SetTechSizesToZero(Multinode_Settings)
         end
     end
     
-    Multinode_Settings_No_Techs["single_outage_start_time_step"] = 0
-    Multinode_Settings_No_Techs["single_outage_end_time_step"] = 0
+    Multinode_Settings_No_Techs["single_outage_start_time_step"] = 5
+    Multinode_Settings_No_Techs["single_outage_end_time_step"] = 5 # set to same time as outage start time step so a single outage is not modeled
     Multinode_Settings_No_Techs["outages_vector"] = []
     Multinode_Settings_No_Techs["run_outage_simulator"] = false
     Multinode_Settings_No_Techs["display_results"] = false
@@ -375,7 +374,7 @@ function ApplyDataEngSettings(data_eng, Multinode_Inputs)
 end
 
 
-function ApplyLoadProfileToPMDModel(data_eng, PMD_number_of_timesteps, REopt_nodes)
+function ApplyLoadProfileToPMDModel(Multinode_Inputs, data_eng, PMD_number_of_timesteps, REopt_nodes; combined_REopt_inputs = "")
     # Apply a timeseries load profile to the PMD model
     
     data_eng["time_series"] = Dict{String,Any}()
@@ -384,32 +383,71 @@ function ApplyLoadProfileToPMDModel(data_eng, PMD_number_of_timesteps, REopt_nod
                                                                           "values" => zeros(PMD_number_of_timesteps)
                                                                           )
 
-    for i in REopt_nodes
+    if Multinode_Inputs.number_of_phases == 1
+        for i in REopt_nodes
             data_eng["load"]["load$(i)"]["time_series"] = Dict(
                     "pd_nom"=>"normalized_load_profile",
                     "qd_nom"=> "normalized_load_profile"
             )
+        end
+    elseif Multinode_Inputs.number_of_phases in [2,3]
+        print("Creating the PMD timeseries load framework for the outage model")
+        for p in combined_REopt_inputs
+            node = p.s.site.node
+            if node in REopt_nodes           
+                for phase in p.s.settings.phase_numbers
+                    print("\n Adding PMD load empty time series to REopt node $(node), phase $(phase)")
+                    data_eng["load"]["load$(node)_phase$(phase)"]["time_series"] = Dict(
+                            "pd_nom"=>"normalized_load_profile",
+                            "qd_nom"=> "normalized_load_profile"
+                    )
+                end
+            end
+        end
+    else
+        throw(@error("The number_of_phases for node $(i) is invalid"))
     end
 end
 
 
-function CreatePMDGenerators(data_eng, REopt_nodes)
+function CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_REopt_inputs = "")
     # Add a generic PMD generator for each REopt node to the model, in order to be able to connect the REopt and PMD models
     
-    # TODO: This needs to be adjusted for three phase loads that are on phases other than just phase 1 (mainly in the "connections" field and/or "configuration" field)
     data_eng["generator"] = Dict{String, Any}()
-    for e in REopt_nodes
-        data_eng["generator"]["REopt_gen_$e"] = Dict{String,Any}(
-                    "status" => PMD.ENABLED,
-                    "bus" => data_eng["load"]["load$(e)"]["bus"],   
-                    "connections" => [data_eng["load"]["load$(e)"]["connections"][1], 4], # Note: From PMD tutorial: "create a generator with the same connection setting."
-                    "configuration" => WYE,
-        )
+    if Multinode_Inputs.number_of_phases == 1
+        for e in REopt_nodes
+            data_eng["generator"]["REopt_gen_$(e)"] = Dict{String,Any}(
+                        "status" => PMD.ENABLED,
+                        "bus" => data_eng["load"]["load$(e)"]["bus"],   
+                        "connections" => [data_eng["load"]["load$(e)"]["connections"][1], 4], # Note: From PMD tutorial: "create a generator with the same connection setting."
+                        "configuration" => WYE,
+            )
+        end
+    elseif Multinode_Inputs.number_of_phases in [2,3]
+        for p in combined_REopt_inputs
+            e = p.s.site.node
+
+            if e in REopt_nodes
+                for phase in p.s.settings.phase_numbers 
+                    #print("\n The connections are: ")
+                    #print(data_eng["load"]["load$(e)_phase$(phase)"]["connections"])
+                    #print("\n")          
+                    data_eng["generator"]["REopt_gen_node$(e)_phase$(phase)"] = Dict{String,Any}(
+                            "status" => PMD.ENABLED,
+                            "bus" => data_eng["load"]["load$(e)_phase$(phase)"]["bus"],   
+                            "connections" => [data_eng["load"]["load$(e)_phase$(phase)"]["connections"][1], 4], # TODO: SHOULD THIS [1] BE "PHASE" HERE FOR MULTIPHASE? It looks like not.    # Note: From PMD tutorial: "create a generator with the same connection setting."
+                            "configuration" => WYE,
+                    )
+                end
+            end
+        end
+    else
+        throw(@error("The number_of_phases for node $(i) is invalid"))
     end
 end
 
 
-function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps)
+function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps; combined_REopt_inputs = "")
     
     print("\n Parsing the network input file \n")
     if typeof(Multinode_Inputs.PMD_network_input) == String 
@@ -424,9 +462,9 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
         
     ApplyDataEngSettings(data_eng, Multinode_Inputs)
     
-    ApplyLoadProfileToPMDModel(data_eng, PMD_number_of_timesteps, REopt_nodes)
+    ApplyLoadProfileToPMDModel(Multinode_Inputs, data_eng, PMD_number_of_timesteps, REopt_nodes; combined_REopt_inputs = combined_REopt_inputs)
     
-    CreatePMDGenerators(data_eng, REopt_nodes)
+    CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_REopt_inputs = combined_REopt_inputs)
 
     data_math_mn = transform_data_model(data_eng, multinetwork=true) # Transforming the engineering model to a mathematical model in PMD 
     
@@ -465,7 +503,7 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     PMD_instantiate_time_minutes = round(PMD_instantiate_time/Millisecond(60000), digits=2)
     print("\n The PMD_instantiate_time was: $(PMD_instantiate_time_minutes) minutes \n")
 
-    return pm, data_math_mn, data_eng;
+    return pm, data_math_mn, data_eng
 end
 
 
@@ -489,29 +527,137 @@ function CreateREoptTotalExportVariables(m, REoptInputs_Combined)
 
 end
 
-    
-function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes)
-    # Link the PMD and REopt variables through constraints
 
-    gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"]);
+function create_load_phase_dictionary(Multinode_Inputs, REopt_nodes, REopt_inputs_combined)
+    # Create a dictionary that lists the phases that are associated with each load
+    load_phase_dictionary = Dict()
+
+    for p in REopt_inputs_combined
+        if p.s.site.node in REopt_nodes
+            load_phase_dictionary[p.s.site.node] = p.s.settings.phase_numbers
+        end
+    end
+    return load_phase_dictionary
+end
+
+
+function create_dictionary_for_gen_ind_e_to_REopt_node(Multinode_Inputs, REopt_nodes, load_phase_dictionary, gen_name2ind)
+
+    if Multinode_Inputs.number_of_phases == 1
+        gen_ind_e_to_REopt_node = Dict()
+        for e in REopt_nodes
+            gen_ind_e_temp = gen_name2ind["REopt_gen_$(e)"]
+            gen_ind_e_to_REopt_node[gen_ind_e_temp] = e
+        end
+
+    elseif Multinode_Inputs.number_of_phases in [2,3]
+        gen_ind_e_to_REopt_node = Dict()
+        for e in REopt_nodes
+            for phase in load_phase_dictionary[e]
+                gen_ind_e_temp = gen_name2ind["REopt_gen_node$(e)_phase$(phase)"]
+                gen_ind_e_to_REopt_node[gen_ind_e_temp] = e
+            end
+        end
+        
+    else
+        throw(@error("The number of phases input is not valid"))
+    end
+
+    return gen_ind_e_to_REopt_node
+end
+
+
+function generate_PMD_information(Multinode_Inputs, REopt_nodes, REopt_inputs_combined, data_math_mn)
+    print("\n keys of data_math_mn with key nw is:")
+    print(keys(data_math_mn["nw"]))
     
-    REopt_gen_ind_e = [gen_name2ind["REopt_gen_$e"] for e in REopt_nodes];
+    gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
+
+    load_phase_dictionary = create_load_phase_dictionary(Multinode_Inputs, REopt_nodes, REopt_inputs_combined)
     
+    gen_ind_e_to_REopt_node = create_dictionary_for_gen_ind_e_to_REopt_node(Multinode_Inputs, REopt_nodes, load_phase_dictionary, gen_name2ind)
+
+    return gen_name2ind, load_phase_dictionary, gen_ind_e_to_REopt_node
+end
+
+    
+function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REopt_inputs_combined)
+    # Link the PMD and REopt variables through constraints
+    
+    gen_name2ind, load_phase_dictionary, gen_ind_e_to_REopt_node = generate_PMD_information(Multinode_Inputs, REopt_nodes, REopt_inputs_combined, data_math_mn)
+    
+    print("\n gen_ind_e_to_REopt_node")
+    print(gen_ind_e_to_REopt_node)
+    print("\n")
+
+    if Multinode_Inputs.number_of_phases == 1
+        REopt_gen_ind_e = [gen_name2ind["REopt_gen_$(e)"] for e in REopt_nodes];
+
+    elseif Multinode_Inputs.number_of_phases in [2,3]
+
+
+        REopt_gen_ind_e = []
+        gen_ind_with_one_phase = []
+        gen_ind_with_two_phases = []
+        gen_ind_with_three_phases = []
+
+        print("\n Gen name to index: ")
+        print(gen_name2ind)
+
+        for e in REopt_nodes
+            for phase in load_phase_dictionary[e]
+                # Add the gen index to the REopt_gen_ind_e list
+
+                gen_ind_e_temp = gen_name2ind["REopt_gen_node$(e)_phase$(phase)"]
+                push!(REopt_gen_ind_e, gen_ind_e_temp)
+
+                # Specify how many phases are associated with that gen_index
+                if length(load_phase_dictionary[e]) == 1
+                    push!(gen_ind_with_one_phase, gen_ind_e_temp)
+                elseif length(load_phase_dictionary[e]) == 2
+                    push!(gen_ind_with_two_phases, gen_ind_e_temp)
+                elseif length(load_phase_dictionary[e]) == 3
+                    push!(gen_ind_with_three_phases, gen_ind_e_temp)
+                else
+                    throw(@error("load_phase_dictionary has an invalid length"))
+                end
+            end
+        end
+    else
+        throw(@error("Error in the number of phases"))
+    end
+        
     PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
     PMDTimeSteps_Indeces = collect(1:length(PMDTimeSteps_InREoptTimes))
      
     PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces] 
     PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]
-    
-    buses = REopt_nodes
-    
+        
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
+        number_of_phases_at_load = ""
+        if Multinode_Inputs.number_of_phases == 1
+            number_of_phases_at_load = 1
+        elseif Multinode_Inputs.number_of_phases in [2,3]
+            if e in gen_ind_with_one_phase
+                number_of_phases_at_load = 1
+            elseif e in gen_ind_with_two_phases
+                number_of_phases_at_load = 2
+            elseif e in gen_ind_with_three_phases
+                number_of_phases_at_load = 3
+            else
+                throw(@error("Error in the number of phases at a load"))
+            end
+        else
+            throw(@error("Error in the number of phases"))
+        end
+
+        # Note: evenly split the total export and import across each phase associated with that load (aka REopt node, aka PMD generator)
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],  
-                            PMD_Pg_ek[e,k] == m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]]  - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]]   # negative power "generation" is a load
+                            PMD_Pg_ek[e,k] == (1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]]  - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]])   # negative power "generation" is a load
         )
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
-                            PMD_Qg_ek[e,k] == 0.0 #m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
+                            PMD_Qg_ek[e,k] == 0.0 #(1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
         )
     end
 
@@ -520,21 +666,21 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes)
 end
 
 
-function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, data_math_mn; OutageSimulator=false, OutageLength_Timesteps=0)
+function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn; OutageSimulator=false, OutageLength_Timesteps=0)
     
     m = pm.model   
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs)
-    REoptInputs_Combined = PrepareREoptInputs(Multinode_Inputs)  
+    REoptInputs_Combined = REopt_inputs_combined 
     
     print("\n Building the REopt model\n")
     REopt.build_reopt!(m, REoptInputs_Combined) # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     
     CreateREoptTotalExportVariables(m, REoptInputs_Combined)
-    REopt_gen_ind_e = LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes)
+    REopt_gen_ind_e = LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REoptInputs_Combined)
     LineInfo = CreateLineInfoDictionary(pm)
     REoptTimeSteps = collect(1:(Multinode_Inputs.time_steps_per_hour * 8760))
     ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
-    LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
+    LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn)
     Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
 
     if Multinode_Inputs.generators_only_run_during_grid_outage == true
@@ -558,11 +704,58 @@ function add_objective(pm, Multinode_Inputs, REoptInputs_Combined)
 
         add_to_expression!(Costs, pm.model[:total_line_upgrade_cost])
     end
-
+    #=
+    if Multinode_Inputs.allow_voltage_violations
+        add_to_expression!(Costs, pm.model[:dvBusVoltageViolationCost])
+    end
+    =#
     @objective(pm.model, Min, pm.model[:Costs]) # Define the optimization objective
 
 end
 
+#=
+function create_bus_info_dictionary()
+      # Creates a dictionary with the bus names and corresponding indeces for the :w decision variable (which is the voltage squared decision variable)
+      BusInfo = Dict([])
+      NumberOfBusses = length(PMD.ref(pm,1,:w))
+      for i in 1:NumberOfBusses
+          BusData = PMD.ref(pm, 1, :w, i)
+          BusInfo[BusData["name"]] = Dict(["index"=>BusData["index"], "terminals"=>BusData["terminals"], "bus_i"=>BusData["bus_i"], "vbase"=>BusData["vbase"]]) 
+      end
+      return BusInfo
+end
+
+
+function add_voltage_violation_to_model(pm, BusInfo, Multinode_Inputs)
+    model = pm.model
+    bus_names = collect(keys(BusInfo))
+
+    PMD_time_steps = collect(1:length(Multinode_Inputs.PMD_time_steps))
+     
+    # Create the voltage violation binary variables
+    @variable(pm.model, binBusVoltageViolation[bus_names, PMD_time_steps], Bin)
+
+    # Add contraints
+    for PMD_time_step in PMD_time_steps
+        for bus_name in bus_names
+            index = BusInfo[bus_name]["index"]
+            voltage_squared = [PMD.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]] # TODO: check that this will work if a bus is on phase 2 and 3 (and not phase 1)
+            
+            for terminal in BusInfo[bus_name]["terminals"]
+                @constraint(model, voltage_squared[terminal] <= (Multinode_Inputs.bus_per_unit_voltage_target_upper_bound^2) + model[:BinBusVoltageViolation][bus_name, PMD_time_step] * 100) # multiply by 100 to make the possible voltage very large
+                @constraint(model, voltage_squared[terminal] >= (Multinode_Inputs.bus_per_unit_voltage_target_lower_bound^2) * (1 - model[:BinBusVoltageViolation][bus_name, PMD_time_step])) # If the binary is one, then the voltage squared can go to zero
+            end
+
+        end
+    end
+
+    # Calculate the total cost of the bus voltage violations
+    @variable(model, dvBusVoltageViolationCost, lower_bound = 0)
+
+    @constraint(model, model[:dvBusVoltageViolationCost] == sum(model[:BinBusVoltageViolation][bus_name, PMD_time_step] for bus_name in bus_names, PMD_time_step in PMD_time_steps))
+
+end
+=#
 
 function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
     # Apply basic constraints to limit export from and import to nodes
@@ -623,11 +816,13 @@ function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combi
 end
 
 
-function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes)
+function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn)
     # Link export through the substation to the utility tariff on the facility meter node
     
     PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
     buses = REopt_nodes
+
+    gen_name2ind, load_phase_dictionary, gen_ind_e_to_REopt_node = generate_PMD_information(Multinode_Inputs, REopt_nodes, REoptInputs_Combined, data_math_mn)
 
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
@@ -670,13 +865,13 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                         q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
                         q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
-                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == p_fr[1])
+                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(p_fr[phase] for phase in f_connections))
 
                     else
                         # Instead of using the line flow from PMD, consider the total system inflow/outflow to be based on a lumped-element model, which sums all power inflows and outflows for each node
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] ==
-                            (-sum(m[Symbol("TotalExport_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e) + 
-                            sum(m[Symbol("dvGridPurchase_"*string(buses[e]))][timestep] for e in REopt_gen_ind_e)))
+                            (-sum(m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][timestep] for e in REopt_gen_ind_e) + 
+                            sum(m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][timestep] for e in REopt_gen_ind_e)))
                     end
 
                     @constraint(m, m[:dvSubstationPowerFlow][timestep] == (sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
@@ -702,9 +897,9 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                         q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
                         q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
-                        @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == p_fr[1])
+                        @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == sum(p_fr[phase] for phase in f_connections))
                         
-                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == p_fr[1]) 
+                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(p_fr[phase] for phase in f_connections)) 
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] >= 0) 
                              
                     else
@@ -727,11 +922,11 @@ end
 
 function LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
     # Prevent the generators from generating power during times that aren't a grid outage
+    NonOutageTimeSteps = []
 
     if Multinode_Inputs.model_outages_with_outages_vector == false
         NonOutageTimeSteps = vcat(collect(1:Multinode_Inputs.single_outage_start_time_step), collect(Multinode_Inputs.single_outage_end_time_step:(8760*Multinode_Inputs.time_steps_per_hour)))
     elseif Multinode_Inputs.model_outages_with_outages_vector == true
-        NonOutageTimeSteps = []
         for i in 1:(8760*Multinode_Inputs.time_steps_per_hour)
             if !(i in Multinode_Inputs.outages_vector) 
                 push!(NonOutageTimeSteps, i)
@@ -743,11 +938,12 @@ function LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
         _n = "_"*string(p.s.site.node)
         if "Generator" in p.techs.elec
             for ts in NonOutageTimeSteps
+                #print("\n Debugging: The ts is: ")
+                #print(ts)
 			    fix(m[Symbol("dvRatedProduction"*_n)]["Generator", ts], 0.0, force=true)
             end       
         end
     end
-
 end
 
 
@@ -917,9 +1113,18 @@ end
 function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
 
     ps = REopt_dictionary
-    
+
     for p in ps
         node_temp = p.s.site.node
+
+        for phase in p.s.settings.phase_numbers
+            if !(phase in [1,2,3])
+                throw(@error("Phase $(phase) for node $(node_temp) is invalid"))
+            end
+            if length(findall(x -> x==phase, p.s.settings.phase_numbers)) > 1
+                throw(@error("Phase $(phase) can't be listed more than once for node $(node_temp)"))
+            end
+        end
 
         if p.s.settings.facilitymeter_node != Multinode_Inputs.facilitymeter_node
             throw(@error("The facilitymeter_node input for each REopt node must equal the facilitymeter_node defined in the multinode settings, which is $(Multinode_Inputs.facilitymeter_node)"))
@@ -951,10 +1156,18 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         end
     end
     
+    if Multinode_Inputs.number_of_phases ∉ [1,2,3]
+        throw(@error("The number_of_phases input must be 1, 2, or 3"))
+    end
+
     if Multinode_Inputs.multinode_type ∉ ["CommunityDistrict", "BehindTheMeter", "OffGrid"]
         throw(@error("An invalid multinode type was provided in the inputs"))
     end
 
+    if (Multinode_Inputs.multinode_type == "Offgrid") && (Multinode_Inputs.run_BAU_case == true)
+        throw(@error("The BAU case cannot be run for an off-grid model because an off-grid model cannot solve without on-site generation."))
+    end
+    
     if Multinode_Inputs.multinode_type != "CommunityDistrict"
         @warn("For the community district multinode type, the electricity tariff for the facility meter node should be 0")
     end

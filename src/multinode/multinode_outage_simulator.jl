@@ -1,8 +1,6 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
-#const PMD = PowerModelsDistribution
-
-function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results)
+function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REopt_inputs_combined)
     
     Outage_Results = Dict([])
     outage_simulator_time_start = now()
@@ -18,7 +16,8 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
                                                                                                                                                                                                     Multinode_Inputs, 
                                                                                                                                                                                                     TimeStamp,
                                                                                                                                                                                                     line_upgrade_options_each_line,
-                                                                                                                                                                                                    line_upgrade_results;
+                                                                                                                                                                                                    line_upgrade_results, 
+                                                                                                                                                                                                    REopt_inputs_combined;
                                                                                                                                                                                                     LineInfo_PMD = LineInfo_PMD,
                                                                                                                                                                                                     NumberOfOutagesToTest = Multinode_Inputs.number_of_outages_to_simulate, 
                                                                                                                                                                                                     OutageLength_TimeSteps_Input = OutageLength)
@@ -36,7 +35,7 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
 end
 
 
-function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, line_upgrade_options_each_line, line_upgrade_results;
+function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, Multinode_Inputs, TimeStamp, line_upgrade_options_each_line, line_upgrade_results, REopt_inputs_combined;
                                    NumberOfOutagesToTest = 15, OutageLength_TimeSteps_Input = 1, LineInfo_PMD="")
     # This function runs the outage simulator for a particular outage length
     
@@ -51,6 +50,7 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
     SuccessfullySolved = 0
     TimeStepsNotSolved = []
     pm = ""
+    data_math_mn = ""
 
     if Multinode_Inputs.allow_dropped_load
         dropped_load_results = Array{Any}(undef, RunNumber)
@@ -66,11 +66,15 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         TotalTimeSteps = 8760*Multinode_Inputs.time_steps_per_hour   
 
         if Multinode_Inputs.model_type == "PowerModelsDistribution"
-            if x != 1
-                m_outagesimulator = "" # empty the m_outagesimulator variable
-            end
-            pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, OutageLength_TimeSteps_Input)
+            #if x != 1
+            m_outagesimulator = "" # empty the m_outagesimulator variable
+            #end
+            pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, OutageLength_TimeSteps_Input; combined_REopt_inputs = REopt_inputs_combined)
             m_outagesimulator = pm.model # TODO: Confirm that when make changes to pm.model again in the function, that that version of pm.model has the additional constraints defined below for m_outagesimulator
+        #elseif
+            # Add other options if additional model_types are added
+        else
+            throw(@error("And invalid model_type was provided."))
         end
         
         for n in NodeList
@@ -78,9 +82,9 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
             AddVariablesOutageSimulator(Multinode_Inputs, pm.model, TimeSteps, DataDictionaryForEachNode, n)           
             AddConstraintsOutageSimulator(Multinode_Inputs, pm.model, TimeSteps, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, n, i)
         end 
-        
+                
         if Multinode_Inputs.model_type == "PowerModelsDistribution"
-            Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_TimeSteps_Input, LineInfo_PMD)
+            Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_TimeSteps_Input, LineInfo_PMD, REopt_inputs_combined)
         end
 
         if Multinode_Inputs.model_line_upgrades
@@ -336,25 +340,81 @@ function AddConstraintsOutageSimulator(Multinode_Inputs, m_outagesimulator, Time
 end
 
 
-function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_TimeSteps_Input, LineInfo_PMD)
+function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_TimeSteps_Input, LineInfo_PMD, REopt_inputs_combined)
     # Link the power export decision variables to the PMD model
     outage_timesteps = collect(1:OutageLength_TimeSteps_Input)
 
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs)
 
-    gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
-    REopt_gen_ind_e = [gen_name2ind["REopt_gen_$e"] for e in REopt_nodes]
+    gen_name2ind, load_phase_dictionary, gen_ind_e_to_REopt_node = generate_PMD_information(Multinode_Inputs, REopt_nodes, REopt_inputs_combined, data_math_mn)
+
+
+    #gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
     
+    if Multinode_Inputs.number_of_phases == 1
+        REopt_gen_ind_e = [gen_name2ind["REopt_gen_$e"] for e in REopt_nodes]
+    
+    elseif Multinode_Inputs.number_of_phases in [2,3]
+
+        REopt_gen_ind_e = []
+        gen_ind_with_one_phase = []
+        gen_ind_with_two_phases = []
+        gen_ind_with_three_phases = []
+
+        print("\n Gen name to index, outage simulator: ")
+        print(gen_name2ind)
+
+        for e in REopt_nodes
+            for phase in load_phase_dictionary[e]
+                # Add the gen index to the REopt_gen_ind_e list
+
+                gen_ind_e_temp = gen_name2ind["REopt_gen_node$(e)_phase$(phase)"]
+                push!(REopt_gen_ind_e, gen_ind_e_temp)
+
+                # Specify how many phases are associated with that gen_index
+                if length(load_phase_dictionary[e]) == 1
+                    push!(gen_ind_with_one_phase, gen_ind_e_temp)
+                elseif length(load_phase_dictionary[e]) == 2
+                    push!(gen_ind_with_two_phases, gen_ind_e_temp)
+                elseif length(load_phase_dictionary[e]) == 3
+                    push!(gen_ind_with_three_phases, gen_ind_e_temp)
+                else
+                    throw(@error("load_phase_dictionary has an invalid length"))
+                end
+            end
+        end
+    else
+        throw(@error("Error in the number of phases"))
+    end
+        
+
     PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps] 
     PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps]
                    
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
+        number_of_phases_at_load = ""
+        if Multinode_Inputs.number_of_phases == 1
+            number_of_phases_at_load = 1
+        elseif Multinode_Inputs.number_of_phases in [2,3]
+            if e in gen_ind_with_one_phase
+                number_of_phases_at_load = 1
+            elseif e in gen_ind_with_two_phases
+                number_of_phases_at_load = 2
+            elseif e in gen_ind_with_three_phases
+                number_of_phases_at_load = 3
+            else
+                throw(@error("Error in the number of phases at a load"))
+            end
+        else
+            throw(@error("Error in the number of phases"))
+        end
+        
         JuMP.@constraint(pm.model, [k in outage_timesteps],  
-                            PMD_Pg_ek[e,k] == pm.model[Symbol("TotalExport_"*string(REopt_nodes[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(REopt_nodes[e]))][k]   # negative power "generation" is a load
+                            PMD_Pg_ek[e,k] == (1/number_of_phases_at_load) * (pm.model[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k])   # negative power "generation" is a load
         )
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(pm.model, [k in outage_timesteps],
-                            PMD_Qg_ek[e,k] == 0.0 #m[Symbol("TotalExport_"*string(REopt_nodes[e]))][k] - m[Symbol("dvGridPurchase_"*string(REopt_nodes[e]))][k] 
+                            PMD_Qg_ek[e,k] == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
         )
     end
 
@@ -736,7 +796,7 @@ function MapOutageSimulatorResultsPlots(Multinode_Inputs, outage_survival_result
 
     traces = PlotlyJS.GenericTrace[]
     push!(traces, PlotlyJS.histogram(x=time_of_day_survived, name="Survived", xbins_start=0, xbins_end=24, xbins_size=1))
-    push!(traces, PlotlyJS.histogram(x=time_of_day_not_survived, name="Not Surived", xbins_start=0, xbins_end=24, xbins_size=1)) 
+    push!(traces, PlotlyJS.histogram(x=time_of_day_not_survived, name="Not Survived", xbins_start=0, xbins_end=24, xbins_size=1)) 
     layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps_Input) Time Step Outage: Distribution of Survival by time of day", xaxis_title = "Time of Day (hour)", yaxis_title="Count")
     p1 = PlotlyJS.plot(traces, layout)
     PlotlyJS.savefig(p1, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Time_Of_Day_$(OutageLength_TimeSteps_Input)_Timestep_Outage.html")
@@ -744,7 +804,7 @@ function MapOutageSimulatorResultsPlots(Multinode_Inputs, outage_survival_result
     
     traces = PlotlyJS.GenericTrace[]
     push!(traces, PlotlyJS.histogram(x=day_of_year_survived, name="Survived", xbins_start=0, xbins_end=371, xbins_size=7))
-    push!(traces, PlotlyJS.histogram(x=day_of_year_not_survived, name="Not Surived", xbins_start=0, xbins_end=371, xbins_size=7)) 
+    push!(traces, PlotlyJS.histogram(x=day_of_year_not_survived, name="Not Survived", xbins_start=0, xbins_end=371, xbins_size=7)) 
     layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps_Input) Time Step Outage: Distribution of Survival by day of year", xaxis_title = "Day of Year (binned in weekly intervals)", yaxis_title="Count")
     p2 = PlotlyJS.plot(traces, layout)
     PlotlyJS.savefig(p2, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Day_Of_Year_$(OutageLength_TimeSteps_Input)_Timestep_Outage.html")

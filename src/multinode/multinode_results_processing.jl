@@ -226,9 +226,29 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                 push!(Data, round((Dates.value(outage_simulator_time)/(1000*60)), digits=2))
             end
 
+            push!(DataLabels, "----Model Information----")
+            push!(Data,"")
+            push!(DataLabels,"  Number of Phases (input)")
+            push!(Data, Multinode_Inputs.number_of_phases)
+            push!(DataLabels,"  Multinode Type (input)")
+            push!(Data, Multinode_Inputs.multinode_type)
+            push!(DataLabels,"  Model Type (input)")
+            push!(Data, Multinode_Inputs.model_type)
+            push!(DataLabels,"  Model Subtype (input)")
+            push!(Data, Multinode_Inputs.model_subtype)
+            #=
+            push!(DataLabels, "----Model Diagnostics----")
+            push!(Data,"")
+            if Multinode_Inputs.allow_voltage_violations
+                push!(DataLabels,"  Number of Bus Voltage Violations")
+                push!(Data, sum(sum(value.(model[Symbol("binBusVoltageViolation")]).data)))
+            else
+                push!(DataLabels,"  No diagnostics were run")
+                push!(Data, "")
+            end
+            =#
             push!(DataLabels, "----System Results----")
             push!(Data,"")
-
             push!(DataLabels,"  Total Lifecycle Cost (LCC)")
             push!(Data, round(system_results["total_lifecycle_cost"], digits=0))
             push!(DataLabels,"  Total Lifecycle Capital Cost (LCCC)")
@@ -289,9 +309,11 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             push!(Data, AveragePowerOnsubstation_line_ReactivePower)
             
             # Add the multinode outage results to the dataframe
-            push!(DataLabels, "----Multinode Outage Results----")
+            push!(DataLabels, "----Multinode Outage Simulator Results----")
             push!(Data, "")
             if Multinode_Inputs.run_outage_simulator == true
+                push!(DataLabels, "  Allowed dropped load?")
+                push!(Data, Multinode_Inputs.allow_dropped_load)
                 for i in 1:length(Multinode_Inputs.length_of_simulated_outages_time_steps)
                     OutageLength = Multinode_Inputs.length_of_simulated_outages_time_steps[i]
                     push!(DataLabels, " --Outage Length: $(OutageLength) time steps--")
@@ -302,6 +324,10 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                     push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfRuns"])
                     push!(DataLabels, "  Total Number of Outages Survived")
                     push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfOutagesSurvived"])
+                    if Multinode_Inputs.allow_dropped_load
+                        push!(DataLabels, "  Average Load Met Fraction")
+                        push!(Data, round(Outage_Results["$(OutageLength)_timesteps_outage"]["dropped_load_results"]["average_load_met_fraction"], digits=5))
+                    end
                 end 
             else 
                 push!(DataLabels,"Outage modeling was not run")
