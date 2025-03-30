@@ -236,17 +236,17 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             push!(Data, Multinode_Inputs.model_type)
             push!(DataLabels,"  Model Subtype (input)")
             push!(Data, Multinode_Inputs.model_subtype)
-            #=
+            
             push!(DataLabels, "----Model Diagnostics----")
             push!(Data,"")
-            if Multinode_Inputs.allow_voltage_violations
+            if Multinode_Inputs.allow_bus_voltage_violations
                 push!(DataLabels,"  Number of Bus Voltage Violations")
-                push!(Data, sum(sum(value.(model[Symbol("binBusVoltageViolation")]).data)))
+                push!(Data, sum(value.(model[Symbol("binBusVoltageViolation")]).data))
             else
                 push!(DataLabels,"  No diagnostics were run")
                 push!(Data, "")
             end
-            =#
+            
             push!(DataLabels, "----System Results----")
             push!(Data,"")
             push!(DataLabels,"  Total Lifecycle Cost (LCC)")
@@ -492,6 +492,55 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
         end 
     end
     return system_results    
+end
+
+
+function process_model_diagnostics_bus_voltage_violations(Multinode_Inputs, pm)
+    model = pm.model
+
+    bus_voltage_violation_results = Dict()
+
+    BusInfo = create_bus_info_dictionary(pm)
+    bus_names = collect(keys(BusInfo))
+    PMD_time_steps = collect(1:length(Multinode_Inputs.PMD_time_steps))
+    
+    #PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
+    #PMDTimeSteps_InPMDTimes = []
+    #PMDTimes_toREoptTimes = Dict([])
+    #for timestep in REopt_timesteps_for_dashboard_InREoptTimes
+    #    PMD_time_step_IndecesForDashboard = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
+    #    push!(PMDTimeSteps_for_dashboard_InPMDTimes, PMD_time_step_IndecesForDashboard)
+    #    PMD_dashboard_InPMDTimes_toREoptTimes[PMD_time_step_IndecesForDashboard] = timestep
+    #end
+
+    for bus_name in bus_names
+        for PMD_time_step in PMD_time_steps
+            bin_value = value.(model[Symbol("binBusVoltageViolation")][bus_name, PMD_time_step])
+            if bin_value == 1 
+                REoptTimeStep = Multinode_Inputs.PMD_time_steps[PMD_time_step]
+                
+                if string("node_"*bus_name) in keys(bus_voltage_violation_results)
+                    entry_to_add_temp = Dict(REoptTimeStep => Dict("associated_PMD_time_step" => PMD_time_step, "per_unit_voltage" => "To add")) # Note: Multinode_Inputs.PMD_time_steps[PMD_time_step] converts the timestep from the PMD timestep (expressed in PMD timesteps) to the PMD timestep (expressed in REopt timesteps)
+                    bus_voltage_violation_results[string("node_"*bus_name)] = merge!(bus_voltage_violation_results[string("node_"*bus_name)], entry_to_add_temp)
+                else
+                    bus_voltage_violation_results[string("node_"*bus_name)] = Dict(REoptTimeStep => Dict("associated_PMD_time_step" => PMD_time_step, "per_unit_voltage" => "To add"))
+                end
+
+                if "REopt_timesteps_with_bus_voltage_violations" in keys(bus_voltage_violation_results)
+                    if REoptTimeStep in bus_voltage_violation_results["REopt_timesteps_with_bus_voltage_violations"]
+                        # Do nothing because the time step is already listed in the array
+                    else
+                        push!(bus_voltage_violation_results["REopt_timesteps_with_bus_voltage_violations"], REoptTimeStep) 
+                    end
+                else
+                    bus_voltage_violation_results["REopt_timesteps_with_bus_voltage_violations"] = [REoptTimeStep] 
+                end
+
+            end
+        end
+    end
+
+    return bus_voltage_violation_results
 end
 
 

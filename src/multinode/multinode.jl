@@ -7,19 +7,20 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
 
     StartTime_EntireModel = now() # Record the start time for the computation
     TimeStamp = Dates.format(now(), "mm-dd-yyyy")*"_"*Dates.format(now(), "HH-MM")
-
+   
     Multinode_Inputs = REopt.MultinodeInputs(; REopt.dictkeys_tosymbols(Multinode_Settings)...)
     
     if Multinode_Inputs.generate_CSV_of_outputs || Multinode_Inputs.generate_results_plots
         cd(Multinode_Inputs.folder_location)
         CreateOutputsFolder(Multinode_Inputs, TimeStamp)
     end
-
+    
     PrepareElectricLoads(Multinode_Inputs)
     REopt_inputs_combined = PrepareREoptInputs(Multinode_Inputs)    
     m_outagesimulator = "empty"
     model = "empty"
     model_BAU = "empty"
+    model_diagnostics_bus_voltage_violations = "empty"
     
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
                 
@@ -59,6 +60,12 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         
         system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
         
+        if Multinode_Inputs.allow_bus_voltage_violations  # || Multinode_Inputs.allow_dropped_load_in_main_optimization
+            model_diagnostics_bus_voltage_violations = process_model_diagnostics_bus_voltage_violations(Multinode_Inputs, pm)
+        else
+            model_diagnostics_bus_voltage_violations = "N/A"
+        end
+
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
@@ -77,7 +84,8 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
                                 ("single_outage_simulator_model", single_model_outage_simulator),
-                                ("data_math_mn", data_math_mn)
+                                ("data_math_mn", data_math_mn),
+                                ("model_diagnostics_bus_voltage_violations", model_diagnostics_bus_voltage_violations)
                                 #("transformer_upgrade_options", transformer_upgrade_options_output),
                                 #("transformer_upgrade_results", transformer_upgrade_results_output)
                                 #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series) 
@@ -568,8 +576,8 @@ end
 
 
 function generate_PMD_information(Multinode_Inputs, REopt_nodes, REopt_inputs_combined, data_math_mn)
-    print("\n keys of data_math_mn with key nw is:")
-    print(keys(data_math_mn["nw"]))
+    #print("\n keys of data_math_mn with key nw is:")
+    #print(keys(data_math_mn["nw"]))
     
     gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
 
@@ -704,30 +712,35 @@ function add_objective(pm, Multinode_Inputs, REoptInputs_Combined)
 
         add_to_expression!(Costs, pm.model[:total_line_upgrade_cost])
     end
-    #=
-    if Multinode_Inputs.allow_voltage_violations
+    
+    if Multinode_Inputs.allow_bus_voltage_violations
+        @info "Allowing bus voltage violations"
+        add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
         add_to_expression!(Costs, pm.model[:dvBusVoltageViolationCost])
     end
-    =#
+    
     @objective(pm.model, Min, pm.model[:Costs]) # Define the optimization objective
 
 end
 
-#=
-function create_bus_info_dictionary()
+
+function create_bus_info_dictionary(pm)
       # Creates a dictionary with the bus names and corresponding indeces for the :w decision variable (which is the voltage squared decision variable)
       BusInfo = Dict([])
-      NumberOfBusses = length(PMD.ref(pm,1,:w))
+      NumberOfBusses = length(PMD.ref(pm,1,:bus))
       for i in 1:NumberOfBusses
-          BusData = PMD.ref(pm, 1, :w, i)
+          BusData = PMD.ref(pm, 1, :bus, i)
           BusInfo[BusData["name"]] = Dict(["index"=>BusData["index"], "terminals"=>BusData["terminals"], "bus_i"=>BusData["bus_i"], "vbase"=>BusData["vbase"]]) 
       end
       return BusInfo
 end
 
 
-function add_voltage_violation_to_model(pm, BusInfo, Multinode_Inputs)
+function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
     model = pm.model
+    
+    BusInfo = create_bus_info_dictionary(pm)
+
     bus_names = collect(keys(BusInfo))
 
     PMD_time_steps = collect(1:length(Multinode_Inputs.PMD_time_steps))
@@ -742,8 +755,8 @@ function add_voltage_violation_to_model(pm, BusInfo, Multinode_Inputs)
             voltage_squared = [PMD.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]] # TODO: check that this will work if a bus is on phase 2 and 3 (and not phase 1)
             
             for terminal in BusInfo[bus_name]["terminals"]
-                @constraint(model, voltage_squared[terminal] <= (Multinode_Inputs.bus_per_unit_voltage_target_upper_bound^2) + model[:BinBusVoltageViolation][bus_name, PMD_time_step] * 100) # multiply by 100 to make the possible voltage very large
-                @constraint(model, voltage_squared[terminal] >= (Multinode_Inputs.bus_per_unit_voltage_target_lower_bound^2) * (1 - model[:BinBusVoltageViolation][bus_name, PMD_time_step])) # If the binary is one, then the voltage squared can go to zero
+                @constraint(model, voltage_squared[terminal] <= (Multinode_Inputs.bus_per_unit_voltage_target_upper_bound^2) + model[:binBusVoltageViolation][bus_name, PMD_time_step] * 100) # multiply by 100 to make the possible voltage very large
+                @constraint(model, voltage_squared[terminal] >= (Multinode_Inputs.bus_per_unit_voltage_target_lower_bound^2) * (1 - model[:binBusVoltageViolation][bus_name, PMD_time_step])) # If the binary is one, then the voltage squared can go to zero
             end
 
         end
@@ -752,10 +765,10 @@ function add_voltage_violation_to_model(pm, BusInfo, Multinode_Inputs)
     # Calculate the total cost of the bus voltage violations
     @variable(model, dvBusVoltageViolationCost, lower_bound = 0)
 
-    @constraint(model, model[:dvBusVoltageViolationCost] == sum(model[:BinBusVoltageViolation][bus_name, PMD_time_step] for bus_name in bus_names, PMD_time_step in PMD_time_steps))
+    @constraint(model, model[:dvBusVoltageViolationCost] == sum(model[:binBusVoltageViolation][bus_name, PMD_time_step] for bus_name in bus_names, PMD_time_step in PMD_time_steps))
 
 end
-=#
+
 
 function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
     # Apply basic constraints to limit export from and import to nodes

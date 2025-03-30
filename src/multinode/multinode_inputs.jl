@@ -54,7 +54,13 @@
     generate_same_pv_production_profile_for_each_node::Bool=false,
     pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
     display_results::Bool=true,
-    fault_analysis::Dict=Dict()
+    fault_analysis::Dict=Dict(),
+    allow_bus_voltage_violations::Bool=false,
+    bus_per_unit_voltage_target_upper_bound::Real=1.05,
+    bus_per_unit_voltage_target_lower_bound::Real=0.95,
+    cost_per_voltage_violation_per_timestep::Real=1000,
+    allow_dropped_load_in_main_optimization::Bool=false,
+    cost_per_kwh_dropped_load::Real=100
 """
 
 mutable struct MultinodeInputs <: AbstractMultinode
@@ -109,8 +115,14 @@ mutable struct MultinodeInputs <: AbstractMultinode
     generate_same_pv_production_profile_for_each_node
     pv_inputs_for_standardized_pv_production_profile 
     display_results
-    load_profiles_for_outage_sim_if_using_the_fraction_method
     fault_analysis
+    allow_bus_voltage_violations
+    bus_per_unit_voltage_target_upper_bound
+    bus_per_unit_voltage_target_lower_bound
+    cost_per_voltage_violation_per_timestep
+    allow_dropped_load_in_main_optimization
+    cost_per_kwh_dropped_load
+    load_profiles_for_outage_sim_if_using_the_fraction_method
 
     function MultinodeInputs(;
         folder_location::String="",
@@ -165,10 +177,16 @@ mutable struct MultinodeInputs <: AbstractMultinode
         pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
         display_results::Bool=true,
         fault_analysis::Dict=Dict(),
+        allow_bus_voltage_violations::Bool=false,
+        bus_per_unit_voltage_target_upper_bound::Real=1.05,
+        bus_per_unit_voltage_target_lower_bound::Real=0.95,
+        cost_per_voltage_violation_per_timestep::Real=1000,
+        allow_dropped_load_in_main_optimization::Bool=false,
+        cost_per_kwh_dropped_load::Real=100,
         load_profiles_for_outage_sim_if_using_the_fraction_method::Array=[]
         )
     
-    if generate_same_pv_production_profile_for_each_node == true
+    if generate_same_pv_production_profile_for_each_node
 
         pv_power_production_factor_series, ambient_temp_celcius = REopt.call_pvwatts_api(pv_inputs_for_standardized_pv_production_profile["latitude"], 
                                                                                         pv_inputs_for_standardized_pv_production_profile["longitude"]; 
@@ -193,6 +211,13 @@ mutable struct MultinodeInputs <: AbstractMultinode
                 end
             end
         end
+    end
+    
+    if allow_bus_voltage_violations
+        @warn "Setting the per unit phase voltage upper bound, phase voltage lower bound, and neutral voltage upper bound to 10, 0, and 10, respectively, for the PMD inputs because allow_bus_voltage_violations is set to true"
+        bus_phase_voltage_upper_bound_per_unit = 10
+        bus_phase_voltage_lower_bound_per_unit = 0
+        bus_neutral_voltage_upper_bound_per_unit = 10
     end
 
     new(
@@ -248,6 +273,12 @@ mutable struct MultinodeInputs <: AbstractMultinode
         pv_inputs_for_standardized_pv_production_profile, 
         display_results,
         fault_analysis,
+        allow_bus_voltage_violations,
+        bus_per_unit_voltage_target_upper_bound,
+        bus_per_unit_voltage_target_lower_bound,
+        cost_per_voltage_violation_per_timestep,
+        allow_dropped_load_in_main_optimization,
+        cost_per_kwh_dropped_load,
         load_profiles_for_outage_sim_if_using_the_fraction_method
     )
    
