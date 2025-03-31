@@ -19,8 +19,8 @@ struct CST <: AbstractThermalTech
     emissions_factor_lb_NOx_per_mmbtu::Real
     emissions_factor_lb_SO2_per_mmbtu::Real
     emissions_factor_lb_PM25_per_mmbtu::Real
-    inlet_temp::Real
-    outlet_temp::Real
+    inlet_temp_degF::Real
+    outlet_temp_degF::Real
 end
 
 """
@@ -52,8 +52,8 @@ function CST(;
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
-    inlet_temp::Real = 200 # Minimum temperature for Industrial Process Heating
-    outlet_temp::Real = 300 # Maximum temperature for Industrial Process Heating
+    inlet_temp_degF::Real = 200 # Minimum temperature for Industrial Process Heating
+    outlet_temp_degF::Real = 300 # Maximum temperature for Industrial Process Heating
 )
 ```
 """
@@ -78,8 +78,8 @@ function CST(;
         emissions_factor_lb_NOx_per_mmbtu::Real = 0.0,
         emissions_factor_lb_SO2_per_mmbtu::Real = 0.0,
         emissions_factor_lb_PM25_per_mmbtu::Real = 0.0,
-        inlet_temp::Real = 200.0,
-        outlet_temp::Real = 300.0
+        inlet_temp_degF::Real = 200.0,
+        outlet_temp_degF::Real = 300.0
     )
 
     if isnothing(tech_type)
@@ -150,8 +150,8 @@ function CST(;
         emissions_factor_lb_NOx_per_mmbtu,
         emissions_factor_lb_SO2_per_mmbtu,
         emissions_factor_lb_PM25_per_mmbtu,
-        inlet_temp,
-        outlet_temp
+        inlet_temp_degF,
+        outlet_temp_degF
     )
 end
 

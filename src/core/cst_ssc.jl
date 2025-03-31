@@ -163,8 +163,8 @@ function run_ssc(case_data::Dict)
     end
     if model == "ptc"
         if haskey(case_data["CST"], "inlet_temp") && haskey(case_data["CST"], "outlet_temp")
-            inlet_temp = case_data["CST"]["inlet_temp"]
-            outlet_temp = case_data["CST"]["outlet_temp"]
+            inlet_temp = case_data["CST"]["inlet_temp_degF"]
+            outlet_temp = case_data["CST"]["outlet_temp_degF"]
             user_defined_inputs["h_tank_in"] = defaults["h_tank"]
             user_defined_inputs["f_htfmin"] = 0.0
             user_defined_inputs["f_htfmax"] = 1.0
