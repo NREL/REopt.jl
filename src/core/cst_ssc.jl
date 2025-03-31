@@ -217,7 +217,7 @@ function run_ssc(case_data::Dict)
             end
             if !haskey(user_defined_inputs, "specified_total_aperture")
                 if haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
-                    if user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
+                    if user_defined_inputs["use_solar_mult_or_aperture_area"] == 1
                         user_defined_inputs["specified_total_aperture"] = case_data["Site"]["land_acres"] * 4046.85642
                     end
                 end
