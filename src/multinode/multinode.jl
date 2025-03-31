@@ -93,7 +93,11 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     end
 
     if Multinode_Inputs.generate_results_plots == true
-        Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step)
+        if Multinode_Inputs.number_of_phases == 1
+            Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step)
+        else
+            @info "The creation of the voltage plots is currently only applicable for single phase systems"
+        end
         PlotPowerFlows(CompiledResults, TimeStamp, Multinode_Inputs.time_steps_for_results_dashboard)
         Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model)
         if Multinode_Inputs.bus_coordinates != ""

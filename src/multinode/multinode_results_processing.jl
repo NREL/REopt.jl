@@ -287,13 +287,19 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             
             push!(DataLabels,"  Total Number of PMD timesteps, based on the user input")
             push!(Data, length(PMD_Results["nw"]) )
-            push!(DataLabels,"  Minimum per unit bus voltage")
-            push!(Data, minimum_voltage)
-            push!(DataLabels,"  Average per unit bus voltage")
-            push!(Data, average_voltage)
-            push!(DataLabels,"  Maximum per unit bus voltage")
-            push!(Data, maximum_voltage)
-            
+
+            if Multinode_Inputs.number_of_phases == 1
+                push!(DataLabels,"  Minimum per unit bus voltage")
+                push!(Data, minimum_voltage)
+                push!(DataLabels,"  Average per unit bus voltage")
+                push!(Data, average_voltage)
+                push!(DataLabels,"  Maximum per unit bus voltage")
+                push!(Data, maximum_voltage)
+            else
+                push!(DataLabels,"  Voltage post processing does not currently work for three-phase systems")
+                push!(Data, "")
+            end
+
             push!(DataLabels,"  Maximum power flow on substation line, Active Power kW")
             push!(Data, MaximumPowerOnsubstation_line_ActivePower)
             push!(DataLabels,"  Minimum power flow on substation line, Active Power kW")
