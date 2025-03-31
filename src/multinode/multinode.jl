@@ -752,11 +752,24 @@ function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
     for PMD_time_step in PMD_time_steps
         for bus_name in bus_names
             index = BusInfo[bus_name]["index"]
-            voltage_squared = [PMD.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]] # TODO: check that this will work if a bus is on phase 2 and 3 (and not phase 1)
+            voltage_squared = [PMD.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]]
             
+            #=
+            # Optional: print out information to understand the approach in the code:
+            print("\n For bus $(bus_name) the terminals are: ")
+            print(BusInfo[bus_name]["terminals"])
+            print("\n")
+            print("\n For bus $(bus_name) the voltage_squared variable is: ")
+            print(voltage_squared)
+            print("\n")
+            index_temp = findall(x -> x== BusInfo[bus_name]["terminals"][1], BusInfo[bus_name]["terminals"])[1]
+            print("The index in voltage_squared for terminal $(BusInfo[bus_name]["terminals"][1]) is $(index_temp) ")
+            =#
+
             for terminal in BusInfo[bus_name]["terminals"]
-                @constraint(model, voltage_squared[terminal] <= (Multinode_Inputs.bus_per_unit_voltage_target_upper_bound^2) + model[:binBusVoltageViolation][bus_name, PMD_time_step] * 100) # multiply by 100 to make the possible voltage very large
-                @constraint(model, voltage_squared[terminal] >= (Multinode_Inputs.bus_per_unit_voltage_target_lower_bound^2) * (1 - model[:binBusVoltageViolation][bus_name, PMD_time_step])) # If the binary is one, then the voltage squared can go to zero
+                terminal_index = findall(x -> x== terminal, BusInfo[bus_name]["terminals"])[1]
+                @constraint(model, voltage_squared[terminal_index] <= (Multinode_Inputs.bus_per_unit_voltage_target_upper_bound^2) + model[:binBusVoltageViolation][bus_name, PMD_time_step] * 100) # multiply by 100 to make the possible voltage very large
+                @constraint(model, voltage_squared[terminal_index] >= (Multinode_Inputs.bus_per_unit_voltage_target_lower_bound^2) * (1 - model[:binBusVoltageViolation][bus_name, PMD_time_step])) # If the binary is one, then the voltage squared can go to zero
             end
 
         end

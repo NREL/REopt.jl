@@ -60,7 +60,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         ActivePowerFlow_line_temp = []
         ReactivePowerFlow_line_temp = []
         for i in 1:length(sol_eng["nw"])
-            push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][pf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][pf_name])) )
+            push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][pf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][pf_name])) ) # The "for Phase in keys(..." sums the power across the phases
             push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][qf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][qf_name])) )
         end
 
