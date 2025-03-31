@@ -127,7 +127,7 @@ function run_ssc(case_data::Dict)
         "mst" => "mspt_iph",
         "swh_flatplate" => "swh",
         "swh_evactube" => "swh",
-        "lf" => "linear_fresnel_dsg_iph",
+        "lf" => "fresnel_physical_iph",
         "ptc" => "trough_physical_iph" #
     ) # relates internal names to specific models in SAM (for example, there are multiple molten salt tower models to pick from in the SSC)
     lat = case_data["Site"]["latitude"]
@@ -142,9 +142,23 @@ function run_ssc(case_data::Dict)
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
     # First set user defined inputs to default just in case
-    defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
-    println("loaded defaults")
+    if !(model in ["swh_flatplate","swh_evactube"])
+        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
+    elseif model in ["swh_flatplate"]
+        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_flatplate_step1.json")
+    elseif model in ["swh_evactube"]
+        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_evactube_step1.json")
+    else
+        error =  error * "Model is not available at this time. \n"
+    end
     defaults = JSON.parsefile(defaults_file)
+    if model in ["swh_flatplate","swh_evactube"]
+        scaled_draw_filename = joinpath(@__DIR__,"sam","defaults","scaled_draw_500000_kg_per_day.csv")
+        scaled_draw_df = CSV.read(scaled_draw_filename, DataFrame; header=false)
+        scaled_draw_values = scaled_draw_df[:, 1]
+        defaults["scaled_draw"] = scaled_draw_values
+    end
+    println("Defaults loaded.")
     defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
     if haskey(case_data["CST"], "SSC_Inputs")
         for i in user_defined_inputs_list[model]
@@ -251,7 +265,7 @@ function run_ssc(case_data::Dict)
         ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
             "mst" => ["Q_thermal","P_tower_pump",0.0,"q_pb_design","solarm"],         # Q_thermal = [MWt] (confirmed 1/14/2025)
-            "lf" => ["q_dot_to_heat_sink","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
+            "lf" => ["q_dot_htf_sf_out","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
             "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # q_dot_htf_sf_out = [MWt] (confirmed 1/14/2025)
             "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # Q_useful = [kWt] confirmed 1/14/2025)
             "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # Q_useful = [kWt] confirmed 1/14/2025), kW, kW, kW
@@ -285,6 +299,7 @@ function run_ssc(case_data::Dict)
             # push!(thermal_production,1.0) #for pass through
             # push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
         end
+        thermal_production[thermal_production .< 0] .= 0 #removes negative values
         # if typeof(outputs[3]) == String
         #     secondary_consumption_response =  @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[3]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
         #     for i in 1:8760
