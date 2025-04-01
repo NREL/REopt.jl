@@ -69,6 +69,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             p.s.electric_load.critical_loads_kw[ts]
         )
     else # load balancing constraint for off-grid runs 
+        # TODO: make off-grid compatible with dc coupled tech + storage by updating add_operating_reserve_constraints
         @constraint(m, [ts in p.time_steps_without_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
                 - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.ac_coupled)
