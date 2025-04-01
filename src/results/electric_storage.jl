@@ -23,7 +23,10 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     r = Dict{String, Any}()
     r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
     r["size_kw"] = round(value(m[Symbol("dvStoragePower"*_n)][b]), digits=2)
-
+    if b in p.s.storage.types.dc_coupled
+        r["dc_coupled_inverter_size_kw"] = round(value(m[:dvHybridInverterSizeAC][b]), digits=2)
+    end
+    
     if r["size_kwh"] != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
@@ -32,7 +35,9 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
         r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
 
         r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
-            r["size_kw"] * p.s.storage.attr[b].installed_cost_per_kw
+            (b in p.s.storage.types.dc_coupled ? 
+                r["dc_coupled_inverter_size_kw"] : r["size_kw"]
+            ) * p.s.storage.attr[b].installed_cost_per_kw
 
         if p.s.storage.attr[b].model_degradation
             r["state_of_health"] = value.(m[:SOH]).data / value.(m[:dvStorageEnergy])["ElectricStorage"];

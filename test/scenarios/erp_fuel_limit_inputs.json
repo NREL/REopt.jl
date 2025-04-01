@@ -17538,8 +17538,8 @@
     "battery_operational_availability": 1.0,
     "battery_size_kw": 2000.0,
     "battery_size_kwh": 600035.0,
-    "charge_efficiency": 0.9479240475903119,
-    "discharge_efficiency": 0.9479240475903119,
+    "ac_charge_efficiency": 0.9479240475903119,
+    "ac_discharge_efficiency": 0.9479240475903119,
     "num_battery_bins": 100,
     "battery_minimum_soc_fraction": 0.0
 }

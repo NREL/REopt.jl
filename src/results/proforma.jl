@@ -78,7 +78,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         storage = p.s.storage.attr["ElectricStorage"]
         total_kw = d["ElectricStorage"]["size_kw"]
         total_kwh = d["ElectricStorage"]["size_kwh"]
-        capital_cost = total_kw * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh
+        capital_cost = (storage.dc_coupled ? d["ElectricStorage"]["dc_coupled_inverter_size_kw"] : total_kw) * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh
         battery_replacement_year = storage.battery_replacement_year
         battery_replacement_cost = -1 * ((total_kw * storage.replace_cost_per_kw) + (
                     total_kwh * storage.replace_cost_per_kwh))

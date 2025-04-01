@@ -155,9 +155,10 @@ end
 
 
 """
-`ElectricStorage` is an optional optional REopt input with the following keys and default values:
+`ElectricStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
+    dc_coupled::Bool = false unless any PV.dc_coupled_with_storage = true (see ElectricStorage call in scenario.jl) # If true, ElectricStorage is DC-coupled with techs that have dc_coupled_with_storage = true
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -168,7 +169,7 @@ end
     soc_min_fraction::Float64 = 0.2
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
-    can_grid_charge::Bool = off_grid_flag ? false : true
+    can_grid_charge::Bool = off_grid_flag || dc_coupled ? false : true
     installed_cost_per_kw::Real = 910.0
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
@@ -181,9 +182,6 @@ end
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
-    charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
-    discharge_efficiency::Float64 = inverter_efficiency_fraction * internal_efficiency_fraction^0.5
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
@@ -194,6 +192,7 @@ end
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
+    dc_coupled::Bool = false
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -217,9 +216,6 @@ Base.@kwdef struct ElectricStorageDefaults
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
-    charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
-    discharge_efficiency::Float64 = inverter_efficiency_fraction * internal_efficiency_fraction^0.5
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
@@ -236,6 +232,7 @@ Construct ElectricStorage struct from Dict with keys-val pairs from the
 REopt ElectricStorage and Financial inputs.
 """
 struct ElectricStorage <: AbstractElectricStorage
+    dc_coupled::Bool
     min_kw::Real
     max_kw::Real
     min_kwh::Real
@@ -259,8 +256,9 @@ struct ElectricStorage <: AbstractElectricStorage
     total_itc_fraction::Float64
     total_rebate_per_kw::Real
     total_rebate_per_kwh::Real
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
+    ac_charge_efficiency::Float64
+    ac_discharge_efficiency::Float64
+    dc_charge_efficiency::Float64
     grid_charge_efficiency::Float64
     net_present_cost_per_kw::Real
     net_present_cost_per_kwh::Real
@@ -273,6 +271,10 @@ struct ElectricStorage <: AbstractElectricStorage
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
+
+        if s.dc_coupled && s.off_grid_flag
+            throw(@error("Modeling DC-coupled PV + ElectricStorage is not yet available for off-grid analyses."))
+        end
 
         if s.inverter_replacement_year >= f.analysis_years
             @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."
@@ -329,7 +331,13 @@ struct ElectricStorage <: AbstractElectricStorage
             degr = Degradation()
         end
     
+        ac_charge_efficiency = s.rectifier_efficiency_fraction * s.internal_efficiency_fraction^0.5
+        ac_discharge_efficiency = s.inverter_efficiency_fraction * s.internal_efficiency_fraction^0.5
+        dc_charge_efficiency = s.internal_efficiency_fraction^0.5
+        grid_charge_efficiency = s.can_grid_charge ? ac_charge_efficiency : 0.0
+
         return new(
+            s.dc_coupled,
             s.min_kw,
             s.max_kw,
             s.min_kwh,
@@ -353,9 +361,10 @@ struct ElectricStorage <: AbstractElectricStorage
             s.total_itc_fraction,
             s.total_rebate_per_kw,
             s.total_rebate_per_kwh,
-            s.charge_efficiency,
-            s.discharge_efficiency,
-            s.grid_charge_efficiency,
+            ac_charge_efficiency,
+            ac_discharge_efficiency,
+            dc_charge_efficiency,
+            grid_charge_efficiency,
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
             s.model_degradation,

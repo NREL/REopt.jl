@@ -73,7 +73,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 		ex_name = "TotalStorageCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * 
-			sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.elec)
+			sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.ac_coupled)
+			+ sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvHybridInverterSizeAC"*_n)][b] for b in p.s.storage.types.dc_coupled)
 			+ sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.all)
 		)
 
@@ -125,6 +126,9 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)
 				if b in p.s.storage.types.elec
 					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
+					if b in p.s.storage.types.dc_coupled
+						add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n=_n)
+					end
 				elseif b in p.s.storage.types.hot
 					add_hot_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
 				elseif b in p.s.storage.types.cold

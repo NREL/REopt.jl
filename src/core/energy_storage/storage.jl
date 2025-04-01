@@ -16,6 +16,8 @@ mutable struct StorageTypes
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
+    dc_coupled::Vector{String}
+    ac_coupled::Vector{String}
 end
 ```
 """
@@ -25,10 +27,13 @@ mutable struct StorageTypes
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
-
+    dc_coupled::Vector{String}
+    ac_coupled::Vector{String}
 
     function StorageTypes()
         new(
+            String[],
+            String[],
             String[],
             String[],
             String[],
@@ -42,6 +47,8 @@ mutable struct StorageTypes
         elec_storage = String[]
         hot_storage = String[]
         cold_storage = String[]
+        dc_coupled = String[]
+        ac_coupled = String[]
 
         for (k,v) in d
             if v.max_kw > 0.0 && v.max_kwh > 0.0
@@ -50,7 +57,11 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
-
+                    if typeof(v) <: MPCElectricStorage || !v.dc_coupled
+                        push!(ac_coupled, k)
+                    else
+                        push!(dc_coupled, k)
+                    end
                 elseif typeof(v) <: HotThermalStorage
                     push!(hot_storage, k)
                 elseif typeof(v) <: ColdThermalStorage
@@ -68,7 +79,9 @@ mutable struct StorageTypes
             elec_storage,
             thermal_storage,
             hot_storage,
-            cold_storage
+            cold_storage,
+            dc_coupled,
+            ac_coupled
         )
     end
 end

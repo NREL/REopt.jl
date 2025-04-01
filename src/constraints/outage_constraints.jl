@@ -3,9 +3,16 @@ function add_dv_UnservedLoad_constraints(m,p)
     # Effective load balance
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvUnservedLoad][s, tz, ts] == p.s.electric_load.critical_loads_kw[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
-        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
-              - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
-            for t in p.techs.elec
+        - sum( m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
+              - m[:dvMGProductionToStorage][t, s, tz, ts]
+              - m[:dvMGCurtail][t, s, tz, ts]
+            for t in p.techs.ac_coupled_with_storage
+        )
+        - sum( p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
+                m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+                - m[:dvMGProductionToStorage][t, s, tz, ts]
+                - m[:dvMGCurtail][t, s, tz, ts])
+            for t in p.techs.dc_coupled_with_storage
         )
         - m[:dvMGDischargeFromStorage][s, tz, ts]
     )
@@ -76,7 +83,8 @@ function add_outage_cost_constraints(m,p)
         @constraint(m,
             m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts] - (
                 p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * (
-                    sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec) + 
+                    sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.ac_coupled) + 
+                    sum( p.s.storage.attr[b].net_present_cost_per_kw * (p.s.storage.attr[b].max_kw + sum(p.max_sizes[t] * maximum(p.production_factor[t,:]) * p.levelization_factor[t] for t in p.techs.dc_coupled_with_storage)) for b in p.s.storage.types.dc_coupled) + 
                     sum( p.s.storage.attr[b].net_present_cost_per_kwh * p.s.storage.attr[b].max_kwh for b in p.s.storage.types.all )
                 ) * (1-m[:binMGStorageUsed])  # Big-M is capital cost of battery with max size kw and kwh
             )
@@ -282,15 +290,17 @@ function add_MG_storage_dispatch_constraints(m,p)
     # state of charge
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvMGStoredEnergy][s, tz, ts] == m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (
-            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec)
-            - m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
+            p.s.storage.attr["ElectricStorage"].ac_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage)
+            + p.s.storage.attr["ElectricStorage"].dc_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_coupled_with_storage)
+            - m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].ac_discharge_efficiency
         )
     )
 
 	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
     @constraint(m, [ts in p.time_steps_without_grid],
         m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (  
-            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) 
+            p.s.storage.attr["ElectricStorage"].ac_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage) 
+            + p.s.storage.attr["ElectricStorage"].dc_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_coupled_with_storage) 
         )
     )
 
@@ -302,23 +312,20 @@ function add_MG_storage_dispatch_constraints(m,p)
         )
     end
     
-    # Dispatch to MG electrical storage is no greater than inverter capacity
-    # and can't charge the battery unless binMGStorageUsed = 1
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvStoragePower]["ElectricStorage"] >= sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec)
-    )
-    
-    # Dispatch from MG storage is no greater than inverter capacity
-    # and can't discharge from storage unless binMGStorageUsed = 1
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage][s, tz, ts]
-    )
-    
-    # Dispatch to and from electrical storage is no greater than power capacity
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage][s, tz, ts]
-            + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec)
-    )
+    # Dispatch to and from MG electrical storage is no greater than power capacity
+    if "ElectricStorage" in p.s.storage.types.dc_coupled
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction
+                + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage) * p.s.storage.attr["ElectricStorage"].rectifier_efficiency_fraction
+                + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_coupled_with_storage)
+        )
+    else
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage][s, tz, ts]
+                + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage)
+                + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_coupled_with_storage) * p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction #TODO: remove term or leave for future flexibility?
+        )
+    end
     
     # State of charge upper bound is storage system size
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -342,8 +349,32 @@ function add_MG_storage_dispatch_constraints(m,p)
             m[:dvMGDischargeFromStorage][s, tz, ts] <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
         )
     end
-end
 
+    # Future development could make this an option by adding bool inputs an updating load balance/battery dispatch constraints to include these flows
+    if "ElectricStorage" in p.s.storage.types.dc_coupled
+        # Don't let AC coupled elec techs charge DC coupled battery. 
+        for ts in 1:p.s.site.min_resil_time_steps
+            for tz in p.s.electric_utility.outage_start_time_steps
+                for s in p.s.electric_utility.scenarios
+                    for t in p.techs.ac_coupled_with_storage
+                        fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
+                    end
+                end
+            end
+        end
+    else
+        # Don't let DC coupled elec techs charge AC coupled battery. 
+        for ts in 1:p.s.site.min_resil_time_steps
+            for tz in p.s.electric_utility.outage_start_time_steps
+                for s in p.s.electric_utility.scenarios
+                    for t in p.techs.dc_coupled_with_storage
+                        fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
+                    end
+                end
+            end
+        end
+    end
+end
 
 function fix_MG_storage_variables(m, p)
     fix(m[:dvMGStorageUpgradeCost], 0.0, force=true)
@@ -392,4 +423,21 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
             )
         end
     end
+end
+
+function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
+	# Lower bound on DC coupled PV and battery inverter power capacity
+    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+        m[:dvHybridInverterSizeAC]["ElectricStorage"] >= 
+        # (inverter direction)
+        m[:dvMGDischargeFromStorage][s, tz, ts]
+        + p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * sum(
+            m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+            - m[:dvMGProductionToStorage][t, s, tz, ts] 
+            - m[:dvMGCurtail][t, s, tz, ts]
+            for t in p.techs.dc_coupled_with_storage
+        )
+        # (rectifier direction, though currently dvMGProductionToStorage for AC coupled techs must be 0)
+        + sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage)
+    )
 end

@@ -25,6 +25,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## new-dc-couple
+### Added
+- Add option to model DC-coupled **PV** and **ElectricStorage**
+    - Add **PV** input **dc_coupled_with_storage** and **ElectricStorage** input **dc_coupled**, which both default to _false_
+    - **ElectricStorage** inputs **inverter_efficiency_fraction** and **rectifier_efficiency_fraction** define the DC-coupled inverter and **PV** input **inv_eff** is ignored
+    - Add sets in **Techs** struct (**dc_coupled_with_storage** and **ac_coupled_with_storage**) and **StorageTypes** struct (**dc_coupled** and **ac_coupled**)
+    - Modify constraints to account for AC and DC coupling
+### Removed
+- Don't expose **ElectricStorage** fields **charge_efficiency**, **discharge_efficiency**, and **grid_charge_efficiency**. It can lead to unexpected behavior when users provide these instead of the inputs they are calculated from (**inverter_efficiency_fraction**, **rectifier_efficiency_fraction**, and **internal_efficiency_fraction**).
 
 ## v0.51.1
 ### Added
@@ -70,7 +79,7 @@ Classify the change according to the following categories:
 
 ## v0.50.0
 ### Added
-- New parameter `force_dispatch` in the **ASHPSpaceHeater** and **ASHPWaterHeater** technologies (default = `true`).  When kept at `true`, the ASHP's thermal output will be the minimum of the site load(s) served and the system size (adjusted for timestep-specific capacity factor) in each period. If set to `false`, ASHP will do economic dispatch considering COP and CF along with electricity prices.
+- New parameter `force_dispatch` in the **ASHPSpaceHeater** and **ASHPWaterHeater** technologies (default = _true_).  When kept at _true_, the ASHP's thermal output will be the minimum of the site load(s) served and the system size (adjusted for timestep-specific capacity factor) in each period. If set to `false`, ASHP will do economic dispatch considering COP and CF along with electricity prices.
 ### Fixed
 - Align heating and cooling load profiles based on electric load year input, if using custom electric load profile with simulated (CRB or schedule-based flatloads) heating/cooling loads
 - Handling of leap years for `ElectricLoad.loads_kw` inputs to align with URDB rate structures
@@ -334,7 +343,7 @@ Classify the change according to the following categories:
 
 ## v0.37.0
 ### Added
-- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
+- Added Bool attribute `is_electric_only` to CHP; if _true_, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
 - Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
 ### Changed
 - Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
@@ -654,7 +663,7 @@ The following name changes were made:
     - The `GhpGhx` module calls for sizing the GHE can only be done if you first "add https://github.com/NREL/GhpGhx.jl" to the environment and then load the package by "using GhpGhx" before running REopt with `GHP`.
     - The `GHP` size and dispatch of the different `GHP` options is pre-determined by the `GhpGhx` package, so the REopt model just chooses one or none of the `GHP` options with a binary decision variable.
 ### Changed
-- Change default value for `wind.jl` **operating_reserve_required_pct** from 0.1 to 0.5 (only applicable when **off_grid_flag**=_True_.)
+- Change default value for `wind.jl` **operating_reserve_required_pct** from 0.1 to 0.5 (only applicable when **off_grid_flag**=_true_.)
 - allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
 - Updated results keys in `results/absorption_chiller.jl`
 ### Fixed
@@ -678,7 +687,7 @@ The following name changes were made:
     - constrain renewable electricity percentage based on user inputs
 - Add "Emissions and Renewable Energy Percent" testset
 ### Changed
-- Allow Wind tech to be included when `off_grid_flag` is true
+- Allow Wind tech to be included when `off_grid_flag` is _true_
 - Add `operating_reserve_required_pct` to Wind struct and incorporate wind into operating reserve constraints
 - Add hot, cold TES results for MPC model
 - Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
@@ -699,13 +708,13 @@ The following name changes were made:
 
 ## v0.16.1
 ### Fixed
-- bug fix for outage simulator when `microgrid_only=true`
+- bug fix for outage simulator when `microgrid_only`=_true_
 
 ## v0.16.0
 ### Added
 Allows users to model "off-grid" systems as a year-long outage: 
 - add flag to "turn on" off-grid modeling `Settings.off_grid_flag` 
-- when `off_grid_flag` is "true", adjust default values in core/ `electric_storage`, `electric_load`, `financial`, `generator`, `pv` 
+- when `off_grid_flag` is _true_, adjust default values in core/ `electric_storage`, `electric_load`, `financial`, `generator`, `pv` 
 - add operating reserve requirement inputs, outputs, and constraints based on load and PV generation 
 - add minimum load met percent input and constraint
 - add generator replacement year and cost (for off-grid and on-grid) 
@@ -803,7 +812,7 @@ Other changes:
     - all of these tiered rates require binaries, which are conditionally added to the model
 - add modeling capability for lookback demand charges
 - add more outputs from the API (eg. `initial_capital_costs`)
-- add option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
+- add option to run Business As Usual scenario in parallel with optimal scenario (default is _true_)
 - add incentives (and cost curves) to `Wind` and `Generator`
 ### Changed
 - removed "_us_dollars" from all names and generally aligned names with API
@@ -813,7 +822,7 @@ Other changes:
 
 ## v0.9.0
 ### Changed
-- `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
+- `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (_true_ if limit > 0)
 ### Added
 - add `ElectricUtility` inputs for `net_metering_limit_kw` and `interconnection_limit_kw`
 - add binary choice for net metering vs. wholesale export
@@ -929,7 +938,7 @@ Other changes:
 - include existing capacity in microgrid upgrade cost
     - previously only had to pay to upgrade new capacity
 - implement ElectricLoad `loads_kw_is_net` and `critical_loads_kw_is_net`
-    - add existing PV production to raw load profile if `true`
+    - add existing PV production to raw load profile if _true_
 - add `min_resil_time_steps` input and optional constraint for minimum time_steps that critical load must be met in every outage
 ### Fixed
 - enforce storage cannot grid charge

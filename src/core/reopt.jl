@@ -236,6 +236,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
+				if b in p.s.storage.types.dc_coupled
+					add_dc_coupled_tech_elec_storage_constraints(m, p, b)
+				end
 			elseif b in p.s.storage.types.hot
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.cold
@@ -406,7 +409,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
-		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.ac_coupled) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvHybridInverterSizeAC][b] for b in p.s.storage.types.dc_coupled) + 
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
 	))
 	
@@ -422,6 +426,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
 			add_MG_storage_dispatch_constraints(m,p)
+			if !isempty(p.s.storage.types.dc_coupled)
+				add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
+			end
 		else
 			fix_MG_storage_variables(m,p)
 		end
@@ -623,6 +630,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
+	end
+
+	if !isempty(p.s.storage.types.dc_coupled)
+		@variable(m, dvHybridInverterSizeAC[p.s.storage.types.dc_coupled] >= 0)   # AC power capacity of the inverter for the DC coupled PV and electric storage system b [kW AC]
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP

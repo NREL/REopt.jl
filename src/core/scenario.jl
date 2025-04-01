@@ -165,13 +165,18 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
         
     storage_structs = Dict{String, AbstractStorage}()
+    dc_coupled_pv = any([pv.dc_coupled_with_storage && pv.max_kw > 0 for pv in pvs])
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
         storage_dict[:off_grid_flag] = settings.off_grid_flag
+        if dc_coupled_pv && !(:dc_coupled in keys(storage_dict))
+            storage_dict[:dc_coupled] = true
+        end
     else
         storage_dict = Dict(:max_kw => 0.0) 
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
+
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
@@ -183,6 +188,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
+    if dc_coupled_pv && isempty(storage.types.dc_coupled)
+        throw(@error("To model PV that is DC coupled with storage (PV input dc_coupled_with_storage = true), you must also model a non-zero DC coupled storage system (set ElectricStorage input dc_coupled = true)"))
+    end
+    if !isempty(storage.types.dc_coupled) && !dc_coupled_pv
+        throw(@error("To model storage that is DC coupled with PV (ElectricStorage input dc_coupled = true), you must also model a non-zero DC coupled PV system (set PV input dc_coupled_with_storage = true)"))
+    end
 
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
@@ -517,8 +528,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if !isempty(pvs)
                 for pv in pvs
                     pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
-                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
-                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                                                                                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                                                                                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, 
+                                                                                        time_steps_per_hour=settings.time_steps_per_hour, dc_coupled_with_storage=pv.dc_coupled_with_storage)
                 end
             else
                 pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
