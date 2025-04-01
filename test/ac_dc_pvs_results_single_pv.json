@@ -17618,7 +17618,7 @@
         ]
     },
     "status": "optimal",
-    "solver_seconds": 6.381,
+    "solver_seconds": 6.245,
     "ElectricUtility": {
         "annual_renewable_electricity_supplied_kwh": 325352.786,
         "lifecycle_emissions_tonnes_PM25": 0.1,
