@@ -100,6 +100,7 @@ end
 function normalize_response(thermal_power_produced,case_data,user_defined_inputs)
     model = case_data["CST"]["tech_type"]
     if model =="ptc"
+        print(user_defined_inputs)
         heat_sink = user_defined_inputs["q_pb_design"]
         rated_power_per_area = 39.37 / 60000.0 # MWt / m2, TODO: update with median values from SAM params
         if user_defined_inputs["use_solar_mult_or_aperture_area"] > 0
@@ -204,9 +205,12 @@ function run_ssc(case_data::Dict)
                 user_defined_inputs["Fluid"] = 21
             end
             if !haskey(user_defined_inputs, "q_pb_design")
+                print("q_pb_design is being calculated")
                 if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
+                    print("using ProcessHeatLoad for q_pb_design")
                     user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
                 else
+                    print("using default for q_pb_design")
                     user_defined_inputs["q_pb_design"] = 5.2
                 end
             end
