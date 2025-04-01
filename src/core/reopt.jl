@@ -410,7 +410,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.ac_coupled) + 
-		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvDCCoupledTechStorageInverterSizeAC][b] for b in p.s.storage.types.dc_coupled) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvHybridInverterSizeAC][b] for b in p.s.storage.types.dc_coupled) + 
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
 	))
 	
@@ -633,7 +633,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if !isempty(p.s.storage.types.dc_coupled)
-		@variable(m, dvDCCoupledTechStorageInverterSizeAC[p.s.storage.types.dc_coupled] >= 0)   # AC power capacity of the inverter for the DC coupled PV and electric storage system b [kW AC]
+		@variable(m, dvHybridInverterSizeAC[p.s.storage.types.dc_coupled] >= 0)   # AC power capacity of the inverter for the DC coupled PV and electric storage system b [kW AC]
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP

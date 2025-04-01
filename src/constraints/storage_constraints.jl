@@ -160,12 +160,12 @@ end
 
 function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
     @constraint(m,
-        m[Symbol("dvDCCoupledTechStorageInverterSizeAC"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b]
+        m[Symbol("dvHybridInverterSizeAC"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b]
     )
 
     # Constraint (4d)-1: Lower bounds on DC coupled PV and battery inverter power capacity 
     @constraint(m, [ts in p.time_steps],
-        m[Symbol("dvDCCoupledTechStorageInverterSizeAC"*_n)][b] >= 
+        m[Symbol("dvHybridInverterSizeAC"*_n)][b] >= 
         # (inverter direction)
         m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
         + p.s.storage.attr[b].inverter_efficiency_fraction * sum(

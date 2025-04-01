@@ -428,7 +428,7 @@ end
 function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
 	# Lower bound on DC coupled PV and battery inverter power capacity
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvDCCoupledTechStorageInverterSizeAC]["ElectricStorage"] >= 
+        m[:dvHybridInverterSizeAC]["ElectricStorage"] >= 
         # (inverter direction)
         m[:dvMGDischargeFromStorage][s, tz, ts]
         + p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * sum(

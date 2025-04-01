@@ -74,7 +74,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		ex_name = "TotalStorageCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * 
 			sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.ac_coupled)
-			+ sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvDCCoupledTechStorageInverterSizeAC"*_n)][b] for b in p.s.storage.types.dc_coupled)
+			+ sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvHybridInverterSizeAC"*_n)][b] for b in p.s.storage.types.dc_coupled)
 			+ sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.all)
 		)
 
