@@ -206,6 +206,8 @@ function run_ssc(case_data::Dict)
             if !haskey(user_defined_inputs, "q_pb_design")
                 if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
                     user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
+                else
+                    user_defined_inputs["q_pb_design"] = 5.2
                 end
             end
             if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")

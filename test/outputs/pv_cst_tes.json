@@ -6,7 +6,7 @@
         [
           "getindex at dict.jl:498 [inlined]",
           "normalize_response(thermal_power_produced::Vector{Any}, case_data::Dict{String, Any}, user_defined_inputs::Dict{Any, Any}) at cst_ssc.jl:103",
-          "run_ssc(case_data::Dict{String, Any}) at cst_ssc.jl:331",
+          "run_ssc(case_data::Dict{String, Any}) at cst_ssc.jl:326",
           "Scenario(d::Dict{String, Any}; flex_hvac_from_json::Bool) at scenario.jl:668",
           "Scenario at scenario.jl:68 [inlined]",
           "run_reopt(ms::Vector{Model}, d::Dict{String, Any}) at reopt.jl:116",
