@@ -17577,8 +17577,8 @@
   "CST": {
     "tech_type": "ptc",
     "min_kw": 0,
-    "inlet_temp": 250,
-    "outlet_temp": 350,
+    "inlet_temp_degF": 400,
+    "outlet_temp_degF": 500,
     "installed_cost_per_kw": 950
   },
   "HotSensibleTes": {
