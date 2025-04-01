@@ -155,10 +155,10 @@ end
 
 
 """
-`ElectricStorage` is an optional optional REopt input with the following keys and default values:
+`ElectricStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
-    dc_coupled::Bool = false
+    dc_coupled::Bool = false unless any PV.dc_coupled_with_storage = true (see ElectricStorage call in scenario.jl) # If true, ElectricStorage is DC-coupled with techs that have dc_coupled_with_storage = true
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0

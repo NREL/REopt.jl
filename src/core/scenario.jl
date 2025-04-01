@@ -165,9 +165,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
         
     storage_structs = Dict{String, AbstractStorage}()
+    dc_coupled_pv = any([pv.dc_coupled_with_storage && pv.max_kw > 0 for pv in pvs])
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
         storage_dict[:off_grid_flag] = settings.off_grid_flag
+        if dc_coupled_pv && !(:dc_coupled in storage_dict)
+            storage_dict[:dc_coupled] = true
+        end
     else
         storage_dict = Dict(:max_kw => 0.0) 
     end
@@ -184,7 +188,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
-    dc_coupled_pv = any([pv.dc_coupled_with_storage && pv.max_kw > 0 for pv in pvs])
     if dc_coupled_pv && isempty(storage.types.dc_coupled)
         throw(@error("To model PV that is DC coupled with storage (PV input dc_coupled_with_storage = true), you must also model a non-zero DC coupled storage system (set ElectricStorage input dc_coupled = true)"))
     end
