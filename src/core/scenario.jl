@@ -169,7 +169,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
         storage_dict[:off_grid_flag] = settings.off_grid_flag
-        if dc_coupled_pv && !(:dc_coupled in storage_dict)
+        if dc_coupled_pv && !(:dc_coupled in keys(storage_dict))
             storage_dict[:dc_coupled] = true
         end
     else
