@@ -256,8 +256,8 @@ struct ElectricStorage <: AbstractElectricStorage
     total_itc_fraction::Float64
     total_rebate_per_kw::Real
     total_rebate_per_kwh::Real
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
+    ac_charge_efficiency::Float64
+    ac_discharge_efficiency::Float64
     dc_charge_efficiency::Float64
     grid_charge_efficiency::Float64
     net_present_cost_per_kw::Real
@@ -331,10 +331,10 @@ struct ElectricStorage <: AbstractElectricStorage
             degr = Degradation()
         end
     
-        charge_efficiency = s.rectifier_efficiency_fraction * s.internal_efficiency_fraction^0.5
-        discharge_efficiency = s.inverter_efficiency_fraction * s.internal_efficiency_fraction^0.5
+        ac_charge_efficiency = s.rectifier_efficiency_fraction * s.internal_efficiency_fraction^0.5
+        ac_discharge_efficiency = s.inverter_efficiency_fraction * s.internal_efficiency_fraction^0.5
         dc_charge_efficiency = s.internal_efficiency_fraction^0.5
-        grid_charge_efficiency = s.can_grid_charge ? charge_efficiency : 0.0
+        grid_charge_efficiency = s.can_grid_charge ? ac_charge_efficiency : 0.0
 
         return new(
             s.dc_coupled,
@@ -361,8 +361,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.total_itc_fraction,
             s.total_rebate_per_kw,
             s.total_rebate_per_kwh,
-            charge_efficiency,
-            discharge_efficiency,
+            ac_charge_efficiency,
+            ac_discharge_efficiency,
             dc_charge_efficiency,
             grid_charge_efficiency,
             net_present_cost_per_kw,

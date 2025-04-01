@@ -48,7 +48,7 @@ function add_re_elec_calcs(m,p)
 	# 	#		have equal RE%, otherwise it is an approximation because the general equation is non linear. 
 	# 	SteamTurbineAnnualREEleckWh = @expression(m,p.hours_per_time_step * (
 	# 		p.STElecOutToThermInRatio * sum(m[:dvThermalToSteamTurbine][tst,ts]*p.tech_renewable_energy_fraction[tst] for ts in p.time_steps, tst in p.TechCanSupplySteamTurbine) # plus steam turbine RE generation 
-	# 		- sum(m[:dvProductionToStorage][b,t,ts] * SteamTurbinePercentREEstimate * (1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in p.steam, b in p.s.storage.types.elec, ts in p.time_steps) # minus battery storage losses from RE from steam turbine
+	# 		- sum(m[:dvProductionToStorage][b,t,ts] * SteamTurbinePercentREEstimate * (1-p.s.storage.attr[b].ac_charge_efficiency*p.s.storage.attr[b].ac_discharge_efficiency) for t in p.steam, b in p.s.storage.types.elec, ts in p.time_steps) # minus battery storage losses from RE from steam turbine
 	# 		- sum(m[:dvCurtail][t,ts] * SteamTurbinePercentREEstimate for t in p.steam, ts in p.time_steps) # minus curtailment.
 	# 		- (1-p.s.site.include_exported_renewable_electricity_in_total)*sum(m[:dvProductionToGrid][t,u,ts]*SteamTurbinePercentREEstimate for t in p.steam,  u in p.export_bins_by_tech[t], ts in p.time_steps) # minus exported RE from steam turbine, if RE accounting method = 0.
 	# 	))
@@ -64,7 +64,7 @@ function add_re_elec_calcs(m,p)
 			sum((p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] #total RE elec generation, excl steam turbine
 				- m[:dvCurtail][t,ts] #minus curtailment
 				- sum(m[:dvProductionToStorage][b,t,ts]
-					*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency)
+					*(1-p.s.storage.attr[b].ac_charge_efficiency*p.s.storage.attr[b].ac_discharge_efficiency)
 					for b in p.s.storage.types.ac_coupled)) #minus battery efficiency losses
 				* p.tech_renewable_energy_fraction[t]
 				for t in setdiff(p.techs.ac_coupled_with_storage, p.techs.steam_turbine), ts in p.time_steps
@@ -92,7 +92,7 @@ function add_re_elec_calcs(m,p)
 			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
 				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 
 			- sum(m[:dvGridToStorage][b, ts] * p.s.electric_utility.renewable_energy_fraction_series[ts] *
-				(1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency)
+				(1 - p.s.storage.attr[b].ac_charge_efficiency * p.s.storage.attr[b].ac_discharge_efficiency)
 				for ts in p.time_steps, b in p.s.storage.types.elec
 			) # minus battery efficiency losses from grid charging storage (assumes all that is charged is discharged)
 		) 

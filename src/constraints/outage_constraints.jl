@@ -290,16 +290,16 @@ function add_MG_storage_dispatch_constraints(m,p)
     # state of charge
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvMGStoredEnergy][s, tz, ts] == m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (
-            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage)
+            p.s.storage.attr["ElectricStorage"].ac_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage)
             + p.s.storage.attr["ElectricStorage"].dc_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_coupled_with_storage)
-            - m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
+            - m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.attr["ElectricStorage"].ac_discharge_efficiency
         )
     )
 
 	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
     @constraint(m, [ts in p.time_steps_without_grid],
         m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (  
-            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage) 
+            p.s.storage.attr["ElectricStorage"].ac_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.ac_coupled_with_storage) 
             + p.s.storage.attr["ElectricStorage"].dc_charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.dc_coupled_with_storage) 
         )
     )

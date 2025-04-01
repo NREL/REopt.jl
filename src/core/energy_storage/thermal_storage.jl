@@ -115,8 +115,8 @@ struct ColdThermalStorage <: AbstractThermalStorage
     min_kwh::Float64
     max_kwh::Float64
     installed_cost_per_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
+    ac_charge_efficiency::Float64
+    ac_discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
@@ -129,8 +129,8 @@ struct ColdThermalStorage <: AbstractThermalStorage
         max_kw = max_kwh * time_steps_per_hour
         om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
-        charge_efficiency = s.internal_efficiency_fraction^0.5
-        discharge_efficiency = s.internal_efficiency_fraction^0.5
+        ac_charge_efficiency = s.internal_efficiency_fraction^0.5
+        ac_discharge_efficiency = s.internal_efficiency_fraction^0.5
         installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
@@ -164,8 +164,8 @@ struct ColdThermalStorage <: AbstractThermalStorage
             min_kwh,
             max_kwh,
             installed_cost_per_kwh,
-            charge_efficiency,
-            discharge_efficiency,
+            ac_charge_efficiency,
+            ac_discharge_efficiency,
             net_present_cost_per_kwh,
             om_cost_per_kwh
         )
@@ -198,8 +198,8 @@ struct HotThermalStorage <: AbstractThermalStorage
     min_kwh::Float64
     max_kwh::Float64
     installed_cost_per_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
+    ac_charge_efficiency::Float64
+    ac_discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
     can_serve_dhw::Bool
@@ -215,8 +215,8 @@ struct HotThermalStorage <: AbstractThermalStorage
         max_kw = max_kwh * time_steps_per_hour
         om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
-        charge_efficiency = s.internal_efficiency_fraction^0.5
-        discharge_efficiency = s.internal_efficiency_fraction^0.5
+        ac_charge_efficiency = s.internal_efficiency_fraction^0.5
+        ac_discharge_efficiency = s.internal_efficiency_fraction^0.5
         installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
@@ -250,8 +250,8 @@ struct HotThermalStorage <: AbstractThermalStorage
             min_kwh,
             max_kwh,
             installed_cost_per_kwh,
-            charge_efficiency,
-            discharge_efficiency,
+            ac_charge_efficiency,
+            ac_discharge_efficiency,
             net_present_cost_per_kwh,
             om_cost_per_kwh,
             s.can_serve_dhw,
