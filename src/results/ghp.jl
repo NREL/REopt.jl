@@ -47,11 +47,17 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"] = round.(value.(HeatingThermalReductionWithGHP) ./ KWH_PER_MMBTU, digits=3)
         @expression(m, CoolingThermalReductionWithGHP[ts in p.time_steps],
 		    sum(p.cooling_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))
+        
+        @expression(m, HeatingThermalLoadServedWithGHP[ts in p.time_steps],
+		    sum(p.ghp_heating_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))    
+        @expression(m, CoolingThermalLoadServedWithGHP[ts in p.time_steps],
+		    sum(p.ghp_cooling_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)) 
+
         r["cooling_thermal_load_reduction_with_ghp_ton"] = round.(value.(CoolingThermalReductionWithGHP) ./ KWH_THERMAL_PER_TONHOUR, digits=3)
         r["ghx_residual_value_present_value"] = value(m[:ResidualGHXCapCost])
         r["avoided_capex_by_ghp_present_value"] = value(m[:AvoidedCapexByGHP])
-        r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = d["HeatingLoad"]["space_heating_thermal_load_series_mmbtu_per_hour"] .- r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"]
-        r["thermal_to_load_series_ton"] = d["CoolingLoad"]["load_series_ton"] .- r["cooling_thermal_load_reduction_with_ghp_ton"]
+        r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(HeatingThermalLoadServedWithGHP) ./ KWH_PER_MMBTU, digits=3) .- r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"]
+        r["thermal_to_load_series_ton"] = round.(value.(CoolingThermalLoadServedWithGHP) ./ KWH_THERMAL_PER_TONHOUR, digits=3) .- r["cooling_thermal_load_reduction_with_ghp_ton"]
         if p.s.ghp_option_list[ghp_option_chosen].can_serve_dhw
             r["thermal_to_dhw_load_series_mmbtu_per_hour"] = d["HeatingLoad"]["dhw_thermal_load_series_mmbtu_per_hour"]
         else
