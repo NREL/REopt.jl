@@ -82,8 +82,9 @@ function add_capex_constraints(m, p; _n="")
     end
 end
 
+# TODO: change fn name
 function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    m[:InitialCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}() # Avoids MethodError
+    m[:InitialCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}(0.0) # Avoids MethodError
     
     add_to_expression!(m[:InitialCapexNoIncentives], 
         p.s.financial.offgrid_other_capital_costs - m[Symbol("AvoidedCapexByASHP"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)]
@@ -127,9 +128,9 @@ function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if "CHP" in p.techs.all
-        # TODO: Come back here
         chp_size_kw = m[Symbol("dvPurchaseSize"*_n)]["CHP"]
-        initial_capex += get_chp_initial_capex(p, chp_size_kw)
+        chp_capex = get_chp_initial_capex(m, p, chp_size_kw)
+        add_to_expression!(m[:InitialCapexNoIncentives], chp_capex)
     end
 
     if "SteamTurbine" in p.techs.all
@@ -151,9 +152,7 @@ function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if !isempty(p.s.ghp_option_list)
-
         for option in enumerate(p.s.ghp_option_list)
-
             if option[2].heat_pump_configuration == "WSHP"
                 add_to_expression!(m[:InitialCapexNoIncentives], 
                     option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*m[Symbol("binGHP"*_n)][option[1]]
@@ -179,5 +178,43 @@ function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
             p.s.ashp_wh.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPWaterHeater"]
         )
     end
+end
 
+""" 
+    get_chp_initial_capex(m::JuMP.AbstractModel, p::REoptInputs, size_kw::Float64)
+
+CHP has a cost-curve input option, so calculating the initial CapEx requires more logic than typical tech CapEx calcs
+"""
+function get_chp_initial_capex(m::JuMP.AbstractModel, p::REoptInputs, chp_size_kw)
+    # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
+    cost_list = p.s.chp.installed_cost_per_kw
+    size_list = p.s.chp.tech_sizes_for_cost_curve
+
+    m[:CHPCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}() 
+
+    if typeof(cost_list) == Vector{Float64}
+        if chp_size_kw <= size_list[1]
+            add_to_expression!(m[:CHPCapexNoIncentives], chp_size_kw * cost_list[1]) # Currently not handling non-zero cost ($) for 0 kW size input
+        elseif chp_size_kw > size_list[end]
+            add_to_expression!(m[:CHPCapexNoIncentives], chp_size_kw * cost_list[end])
+        else
+            for s in 2:length(size_list)
+                if (chp_size_kw > size_list[s-1]) && (chp_size_kw <= size_list[s])
+                    slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                            (size_list[s] - size_list[s-1])
+                    add_to_expression!(m[:CHPCapexNoIncentives],  cost_list[s-1] * size_list[s-1] + (chp_size_kw - size_list[s-1]) * slope)
+                end
+            end
+        end
+    else
+        add_to_expression!(m[:CHPCapexNoIncentives], cost_list * chp_size_kw)
+
+    # TODO: Why was this commented out?
+    #Add supplementary firing capital cost
+    # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
+    # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
+    # add_to_expression!(m[:CHPCapexNoIncentives], chp_supp_firing_size * chp_supp_firing_cost)
+    end
+
+    return m[:CHPCapexNoIncentives]
 end
