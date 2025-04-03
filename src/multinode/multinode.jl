@@ -80,7 +80,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                                 ("ComputationTime_EntireModel", ComputationTime_EntireModel),
                                 ("Line_Info_PMD", LineInfo_PMD),
-                                ("pm", pm), # This can be a very large variable and it can be slow to load
+                                #("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
                                 ("single_outage_simulator_model", single_model_outage_simulator),
