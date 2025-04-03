@@ -39,7 +39,11 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         line_upgrades = "N/A"
     end
 
-    DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
+    if Multinode_Inputs.run_outage_simulator
+        DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
+    else
+        DataDictionaryForEachNodeForOutageSimulator = "N/A"
+    end
 
     if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel" 
         pf_name = "pf"

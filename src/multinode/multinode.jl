@@ -402,8 +402,7 @@ function ApplyLoadProfileToPMDModel(Multinode_Inputs, data_eng, PMD_number_of_ti
                     "qd_nom"=> "normalized_load_profile"
             )
         end
-    elseif Multinode_Inputs.number_of_phases in [2,3]
-        print("Creating the PMD timeseries load framework for the outage model")
+    elseif Multinode_Inputs.number_of_phases in [2,3]        
         for p in combined_REopt_inputs
             node = p.s.site.node
             if node in REopt_nodes           
@@ -447,7 +446,7 @@ function CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_R
                     data_eng["generator"]["REopt_gen_node$(e)_phase$(phase)"] = Dict{String,Any}(
                             "status" => PMD.ENABLED,
                             "bus" => data_eng["load"]["load$(e)_phase$(phase)"]["bus"],   
-                            "connections" => [data_eng["load"]["load$(e)_phase$(phase)"]["connections"][1], 4], # TODO: SHOULD THIS [1] BE "PHASE" HERE FOR MULTIPHASE? It looks like not.    # Note: From PMD tutorial: "create a generator with the same connection setting."
+                            "connections" => [data_eng["load"]["load$(e)_phase$(phase)"]["connections"][1], 4],  # data_eng["load"]["load$(e)_phase$(phase)"]["connections"][1] will show the phase connection for that load. Does this only work with single phase loads? Note: From PMD tutorial: "create a generator with the same connection setting."
                             "configuration" => WYE,
                     )
                 end
@@ -470,6 +469,8 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
         throw(@error("The PMD_network_input input format is not valid"))
     end 
 
+    @info "Completed parsing the .dss file"
+
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs) # Generate a list of the REopt nodes
         
     ApplyDataEngSettings(data_eng, Multinode_Inputs)
@@ -480,11 +481,12 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
 
     data_math_mn = transform_data_model(data_eng, multinetwork=true) # Transforming the engineering model to a mathematical model in PMD 
     
-    # Initialize voltage variable values. 
+    # Initialize voltage variable values:
+    @info "running add_start_vrvi"
     Start_vrvi = now()
     add_start_vrvi!(data_math_mn)
     End_vrvi = now()
-    
+
     # Measure and report the time for initializing the voltage variable values
     PMD_vrvi_time = End_vrvi - Start_vrvi
     PMD_vrvi_time_minutes = round(PMD_vrvi_time/Millisecond(60000), digits=2)
@@ -1163,21 +1165,26 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         if p.s.settings.time_steps_per_hour != Multinode_Inputs.time_steps_per_hour
             throw(@error("The time steps per hour for each REopt node must match the time steps per hour defined in the multinode settings dictionary"))
         end
-        
-        if Multinode_Inputs.critical_load_method == "Fraction"
-            if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_fraction)
-                if sum(p.s.electric_load.loads_kw) > 0
-                    throw(@error("The REopt node $(node_temp) does not have an assigned critical load fraction in the critical_load_fraction input dictionary"))
-                end
-            end
-        end
 
-        if Multinode_Inputs.critical_load_method == "TimeSeries"
-            if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_timeseries)
-                if sum(p.s.electric_load.loads_kw) > 0
-                    throw(@error("The REopt node $(node_temp) does not have an assigned critical load timeseries profile in the critical_load_timeseries input dictionary"))
+        # Checking that critical loads are defined, if running a resilience model
+        if  Multinode_Inputs.model_outages_with_outages_vector || ((Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step) > 0 )
+
+            if Multinode_Inputs.critical_load_method == "Fraction"
+                if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_fraction)
+                    if sum(p.s.electric_load.loads_kw) > 0
+                        throw(@error("The REopt node $(node_temp) does not have an assigned critical load fraction in the critical_load_fraction input dictionary"))
+                    end
                 end
             end
+
+            if Multinode_Inputs.critical_load_method == "TimeSeries"
+                if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_timeseries)
+                    if sum(p.s.electric_load.loads_kw) > 0
+                        throw(@error("The REopt node $(node_temp) does not have an assigned critical load timeseries profile in the critical_load_timeseries input dictionary"))
+                    end
+                end
+            end
+
         end
         # TODO: add data check to ensure that if a critical load method is defined, then there must be either a critical load fraction or a critical load timeseries dictionary   
         
