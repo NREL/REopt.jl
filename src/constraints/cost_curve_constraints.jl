@@ -69,64 +69,85 @@ end
 
 function add_capex_constraints(m, p; _n="")
     @warn "Adding capital costs constraints. These may cause an infeasible problem in some cases, particularly for resilience runs."
-    initial_capex = initial_capex_opt(m, p)
+    initial_capex_opt(m, p)
     if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives)
         @constraint(m,
-            initial_capex >= p.s.financial.min_initial_capital_costs_before_incentives
+            m[:InitialCapexNoIncentives] >= p.s.financial.min_initial_capital_costs_before_incentives
         )
     end
     if !isnothing(p.s.financial.max_initial_capital_costs_before_incentives)
         @constraint(m,
-            initial_capex <= p.s.financial.max_initial_capital_costs_before_incentives
+            m[:InitialCapexNoIncentives] <= p.s.financial.max_initial_capital_costs_before_incentives
         )
     end
 end
 
 function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    initial_capex = p.s.financial.offgrid_other_capital_costs - m[Symbol("AvoidedCapexByASHP"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)]
+    m[:InitialCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}() # Avoids MethodError
+    
+    add_to_expression!(m[:InitialCapexNoIncentives], 
+        p.s.financial.offgrid_other_capital_costs - m[Symbol("AvoidedCapexByASHP"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)]
+    )
 
     if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
-        initial_capex += p.s.generator.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Generator"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.generator.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Generator"]
+        )
     end
 
     if !isempty(p.techs.pv)
         for pv in p.s.pvs
-            initial_capex += pv.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)][pv.name]
+            add_to_expression!(m[:InitialCapexNoIncentives], 
+                pv.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)][pv.name]
+            )
         end
     end
 
     for b in p.s.storage.types.elec
         if p.s.storage.attr[b].max_kw > 0
-            initial_capex += p.s.storage.attr[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] + 
-                p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+            add_to_expression!(m[:InitialCapexNoIncentives], 
+                p.s.storage.attr[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b]
+                + p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+            )
         end
     end
 
     for b in p.s.storage.types.thermal
         if p.s.storage.attr[b].max_kw > 0
-            initial_capex += p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+            add_to_expression!(m[:InitialCapexNoIncentives], 
+                p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
+            )
         end
     end
 
     if "Wind" in p.techs.all
-        initial_capex += p.s.wind.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Wind"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.wind.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Wind"]
+        )
     end
 
     if "CHP" in p.techs.all
+        # TODO: Come back here
         chp_size_kw = m[Symbol("dvPurchaseSize"*_n)]["CHP"]
         initial_capex += get_chp_initial_capex(p, chp_size_kw)
     end
 
     if "SteamTurbine" in p.techs.all
-        initial_capex += p.s.steam_turbine.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["SteamTurbine"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.steam_turbine.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["SteamTurbine"]
+        )
     end
 
     if "Boiler" in p.techs.all
-        initial_capex += p.s.boiler.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Boiler"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.boiler.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["Boiler"]
+        )
     end
 
     if "AbsorptionChiller" in p.techs.all
-        initial_capex += p.s.absorption_chiller.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["AbsorptionChiller"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.absorption_chiller.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["AbsorptionChiller"]
+        )
     end
 
     if !isempty(p.s.ghp_option_list)
@@ -134,9 +155,13 @@ function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         for option in enumerate(p.s.ghp_option_list)
 
             if option[2].heat_pump_configuration == "WSHP"
-                initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*m[Symbol("binGHP"*_n)][option[1]]
+                add_to_expression!(m[:InitialCapexNoIncentives], 
+                    option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*m[Symbol("binGHP"*_n)][option[1]]
+                )
             elseif option[2].heat_pump_configuration == "WWHP"
-                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*m[Symbol("binGHP"*_n)][option[1]]
+                add_to_expression!(m[:InitialCapexNoIncentives], 
+                    (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*m[Symbol("binGHP"*_n)][option[1]]
+                )
             else
                 @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
@@ -144,12 +169,15 @@ function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if "ASHPSpaceHeater" in p.techs.all
-        initial_capex += p.s.ashp.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPSpaceHeater"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.ashp.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPSpaceHeater"]
+        )
     end
 
     if "ASHPWaterHeater" in p.techs.all
-        initial_capex += p.s.ashp_wh.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPWaterHeater"]
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.ashp_wh.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPWaterHeater"]
+        )
     end
 
-    return initial_capex
 end
