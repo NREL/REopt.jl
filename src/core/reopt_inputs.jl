@@ -54,7 +54,7 @@ struct REoptInputs <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options    
-    tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
+    tech_renewable_energy_fraction::Dict{String, <:Real} # union(techs.elec, techs.fuel_burning)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
@@ -122,7 +122,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided (GHP)
     ghx_useful_life_years::Array{Float64,1} # GHX useful life years
     ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
-    tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
+    tech_renewable_energy_fraction::Dict{String, <:Real} # union(techs.elec, techs.fuel_burning)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
@@ -353,7 +353,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
-    tech_renewable_energy_fraction = Dict(t => 1.0 for t in techs.all)
+    tech_renewable_energy_fraction = Dict{String, Float64}()
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
@@ -385,12 +385,13 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     if !isempty(techs.pv)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
                         pvlocations, pv_to_location, maxsize_pv_locations, techs.segmented, n_segs_by_tech, 
-                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs)
+                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs, tech_renewable_energy_fraction)
     end
 
     if "Wind" in techs.all
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs)
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs, 
+            tech_renewable_energy_fraction)
     end
 
     if "Generator" in techs.all
@@ -408,7 +409,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     if "Boiler" in techs.all
         setup_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-                        om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
+            tech_renewable_energy_fraction, om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
     end
 
     if "CHP" in techs.all
@@ -575,14 +576,25 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
     pvlocations, pv_to_location, maxsize_pv_locations, 
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, 
-    techs_by_exportbin, techs)
+    techs_by_exportbin, techs, tech_renewable_energy_fraction)
 
     pv_roof_limited, pv_ground_limited, pv_space_limited = false, false, false
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
-    # First pass: Calculate space constraints for all PVs
-    for pv in s.pvs
+    for pv in s.pvs        
+        production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
+            time_steps_per_hour=s.settings.time_steps_per_hour)
+        for location in pvlocations
+            if pv.location == String(location) # Must convert symbol to string
+                pv_to_location[pv.name][location] = 1
+            else
+                pv_to_location[pv.name][location] = 0
+            end
+        end
+        tech_renewable_energy_fraction[pv.name] = 1.0
+
+        beyond_existing_kw = pv.max_kw
         if pv.location == "both"
             both_existing_pv_kw += pv.existing_kw
             if !(s.site.roof_squarefeet === nothing) && !(s.site.land_acres === nothing)
@@ -775,11 +787,13 @@ end
 
 function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs, 
+    tech_renewable_energy_fraction
     )
     max_sizes["Wind"] = s.wind.max_kw
     min_sizes["Wind"] = s.wind.min_kw
     existing_sizes["Wind"] = 0.0
+    tech_renewable_energy_fraction["Wind"] = 1.0
     
     if !(s.site.land_acres === nothing) # Limit based on available land 
         land_max_kw = s.site.land_acres / s.wind.acres_per_kw
@@ -867,17 +881,18 @@ end
 
 """
     function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
+        tech_renewable_energy_fraction, om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for (new) boiler.
 This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
 """
 function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-                            om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
+        tech_renewable_energy_fraction, om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
     max_sizes["Boiler"] = s.boiler.max_kw
     min_sizes["Boiler"] = s.boiler.min_kw
     existing_sizes["Boiler"] = 0.0
     boiler_efficiency["Boiler"] = s.boiler.efficiency
+    tech_renewable_energy_fraction["Boiler"] = s.boiler.fuel_renewable_energy_fraction
     
     # The Boiler only has a MACRS benefit, no ITC etc.
     if s.boiler.macrs_option_years in [5, 7]
