@@ -591,120 +591,26 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         if pv.location == "both"
             both_existing_pv_kw += pv.existing_kw
             if !(s.site.roof_squarefeet === nothing) && !(s.site.land_acres === nothing)
+                # don"t restrict unless both land_area and roof_area specified,
+                # otherwise one of them is "unlimited"
                 roof_max_kw = s.site.roof_squarefeet * pv.kw_per_square_foot
                 land_max_kw = s.site.land_acres / pv.acres_per_kw
+                beyond_existing_kw = min(roof_max_kw + land_max_kw, beyond_existing_kw)
                 pv_space_limited = true
             end
         elseif pv.location == "roof"
             roof_existing_pv_kw += pv.existing_kw
             if !(s.site.roof_squarefeet === nothing)
                 roof_max_kw = s.site.roof_squarefeet * pv.kw_per_square_foot
+                beyond_existing_kw = min(roof_max_kw, beyond_existing_kw)
                 pv_roof_limited = true
             end
         elseif pv.location == "ground"
             ground_existing_pv_kw += pv.existing_kw
             if !(s.site.land_acres === nothing)
                 land_max_kw = s.site.land_acres / pv.acres_per_kw
+                beyond_existing_kw = min(land_max_kw, beyond_existing_kw)
                 pv_ground_limited = true
-            end
-        end
-    end
-
-    # Second pass: Setup each PV with the constraint information
-    electric_load_annual_kwh = sum(s.electric_load.loads_kw) / s.settings.time_steps_per_hour
-    for pv in s.pvs
-        # Start with the user-specified max_kw
-        beyond_existing_kw = pv.max_kw
-        
-        # Apply space constraints only if they're specified and more restrictive
-        if pv.location == "both"
-            if pv_space_limited
-                space_constrained_max = roof_max_kw + land_max_kw
-                beyond_existing_kw = min(beyond_existing_kw, space_constrained_max)
-            end
-        elseif pv.location == "roof"
-            if pv_roof_limited
-                beyond_existing_kw = min(beyond_existing_kw, roof_max_kw)
-            end
-        elseif pv.location == "ground"
-            if pv_ground_limited
-                beyond_existing_kw = min(beyond_existing_kw, land_max_kw)
-            end
-        end
-
-        # TODO need to know if a USER input the size_class or cost to avoid overwriting user-input Values
-        # We should instead just bring this into pv.jl along with site.[roof and land space] and use that to calculate the max_kw 
-        if beyond_existing_kw < pv.max_kw
-            array_category = pv.array_type in [0, 2, 3, 4] ? "ground" : "roof"
-            defaults = get_pv_defaults_size_class()
-            
-            # Use the space-constrained max in get_pv_size_class
-            pv.size_class = get_pv_size_class(
-                electric_load_annual_kwh,
-                [c["tech_sizes_for_cost_curve"] for c in defaults],
-                min_kw=pv.min_kw,
-                max_kw=beyond_existing_kw,  #space-constrained max
-                existing_kw=pv.existing_kw
-            )
-            
-            # Directly access by size class number as in your working version
-            class_defaults = defaults[pv.size_class]
-            
-            if isempty(pv.installed_cost_per_kw)
-                # Handle both scalar and vector cost data
-                installed_cost_data = class_defaults["roof"]["installed_cost_per_kw"]
-                
-                # Apply ground mount premium if needed
-                if array_category == "ground" && 
-                   haskey(class_defaults, "mount_premiums") &&
-                   haskey(class_defaults["mount_premiums"], "ground") &&
-                   haskey(class_defaults["mount_premiums"]["ground"], "cost_premium")
-                    
-                    premium = class_defaults["mount_premiums"]["ground"]["cost_premium"]
-                    
-                    if installed_cost_data isa Number
-                        installed_cost_data *= premium
-                    else
-                        installed_cost_data = [cost * premium for cost in installed_cost_data]
-                    end
-                end
-                
-                if installed_cost_data isa Number
-                    pv.installed_cost_per_kw = convert(Float64, installed_cost_data)
-                else
-                    pv.installed_cost_per_kw = convert(Vector{Float64}, installed_cost_data)
-                end
-            end
-            
-            if isempty(pv.om_cost_per_kw)
-                om_cost = class_defaults["roof"]["om_cost_per_kw"]
-                
-                # Apply ground mount premium if needed
-                if array_category == "ground" && 
-                   haskey(class_defaults, "mount_premiums") &&
-                   haskey(class_defaults["mount_premiums"], "ground") &&
-                   haskey(class_defaults["mount_premiums"]["ground"], "om_premium")
-                    
-                    om_premium = class_defaults["mount_premiums"]["ground"]["om_premium"]
-                    om_cost *= om_premium
-                end
-                
-                pv.om_cost_per_kw = convert(Float64, om_cost)
-            end
-            
-            if isempty(pv.tech_sizes_for_cost_curve) && length(pv.installed_cost_per_kw) > 1
-                pv.tech_sizes_for_cost_curve = convert(Vector{Float64}, class_defaults["tech_sizes_for_cost_curve"])
-            end
-        end
-
-        production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
-            time_steps_per_hour=s.settings.time_steps_per_hour)
-
-        for location in pvlocations
-            if pv.location == String(location)
-                pv_to_location[pv.name][location] = 1
-            else
-                pv_to_location[pv.name][location] = 0
             end
         end
 
@@ -716,11 +622,8 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
             cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
         )
 
-        om_cost_per_kw[pv.name] = typeof(pv.om_cost_per_kw) <: Number ? 
-        convert(Float64, pv.om_cost_per_kw) : convert(Float64, first(pv.om_cost_per_kw))
-        
+        om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
-        # @info "PV Cost Passed to Optimizer" pv.name om_cost_per_kw[pv.name] typeof(pv.installed_cost_per_kw) pv.installed_cost_per_kw
 
         if !pv.can_curtail
             push!(techs.no_curtail, pv.name)
