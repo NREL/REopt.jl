@@ -79,9 +79,6 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     cap_cost_yint = Real[]
     n_segments = 1
 
-    # Debug installed cost
-    # @info "Tech installed cost in cost_curve:" typeof(tech.installed_cost_per_kw) tech.installed_cost_per_kw
-
     existing_kw = 0.0
     if :existing_kw in fieldnames(T)
         existing_kw = tech.existing_kw
@@ -367,17 +364,6 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     end
     cap_cost_slope = updated_cap_cost_slope
     cap_cost_yint = updated_y_intercept
-
-    # @info "Cost curve results:" typeof(cap_cost_slope) cap_cost_slope typeof(cost_curve_bp_x) cost_curve_bp_x typeof(cap_cost_yint) cap_cost_yint typeof(n_segments) n_segments
-    # @info "Debugging cost curve calculation..."
-    # @info "Input Installed Cost Per kW: ", tech.installed_cost_per_kw
-    # @info "Input Tech Sizes for Cost Curve: ", tech.tech_sizes_for_cost_curve
-    # @info "Cap Cost Slope Values Calculated: ", cap_cost_slope
-    # @info "Cap Cost Y-Intercept Values Calculated: ", cap_cost_yint
-    # @info "Cost Curve Breakpoints X: ", cost_curve_bp_x
-    # @info "Cost Curve Breakpoints Y: ", cost_curve_bp_y
-    # @info "Final return values:" typeof(cap_cost_slope) cap_cost_slope
-
 
     return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
 end

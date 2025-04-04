@@ -562,13 +562,6 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
         end
     end
 
-    # @info "Running update_cost_curve! for $(tech_name)"
-    # @info "Cap Cost Slope Calculated: ", cap_cost_slope[tech_name]
-    # @info "Number of Segments: ", n_segments
-    # @info "Seg Min Size: ", seg_min_size[tech_name]
-    # @info "Seg Max Size: ", seg_max_size[tech_name]
-    # @info "Y-Intercept: ", seg_yint[tech_name]
-
     nothing
 end
 
