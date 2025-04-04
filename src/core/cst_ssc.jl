@@ -122,6 +122,7 @@ end
 function run_ssc(case_data::Dict)
     #println("updated version as of 12/2 4:46pm")
     model = case_data["CST"]["tech_type"]
+    R = Dict()
     if model == "dish"
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         R["thermal_production_series"] = case_data["CST"]["SSC_Inputs"]["thermal_production_series"]
@@ -178,7 +179,6 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["f_htfmin"] = 0.0
             user_defined_inputs["f_htfmax"] = 1.0
         end
-        R = Dict()
         error = ""
         
         if !(model in collect(keys(model_ssc)))
