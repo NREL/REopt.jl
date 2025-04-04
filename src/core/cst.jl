@@ -162,8 +162,10 @@ returns
 cst_defaults::Dict -- Dictionary containing defaults for CST technology type
 """
 function get_cst_defaults(tech_type::String="")
-    if !(tech_type in CST_TYPES)
-        throw(@error("Invalid inputs: argument `tech_type` to function get_cst_defaults() is invalid."))
+    if tech_type != "dish"
+        if !(tech_type in CST_TYPES)
+            throw(@error("Invalid inputs: argument `tech_type` to function get_cst_defaults() is invalid."))
+        end
     end
     all_cst_defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "cst", "cst_defaults.json"))
     return all_cst_defaults[tech_type]
