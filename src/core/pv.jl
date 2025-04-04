@@ -46,8 +46,10 @@
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
     size_class::Union{Int, Nothing} = nothing, # Size class for cost curve selection
     tech_sizes_for_cost_curve::AbstractVector = Float64[], # System sizes for detailed cost curve
+    use_detailed_cost_curve::Bool = false, # Use detailed cost curve instead of average cost
     electric_load_annual_kwh::Real = 0.0, # Annual electric load (kWh) for size class determination
-    use_detailed_cost_curve::Bool = false # Use detailed cost curve instead of average cost
+    site_land_acres::Union{Real, Nothing} = nothing,  # site.land_acres to determine size_class if space constraineed
+    site_roof_squarefeet::Union{Real, Nothing} = nothing  # site.roof_squarefeet to determine size_class if space constraineed
 ```
 
 !!! note "Multiple PV types" 
@@ -108,13 +110,14 @@ mutable struct PV <: AbstractTech
     operating_reserve_required_fraction
     size_class
     tech_sizes_for_cost_curve
-    electric_load_annual_kwh
     use_detailed_cost_curve
+    electric_load_annual_kwh
+    site_land_acres
+    site_roof_squarefeet
 
     function PV(;
         off_grid_flag::Bool = false,
         latitude::Real,
-        electric_load_annual_kwh::Real = 0.0,
         array_type::Int=1,
         tilt::Real = (array_type == 0 || array_type == 1) ? 20 : 0,
         module_type::Int=0,
@@ -159,7 +162,10 @@ mutable struct PV <: AbstractTech
         operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0,
         size_class::Union{Int, Nothing} = nothing,
         tech_sizes_for_cost_curve::AbstractVector = Float64[],
-        use_detailed_cost_curve::Bool = false
+        use_detailed_cost_curve::Bool = false,
+        electric_load_annual_kwh::Real = 0.0,
+        site_land_acres::Union{Real, Nothing} = nothing,
+        site_roof_squarefeet::Union{Real, Nothing} = nothing
         )
 
         # Adjust operating_reserve_required_fraction based on off_grid_flag
@@ -266,14 +272,32 @@ mutable struct PV <: AbstractTech
                 size_class
             end
         else
-            # Default case: Calculate based on average load
+            # Default case: Calculate based on land/roof space available or load
+            max_kw_for_size_class = max_kw
+            max_kw_roof, max_kw_ground = 0.0, 0.0
+            space_constrained = false
+            if !isnothing(site_roof_squarefeet) && location in ["both", "roof"]
+                # Calculate size class based on roof space
+                max_kw_roof = kw_per_square_foot * site_roof_squarefeet
+                space_constrained = true
+            end
+            if !isnothing(site_land_acres) && location in ["both", "ground"]
+                # Calculate size class based on land space
+                max_kw_ground = site_land_acres / acres_per_kw
+                space_constrained = true
+            end
+            if space_constrained
+                max_kw_for_size_class = max_kw_roof + max_kw_ground
+            end
             tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
+            # Include both roof and land for size class -> cost determination
             get_pv_size_class(
                 electric_load_annual_kwh,
                 tech_sizes,
                 min_kw=min_kw,
-                max_kw=max_kw,
-                existing_kw=existing_kw
+                max_kw=max_kw_for_size_class,
+                existing_kw=existing_kw,
+                space_constrained=space_constrained
             )
         end
 
@@ -434,8 +458,10 @@ mutable struct PV <: AbstractTech
             operating_reserve_required_fraction,
             size_class,
             tech_sizes_for_cost_curve,
+            use_detailed_cost_curve,
             electric_load_annual_kwh,
-            use_detailed_cost_curve
+            site_land_acres,
+            site_roof_squarefeet
         )
     end
 end
@@ -457,18 +483,22 @@ end
 
 # Determine appropriate size class based on system parameters
 function get_pv_size_class(electric_load_annual_kwh::Real, tech_sizes_for_cost_curve::AbstractVector;
-                          min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0)
+                          min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0, space_constrained=false)
     
     # TODO pass in Site.[land and roof space] to include that in the size class determination
 
     # Estimate size based on electric load and estimated PV capacity factor
     capacity_factor_estimate = 0.2
     fraction_of_annual_kwh_to_size_pv = 0.5
-    effective_size = electric_load_annual_kwh * fraction_of_annual_kwh_to_size_pv / (8760.0* capacity_factor_estimate)
+    size_to_serve_all_load = electric_load_annual_kwh / (8760.0* capacity_factor_estimate)
+    effective_size = fraction_of_annual_kwh_to_size_pv * size_to_serve_all_load
+    if space_constrained 
+        # max_kw was adjusted down based on space available
+        effective_size = min(max_kw, size_to_serve_all_load)
+    end
     if max_kw != 1.0e9 
         effective_size = min(effective_size, max_kw)
     end
-    
     if min_kw != 0.0
         effective_size = max(effective_size, min_kw)
     end
