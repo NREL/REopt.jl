@@ -135,6 +135,7 @@ end
 
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
 """
+
 function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
 
 	try
@@ -148,6 +149,7 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
 			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+
 			if !isempty(p.techs.pv)
 				organize_multiple_pv_results(p, results_dict)
 			end

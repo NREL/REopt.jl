@@ -3313,5 +3313,101 @@ else  # run HiGHS tests
             payback = results["Financial"]["capital_costs_after_non_discounted_incentives"] / results["Financial"]["year_one_total_operating_cost_savings_after_tax"]
             @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
         end        
+
+        @testset "PV size classes and cost-scaling" begin
+            """
+            PV size class determination, assigning defaults based on size-class and PV type, and cost-scaling within the model
+            TODO roof/land space-based limit on size_class
+            TODO installed_cost is input but O&M is not, that it still uses the size_class O&M cost
+            """
+
+            # Get active PV defaults for checking
+            pv_defaults_path = joinpath(@__DIR__, "..", "data", "pv", "pv_defaults.json")
+            pv_defaults_all = JSON.parsefile(pv_defaults_path)
+
+            # Test that the size_class is one based on max_kw input
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["PV"]["max_kw"] = 7.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            @test s.pvs[1].size_class == 1
+
+            # Test that size_class is 2 based on the load and ground-mount data is used
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["ElectricLoad"]["annual_kwh"] = 10*8760
+            # input_data["PV"]["array_type"] = 1  # This is the default - STRANGE that webtool default is ground, but REopt.jl is roof
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            # Avg load = 10 kW -> PV size == 10 / 0.2 * 0.5 = 25 kW which is in size_class 2 (11-100 kW)
+            @test s.pvs[1].size_class == 2
+            @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
+
+            # Test that the roof default data is grabbed when array_type=1 but then ground premium is applied
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["PV"]["array_type"] = 0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            roof_cost_expected = pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
+            cost_factor = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["cost_premium"] 
+            @test s.pvs[1].installed_cost_per_kw == roof_cost_expected * cost_factor
+
+            # Test that the output installed_cost_per_kw and om_cost_per_kw is as expected based on the input
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["installed_cost_per_kw"] = 2500.0
+            input_data["PV"]["om_cost_per_kw"] = 2500.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            @test s.pvs[1].installed_cost_per_kw == input_data["PV"]["installed_cost_per_kw"]
+            @test s.pvs[1].om_cost_per_kw == input_data["PV"]["om_cost_per_kw"]
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+            @test results["PV"]["installed_cost_per_kw"] == input_data["PV"]["installed_cost_per_kw"]
+
+            # Test that cost curve input behaves as expected
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["min_kw"] = 400.0
+            input_data["PV"]["max_kw"] = 400.0
+            input_data["PV"]["tech_sizes_for_cost_curve"] = [100.0, 2000.0]
+            input_data["PV"]["installed_cost_per_kw"] = [1710.0, 1420.0]
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.001, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+            @test results["Financial"]["lifecycle_capital_costs"] >= results["PV"]["size_kw"] * input_data["PV"]["installed_cost_per_kw"][2]
+            @test results["Financial"]["lifecycle_capital_costs"] <= results["PV"]["size_kw"] * input_data["PV"]["installed_cost_per_kw"][1]
+
+            # Test that size_class is 1 based on Site.roof_squarefeet
+            kw_per_square_foot = 0.01
+            acres_per_kw = 6e-3
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["array_type"] = 1  # roof
+            input_data["PV"]["location"] = "roof"
+            input_data["Site"]["roof_squarefeet"] = 9 / kw_per_square_foot
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            @test s.pvs[1].size_class == 1
+            
+            # Test that size_class input is preserved and only the user-input installed_cost_per_kw overwrites the default
+            kw_per_square_foot = 0.01
+            acres_per_kw = 6e-3
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["array_type"] = 0  # ground
+            input_data["PV"]["location"] = "ground"
+            input_data["Site"]["land_acres"] = 9 * acres_per_kw
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["PV"]["size_class"] = 2
+            input_data["PV"]["installed_cost_per_kw"] = 2500.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            @test s.pvs[1].size_class == 2
+            @test s.pvs[1].installed_cost_per_kw == input_data["PV"]["installed_cost_per_kw"]
+            ground_premium = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["om_premium"]
+            @test s.pvs[1].om_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["om_cost_per_kw"] * ground_premium
+        end
     end
 end

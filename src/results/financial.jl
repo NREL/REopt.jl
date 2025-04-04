@@ -165,7 +165,8 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if !isempty(p.techs.pv)
         for pv in p.s.pvs
-            initial_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
+            pv_size_kw = convert(Float64, value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name])
+            initial_capex += get_pv_initial_capex(p, pv, pv_size_kw)
         end
     end
 
@@ -304,8 +305,17 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
         discount_rate_fraction = p.s.financial.offtaker_discount_rate_fraction
         federal_tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
+    capital_costs = if typeof(tech) == PV && :tech_sizes_for_cost_curve in fieldnames(typeof(tech))
+        # Use PV-specific cost curve calculation for PV tech
+        get_pv_initial_capex(p, tech, new_kw)
+    else
+        # Use simple calculation for other techs like Wind
+        new_kw * tech.installed_cost_per_kw
+    end
 
-    capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
+    # @info "Using initial cap cost: $(capital_costs) for lcoe calculation"
+
+    # capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
 
     annual_om = new_kw * tech.om_cost_per_kw 
 
@@ -438,6 +448,34 @@ function get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
     # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
     # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
     # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
+    end
+
+    return initial_capex
+end
+
+
+function get_pv_initial_capex(p::REoptInputs, pv::AbstractTech, size_kw::Float64)
+    cost_list = pv.installed_cost_per_kw
+    size_list = pv.tech_sizes_for_cost_curve
+    pv_size = size_kw
+    initial_capex = 0.0
+    
+    if typeof(cost_list) == Vector{Float64}
+        if pv_size <= size_list[1]
+            initial_capex = pv_size * cost_list[1]
+        elseif pv_size > size_list[end]
+            initial_capex = pv_size * cost_list[end]
+        else
+            for s in 2:length(size_list)
+                if (pv_size > size_list[s-1]) && (pv_size <= size_list[s])
+                    slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                            (size_list[s] - size_list[s-1])
+                    initial_capex = cost_list[s-1] * size_list[s-1] + (pv_size - size_list[s-1]) * slope
+                end
+            end
+        end
+    else
+        initial_capex = cost_list * pv_size
     end
 
     return initial_capex
