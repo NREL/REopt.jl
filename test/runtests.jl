@@ -3268,14 +3268,15 @@ else  # run HiGHS tests
 
             # Test that size_class is 2 based on the load and ground-mount data is used
             input_data = JSON.parsefile("scenarios/pv_cost.json")
-            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["ElectricLoad"]["annual_kwh"] = 10*8760
             # input_data["PV"]["array_type"] = 1  # This is the default - STRANGE that webtool default is ground, but REopt.jl is roof
             s = Scenario(input_data)
             inputs = REoptInputs(s)
+            # Avg load = 10 kW -> PV size == 10 / 0.2 * 0.5 = 25 kW which is in size_class 2 (11-100 kW)
             @test s.pvs[1].size_class == 2
             @test s.pvs[1].installed_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
 
-            # Test that the roof default data is grabbed when array_type=1
+            # Test that the roof default data is grabbed when array_type=1 but then ground premium is applied
             input_data = JSON.parsefile("scenarios/pv_cost.json")
             input_data["ElectricLoad"]["annual_kwh"] = 500*8760
             input_data["PV"]["array_type"] = 0
