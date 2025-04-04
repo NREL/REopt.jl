@@ -76,7 +76,7 @@ function CST(;
         emissions_factor_lb_PM25_per_mmbtu::Real = 0.0
     )
 
-    if tech_type == "dish"
+    if tech_type != "dish"
         if isnothing(tech_type)
             throw(@error("CST.tech_type is a required input but not provided."))
         elseif !(tech_type in CST_TYPES)
