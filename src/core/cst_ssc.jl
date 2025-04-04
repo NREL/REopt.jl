@@ -120,187 +120,193 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    println("updated version as of 12/2 4:46pm")
+    #println("updated version as of 12/2 4:46pm")
     model = case_data["CST"]["tech_type"]
-    ### Maps STEP 1 model names to specific SSC modules
-    model_ssc = Dict(
-        "mst" => "mspt_iph",
-        "swh_flatplate" => "swh",
-        "swh_evactube" => "swh",
-        "lf" => "fresnel_physical_iph",
-        "ptc" => "trough_physical_iph" #
-    ) # relates internal names to specific models in SAM (for example, there are multiple molten salt tower models to pick from in the SSC)
-    lat = case_data["Site"]["latitude"]
-    lon = case_data["Site"]["longitude"]
-    ### User defined inputs needed by technology type
-    user_defined_inputs = Dict()
-    user_defined_inputs_list = Dict(
-        "swh_flatplate" => ["T_set","fluid","ncoll","tilt"],
-        "swh_evactube" => ["T_set","fluid","ncoll","tilt"],
-        "ptc" => ["Fluid","q_pb_design","T_loop_in_des","T_loop_out","specified_total_aperture","T_tank_hot_inlet_min","use_solar_mult_or_aperture_area","hot_tank_Thtr","cold_tank_Thtr","lat"], # need to add "store_fluid",
-        "lf" => [],
-        "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
-    )
-    # First set user defined inputs to default just in case
-    if !(model in ["swh_flatplate","swh_evactube"])
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
-    elseif model in ["swh_flatplate"]
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_flatplate_step1.json")
-    elseif model in ["swh_evactube"]
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_evactube_step1.json")
-    else
-        error =  error * "Model is not available at this time. \n"
-    end
-    defaults = JSON.parsefile(defaults_file)
-    if model in ["swh_flatplate","swh_evactube"]
-        scaled_draw_filename = joinpath(@__DIR__,"sam","defaults","scaled_draw_500000_kg_per_day.csv")
-        scaled_draw_df = CSV.read(scaled_draw_filename, DataFrame; header=false)
-        scaled_draw_values = scaled_draw_df[:, 1]
-        defaults["scaled_draw"] = scaled_draw_values
-    end
-    println("Defaults loaded.")
-    defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
-    for i in user_defined_inputs_list[model]
-        if (i == "tilt") || (i == "lat")
-            user_defined_inputs[i] = lat
-        end
-    end
-    for i in keys(case_data["CST"]["SSC_Inputs"])
-        user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
-    end
-    if model == "ptc"
-        user_defined_inputs["h_tank_in"] = defaults["h_tank"]
-        user_defined_inputs["f_htfmin"] = 0.0
-        user_defined_inputs["f_htfmax"] = 1.0
-    end
-    R = Dict()
-    error = ""
-    
-    if !(model in collect(keys(model_ssc)))
-        error =  error * "Model is not available at this time. \n"
-    else
-        ### Setup SSC
-        global hdl = nothing
-        #libfile = "ssc_new.dll"
-        if Sys.isapple() 
-            libfile = "libssc.dylib"
-        elseif Sys.islinux()
-            libfile = "ssc.so"
-        elseif Sys.iswindows()
-            libfile = "ssc_new.dll"
-        end
-        global hdl = joinpath(@__DIR__, "sam", libfile)
-        chmod(hdl, filemode(hdl) | 0o755) ### added just because I saw this in the wind module
-        ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
-        data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
-        @ccall hdl.ssc_module_exec_set_print(1::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
-
-        ### Set defaults
-        set_ssc_data_from_dict(defaults,model,data)
-        println("set defaults")
-        ### Get weather data
-        print_weatherdata = false # True = write a weather data csv file that can be read in the SAM UI # false = skip writing
-        weatherdata = get_weatherdata(lat,lon,print_weatherdata)
-        user_defined_inputs["solar_resource_data"] = weatherdata
-        println("got weather data")
-        ### Set inputs
-        set_ssc_data_from_dict(user_defined_inputs,model,data)
-        println("set inputs")
-        ### Execute simulation
-        test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
-        println(test)
-        println("execution completed")
-        ### Retrieve results
-        ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
-        outputs_dict = Dict(
-            "mst" => ["Q_thermal","P_tower_pump",0.0,"q_pb_design","solarm"],         # Q_thermal = [MWt] (confirmed 1/14/2025)
-            "lf" => ["q_dot_htf_sf_out","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
-            "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # q_dot_htf_sf_out = [MWt] (confirmed 1/14/2025)
-            "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # Q_useful = [kWt] confirmed 1/14/2025)
-            "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # Q_useful = [kWt] confirmed 1/14/2025), kW, kW, kW
-        )
-        thermal_conversion_factor = Dict(
-            "mst" => 1,         
-            "lf" => 1, 
-            "ptc" => 1,  
-            "swh_flatplate" => 1,          
-            "swh_evactube" => 1           
-        ) 
-        elec_conversion_factor = Dict(
-            "mst" => 1,   
-            "lf" => 1, 
-            "ptc" => 1,  
-            "swh_flatplate" => 1,           
-            "swh_evactube" => 1           
-        ) 
-        outputs = outputs_dict[model]
-        
-        len = 8760
-        len_ref = Ref(len)
-        thermal_production_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[1]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
-        # electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
-        thermal_production = []
-        # elec_consumption = []
-        # return
-        for i in 1:8760
-            push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
-            # push!(thermal_production,1.0) #for pass through
-            # push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
-        end
-        thermal_production[thermal_production .< 0] .= 0 #removes negative values
-        # if typeof(outputs[3]) == String
-        #     secondary_consumption_response =  @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[3]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
-        #     for i in 1:8760
-        #         elec_consumption[i] += unsafe_load(secondary_consumption_response, i)
-        #     end
-        # end
-        if outputs[4] in keys(user_defined_inputs)
-            tpow = user_defined_inputs[outputs[4]]
-        else
-            tpow = defaults[outputs[4]]
-        end
-        if typeof(outputs[5]) != String
-            mult = outputs[5]
-        elseif outputs[5] in keys(user_defined_inputs)
-            mult = user_defined_inputs[outputs[5]]
-        else
-            mult = defaults[outputs[5]]
-        end
-        # println("tpow ", tpow, " mult ", mult)
-        rated_power = tpow * mult
-        
-        tcf = thermal_conversion_factor[model]
-        ecf = elec_conversion_factor[model]
-        #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
-        # print(c_response)
-        ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
-        if model == "ptc"
-            
-            thermal_production_norm = normalize_response(thermal_production, case_data)
-        else
-            thermal_production_norm = thermal_production .* tcf ./ rated_power
-        end
-        if model in ["mst","ptc","lf"]
-            println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
-        elseif model in ["swh_evactube","swh_flatplate"]
-            println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
-        end
+    if model == "dish"
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
-        # R[k] = response_norm
-        # end
-        ### Free SSC
-        @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
-        @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
-
-        R["thermal_production_series"] = thermal_production_norm
+        R["thermal_production_series"] = case_data["CST"]["SSC_Inputs"]["thermal_production_series"]
         R["electric_consumption_series"] = electric_consumption_norm
-        ### Check for errors
-        if error == ""
-            error = "No errors found."
+    else
+        ### Maps STEP 1 model names to specific SSC modules
+        model_ssc = Dict(
+            "mst" => "mspt_iph",
+            "swh_flatplate" => "swh",
+            "swh_evactube" => "swh",
+            "lf" => "fresnel_physical_iph",
+            "ptc" => "trough_physical_iph" #
+        ) # relates internal names to specific models in SAM (for example, there are multiple molten salt tower models to pick from in the SSC)
+        lat = case_data["Site"]["latitude"]
+        lon = case_data["Site"]["longitude"]
+        ### User defined inputs needed by technology type
+        user_defined_inputs = Dict()
+        user_defined_inputs_list = Dict(
+            "swh_flatplate" => ["T_set","fluid","ncoll","tilt"],
+            "swh_evactube" => ["T_set","fluid","ncoll","tilt"],
+            "ptc" => ["Fluid","q_pb_design","T_loop_in_des","T_loop_out","specified_total_aperture","T_tank_hot_inlet_min","use_solar_mult_or_aperture_area","hot_tank_Thtr","cold_tank_Thtr","lat"], # need to add "store_fluid",
+            "lf" => [],
+            "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
+        )
+        # First set user defined inputs to default just in case
+        if !(model in ["swh_flatplate","swh_evactube"])
+            defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
+        elseif model in ["swh_flatplate"]
+            defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_flatplate_step1.json")
+        elseif model in ["swh_evactube"]
+            defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_evactube_step1.json")
+        else
+            error =  error * "Model is not available at this time. \n"
         end
-        R["error"] = error
-        #return R
+        defaults = JSON.parsefile(defaults_file)
+        if model in ["swh_flatplate","swh_evactube"]
+            scaled_draw_filename = joinpath(@__DIR__,"sam","defaults","scaled_draw_500000_kg_per_day.csv")
+            scaled_draw_df = CSV.read(scaled_draw_filename, DataFrame; header=false)
+            scaled_draw_values = scaled_draw_df[:, 1]
+            defaults["scaled_draw"] = scaled_draw_values
+        end
+        println("Defaults loaded.")
+        defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
+        for i in user_defined_inputs_list[model]
+            if (i == "tilt") || (i == "lat")
+                user_defined_inputs[i] = lat
+            end
+        end
+        for i in keys(case_data["CST"]["SSC_Inputs"])
+            user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
+        end
+        if model == "ptc"
+            user_defined_inputs["h_tank_in"] = defaults["h_tank"]
+            user_defined_inputs["f_htfmin"] = 0.0
+            user_defined_inputs["f_htfmax"] = 1.0
+        end
+        R = Dict()
+        error = ""
         
+        if !(model in collect(keys(model_ssc)))
+            error =  error * "Model is not available at this time. \n"
+        else
+            ### Setup SSC
+            global hdl = nothing
+            #libfile = "ssc_new.dll"
+            if Sys.isapple() 
+                libfile = "libssc.dylib"
+            elseif Sys.islinux()
+                libfile = "ssc.so"
+            elseif Sys.iswindows()
+                libfile = "ssc_new.dll"
+            end
+            global hdl = joinpath(@__DIR__, "sam", libfile)
+            chmod(hdl, filemode(hdl) | 0o755) ### added just because I saw this in the wind module
+            ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
+            data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
+            @ccall hdl.ssc_module_exec_set_print(1::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
+    
+            ### Set defaults
+            set_ssc_data_from_dict(defaults,model,data)
+            println("set defaults")
+            ### Get weather data
+            print_weatherdata = false # True = write a weather data csv file that can be read in the SAM UI # false = skip writing
+            weatherdata = get_weatherdata(lat,lon,print_weatherdata)
+            user_defined_inputs["solar_resource_data"] = weatherdata
+            println("got weather data")
+            ### Set inputs
+            set_ssc_data_from_dict(user_defined_inputs,model,data)
+            println("set inputs")
+            ### Execute simulation
+            test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
+            println(test)
+            println("execution completed")
+            ### Retrieve results
+            ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
+            outputs_dict = Dict(
+                "mst" => ["Q_thermal","P_tower_pump",0.0,"q_pb_design","solarm"],         # Q_thermal = [MWt] (confirmed 1/14/2025)
+                "lf" => ["q_dot_htf_sf_out","W_dot_heat_sink_pump","W_dot_parasitic_tot","q_pb_design",1.0], # locked in [W]
+                "ptc" => ["q_dot_htf_sf_out","P_loss",0.0,"q_pb_design",3.0],  # q_dot_htf_sf_out = [MWt] (confirmed 1/14/2025)
+                "swh_flatplate" => ["Q_useful","P_pump",0.0,"system_capacity",1.0],           # Q_useful = [kWt] confirmed 1/14/2025)
+                "swh_evactube" => ["Q_useful","P_pump",0.0,"system_capacity",1.0]           # Q_useful = [kWt] confirmed 1/14/2025), kW, kW, kW
+            )
+            thermal_conversion_factor = Dict(
+                "mst" => 1,         
+                "lf" => 1, 
+                "ptc" => 1,  
+                "swh_flatplate" => 1,          
+                "swh_evactube" => 1           
+            ) 
+            elec_conversion_factor = Dict(
+                "mst" => 1,   
+                "lf" => 1, 
+                "ptc" => 1,  
+                "swh_flatplate" => 1,           
+                "swh_evactube" => 1           
+            ) 
+            outputs = outputs_dict[model]
+            
+            len = 8760
+            len_ref = Ref(len)
+            thermal_production_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[1]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
+            # electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
+            thermal_production = []
+            # elec_consumption = []
+            # return
+            for i in 1:8760
+                push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
+                # push!(thermal_production,1.0) #for pass through
+                # push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
+            end
+            thermal_production[thermal_production .< 0] .= 0 #removes negative values
+            # if typeof(outputs[3]) == String
+            #     secondary_consumption_response =  @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[3]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}    
+            #     for i in 1:8760
+            #         elec_consumption[i] += unsafe_load(secondary_consumption_response, i)
+            #     end
+            # end
+            if outputs[4] in keys(user_defined_inputs)
+                tpow = user_defined_inputs[outputs[4]]
+            else
+                tpow = defaults[outputs[4]]
+            end
+            if typeof(outputs[5]) != String
+                mult = outputs[5]
+            elseif outputs[5] in keys(user_defined_inputs)
+                mult = user_defined_inputs[outputs[5]]
+            else
+                mult = defaults[outputs[5]]
+            end
+            # println("tpow ", tpow, " mult ", mult)
+            rated_power = tpow * mult
+            
+            tcf = thermal_conversion_factor[model]
+            ecf = elec_conversion_factor[model]
+            #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
+            # print(c_response)
+            ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
+            if model == "ptc"
+                
+                thermal_production_norm = normalize_response(thermal_production, case_data)
+            else
+                thermal_production_norm = thermal_production .* tcf ./ rated_power
+            end
+            if model in ["mst","ptc","lf"]
+                println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
+            elseif model in ["swh_evactube","swh_flatplate"]
+                println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
+            end
+            electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
+            # R[k] = response_norm
+            # end
+            ### Free SSC
+            @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
+            @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
+    
+            R["thermal_production_series"] = thermal_production_norm
+            R["electric_consumption_series"] = electric_consumption_norm
+            ### Check for errors
+            if error == ""
+                error = "No errors found."
+            end
+            R["error"] = error
+            #return R
+            
+        end
     end
     return R
 end
