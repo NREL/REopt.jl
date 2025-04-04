@@ -3391,6 +3391,23 @@ else  # run HiGHS tests
             s = Scenario(input_data)
             inputs = REoptInputs(s)
             @test s.pvs[1].size_class == 1
+            
+            # Test that size_class input is preserved and only the user-input installed_cost_per_kw overwrites the default
+            kw_per_square_foot = 0.01
+            acres_per_kw = 6e-3
+            input_data = JSON.parsefile("scenarios/pv_cost.json")
+            input_data["PV"]["array_type"] = 0  # ground
+            input_data["PV"]["location"] = "ground"
+            input_data["Site"]["land_acres"] = 9 * acres_per_kw
+            input_data["ElectricLoad"]["annual_kwh"] = 500*8760
+            input_data["PV"]["size_class"] = 2
+            input_data["PV"]["installed_cost_per_kw"] = 2500.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            @test s.pvs[1].size_class == 2
+            @test s.pvs[1].installed_cost_per_kw == input_data["PV"]["installed_cost_per_kw"]
+            ground_premium = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["om_premium"]
+            @test s.pvs[1].om_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["om_cost_per_kw"] * ground_premium
         end
     end
 end
