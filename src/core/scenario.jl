@@ -626,6 +626,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # Call GhpGhx.jl to size GHP and GHX
                 # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
                 heating_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
+                CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/original_heating_load_mmbtu.csv",  Tables.table(ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]), writeheader=false) 
+                CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_ton.csv",  Tables.table(heating_load_ton), writeheader=false) 
                 thermal_load_ton = heating_load_ton
                 if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
@@ -643,6 +645,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
                         heating_load_mmbtu = heating_load_mmbtu .- peak_diff_ton*12000/1000000
                         heating_load_mmbtu[heating_load_mmbtu .<0] .= 0
+                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/peak_diff_ton.csv",  Tables.table(peak_diff_ton), writeheader=false) 
+                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu.csv",  Tables.table(heating_load_mmbtu), writeheader=false) 
                         ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                         if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                             thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
@@ -658,7 +662,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         heating_load_mmbtu[heating_load_mmbtu .>=d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
                         ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                         # Check to make sure the updated heating load are as expected
-                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu.csv",  Tables.table(ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]), writeheader=false)    
+                        # CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu.csv",  Tables.table(ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]), writeheader=false)    
                         if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                             thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
                             peak_thermal_load_ton = maximum(thermal_load_ton)
