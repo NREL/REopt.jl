@@ -104,7 +104,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     ; dictkeys_tosymbols(pv)...,
                     off_grid_flag = settings.off_grid_flag, 
                     latitude = site.latitude,
-                    electric_load_annual_kwh = electric_load_annual_kwh
+                    electric_load_annual_kwh = electric_load_annual_kwh,
+                    site_land_acres = site.land_acres,
+                    site_roof_squarefeet = site.roof_squarefeet
                 ))
             end
         elseif typeof(d["PV"]) <: AbstractDict
@@ -112,7 +114,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 ; dictkeys_tosymbols(d["PV"])..., 
                 off_grid_flag = settings.off_grid_flag, 
                 latitude = site.latitude,
-                electric_load_annual_kwh = electric_load_annual_kwh
+                electric_load_annual_kwh = electric_load_annual_kwh,
+                site_land_acres = site.land_acres,
+                site_roof_squarefeet = site.roof_squarefeet
             ))
         else
             throw(@error("PV input must be Dict or Dict[]."))
