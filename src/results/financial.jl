@@ -124,7 +124,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lifecycle_capital_costs_plus_om_after_tax"] = r["lifecycle_capital_costs"] + r["lifecycle_om_costs_after_tax"]
 
     # r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
-    r["initial_capital_costs2"] = value(m[Symbol("InitialCapexNoIncentives"*_n)]) 
+    r["initial_capital_costs"] = value(m[Symbol("InitialCapexNoIncentives"*_n)]) 
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
 

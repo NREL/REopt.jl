@@ -69,7 +69,6 @@ end
 
 function add_capex_constraints(m, p; _n="")
     @warn "Adding capital costs constraints. These may cause an infeasible problem in some cases, particularly for resilience runs."
-    initial_capex_opt(m, p)
     if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives)
         @constraint(m,
             m[:InitialCapexNoIncentives] >= p.s.financial.min_initial_capital_costs_before_incentives
@@ -82,8 +81,7 @@ function add_capex_constraints(m, p; _n="")
     end
 end
 
-# TODO: change fn name
-function initial_capex_opt(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     m[:InitialCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}(0.0) # Avoids MethodError
     
     add_to_expression!(m[:InitialCapexNoIncentives], 
