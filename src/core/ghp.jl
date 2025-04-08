@@ -25,8 +25,8 @@ struct with outer constructor:
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
     max_ton::Real                                           # Maximum heat pump capacity size. Default at a big number
-    max_number_of_boreholes::Real                               # Maximum GHX size
-    load_served_by_ghp::String                              # "shifted" or "nonpeak"
+    max_number_of_boreholes::Real                           # Maximum GHX size
+    load_served_by_ghp::String                              # "scaled" or "nonpeak"
 
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.6

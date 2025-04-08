@@ -635,24 +635,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if haskey(d["GHP"],"max_ton") && peak_thermal_load_ton > d["GHP"]["max_ton"]
                     @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
                     # When user specifies undersized GHP, calculate the load to be served by GHP and send the rest to REopt
-                    # If user choose to scale down total load (load_served_by_ghp="shifted"), calculate the ratio of the udersized GHP size and peak load
-                    if d["GHP"]["load_served_by_ghp"] == "shifted"
-                        @info "GHP served shifted down of total thermal load"
-                        peak_diff_ton = peak_thermal_load_ton - d["GHP"]["max_ton"]
-                        # Shift the total load profile down by the peak difference and use this shifted down load to rerun GhpGhx.jl
+                    # If user choose to scale down total load (load_served_by_ghp="scaled"), calculate the ratio of the udersized GHP size and peak load
+                    if d["GHP"]["load_served_by_ghp"] == "scaled"
+                        @info "GHP served scaled down of total thermal load"
+                        peak_ratio = d["GHP"]["max_ton"]/peak_thermal_load_ton
+                        # Scale the total load profile down by the peak_ratio and use this scaled down load to rerun GhpGhx.jl
                         heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
-                        heating_load_mmbtu = heating_load_mmbtu .- (peak_diff_ton*12000/1000000)
-                        heating_load_mmbtu[heating_load_mmbtu .<0] .= 0
-                        #CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/peak_diff_ton.csv",  Tables.table(peak_diff_ton), writeheader=false) 
-                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/heating_load_mmbtu.csv",  Tables.table(heating_load_mmbtu), writeheader=false) 
+                        heating_load_mmbtu = heating_load_mmbtu .* peak_ratio
                         ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                         if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
-                            thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
-                            peak_thermal_load_ton = maximum(thermal_load_ton)
-                            if peak_thermal_load_ton > d["GHP"]["max_ton"]
-                                peak_diff_ton = peak_thermal_load_ton - d["GHP"]["max_ton"]
-                                ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton .- peak_diff_ton
-                            end
+                            ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton .* peak_ratio
                         end
                     elseif d["GHP"]["load_served_by_ghp"] == "nonpeak"
                         @info "GHP serves all thermal load below peak"
