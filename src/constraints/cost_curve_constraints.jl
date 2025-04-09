@@ -6,7 +6,7 @@ There are two situations under which we add binary constraints to the model in o
 for a technology:
     1. When a technology has tax or investment incentives with upper capacity limits < tech.max_kw
         - first segment(s) have lower slope than last segment
-    2. When a technology has multiple cost/size pairs (not implemented yet, used for CHP in v1)
+    2. When a technology has multiple cost/size pairs
         - we interpolate the slope between the cost/size points, typically with economies of scale pricing
 We used to use cost curve segments for when a technology has a non-zero existing_kw by setting the first segment to a
 zero cost (and slope) from zero kw to the existing_kw. Instead, we now have dvPurchaseSize >= dvSize - existing_kw.
@@ -81,7 +81,7 @@ function add_capex_constraints(m, p; _n="")
     end
 end
 
-function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     m[:InitialCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}(0.0) # Avoids MethodError
     
     add_to_expression!(m[:InitialCapexNoIncentives], 
@@ -126,9 +126,35 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if "CHP" in p.techs.all
-        chp_size_kw = m[Symbol("dvPurchaseSize"*_n)]["CHP"]
-        chp_capex = get_chp_initial_capex(m, p, chp_size_kw)
-        add_to_expression!(m[:InitialCapexNoIncentives], chp_capex)
+        m[:CHPCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}()
+        cost_list = p.s.chp.installed_cost_per_kw
+        size_list = p.s.chp.tech_sizes_for_cost_curve
+
+        t="CHP"
+        if t in p.techs.segmented
+            # Use "no incentives" version of p.cap_cost_slope and p.seg_yint
+            cost_slope_no_inc = [cost_list[1]]
+            seg_yint_no_inc = [0.0]
+            for s in range(2, stop=length(size_list))
+                tmp_slope = round((cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                                (size_list[s] - size_list[s-1]), digits=0)
+                tmp_y_int = round(cost_list[s-1] * size_list[s-1] - tmp_slope * size_list[s-1], digits=0)
+                append!(cost_slope_no_inc, tmp_slope)
+                append!(seg_yint_no_inc, tmp_y_int)
+            end
+            append!(cost_slope_no_inc, cost_list[end])
+            append!(seg_yint_no_inc, 0.0)
+
+            add_to_expression!(m[:CHPCapexNoIncentives], 
+            # p.third_party_factor * (
+                sum(cost_slope_no_inc[s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                    seg_yint_no_inc[s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
+            )
+        else
+            add_to_expression!(m[:CHPCapexNoIncentives], cost_list * m[Symbol("dvPurchaseSize"*_n)]["CHP"])
+        end
+        # TODO: include supplementary firing costs?
+        add_to_expression!(m[:InitialCapexNoIncentives], m[:CHPCapexNoIncentives])
     end
 
     if "SteamTurbine" in p.techs.all
@@ -183,36 +209,36 @@ end
 
 CHP has a cost-curve input option, so calculating the initial CapEx requires more logic than typical tech CapEx calcs
 """
-function get_chp_initial_capex(m::JuMP.AbstractModel, p::REoptInputs, chp_size_kw)
-    # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
-    cost_list = p.s.chp.installed_cost_per_kw
-    size_list = p.s.chp.tech_sizes_for_cost_curve
+# function get_chp_initial_capex(m::JuMP.AbstractModel, p::REoptInputs, chp_size_kw)
+#     # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
+#     cost_list = p.s.chp.installed_cost_per_kw
+#     size_list = p.s.chp.tech_sizes_for_cost_curve
 
-    m[:CHPCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}() 
+#     m[:CHPCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}() 
 
-    if typeof(cost_list) == Vector{Float64}
-        if chp_size_kw <= size_list[1]
-            add_to_expression!(m[:CHPCapexNoIncentives], chp_size_kw * cost_list[1]) # Currently not handling non-zero cost ($) for 0 kW size input
-        elseif chp_size_kw > size_list[end]
-            add_to_expression!(m[:CHPCapexNoIncentives], chp_size_kw * cost_list[end])
-        else
-            for s in 2:length(size_list)
-                if (chp_size_kw > size_list[s-1]) && (chp_size_kw <= size_list[s])
-                    slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
-                            (size_list[s] - size_list[s-1])
-                    add_to_expression!(m[:CHPCapexNoIncentives],  cost_list[s-1] * size_list[s-1] + (chp_size_kw - size_list[s-1]) * slope)
-                end
-            end
-        end
-    else
-        add_to_expression!(m[:CHPCapexNoIncentives], cost_list * chp_size_kw)
+#     if typeof(cost_list) == Vector{Float64}
+#         if chp_size_kw <= size_list[1]
+#             add_to_expression!(m[:CHPCapexNoIncentives], chp_size_kw * cost_list[1]) # Currently not handling non-zero cost ($) for 0 kW size input
+#         elseif chp_size_kw > size_list[end]
+#             add_to_expression!(m[:CHPCapexNoIncentives], chp_size_kw * cost_list[end])
+#         else
+#             for s in 2:length(size_list)
+#                 if (chp_size_kw > size_list[s-1]) && (chp_size_kw <= size_list[s])
+#                     slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+#                             (size_list[s] - size_list[s-1])
+#                     add_to_expression!(m[:CHPCapexNoIncentives],  cost_list[s-1] * size_list[s-1] + (chp_size_kw - size_list[s-1]) * slope)
+#                 end
+#             end
+#         end
+#     else
+#         add_to_expression!(m[:CHPCapexNoIncentives], cost_list * chp_size_kw)
 
-    # TODO: Why was this commented out?
-    #Add supplementary firing capital cost
-    # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
-    # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
-    # add_to_expression!(m[:CHPCapexNoIncentives], chp_supp_firing_size * chp_supp_firing_cost)
-    end
+#     # TODO: Why was this commented out?
+#     #Add supplementary firing capital cost
+#     # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
+#     # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
+#     # add_to_expression!(m[:CHPCapexNoIncentives], chp_supp_firing_size * chp_supp_firing_cost)
+#     end
 
-    return m[:CHPCapexNoIncentives]
-end
+#     return m[:CHPCapexNoIncentives]
+# end
