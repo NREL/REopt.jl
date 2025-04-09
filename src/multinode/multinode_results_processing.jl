@@ -1083,7 +1083,16 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         end
     end
 
-    Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
+    if max_power > 50
+        Color_bins = round.(collect(range(0,(ceil(max_power/10)*10),increments)))
+    elseif max_power < 10
+        increments = Int(increments/2)
+        Color_bins = round.(collect(range(0,max_power,increments)), digits=2)
+    else
+        increments = Int(increments/2)
+        Color_bins = round.(collect(range(0,ceil(max_power),increments)), digits=2)
+    end
+    
     line_colors = Dict{Any, Any}()
     for line in line_key_values
         line_colors[line] = Vector{String}(undef, maximum(timesteps))

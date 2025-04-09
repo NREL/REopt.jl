@@ -646,7 +646,14 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
      
     PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces] 
     PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]
-        
+    
+    #dv = "dvReactivePower"
+    #m[Symbol(dv)] = @variable(m, [REopt_gen_ind_e, PMDTimeSteps_Indeces], base_name=dv) 
+    
+    #@constraint(m, [e in REopt_gen_ind_e, ts in PMDTimeSteps_Indeces], m[:dvReactivePower][e, ts] .<= 1000)
+    #@constraint(m, [e in REopt_gen_ind_e, ts in PMDTimeSteps_Indeces], m[:dvReactivePower][e, ts] .>= -1000)
+
+
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
         number_of_phases_at_load = ""
         if Multinode_Inputs.number_of_phases == 1
@@ -671,7 +678,7 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
         )
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
-                            PMD_Qg_ek[e,k] == 0.0 #(1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
+                            PMD_Qg_ek[e,k] ==  0.0 # m[:dvReactivePower][e, k]   #  (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
         )
     end
 
@@ -1237,6 +1244,13 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         TotalNumberOfTimeSteps = Int(8760 * Multinode_Inputs.time_steps_per_hour)
         throw(@error("In the Multinode_Inputs dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
     end
+
+    if Multinode_Inputs.generate_results_plots
+        if Multinode_Inputs.voltage_plot_time_step > length(Multinode_Inputs.time_steps_for_results_dashboard)
+            throw(@error("In the Multinode_Inputs dictionary, the voltage_plot_time_step should be less than or equal to the number of timesteps in time_steps_for_results_dashboard"))
+        end
+    end
+
 end
 
 
