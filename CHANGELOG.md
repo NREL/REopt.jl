@@ -25,6 +25,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fixed-bess-soc
+### Added
+- Add **ElectricStorage** input field **fixed_soc_series_fraction** to allow users to fix the SOC timeseries
 
 ## v0.51.1
 ### Added
