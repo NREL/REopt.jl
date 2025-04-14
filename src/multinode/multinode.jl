@@ -29,7 +29,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         
         PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)
 
-        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades = true)
+        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, gen_ind_with_one_phase, gen_ind_with_two_phases, gen_ind_with_three_phases = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades = true)
         time_results["model_solve_time_minutes"] = round(JuMP.solve_time(model)/60, digits = 2)
 
         if Multinode_Inputs.run_outage_simulator
@@ -48,7 +48,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             
             Outage_Results_No_Techs = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             
-            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades=false, BAU_case=true)
+            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs, load_phase_dictionary_NoTechs, gen_ind_e_to_REopt_node_noTechs,REopt_gen_ind_e_noTechs, gen_ind_with_one_phase_noTechs, gen_ind_with_two_phases_noTechs, gen_ind_with_three_phases_noTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades=false, BAU_case=true)
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
             system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
@@ -84,18 +84,24 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                                 ("Computation_Time_Data", time_results),
                                 ("Line_Info_PMD", LineInfo_PMD),
-                                #("pm", pm), # This can be a very large variable and it can be slow to load
+                                ("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
                                 ("single_outage_simulator_model", single_model_outage_simulator),
                                 ("data_math_mn", data_math_mn),
-                                ("model_diagnostics_bus_voltage_violations", model_diagnostics_bus_voltage_violations)
+                                ("model_diagnostics_bus_voltage_violations", model_diagnostics_bus_voltage_violations),
+                                ("load_phase_dictionary", load_phase_dictionary),
+                                ("gen_ind_e_to_REopt_node", gen_ind_e_to_REopt_node),
+                                ("REopt_gen_ind_e", REopt_gen_ind_e),
+                                ("gen_ind_with_one_phase", gen_ind_with_one_phase),
+                                ("gen_ind_with_two_phases", gen_ind_with_two_phases),
+                                ("gen_ind_with_three_phases", gen_ind_with_three_phases)
                                 #("transformer_upgrade_options", transformer_upgrade_options_output),
                                 #("transformer_upgrade_results", transformer_upgrade_results_output)
                                 #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series) 
                                 ])
     end
-
+       
     Start_time_create_plots = now()
     if Multinode_Inputs.generate_results_plots == true
         if Multinode_Inputs.number_of_phases == 1
@@ -201,7 +207,7 @@ function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, 
     
     pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps, time_results; combined_REopt_inputs = combined_REopt_inputs, BAU_case = BAU_case)
         
-    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn)
+    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, gen_ind_with_one_phase, gen_ind_with_two_phases, gen_ind_with_three_phases = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn)
     
     line_upgrade_options_each_line = "N/A"
     if allow_upgrades == true
@@ -221,7 +227,7 @@ function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, 
     
     REopt_Results, PMD_Results, DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow_Summary, line_upgrade_results = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp, time_results; allow_upgrades=allow_upgrades, line_upgrade_options_each_line = line_upgrade_options_each_line, BAU_case=BAU_case)
     
-    return REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, pm.model, pm, line_upgrade_options_each_line, line_upgrade_results
+    return REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, pm.model, pm, line_upgrade_options_each_line, line_upgrade_results, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, gen_ind_with_one_phase, gen_ind_with_two_phases, gen_ind_with_three_phases
 end
 
 function create_list_of_upgradable_lines(Multinode_Inputs)
@@ -637,12 +643,12 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
     print("\n gen_ind_e_to_REopt_node")
     print(gen_ind_e_to_REopt_node)
     print("\n")
+    REopt_gen_ind_e = ""
 
     if Multinode_Inputs.number_of_phases == 1
         REopt_gen_ind_e = [gen_name2ind["REopt_gen_$(e)"] for e in REopt_nodes];
 
-    elseif Multinode_Inputs.number_of_phases in [2,3]
-
+    elseif (Multinode_Inputs.number_of_phases == 2) || (Multinode_Inputs.number_of_phases == 3)
 
         REopt_gen_ind_e = []
         gen_ind_with_one_phase = []
@@ -660,6 +666,7 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
                 push!(REopt_gen_ind_e, gen_ind_e_temp)
 
                 # Specify how many phases are associated with that gen_index
+                #=
                 if length(load_phase_dictionary[e]) == 1
                     push!(gen_ind_with_one_phase, gen_ind_e_temp)
                 elseif length(load_phase_dictionary[e]) == 2
@@ -669,18 +676,30 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
                 else
                     throw(@error("load_phase_dictionary has an invalid length"))
                 end
+                =#
             end
         end
     else
         throw(@error("Error in the number of phases"))
     end
-        
+    #=
+    print("\n PMD Generator Index with one phase are: ")
+    print(gen_ind_with_one_phase)
+    print("\n PMD Generator Index with two phases are: ")
+    print(gen_ind_with_two_phases)
+    print("\n PMD Generator Index with three phases are: ")
+    print(gen_ind_with_three_phases)
+    print("\n")
+    =#
     PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
     PMDTimeSteps_Indeces = collect(1:length(PMDTimeSteps_InREoptTimes))
      
-    PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces] 
-    PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]
+    #PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]  # The [1] here should be okay
+    #PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]
     
+    # Get the gen indeces this way:
+    #gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
+
     #dv = "dvReactivePower"
     #m[Symbol(dv)] = @variable(m, [REopt_gen_ind_e, PMDTimeSteps_Indeces], base_name=dv) 
     
@@ -689,7 +708,8 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
 
 
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
-        number_of_phases_at_load = ""
+        #=
+        
         if Multinode_Inputs.number_of_phases == 1
             number_of_phases_at_load = 1
         elseif Multinode_Inputs.number_of_phases in [2,3]
@@ -697,7 +717,7 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
                 number_of_phases_at_load = 1
             elseif e in gen_ind_with_two_phases
                 number_of_phases_at_load = 2
-            elseif e in gen_ind_with_three_phases
+            elseif e in gen_ind_with_three_phases 
                 number_of_phases_at_load = 3
             else
                 throw(@error("Error in the number of phases at a load"))
@@ -705,18 +725,33 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
         else
             throw(@error("Error in the number of phases"))
         end
-
+        =#
         # Note: evenly split the total export and import across each phase associated with that load (aka REopt node, aka PMD generator)
+        number_of_phases_at_load = ""
+        number_of_phases_at_load = length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]])
+
+        print("\n ")
+        print("\n The number of phases at gen index $(e) (aka REopt node $(gen_ind_e_to_REopt_node[e])) is $(number_of_phases_at_load) ")
+        # (1/number_of_phases_at_load) (1/(length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]]))) *
+        
+        #print("\n The number of phases at load is: $(number_of_phases_at_load)")
+        #print("\n The e is: $(e)")
+        #print("\n PMD time step indeces are: $(PMDTimeSteps_Indeces)")
+
+        #row_index = findall(  gen_name2ind["REopt_gen_node$(e)_phase$(phase)"] in REopt_gen_ind_e)
+        #PMD_Pg_ek[row_index, k] 
+        # Note: PMD_Pg_ek is a 2-dimensional array of decision variables
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],  
-                            PMD_Pg_ek[e,k] == (1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]]  - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]])   # negative power "generation" is a load
+                            PMD.var(pm, k, :pg, e).data[1] .== round((1/number_of_phases_at_load), digits = 3) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]])   # negative power "generation" is a load
         )
+        #PMD_Qg_ek[row_index, k]
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
-                            PMD_Qg_ek[e,k] ==  0.0 # m[:dvReactivePower][e, k]   #  (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
+                            PMD.var(pm, k, :qg, e).data[1] .==  0.0 # m[:dvReactivePower][e, k]   #  (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
         )
     end
 
-    return REopt_gen_ind_e
+    return REopt_gen_ind_e, load_phase_dictionary, gen_ind_e_to_REopt_node, gen_ind_with_one_phase, gen_ind_with_two_phases, gen_ind_with_three_phases
 
 end
 
@@ -731,7 +766,7 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
     REopt.build_reopt!(m, REoptInputs_Combined) # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     
     CreateREoptTotalExportVariables(m, REoptInputs_Combined)
-    REopt_gen_ind_e = LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REoptInputs_Combined)
+    REopt_gen_ind_e, load_phase_dictionary, gen_ind_e_to_REopt_node, gen_ind_with_one_phase, gen_ind_with_two_phases, gen_ind_with_three_phases = LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REoptInputs_Combined)
     LineInfo = CreateLineInfoDictionary(pm)
     REoptTimeSteps = collect(1:(Multinode_Inputs.time_steps_per_hour * 8760))
     ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
@@ -742,7 +777,7 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
         LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
     end
 
-    return LineInfo, data_math_mn, REoptInputs_Combined, pm;
+    return LineInfo, data_math_mn, REoptInputs_Combined, pm, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, gen_ind_with_one_phase, gen_ind_with_two_phases, gen_ind_with_three_phases
 end
 
 
@@ -1057,9 +1092,9 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     else
         @info "The solver's default tolerance and log settings are being used for the optimization"
     end
-    print("\n The model type is: ")
-    print(pm.model)
-    print("\n")
+    #print("\n The model type is: ")
+    #print(pm.model)
+    #print("\n")
 
     print("\n The optimization is starting\n")
     results = PMD.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=HiGHS.Optimizer) # The default in PMD for relax_integrality is false

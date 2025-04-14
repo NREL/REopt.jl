@@ -367,6 +367,7 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
                 push!(REopt_gen_ind_e, gen_ind_e_temp)
 
                 # Specify how many phases are associated with that gen_index
+                #=
                 if length(load_phase_dictionary[e]) == 1
                     push!(gen_ind_with_one_phase, gen_ind_e_temp)
                 elseif length(load_phase_dictionary[e]) == 2
@@ -376,6 +377,7 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
                 else
                     throw(@error("load_phase_dictionary has an invalid length"))
                 end
+                =#
             end
         end
     else
@@ -383,10 +385,11 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
     end
         
 
-    PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps] 
-    PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps]
+    #PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps] 
+    #PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps]
                    
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
+        #=
         number_of_phases_at_load = ""
         if Multinode_Inputs.number_of_phases == 1
             number_of_phases_at_load = 1
@@ -403,13 +406,16 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
         else
             throw(@error("Error in the number of phases"))
         end
-        
+        =#
+        number_of_phases_at_load = ""
+        number_of_phases_at_load = length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]])
+
         JuMP.@constraint(pm.model, [k in outage_timesteps],  
-                            PMD_Pg_ek[e,k] == (1/number_of_phases_at_load) * (pm.model[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k])   # negative power "generation" is a load
+                            PMD.var(pm, k, :pg, e).data[1] == (1/number_of_phases_at_load) * (pm.model[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k])   # negative power "generation" is a load
         )
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(pm.model, [k in outage_timesteps],
-                            PMD_Qg_ek[e,k] == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
+                            PMD.var(pm, k, :qg, e).data[1]  == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
         )
     end
 
