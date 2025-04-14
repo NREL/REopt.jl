@@ -74,9 +74,39 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         #Phase = 1
         ActivePowerFlow_line_temp = []
         ReactivePowerFlow_line_temp = []
+
+        ActivePowerFlow_line_Phase1_temp = []
+        ActivePowerFlow_line_Phase2_temp = []
+        ActivePowerFlow_line_Phase3_temp = []
+        ReactivePowerFlow_line_Phase1_temp = []
+        ReactivePowerFlow_line_Phase2_temp = []
+        ReactivePowerFlow_line_Phase3_temp = []
+
         for i in 1:length(sol_eng["nw"])
             push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][pf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][pf_name])) ) # The "for Phase in keys(..." sums the power across the phases
             push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][qf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][qf_name])) )
+        end
+
+        # Pull data from the first time step
+        for phase in keys(sol_eng["nw"]["1"]["line"][line][pf_name])  # TODO: confirm that "phase" here is the phase number, not just the index
+            if phase == 1
+                for i in 1:length(sol_eng["nw"])
+                    push!(ActivePowerFlow_line_Phase1_temp, sol_eng["nw"][string(i)]["line"][line][pf_name][phase])
+                    push!(ReactivePowerFlow_line_Phase1_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                end
+            elseif phase == 2
+                for i in 1:length(sol_eng["nw"])
+                    push!(ActivePowerFlow_line_Phase2_temp, sol_eng["nw"][string(i)]["line"][line][pf_name][phase])
+                    push!(ReactivePowerFlow_line_Phase2_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                end
+            elseif phase ==3
+                for i in 1:length(sol_eng["nw"])
+                    push!(ActivePowerFlow_line_Phase3_temp, sol_eng["nw"][string(i)]["line"][line][pf_name][phase])
+                    push!(ReactivePowerFlow_line_Phase3_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                end
+            else
+                throw(@error("The phase number, $(phase), is invalid"))
+            end
         end
 
         DataLineFlow[1] = round(minimum(ActivePowerFlow_line_temp[:]), digits = 5)
@@ -92,7 +122,13 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         # Also create a dictionary of the line power flows
         Dictionary_LineFlow_Power_Series_temp = Dict([(line, Dict([
                                                             ("ActiveLineFlow", ActivePowerFlow_line_temp),
-                                                            ("ReactiveLineFlow", ReactivePowerFlow_line_temp)
+                                                            ("ReactiveLineFlow", ReactivePowerFlow_line_temp),
+                                                            ("Phase1_ActiveLineFlow", ActivePowerFlow_line_Phase1_temp),
+                                                            ("Phase2_ActiveLineFlow", ActivePowerFlow_line_Phase2_temp),
+                                                            ("Phase3_ActiveLineFlow", ActivePowerFlow_line_Phase3_temp),
+                                                            ("Phase1_ReactiveLineFlow", ReactivePowerFlow_line_Phase1_temp),
+                                                            ("Phase2_ReactiveLineFlow", ReactivePowerFlow_line_Phase2_temp),
+                                                            ("Phase3_ReactiveLineFlow", ReactivePowerFlow_line_Phase3_temp)
                                                         ]))
                                                         ])
         merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
@@ -446,7 +482,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
             
             # Save the Line Flow summary to a different csv
-            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Powerflow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
             
             # Save the bus voltage summary to a different csv
             CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
@@ -455,6 +491,35 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             if Multinode_Inputs.model_transformer_upgrades
                 CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Transformer_Upgrade_Summary_"*TimeStamp*".csv", dataframe_transformer_upgrade_summary)
             end
+            
+            # Generate CSV summarizing the line power flow for each line
+            line_powerflow_data = DataFrame()
+            
+            line_powerflow_data[!,"REopt_time_steps"] = Multinode_Inputs.PMD_time_steps  # Note: The PMD_time_steps input is expressed in REopt time steps
+            line_powerflow_data[!,"PMD_time_steps"] = collect(1:length(Multinode_Inputs.PMD_time_steps))
+                                                
+            for line_data in keys(Dictionary_LineFlow_Power_Series)
+                for data_subtype in keys(Dictionary_LineFlow_Power_Series[line_data])
+                    if (data_subtype == "ActiveLineFlow") || (data_subtype == "ReactiveLineFlow")
+                        OptionalNameAddition = "CombinedPhases_"
+                    else
+                        OptionalNameAddition = ""
+                    end
+                    line_phase_name = line_data*"_"*OptionalNameAddition*data_subtype
+                    
+                    if length(Dictionary_LineFlow_Power_Series[line_data][data_subtype]) > 0
+                        line_powerflow_data[!,line_phase_name] = Dictionary_LineFlow_Power_Series[line_data][data_subtype]
+                    else
+                        line_powerflow_data[!,line_phase_name] = zeros(length(Multinode_Inputs.PMD_time_steps))
+                    end
+                    
+                end
+            end
+            
+            line_powerflow_data = line_powerflow_data[:,sortperm(names(line_powerflow_data))] # Sort the dataframe by the header title
+
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Powerflow_Data_"*TimeStamp*".csv", line_powerflow_data)
+            
         end 
 
         #Display results if the "display_results" input is set to true

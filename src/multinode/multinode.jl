@@ -502,7 +502,7 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     # Initialize voltage variable values:
     @info "running add_start_vrvi (this may take a few minutes for large models)\n"
     Start_vrvi = now()
-    add_start_vrvi!(data_math_mn)
+    #add_start_vrvi!(data_math_mn)
    
     milliseconds, PMD_vrvi_time_minutes = CalculateComputationTime(Start_vrvi)
     print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes \n")
