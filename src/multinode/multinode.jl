@@ -622,9 +622,7 @@ end
 
 
 function generate_PMD_information(Multinode_Inputs, REopt_nodes, REopt_inputs_combined, data_math_mn)
-    #print("\n keys of data_math_mn with key nw is:")
-    #print(keys(data_math_mn["nw"]))
-    
+        
     gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
 
     load_phase_dictionary = create_load_phase_dictionary(Multinode_Inputs, REopt_nodes, REopt_inputs_combined)
@@ -661,93 +659,43 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
         for e in REopt_nodes
             for phase in load_phase_dictionary[e]
                 # Add the gen index to the REopt_gen_ind_e list
-
                 gen_ind_e_temp = gen_name2ind["REopt_gen_node$(e)_phase$(phase)"]
                 push!(REopt_gen_ind_e, gen_ind_e_temp)
 
-                # Specify how many phases are associated with that gen_index
-                #=
-                if length(load_phase_dictionary[e]) == 1
-                    push!(gen_ind_with_one_phase, gen_ind_e_temp)
-                elseif length(load_phase_dictionary[e]) == 2
-                    push!(gen_ind_with_two_phases, gen_ind_e_temp)
-                elseif length(load_phase_dictionary[e]) == 3
-                    push!(gen_ind_with_three_phases, gen_ind_e_temp)
-                else
-                    throw(@error("load_phase_dictionary has an invalid length"))
-                end
-                =#
             end
         end
     else
         throw(@error("Error in the number of phases"))
     end
-    #=
-    print("\n PMD Generator Index with one phase are: ")
-    print(gen_ind_with_one_phase)
-    print("\n PMD Generator Index with two phases are: ")
-    print(gen_ind_with_two_phases)
-    print("\n PMD Generator Index with three phases are: ")
-    print(gen_ind_with_three_phases)
-    print("\n")
-    =#
+    
     PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
     PMDTimeSteps_Indeces = collect(1:length(PMDTimeSteps_InREoptTimes))
-     
-    #PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]  # The [1] here should be okay
-    #PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in PMDTimeSteps_Indeces]
-    
+         
     # Get the gen indeces this way:
     #gen_name2ind = Dict(gen["name"] => gen["index"] for (_,gen) in data_math_mn["nw"]["1"]["gen"])
 
-    #dv = "dvReactivePower"
-    #m[Symbol(dv)] = @variable(m, [REopt_gen_ind_e, PMDTimeSteps_Indeces], base_name=dv) 
-    
-    #@constraint(m, [e in REopt_gen_ind_e, ts in PMDTimeSteps_Indeces], m[:dvReactivePower][e, ts] .<= 1000)
-    #@constraint(m, [e in REopt_gen_ind_e, ts in PMDTimeSteps_Indeces], m[:dvReactivePower][e, ts] .>= -1000)
+    #=
+    dv = "dvFreeReactivePower"
+    m[Symbol(dv)] = @variable(m, [REopt_gen_ind_e, PMDTimeSteps_Indeces], base_name=dv)
 
+    @constraint(m, [k in PMDTimeSteps_Indeces, e in REopt_gen_ind_e], m[:dvFreeReactivePower][e,k] .<= 0), #500 )
+    @constraint(m, [k in PMDTimeSteps_Indeces, e in REopt_gen_ind_e], m[:dvFreeReactivePower][e,k] .>= 0), #-500 )                                                 
+    =#                                                    
 
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
-        #=
-        
-        if Multinode_Inputs.number_of_phases == 1
-            number_of_phases_at_load = 1
-        elseif Multinode_Inputs.number_of_phases in [2,3]
-            if e in gen_ind_with_one_phase
-                number_of_phases_at_load = 1
-            elseif e in gen_ind_with_two_phases
-                number_of_phases_at_load = 2
-            elseif e in gen_ind_with_three_phases 
-                number_of_phases_at_load = 3
-            else
-                throw(@error("Error in the number of phases at a load"))
-            end
-        else
-            throw(@error("Error in the number of phases"))
-        end
-        =#
-        # Note: evenly split the total export and import across each phase associated with that load (aka REopt node, aka PMD generator)
+       
         number_of_phases_at_load = ""
         number_of_phases_at_load = length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]])
-
-        print("\n ")
         print("\n The number of phases at gen index $(e) (aka REopt node $(gen_ind_e_to_REopt_node[e])) is $(number_of_phases_at_load) ")
-        # (1/number_of_phases_at_load) (1/(length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]]))) *
-        
-        #print("\n The number of phases at load is: $(number_of_phases_at_load)")
-        #print("\n The e is: $(e)")
-        #print("\n PMD time step indeces are: $(PMDTimeSteps_Indeces)")
-
-        #row_index = findall(  gen_name2ind["REopt_gen_node$(e)_phase$(phase)"] in REopt_gen_ind_e)
-        #PMD_Pg_ek[row_index, k] 
-        # Note: PMD_Pg_ek is a 2-dimensional array of decision variables
+                
+        # Note: evenly split the total export and import across each phase associated with that load (aka REopt node, aka PMD generator)
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],  
                             PMD.var(pm, k, :pg, e).data[1] .== round((1/number_of_phases_at_load), digits = 3) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]])   # negative power "generation" is a load
         )
-        #PMD_Qg_ek[row_index, k]
+        
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
-                            PMD.var(pm, k, :qg, e).data[1] .==  0.0 # m[:dvReactivePower][e, k]   #  (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
+                            PMD.var(pm, k, :qg, e).data[1] .== 0.0 # m[:dvFreeReactivePower][e,k]  # (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
         )
     end
 
