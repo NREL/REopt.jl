@@ -627,7 +627,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # Call GhpGhx.jl to size GHP and GHX
                 # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
                 thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
-                println(maximum(thermal_load_ton))
                 if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
                     thermal_load_ton .+= cooling_load_ton
@@ -654,7 +653,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                             thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
                             peak_thermal_load_ton = maximum(thermal_load_ton)
-                            println(peak_thermal_load_ton)
                             # If total thermal load (heating + cooling) is more than user-defined GHP size, 
                             # first reduce heating load as much as possible while keeping cooling load the same
                             if peak_thermal_load_ton > d["GHP"]["max_ton"]
@@ -668,7 +666,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                 updated_peak_thermal_load_ton = maximum(updated_thermal_load_ton)
                                 if updated_peak_thermal_load_ton > d["GHP"]["max_ton"]
                                     updated_thermal_load_ton[updated_thermal_load_ton .>=d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
-                                    cooling_load_ton = updated_peak_thermal_load_ton .- heating_load_ton
+                                    cooling_load_ton = updated_thermal_load_ton .- heating_load_ton
                                     ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton
                                 end
                                 heating_load_mmbtu = heating_load_ton.*12000/1000000
