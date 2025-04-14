@@ -352,10 +352,7 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
     elseif Multinode_Inputs.number_of_phases in [2,3]
 
         REopt_gen_ind_e = []
-        gen_ind_with_one_phase = []
-        gen_ind_with_two_phases = []
-        gen_ind_with_three_phases = []
-
+        
         print("\n Gen name to index, outage simulator: ")
         print(gen_name2ind)
 
@@ -366,47 +363,14 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
                 gen_ind_e_temp = gen_name2ind["REopt_gen_node$(e)_phase$(phase)"]
                 push!(REopt_gen_ind_e, gen_ind_e_temp)
 
-                # Specify how many phases are associated with that gen_index
-                #=
-                if length(load_phase_dictionary[e]) == 1
-                    push!(gen_ind_with_one_phase, gen_ind_e_temp)
-                elseif length(load_phase_dictionary[e]) == 2
-                    push!(gen_ind_with_two_phases, gen_ind_e_temp)
-                elseif length(load_phase_dictionary[e]) == 3
-                    push!(gen_ind_with_three_phases, gen_ind_e_temp)
-                else
-                    throw(@error("load_phase_dictionary has an invalid length"))
-                end
-                =#
             end
         end
     else
         throw(@error("Error in the number of phases"))
     end
-        
-
-    #PMD_Pg_ek = [PMD.var(pm, k, :pg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps] 
-    #PMD_Qg_ek = [PMD.var(pm, k, :qg, e).data[1] for e in REopt_gen_ind_e, k in outage_timesteps]
-                   
+                           
     for e in REopt_gen_ind_e  #Note: the REopt_gen_ind_e does not contain the facility meter
-        #=
-        number_of_phases_at_load = ""
-        if Multinode_Inputs.number_of_phases == 1
-            number_of_phases_at_load = 1
-        elseif Multinode_Inputs.number_of_phases in [2,3]
-            if e in gen_ind_with_one_phase
-                number_of_phases_at_load = 1
-            elseif e in gen_ind_with_two_phases
-                number_of_phases_at_load = 2
-            elseif e in gen_ind_with_three_phases
-                number_of_phases_at_load = 3
-            else
-                throw(@error("Error in the number of phases at a load"))
-            end
-        else
-            throw(@error("Error in the number of phases"))
-        end
-        =#
+        
         number_of_phases_at_load = ""
         number_of_phases_at_load = length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]])
 
