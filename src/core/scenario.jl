@@ -620,18 +620,21 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
 
             ghpghx_results = Dict()
+
             try
                 # Call GhpGhx.jl to size GHP and GHX
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
                 # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
-                heating_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
-                thermal_load_ton = heating_load_ton
-                if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
+                if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
-                    thermal_load_ton = heating_load_ton .+ cooling_load_ton
+                    thermal_load_ton .+= cooling_load_ton
                 end
                 peak_thermal_load_ton = maximum(thermal_load_ton)
+                CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/thermal_load_ton.csv",  Tables.table(thermal_load_ton), writeheader=false)  
+                write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/ghpghx_inputs.json", JSON.json(ghpghx_inputs))
+                println(peak_thermal_load_ton)
                 if haskey(d["GHP"],"max_ton") && peak_thermal_load_ton > d["GHP"]["max_ton"]
                     @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
                     # When user specifies undersized GHP, calculate the load to be served by GHP and send the rest to REopt
@@ -643,7 +646,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
                         heating_load_mmbtu = heating_load_mmbtu .* peak_ratio
                         ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
-                        if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                        if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                             ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton .* peak_ratio
                         end
                     elseif d["GHP"]["load_served_by_ghp"] == "nonpeak"
@@ -652,12 +655,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         heating_load_mmbtu[heating_load_mmbtu .>=d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
                         ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                         # Check to make sure the updated heating load are as expected
-                        CSV.write("/Users/apham/Documents/Projects/REopt_Projects/FY25/GHP Development/Test_Model_Presized_GHP/nonpeak_heating_load_mmbtu.csv",  Tables.table(ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]), writeheader=false)    
-                        if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                        if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                             thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
                             peak_thermal_load_ton = maximum(thermal_load_ton)
+                            println(peak_thermal_load_ton)
                             if peak_thermal_load_ton > d["GHP"]["max_ton"]
-                                cooling_load_ton[cooling_load_ton .>=d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
+                                thermal_load_ton[thermal_load_ton .>=d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
+                                cooling_load_ton = thermal_load_ton - heating_load_mmbtu.*1000000/12000
                                 ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton
                             end
                         end
@@ -678,7 +682,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             new_load_peak = maximum(heating_load_mmbtu)*borehole_ratio
                             heating_load_mmbtu[heating_load_mmbtu .>=new_load_peak] .= new_load_peak
                             ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
-                            if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                            if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                                 new_load_peak = maximum(cooling_load_ton)*borehole_ratio
                                 cooling_load_ton[cooling_load_ton .>=new_load_peak] .= new_load_peak
                                 ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton      
