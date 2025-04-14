@@ -21,6 +21,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     model = "empty"
     model_BAU = "empty"
     model_diagnostics_bus_voltage_violations = "empty"
+    time_results = Dict()
     
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
                 
@@ -28,14 +29,16 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         
         PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)
 
-        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp; allow_upgrades = true)
+        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades = true)
+        time_results["model_solve_time_minutes"] = round(JuMP.solve_time(model)/60, digits = 2)
 
         if Multinode_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds = run_outage_simulator(DataDictionaryForEachNode, REopt_inputs_combined, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REoptInputs_Combined)
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes = run_outage_simulator(DataDictionaryForEachNode, REopt_inputs_combined, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REoptInputs_Combined)
+            time_results["outage_simulator_time_minutes"] = outage_simulator_time_minutes
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
-            outage_simulator_time_milliseconds = "N/A"
+            outage_simulator_time_minutes = "N/A"
         end 
 
         if Multinode_Inputs.run_BAU_case
@@ -45,26 +48,27 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             
             Outage_Results_No_Techs = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             
-            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp; allow_upgrades = false)
+            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades=false, BAU_case=true)
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
             system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
-            
+            time_results["BAU_model_solve_time_minutes"] = round(JuMP.solve_time(model_BAU)/60, digits = 2)
         else
             system_results_BAU = "none"
             REopt_Results_BAU = "none"
             model_BAU = "none"
         end
 
-        ComputationTime_EntireModel = CalculateComputationTime(StartTime_EntireModel)
-        
-        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_milliseconds)
-        
         if Multinode_Inputs.allow_bus_voltage_violations  # || Multinode_Inputs.allow_dropped_load_in_main_optimization
             model_diagnostics_bus_voltage_violations = process_model_diagnostics_bus_voltage_violations(Multinode_Inputs, pm)
         else
             model_diagnostics_bus_voltage_violations = "N/A"
         end
+
+        ComputationTime_EntireModel_Milliseconds, ComputationTime_EntireModel_Minutes = CalculateComputationTime(StartTime_EntireModel)
+        time_results["ComputationTime_EntireModel_Minutes"] = ComputationTime_EntireModel_Minutes
+        
+        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel_Minutes; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_minutes)
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
@@ -78,7 +82,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("REopt_results_BAU", REopt_Results_BAU),
                                 ("Outage_Results", Outage_Results),
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
-                                ("ComputationTime_EntireModel", ComputationTime_EntireModel),
+                                ("Computation_Time_Data", time_results),
                                 ("Line_Info_PMD", LineInfo_PMD),
                                 #("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
@@ -92,6 +96,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ])
     end
 
+    Start_time_create_plots = now()
     if Multinode_Inputs.generate_results_plots == true
         if Multinode_Inputs.number_of_phases == 1
             Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step)
@@ -104,6 +109,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             CreateResultsMap(CompiledResults, Multinode_Inputs, TimeStamp)
         end
     end
+    milliseconds, CompiledResults["Computation_Time_Data"]["creating_plots_minutes_NotIncludedInTotalComputationTime"] = CalculateComputationTime(Start_time_create_plots)
 
     # Optional code for saving the outputs from the SOCNLPUBFPowerModel model
     #if (Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel") && (Multinode_Inputs.generate_CSV_of_outputs == true)
@@ -113,7 +119,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     #    end
     #end
 
-    return CompiledResults, model, model_BAU, m_outagesimulator;  
+    return CompiledResults, model, model_BAU, m_outagesimulator
 end
 
 
@@ -183,7 +189,7 @@ function PrepareElectricLoads(Multinode_Inputs)
 end
 
 
-function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, timestamp; allow_upgrades=false)
+function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, timestamp, time_results; allow_upgrades=false, BAU_case=false)
     # Function to build the model, run the model, and process results
 
     # Empty these variables from any previous contents
@@ -192,8 +198,8 @@ function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, 
     data_eng = nothing
 
     combined_REopt_inputs = REopt_inputs_combined
-
-    pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps; combined_REopt_inputs = combined_REopt_inputs)
+    
+    pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps, time_results; combined_REopt_inputs = combined_REopt_inputs, BAU_case = BAU_case)
         
     LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn)
     
@@ -213,7 +219,7 @@ function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, 
 
     results, TerminationStatus = Run_REopt_PMD_Model(pm, Multinode_Inputs)
     
-    REopt_Results, PMD_Results, DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow_Summary, line_upgrade_results = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp; allow_upgrades=allow_upgrades, line_upgrade_options_each_line = line_upgrade_options_each_line)
+    REopt_Results, PMD_Results, DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow_Summary, line_upgrade_results = Results_Processing_REopt_PMD_Model(pm.model, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp, time_results; allow_upgrades=allow_upgrades, line_upgrade_options_each_line = line_upgrade_options_each_line, BAU_case=BAU_case)
     
     return REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, pm.model, pm, line_upgrade_options_each_line, line_upgrade_results
 end
@@ -458,7 +464,7 @@ function CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_R
 end
 
 
-function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps; combined_REopt_inputs = "")
+function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps, time_results; combined_REopt_inputs = "", outage_simulator = false, BAU_case = false)
     
     print("\n Parsing the network input file \n")
     if typeof(Multinode_Inputs.PMD_network_input) == String 
@@ -471,27 +477,30 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
 
     @info "Completed parsing the .dss file"
 
+    Start_generate_REopt_nodes_list = now()
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs) # Generate a list of the REopt nodes
-        
+    
+    Start_apply_data_eng_settings = now()
     ApplyDataEngSettings(data_eng, Multinode_Inputs)
     
+    Start_apply_load_profile_to_PMD_model = now()
     ApplyLoadProfileToPMDModel(Multinode_Inputs, data_eng, PMD_number_of_timesteps, REopt_nodes; combined_REopt_inputs = combined_REopt_inputs)
     
+    Start_create_PMD_generators = now()
     CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_REopt_inputs = combined_REopt_inputs)
 
+
+    Start_transform_to_math_model = now()
     data_math_mn = transform_data_model(data_eng, multinetwork=true) # Transforming the engineering model to a mathematical model in PMD 
     
     # Initialize voltage variable values:
-    @info "running add_start_vrvi"
+    @info "running add_start_vrvi (this may take a few minutes for large models)\n"
     Start_vrvi = now()
     add_start_vrvi!(data_math_mn)
-    End_vrvi = now()
-
-    # Measure and report the time for initializing the voltage variable values
-    PMD_vrvi_time = End_vrvi - Start_vrvi
-    PMD_vrvi_time_minutes = round(PMD_vrvi_time/Millisecond(60000), digits=2)
+   
+    milliseconds, PMD_vrvi_time_minutes = CalculateComputationTime(Start_vrvi)
     print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes \n")
-    
+
     print("\n Instantiating the PMD model (this may take a few minutes for large models)\n")
     Start_instantiate = now()
 
@@ -511,11 +520,36 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
         throw(@error("The PMD subtype is not valid"))
     end
     
-    End_instantiate = now()
-    
-    PMD_instantiate_time = End_instantiate - Start_instantiate
-    PMD_instantiate_time_minutes = round(PMD_instantiate_time/Millisecond(60000), digits=2)
+    milliseconds, PMD_instantiate_time_minutes = CalculateComputationTime(Start_instantiate)
     print("\n The PMD_instantiate_time was: $(PMD_instantiate_time_minutes) minutes \n")
+    
+    # Record additional computation times for non-outage-simulator models
+    if outage_simulator == false 
+        if BAU_case == true
+            BAU_indicator = "BAU_model_"
+        else
+            BAU_indicator = ""
+        end
+
+        time_results[BAU_indicator*"PMD_instantiate_time_minutes"] = PMD_instantiate_time_minutes
+
+        time_results[BAU_indicator*"PMD_vrvi_time_minutes"] = PMD_vrvi_time_minutes
+
+        milliseconds, PMD_transform_to_math_model_time_minutes = CalculateComputationTime(Start_transform_to_math_model)
+        time_results[BAU_indicator*"PMD_transform_to_math_model_minutes"] = PMD_transform_to_math_model_time_minutes
+
+        milliseconds, generate_REopt_nodes_list_minutes = CalculateComputationTime(Start_generate_REopt_nodes_list)
+        time_results[BAU_indicator*"generate_REopt_nodes_list_minutes"] = generate_REopt_nodes_list_minutes
+
+        milliseconds, apply_data_eng_settings_minutes = CalculateComputationTime(Start_apply_data_eng_settings)
+        time_results[BAU_indicator*"apply_data_eng_settings_minutes"] = apply_data_eng_settings_minutes
+
+        milliseconds, apply_load_profile_to_PMD_model_minutes = CalculateComputationTime(Start_apply_load_profile_to_PMD_model)
+        time_results[BAU_indicator*"apply_load_profile_to_PMD_model_minutes"] = apply_load_profile_to_PMD_model_minutes
+
+        milliseconds, create_PMD_generators_minutes = CalculateComputationTime(Start_create_PMD_generators)
+        time_results[BAU_indicator*"create_PMD_generators_minutes"] = create_PMD_generators_minutes
+    end
 
     return pm, data_math_mn, data_eng
 end

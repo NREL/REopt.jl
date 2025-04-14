@@ -30,8 +30,8 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
                                                                              "outage_start_timesteps" => outage_start_timesteps,
                                                                              "dropped_load_results" => dropped_load_results_summary ])
     end
-    outage_simulator_time_milliseconds = CalculateComputationTime(outage_simulator_time_start)
-    return Outage_Results, single_model_outage_simulator, outage_simulator_time_milliseconds
+    outage_simulator_time_milliseconds, outage_simulator_time_minutes = CalculateComputationTime(outage_simulator_time_start)
+    return Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes
 end
 
 
@@ -64,12 +64,10 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         RunsTested = RunsTested + 1
         i = outage_start_timesteps_checked[x]
         TotalTimeSteps = 8760*Multinode_Inputs.time_steps_per_hour   
-
+        time_results = Dict()
         if Multinode_Inputs.model_type == "PowerModelsDistribution"
-            #if x != 1
             m_outagesimulator = "" # empty the m_outagesimulator variable
-            #end
-            pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, OutageLength_TimeSteps_Input; combined_REopt_inputs = REopt_inputs_combined)
+            pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, OutageLength_TimeSteps_Input, time_results; combined_REopt_inputs = REopt_inputs_combined, outage_simulator = true)
             m_outagesimulator = pm.model # TODO: Confirm that when make changes to pm.model again in the function, that that version of pm.model has the additional constraints defined below for m_outagesimulator
         #elseif
             # Add other options if additional model_types are added
@@ -95,13 +93,10 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
             AddConstraintsFromTransformerUpgrades() # TODO: finish this function once transformer upgrades are implemented in the code
         end
 
-
         if !(Multinode_Inputs.allow_dropped_load)
-            #@objective(pm.model, Max, sum(pm.model[:dvBatToGrid_5])) #sum(sum(pm.model[Symbol(string("dvPVToLoad_", n))]) for n in NodesWithPV)) # The objective is to maximize the PV power that is used to meet the load
-
-            @objective(pm.model, FEASIBILITY_SENSE, 0) #sum(sum(pm.model[Symbol(string("dvPVToLoad_", n))]) for n in NodesWithPV)) # The objective is to maximize the PV power that is used to meet the load
+            @objective(pm.model, FEASIBILITY_SENSE, 0)
         elseif Multinode_Inputs.allow_dropped_load
-            @objective(pm.model, Max, (100 * sum(sum(pm.model[Symbol("dvLoadMetMultiplier_"*n)] for n in NodeList)))) # + sum(sum(pm.model[Symbol(string("dvPVToLoad_", n))]) for n in NodesWithPV)) # If allowing dropped load, the objective is to maximize the non-dropped load
+            @objective(pm.model, Max, (100 * sum(sum(pm.model[Symbol("dvLoadMetMultiplier_"*n)] for n in NodeList)))) # If allowing dropped load, the objective is to maximize the non-dropped load
         else
             throw(@error("The input for allow_dropped_load is invalid. It must be true or false."))
         end

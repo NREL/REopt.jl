@@ -14,25 +14,36 @@ function CreateOutputsFolder(Multinode_Inputs, TimeStamp)
 end
 
 
-function CalculateComputationTime(StartTime_EntireModel)
+function CalculateComputationTime(StartTime)
     # Function to calculate the elapsed time between a time (input into the function) and the current time
-    EndTime_EntireModel = now()
-    ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
-    return ComputationTime_EntireModel
+    EndTime = now()
+    ComputationTime_milliseconds = EndTime - StartTime
+    print("The computation time in milliseconds is: $(ComputationTime_milliseconds)")
+
+    if Dates.value(ComputationTime_milliseconds) > 1000
+        ComputationTime_minutes = round(Dates.value(ComputationTime_milliseconds)/60000, digits=2)
+    else
+        ComputationTime_minutes = round(Dates.value(ComputationTime_milliseconds)/60000, digits=4)
+    end
+
+    return ComputationTime_milliseconds, ComputationTime_minutes
 end
 
 
-function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp; allow_upgrades=false, line_upgrade_options_each_line ="")
+function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp, time_results; allow_upgrades=false, line_upgrade_options_each_line ="", BAU_case=false)
     # Extract the PMD results
     print("\n Reading the PMD results")
+    Start_reading_PMD_results = now()
     sol_math = results["solution"]
     # The PMD results are saved to the sol_eng variable
     sol_eng = transform_solution(sol_math, data_math_mn)
 
     # Extract the REopt results
     print("\n Reading the REopt results")
+    Start_reading_REopt_results = now()
     REopt_results = reopt_results(m, REoptInputs_Combined)
 
+    
     if allow_upgrades == true && Multinode_Inputs.model_line_upgrades == true
         line_upgrades = Process_Line_Upgrades(m, line_upgrade_options_each_line, Multinode_Inputs, timestamp)
     else
@@ -87,6 +98,15 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
 
     end
+
+    # Record the time for post-processing
+    if BAU_case == true
+        BAU_indicator = "BAU_model_"
+    else
+        BAU_indicator = ""
+    end
+    milliseconds, time_results[BAU_indicator*"reading_REopt_results_minutes"] = CalculateComputationTime(Start_reading_REopt_results)
+    milliseconds, time_results[BAU_indicator*"reading_PMD_results_minutes"] = CalculateComputationTime(Start_reading_PMD_results)
 
     return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow, line_upgrades
 end
@@ -217,7 +237,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             push!(DataLabels, "  Number of Variables")
             push!(Data, length(all_variables(model)))
             push!(DataLabels, "  Computation time, including the BAU model and the outage simulator if used (minutes)")
-            push!(Data, round((Dates.value(ComputationTime_EntireModel)/(1000*60)), digits=2))
+            push!(Data, round(ComputationTime_EntireModel, digits=2))
             push!(DataLabels, "  Model solve time (minutes)" )
             push!(Data, round(JuMP.solve_time(model)/60, digits = 2))
             
@@ -227,7 +247,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             end
             if Multinode_Inputs.run_outage_simulator
                 push!(DataLabels, "  Total outage simulation time (minutes)")
-                push!(Data, round((Dates.value(outage_simulator_time)/(1000*60)), digits=2))
+                push!(Data, outage_simulator_time)
             end
 
             push!(DataLabels, "----Model Information----")
