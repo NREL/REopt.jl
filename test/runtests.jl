@@ -196,6 +196,28 @@ else  # run HiGHS tests
             results = run_reopt(model, "./scenarios/incentives.json")
             @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
         end
+        @testset "Production Based Incentives" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            d = JSON.parsefile("scenarios/pbi.json")
+            results = run_reopt(model, d)
+            s = Scenario(d)
+            i = REoptInputs(s)
+            @test i.pbi_benefit_per_kwh["Wind"] == 0.05
+            @test i.pbi_benefit_per_kwh["Generator"] == 0.08
+            @test i.pbi_benefit_per_kwh["CHP"] == 0.02
+            @test i.pbi_benefit_per_kwh["PV"] == 0.1
+            @test i.pbi_benefit_per_kwh["SteamTurbine"] == 0.07
+            
+            @test i.pbi_max_benefit["Wind"] == 1000000
+            @test i.pbi_max_benefit["Generator"] == 100
+            @test i.pbi_max_benefit["CHP"] == 10000
+            @test i.pbi_max_benefit["PV"] == 10
+            @test i.pbi_pwf["Wind"] < i.pbi_pwf["PV"]  #PV has more years of benefit than wind
+            @test i.pbi_pwf["PV"] < i.pbi_pwf["SteamTurbine"]  #SteamTurbine has more years of benefit than PV
+
+            # No generator or CHP production and SteamTurbine min size is larger than prod incentive max size, so just testing against wind prod plus the PV max benefit
+            @test results["Financial"]["lifecycle_production_incentive_after_tax"] ≈ i.pbi_pwf["PV"]*i.pbi_max_benefit["PV"] + i.pbi_pwf["Wind"]*d["Wind"]["production_incentive_per_kwh"]*results["Wind"]["annual_energy_produced_kwh"] rtol=1e-4
+        end
 
         @testset "Fifteen minute load" begin
             d = JSON.parsefile("scenarios/no_techs.json")
