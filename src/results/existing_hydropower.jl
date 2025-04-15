@@ -13,8 +13,6 @@
 
 """
 
-# TODO: change all of this to hydropower
-
 function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `ExistingHydropower` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
 	# Note: the node number is an empty string if evaluating a single `Site`.
@@ -73,18 +71,37 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 	)
 	r["total_power_output_series_kw_all_turbines_combined"] = round.(value.(TotalHydropowerPowerOutput).data, digits=3)
 	
-	# Reservoir volume
-	reservoir_volume = @expression(m, [ts in p.time_steps], m[:dvWaterVolume][ts])
-	r["reservoir_water_volume_cubic_meters"] = round.(value.(reservoir_volume).data, digits=3) 
+	# Upstream reservoir volume
+	upstream_reservoir_volume = @expression(m, [ts in p.time_steps], m[:dvWaterVolume][ts])
+	r["upstream_reservoir_water_volume_cubic_meters"] = round.(value.(upstream_reservoir_volume).data, digits=3) 
+	
+	# Downstream reservoir volume
+	if p.s.existing_hydropower.model_downstream_reservoir
+		downstream_reservoir_volume = @expression(m, [ts in p.time_steps], m[:dvDownstreamReservoirWaterVolume][ts])
+		r["downstream_reservoir_water_volume_cubic_meters"] = round.(value.(downstream_reservoir_volume).data, digits=3) 
+	end
 
+	# Water flow into upstream reservoir (input into the model)
 	r["input_to_model_tributary_water_flow"] = p.s.existing_hydropower.water_inflow_cubic_meter_per_second
 
+	# Water outflow from the turbines
 	water_outflow_total = @expression(m, [ts in p.time_steps],
 		#m[:dvWaterOutFlow][ts]
 		sum(m[:dvWaterOutFlow][t, ts] for t in p.techs.existing_hydropower) # use this line next
 		)
 	r["water_outflow_for_all_turbines_combined"] = round.(value.(water_outflow_total).data, digits=3) 
 
+	# Spillway water flow
+	spillway_water_flow = @expression(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts])
+	r["spillway_water_outflow_cubic_meters_per_second"] = round.(value.(spillway_water_flow).data, digits = 3)
+
+	# Water flow out of downstream reservoir
+	if p.s.existing_hydropower.model_downstream_reservoir
+		downstream_reservoir_water_outflow = @expression(m, [ts in p.time_steps], m[:dvDownstreamReservoirWaterOutflow][ts])
+		r["downstream_reservoir_water_outflow_cubic_meters_per_second"] = round.(value.(downstream_reservoir_water_outflow).data, digits = 3)
+	end
+
+	# Annual power production
 	AnnualExistingHydropowerProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t]
@@ -92,9 +109,6 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 	)
 	r["annual_energy_produced_kwh"] = round(value(AnnualExistingHydropowerProd), digits=0) # includes curtailment
     
-	spillway_water_flow = @expression(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts])
-	r["spillway_water_outflow_cubic_meters_per_second"] = round.(value.(spillway_water_flow).data, digits = 3)
-
 	for i in p.techs.existing_hydropower
 		print("\n Saving results for turbine "*string(i))
 	    r[string(i)*"_results"] = Dict([])

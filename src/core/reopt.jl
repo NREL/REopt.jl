@@ -330,7 +330,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			print("\n Adding existing hydropower constraints")
 			add_existing_hydropower_constraints(m,p)
 		end
-
+		print("\n Debug 6")
         if !isempty(p.ghp_options)
             add_ghp_constraints(m, p)
         end
@@ -655,6 +655,17 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			ReservoirHead[p.time_steps] >= 0
 			dvSpillwayWaterFlow[p.time_steps] >= 0
 			# Note: the power flow from the hydropower are part of: dvRatedProduction, dvProductionToGrid, and dvProductionToStorage
+		end
+		if p.s.existing_hydropower.model_downstream_reservoir
+			@variables m begin
+				dvDownstreamReservoirWaterVolume[p.time_steps] >= 0
+				dvDownstreamReservoirWaterOutflow[p.time_steps] >= 0
+				dvPumpedWaterFlow[p.techs.existing_hydropower, p.time_steps] >= 0
+				dvPumpPowerInput[p.techs.existing_hydropower, p.time_steps] >= 0
+				binPumpingWaterActive[p.techs.existing_hydropower, p.time_steps], Bin
+				binTurbineOrPump[p.time_steps], Bin
+				dvPumpEfficiency[p.techs.existing_hydropower, p.time_steps] >= 0
+			end
 		end
 	end
 

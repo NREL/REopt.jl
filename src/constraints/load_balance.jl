@@ -8,7 +8,6 @@ function add_elec_load_balance_constraints(m, p; _n="")
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec) 
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
-            #+ m[Symbol("dvHydroToLoad")][ts]
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
@@ -18,13 +17,13 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + p.s.electric_load.loads_kw[ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+            + sum(m[Symbol("dvPumpPowerInput"*_n)][t, ts] for t in p.techs.existing_hydropower)
         )
     else
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
-            #+ m[Symbol("dvHydroToLoad")][ts]
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
                 + sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) 
@@ -35,6 +34,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + p.s.electric_load.loads_kw[ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+            + sum(m[Symbol("dvPumpPowerInput"*_n)][t, ts] for t in p.techs.existing_hydropower)
         )
     end
 
@@ -42,9 +42,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
 		JuMP.set_name(cr, "con_load_balance"*_n*string("_t", i))
 	end
 	
-    # Note: Hydro power not added to off-grid load balance
-
-	##Constraint (8b): Electrical Load Balancing without Grid
+    ##Constraint (8b): Electrical Load Balancing without Grid
 	if !p.s.settings.off_grid_flag # load balancing constraint for grid-connected runs
         @constraint(m, [ts in p.time_steps_without_grid],
             sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)  
@@ -53,6 +51,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + p.s.electric_load.critical_loads_kw[ts]
+            + sum(m[Symbol("dvPumpPowerInput"*_n)][t, ts] for t in p.techs.existing_hydropower)
         )
     else # load balancing constraint for off-grid runs 
         @constraint(m, [ts in p.time_steps_without_grid],
@@ -62,6 +61,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts]
+            + sum(m[Symbol("dvPumpPowerInput"*_n)][t, ts] for t in p.techs.existing_hydropower)
         )
         ##Constraint : For off-grid scenarios, annual load served must be >= minimum percent specified
         @constraint(m, 

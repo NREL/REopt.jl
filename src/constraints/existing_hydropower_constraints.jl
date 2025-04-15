@@ -95,7 +95,7 @@ function add_existing_hydropower_constraints(m,p)
 					m[:dvRatedProduction][Hydro_techs[t],ts] == m[:dvWaterOutFlow][Hydro_techs[t],ts] * (1/p.s.existing_hydropower.average_cubic_meters_per_second_per_kw)* (1- (t/1000))  # convert to kW/time step, for instance: m3/15min  * kwh/m3 * (0.25 hrs/1hr)
 						)
 		end
-
+	
 	elseif p.s.existing_hydropower.computation_type == "quadratic_unsimplified" # This equation has not been tested directly
 		@info "Adding quadratic1 constraint for the hydropower power output"
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
@@ -118,31 +118,108 @@ function add_existing_hydropower_constraints(m,p)
 	@constraint(m, [ts in p.time_steps],
 		p.s.existing_hydropower.cubic_meter_minimum <= m[:dvWaterVolume][ts] 
 				)
-
-	# Water flow rate is between the maximum and minimum allowable levels
+	
+	# Water flow rate from all turbines combined is between the maximum and minimum allowable levels
 	@constraint(m, [ts in p.time_steps], # t in p.techs.existing_hydropower],
 		 sum(m[:dvWaterOutFlow][t, ts] for t in p.techs.existing_hydropower) + m[:dvSpillwayWaterFlow][ts] >= p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_total_of_all_turbines   # m[:dvWaterOutFlow][t, ts]
 				)
-	 
+	
+	# Each turbine must meet the minimum water flow requirement, if it is on
 	@constraint(m, [t in p.techs.existing_hydropower, ts in p.time_steps], 
 			m[:dvWaterOutFlow][t, ts] >=  m[:binTurbineActive][t,ts]*p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_per_turbine    #p.s.existing_hydropower.existing_kw_per_turbine / (p.s.existing_hydropower.efficiency_kwh_per_cubicmeter * p.hours_per_time_step)
 				)
-
-	# The total water volume changes based on the water flow rates
-	@constraint(m, [ts in p.time_steps[2:end]], m[:dvWaterVolume][ts] == m[:dvWaterVolume][ts-1] + ((3600/p.s.settings.time_steps_per_hour)* (p.s.existing_hydropower.water_inflow_cubic_meter_per_second[ts] - m[:dvSpillwayWaterFlow][ts] - sum(m[:dvWaterOutFlow][t,ts] for t in p.techs.existing_hydropower)))) # m[:dvWaterOutFlow][ts]) 
-	@constraint(m, m[:dvWaterVolume][1] == p.s.existing_hydropower.initial_reservoir_volume) 
 	
-	# Total water volume must be the same in the beginning and the end
+	# Upstream Reservoir: The total water volume changes based on the water flow rates
+	final_time_step = Int(p.s.settings.time_steps_per_hour * 8760)
+	time_steps_without_first_time_step = p.time_steps[2:final_time_step]
+		
+	@variable(m, dvWaterVolumeChange[ts in time_steps_without_first_time_step] >= -100000 )
+	
+	@constraint(m, [ts in time_steps_without_first_time_step], 
+					m[:dvWaterVolumeChange][ts] == p.s.existing_hydropower.water_inflow_cubic_meter_per_second[ts] - m[:dvSpillwayWaterFlow][ts] - sum(m[:dvWaterOutFlow][t,ts] for t in p.techs.existing_hydropower)
+				)
+	
+	@constraint(m, [ts in time_steps_without_first_time_step], 
+					m[:dvWaterVolume][ts] == 
+					m[:dvWaterVolume][ts-1]  
+					+ ((3600/p.s.settings.time_steps_per_hour) * m[:dvWaterVolumeChange][ts])
+				)
+	
+	@constraint(m, m[:dvWaterVolume][1] == p.s.existing_hydropower.initial_reservoir_volume) 
+		
+	# Upstream Reservoir: Total water volume must be the same in the beginning and the end
 	@constraint(m, m[:dvWaterVolume][1] == m[:dvWaterVolume][maximum(p.time_steps)])
-
+	
 	# Limit power output from the hydropower turbines to the existing kW capacity:
 	@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:dvRatedProduction][t,ts] <= m[:binTurbineActive][t,ts]*p.s.existing_hydropower.existing_kw_per_turbine)
-
+	
 	# Limit the water flow through the spillway, if a value was input
 	if !isnothing(p.s.existing_hydropower.spillway_maximum_cubic_meter_per_second)
 		@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts] <= p.s.existing_hydropower.spillway_maximum_cubic_meter_per_second)
 	end 
 
+	print("\n Debug 1")
+	# Model a downstream reservoir
+	if p.s.existing_hydropower.model_downstream_reservoir
+		print("\n Debug 2")
+		# Downstream Reservoir: The total water volume changes based on the water flow rates
+		@constraint(m, [ts in p.time_steps[2:end]], m[:dvDownstreamReservoirWaterVolume][ts] == m[:dvDownstreamReservoirWaterVolume][ts-1] + ((3600/p.s.settings.time_steps_per_hour)* (m[:dvSpillwayWaterFlow][ts] + sum(m[:dvWaterOutFlow][t,ts] for t in p.techs.existing_hydropower) - sum(m[:dvPumpedWaterFlow][t,ts] for t in p.techs.existing_hydropower) - m[:dvDownstreamReservoirWaterOutflow][ts])))
+		@constraint(m, m[:dvDownstreamReservoirWaterVolume][1] == p.s.existing_hydropower.initial_downstream_reservoir_water_volume) 
+		
+		# Downstream Reservoir: Total water volume must be the same in the beginning and the end
+		@constraint(m, m[:dvDownstreamReservoirWaterVolume][1] == m[:dvDownstreamReservoirWaterVolume][maximum(p.time_steps)])
+
+		# Downstream Reservoir: Minimum and maximum water volumes
+		@constraint(m, [ts in p.time_steps], m[:dvDownstreamReservoirWaterVolume][ts] >= p.s.existing_hydropower.minimum_downstream_reservoir_volume_cubic_meters)
+		@constraint(m, [ts in p.time_steps], m[:dvDownstreamReservoirWaterVolume][ts] <= p.s.existing_hydropower.maximum_downstream_reservoir_volume_cubic_meters)
+
+		# Downstream Reservoir outflow: minimum and maximum flow rates
+		@constraint(m, [ts in p.time_steps], 
+						m[:dvDownstreamReservoirWaterOutflow][ts] >= p.s.existing_hydropower.minimum_outflow_from_downstream_reservoir_cubic_meter_per_second 
+			   		)
+		@constraint(m, [ts in p.time_steps], 
+					   m[:dvDownstreamReservoirWaterOutflow][ts] <= p.s.existing_hydropower.maximum_outflow_from_downstream_reservoir_cubic_meter_per_second
+					)
+	
+		# Ensure that the turbines aren't on when the pumping is happening
+			# binTurbineOrPump is 1 when the turbines are on; binTurbineOrPump is 0 when the pumps are operating
+		#NumberOfTurbines = 0
+		#for t in p.techs.existing_hydropower
+		#	NumberOfTurbines = NumberOfTurbines + 1
+		#end
+		
+		@constraint(m, [ts in p.time_steps], sum(m[:binTurbineActive][t,ts] for t in p.techs.existing_hydropower) <= p.techs.existing_hydropower.number_of_turbines * binTurbineOrPump[ts] )
+
+		@constraint(m, [ts in p.time_steps], sum(m[:binPumpingWaterActive][t,ts] for t in p.techs.existing_hydropower) <= p.techs.existing_hydropower.number_of_pumps * (1 - binTurbineOrPump[ts]))
+
+		# Each pump must meet the minimum water flow requirement, if it is on
+		@constraint(m, [t in p.techs.existing_hydropower, ts in p.time_steps], 
+						m[:dvPumpedWaterFlow][t, ts] >=  m[:binPumpingWaterActive][t,ts]*p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_per_turbine    # TODO: change input value to "minimum water flow cubic meter per second per turbine"
+							)
+		
+		# The electric power input into each pump must be below the pump's electric power rating
+		@constraint(m, [t in p.techs.existing_hydropower, ts in p.time_steps], 
+						m[:dvPumpPowerInput][t, ts] <= p.s.existing_hydropower.existing_kw_per_pump
+					)
+
+		if p.s.existing_hydropower.computation_type == "average_power_conversion"
+			
+			# Conversion between pumped water flow rate and power input into the pump
+			@constraint(m, [t in p.techs.existing_hydropower, ts in p.time_steps], 
+						m[:dvPumpedWaterFlow][t, ts] == m[:dvPumpPowerInput][t, ts] * p.s.existing_hydropower.water_pump_average_cubic_meters_per_second_per_kw )
+
+		else
+			throw(@error("A downstream reservoir is only compatible with average_power_conversion at the moment"))
+		end
+
+	#else
+		# If pumped is not allowed, then binAnyTurbineActive is always 1 (meaning that the turbines can always operate)
+			# This constraint shouldn't be needed
+		#@constraint(m, [ts in p.time_steps], binAnyTurbineActive[ts] == 1)
+	
+	end
+	print("\n Debug 3")
+	
 	# Define the minimum operating time (in time steps) for the hydropower turbine
 	if p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine > 1
 		print("\n Adding minimum operating time constraint \n")
@@ -175,6 +252,6 @@ function add_existing_hydropower_constraints(m,p)
 	end
 	# TODO: remove this constraint that prevents a spike in the spillway use during the first time step
 	@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][1] == 0)
-
+	print("\n Debug 4")
 end
 

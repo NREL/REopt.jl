@@ -187,11 +187,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         tribuary_flow = d["existing_hydropower"]["water_inflow_cubic_meter_per_second"]
         tributary_flow_length = length(d["existing_hydropower"]["water_inflow_cubic_meter_per_second"])
 
-        if tributary_flow_length != 8760 && tributary_flow_length != 17520 && tributary_flow_length != 35040
+        if (tributary_flow_length != 8760) && (tributary_flow_length != 17520) && (tributary_flow_length != 35040)
             throw(@error("Invalid length of the tributary flow vector"))
-        elseif settings.time_steps_per_hour > 1 && tributary_flow_length > 8760
+        elseif (settings.time_steps_per_hour == 2) && (tributary_flow_length == 8760)
             @warn("Upscaling the tributary flow rate to match the time steps per hour")
-            tribuary_flow = repeat(tribuary_flow, inner=time_steps_per_hour)
+            tribuary_flow = repeat(tribuary_flow, inner=settings.time_steps_per_hour)
+        elseif (settings.time_steps_per_hour == 4) && (tributary_flow_length == 8760)
+            @warn("Upscaling the tributary flow rate to match the time steps per hour")
+            tribuary_flow = repeat(tribuary_flow, inner=settings.time_steps_per_hour)
+        #elseif
+            # TODO: add more options for setting the tributary_flow variable to the correct length
         else
             print("\n No changes made to the tributary flow input vector \n")
         end
@@ -223,9 +228,18 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 can_net_meter=d["existing_hydropower"]["can_net_meter"], 
                 can_wholesale=d["existing_hydropower"]["can_wholesale"], 
                 can_export_beyond_nem_limit=d["existing_hydropower"]["can_export_beyond_nem_limit"], 
-                can_curtail=d["existing_hydropower"]["can_curtail"]
-    ) 
+                can_curtail=d["existing_hydropower"]["can_curtail"],
 
+                model_downstream_reservoir=d["existing_hydropower"]["model_downstream_reservoir"],
+                initial_downstream_reservoir_water_volume=d["existing_hydropower"]["initial_downstream_reservoir_water_volume"],
+                minimum_outflow_from_downstream_reservoir_cubic_meter_per_second=d["existing_hydropower"]["minimum_outflow_from_downstream_reservoir_cubic_meter_per_second"],
+                maximum_outflow_from_downstream_reservoir_cubic_meter_per_second=d["existing_hydropower"]["maximum_outflow_from_downstream_reservoir_cubic_meter_per_second"],
+                minimum_downstream_reservoir_volume_cubic_meters=d["existing_hydropower"]["minimum_downstream_reservoir_volume_cubic_meters"],
+                maximum_downstream_reservoir_volume_cubic_meters=d["existing_hydropower"]["maximum_downstream_reservoir_volume_cubic_meters"],
+                number_of_pumps=d["existing_hydropower"]["number_of_pumps"],
+                water_pump_average_cubic_meters_per_second_per_kw=d["existing_hydropower"]["water_pump_average_cubic_meters_per_second_per_kw"],
+                existing_kw_per_pump=d["existing_hydropower"]["existing_kw_per_pump"]
+    ) 
 
     else
         existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = 0)

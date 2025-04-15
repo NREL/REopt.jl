@@ -30,6 +30,17 @@
     can_wholesale::Bool = off_grid_flag ? false : true,
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
+    
+    # Model a downstream reservoir
+    model_downstream_reservoir::Bool=false,
+    initial_downstream_reservoir_water_volume::Real=0.0,
+    minimum_outflow_from_downstream_reservoir_cubic_meter_per_second::Real=0,
+    maximum_outflow_from_downstream_reservoir_cubic_meter_per_second::Real=1000000,
+    minimum_downstream_reservoir_volume_cubic_meters::Real=0,
+    maximum_downstream_reservoir_volume_cubic_meters::Real=1000000,
+    number_of_pumps::Real=0,
+    water_pump_average_cubic_meters_per_second_per_kw::Real=0,
+    existing_kw_per_pump::Real=0
 ```
 """
 
@@ -62,7 +73,16 @@ mutable struct ExistingHydropower <: AbstractTech
     can_net_meter  
     can_wholesale  
     can_export_beyond_nem_limit 
-    can_curtail 
+    can_curtail
+    model_downstream_reservoir
+    initial_downstream_reservoir_water_volume
+    minimum_outflow_from_downstream_reservoir_cubic_meter_per_second
+    maximum_outflow_from_downstream_reservoir_cubic_meter_per_second
+    minimum_downstream_reservoir_volume_cubic_meters
+    maximum_downstream_reservoir_volume_cubic_meters
+    number_of_pumps
+    water_pump_average_cubic_meters_per_second_per_kw
+    existing_kw_per_pump
 
     function ExistingHydropower(;
         existing_kw_per_turbine::Real=0.0,
@@ -78,9 +98,9 @@ mutable struct ExistingHydropower <: AbstractTech
         number_of_efficiency_bins::Real=3,
         fixed_turbine_efficiency::Real=0.9,
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
-        cubic_meter_maximum::Real=0.0, #maximum capacity of the reservoir
+        cubic_meter_maximum::Real=1000000, #maximum capacity of the reservoir
         cubic_meter_minimum::Real=0.0, #minimum water level of the reservoir
-        initial_reservoir_volume::Real=0.0, # the initial volume of the reservoir
+        initial_reservoir_volume::Real=500000, # the initial volume of the reservoir
         minimum_water_output_cubic_meter_per_second_total_of_all_turbines::Real=0.0,
         minimum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
         maximum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
@@ -92,7 +112,16 @@ mutable struct ExistingHydropower <: AbstractTech
         can_net_meter::Bool = false,
         can_wholesale::Bool = false,
         can_export_beyond_nem_limit::Bool = false,
-        can_curtail::Bool = true
+        can_curtail::Bool = true,
+        model_downstream_reservoir::Bool=false,
+        initial_downstream_reservoir_water_volume::Real=500000,
+        minimum_outflow_from_downstream_reservoir_cubic_meter_per_second::Real=0,
+        maximum_outflow_from_downstream_reservoir_cubic_meter_per_second::Real=1000000,
+        minimum_downstream_reservoir_volume_cubic_meters::Real=0,
+        maximum_downstream_reservoir_volume_cubic_meters::Real=1000000,
+        number_of_pumps::Real=0,
+        water_pump_average_cubic_meters_per_second_per_kw::Real=0,
+        existing_kw_per_pump::Real=0
         )
         
         #=
@@ -152,7 +181,17 @@ mutable struct ExistingHydropower <: AbstractTech
             can_net_meter,
             can_wholesale,
             can_export_beyond_nem_limit,
-            can_curtail
+            can_curtail,
+
+            model_downstream_reservoir,
+            initial_downstream_reservoir_water_volume,
+            minimum_outflow_from_downstream_reservoir_cubic_meter_per_second,
+            maximum_outflow_from_downstream_reservoir_cubic_meter_per_second,
+            minimum_downstream_reservoir_volume_cubic_meters,
+            maximum_downstream_reservoir_volume_cubic_meters,
+            number_of_pumps,
+            water_pump_average_cubic_meters_per_second_per_kw,
+            existing_kw_per_pump
         )
     end
 end
