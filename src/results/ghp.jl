@@ -65,7 +65,7 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["annual_thermal_production_tonhour"] = sum(r["thermal_to_load_series_ton"])
         if p.s.ghp_option_list[ghp_option_chosen].can_serve_dhw
             r["thermal_to_dhw_load_series_mmbtu_per_hour"] = d["HeatingLoad"]["dhw_thermal_load_series_mmbtu_per_hour"]
-            r["annual_thermal_production_mmbtu"] = r["annual_thermal_production_mmbtu"] + sum(d["HeatingLoad"]["dhw_thermal_load_series_mmbtu_per_hour"])
+            r["annual_thermal_production_mmbtu"] = r["annual_thermal_production_mmbtu"] + sum(r["thermal_to_dhw_load_series_mmbtu_per_hour"])
         else
             r["thermal_to_dhw_load_series_mmbtu_per_hour"] = zeros(length(p.time_steps))
         end
