@@ -686,7 +686,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     determine_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
                     optimal_number_of_boreholes = determine_number_of_boreholes["number_of_boreholes"]
                     if optimal_number_of_boreholes > d["GHP"]["max_number_of_boreholes"]
-                        @info "Max number of boreholes specified less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
+                        @info "Max number of boreholes specified is less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
                         max_iter = 10
                         for iter = 1:max_iter
                             borehole_ratio = d["GHP"]["max_number_of_boreholes"]/optimal_number_of_boreholes
