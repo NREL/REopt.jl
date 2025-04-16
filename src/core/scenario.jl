@@ -715,7 +715,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                 ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu                              
                             # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
                             else
-                                new_peak_load = maximum(heating_load_mmbtu.*1000000/12000)*borehole_ratio
+                                new_peak_load = maximum(heating_load_mmbtu)*borehole_ratio
                                 heating_load_mmbtu[heating_load_mmbtu .>=new_peak_load] .= new_peak_load
                                 ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                             end     
