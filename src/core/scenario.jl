@@ -692,8 +692,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         max_iter = 10
                         for iter = 1:max_iter
                             borehole_ratio = d["GHP"]["max_number_of_boreholes"]/optimal_number_of_boreholes
-                            println(borehole_ratio)
-
                             heating_load_mmbtu .*= borehole_ratio
                             if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                                 cooling_load_ton .*= borehole_ratio
@@ -707,7 +705,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
                             # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
                             # Otherwise, continue solving until reaching max iteration
-                            println(optimal_number_of_boreholes)
                             if -0.5 < optimal_number_of_boreholes-d["GHP"]["max_number_of_boreholes"] < 0.5
                                 break
                             else
