@@ -146,13 +146,11 @@ Note that not all of the above inputs are necessary. When not providing `calenda
 """
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
-    cycle_fade_coefficient::Real = 9.83E-05
+    cycle_fade_coefficient::Vector{<:Real} = [9.83E-05]
     time_exponent::Real = 0.42
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
-    segmented_cycle_degr_bess_type::Union{Int, Nothing} = nothing
-    segment_energy_capacity::Union{Vector{<:Float64}, Nothing} = nothing
 end
 
 
@@ -328,8 +326,8 @@ struct ElectricStorage <: AbstractElectricStorage
         if haskey(d, :degradation)
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
             
-            if !isnothing(degr.segmented_cycle_degr_bess_type) && !isnothing(degr.segment_energy_capacity)
-                @info "Modeling segmented cycle fade coefficients under battery degradation costing"
+            if length(degr.cycle_fade_coefficient) > 1
+                @info "Modeling segmented cycle fade battery degradation costing"
             end
         else
             degr = Degradation()
