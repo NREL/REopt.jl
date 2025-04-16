@@ -686,8 +686,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # If max_number_of_boreholes is specified, check if number of boreholes sized by GhpGhx.jl greater than user-specified max_number_of_boreholes,
                 # and if max_number_of_boreholes is less, reduce thermal load served by GHP until max_number_of_boreholes = number of boreholses sized by GhpGhx.jl                
                 if haskey(d["GHP"],"max_number_of_boreholes")
-                    determine_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
-                    optimal_number_of_boreholes = determine_number_of_boreholes["number_of_boreholes"]
+                    optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
                     if optimal_number_of_boreholes > d["GHP"]["max_number_of_boreholes"]
                         @info "Max number of boreholes specified is less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
                         max_iter = 10
@@ -695,35 +694,17 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             borehole_ratio = d["GHP"]["max_number_of_boreholes"]/optimal_number_of_boreholes
                             println(borehole_ratio)
 
+                            heating_load_mmbtu .*= borehole_ratio
                             if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                                thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
-                                new_peak_load = maximum(thermal_load_ton)*borehole_ratio
-                                thermal_load_ton[thermal_load_ton .>=new_peak_load] .= new_peak_load
-                                heating_load_ton = thermal_load_ton .- cooling_load_ton
-                                # Make sure that the reduced heating load is not negative
-                                heating_load_ton[heating_load_ton .<0] .= 0
-                                # If the updated peak thermal load is still more than new peak load, 
-                                # reduce cooling load as well
-                                updated_thermal_load_ton = heating_load_ton .+ cooling_load_ton
-                                updated_peak_thermal_load_ton = maximum(updated_thermal_load_ton)
-                                if updated_peak_thermal_load_ton > new_peak_load
-                                    updated_thermal_load_ton[updated_thermal_load_ton .>=new_peak_load] .= new_peak_load
-                                    cooling_load_ton = updated_thermal_load_ton .- heating_load_ton
-                                    ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton
-                                end
-                                heating_load_mmbtu = heating_load_ton.*12000/1000000
-                                ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu                              
+                                cooling_load_ton .*= borehole_ratio
                             # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
-                            else
-                                new_peak_load = maximum(heating_load_mmbtu)*borehole_ratio
-                                heating_load_mmbtu[heating_load_mmbtu .>=new_peak_load] .= new_peak_load
-                                ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
-                            end     
+                            end
+                            ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu                              
+                            ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton   
                             
                             # Rerun GhpGhx.jl
                             results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-                            determine_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)
-                            optimal_number_of_boreholes = determine_number_of_boreholes["number_of_boreholes"]
+                            optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
                             # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
                             # Otherwise, continue solving until reaching max iteration
                             println(optimal_number_of_boreholes)

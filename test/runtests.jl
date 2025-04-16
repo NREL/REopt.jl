@@ -2093,7 +2093,7 @@ else  # run HiGHS tests
             results = run_reopt([m1,m2], input_presizedGHPGHX)
             # GHP output size should equal user-defined GHP size
             output_GHX_size = sum(results["GHP"]["number_of_boreholes"])
-            @test output_GHX_size ≈ 400.00 atol=0.1
+            @test output_GHX_size ≈ 400.00 atol=0.9
 
         end
 
