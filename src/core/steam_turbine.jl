@@ -20,7 +20,11 @@
     installed_cost_per_kw::Float64 = NaN   # Installed cost based on electric power capacity
     om_cost_per_kw::Float64 = 0.0  # Fixed O&M cost based on electric power capacity
     om_cost_per_kwh::Float64 = NaN  # Variable O&M based on electric energy produced
-
+    production_incentive_per_kwh::Float64 = 0.0 # revenue from production incentive per kWh electricity produced, including curtailment
+    production_incentive_max_benefit::Float64 = 1.0e9 # maximum allowable annual revenue from production incentives
+    production_incentive_years::Int = 0 # number of year in which production incentives are paid
+    production_incentive_max_kw::Float64 = 1.0e9 # maximum allowable system size to receive production incentives
+    
     can_net_meter::Bool = false
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
@@ -54,6 +58,10 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     installed_cost_per_kw::Float64 = NaN
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_kwh::Float64 = NaN
+    production_incentive_per_kwh::Float64 = 0.0
+    production_incentive_max_benefit::Float64 = 1.0e9
+    production_incentive_years::Int = 0
+    production_incentive_max_kw::Float64 = 1.0e9
     
     can_net_meter::Bool = false
     can_wholesale::Bool = false
