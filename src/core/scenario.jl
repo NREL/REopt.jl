@@ -635,6 +635,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if haskey(d["GHP"],"max_ton") && peak_thermal_load_ton > d["GHP"]["max_ton"]
                     @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
                     # When user specifies undersized GHP, calculate the load to be served by GHP and send the rest to REopt
+                    if !haskey(d["GHP"], "load_served_by_ghp")
+                        d["GHP"]["load_served_by_ghp"] = "nonpeak"
+                    end
                     # If user choose to scale down total load (load_served_by_ghp="scaled"), calculate the ratio of the udersized GHP size and peak load
                     if d["GHP"]["load_served_by_ghp"] == "scaled"
                         @info "GHP served scaled down of total thermal load"
