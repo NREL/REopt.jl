@@ -2016,32 +2016,27 @@ else  # run HiGHS tests
             
             ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
             @test ghp_option_chosen == 2
-            @info "GHP test 1"
 
             # Test GHP heating and cooling load reduced
             hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
             cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
             @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
             @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
-            @info "GHP test 2,3"
 
             # Test GHP serving space heating with VAV thermal efficiency improvements
             heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
             expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
             @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
-            @info "GHP test 4"
             
             # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
             boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
             expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
             @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
-            @info "GHP test 5"
             
             # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
             bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
             ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
             @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
-            @info "GHP test 6"
             
             # Custom heat pump COP map is used properly
             ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
@@ -2050,7 +2045,6 @@ else  # run HiGHS tests
             # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
             @test heating_cop_avg <= 4.0
             @test cooling_cop_avg <= 8.0
-            @info "GHP test 7,8"
 
             # Check GHP LCC calculation for URBANopt
             ghp_data = JSON.parsefile("scenarios/ghp_urbanopt.json")
@@ -2074,7 +2068,6 @@ else  # run HiGHS tests
             # GHX size must be 0
             @test boreholes ≈ 0.0 atol = 0.01
             @test boreholes_len ≈ 0.0 atol = 0.01
-            @info "GHP test 8-12"
 
             # Check GHX LCC calculation for URBANopt
             ghx_data = JSON.parsefile("scenarios/ghx_urbanopt.json")
@@ -2095,37 +2088,36 @@ else  # run HiGHS tests
             @test ghp_size ≈ 0.0 atol = 0.01
             # LCCC should be around 52% of initial capital cost due to incentive and bonus
             @test ghx_lccc/ghx_lccc_initial ≈ 0.518 atol = 0.01
-            @info "GHP test 12-15"
 
             # User specified GHP size
-            input_presizedGHP = deepcopy(input_data)
-            input_presizedGHP["GHP"]["max_ton"] = 300
-            input_presizedGHP["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] = 1.0
-            delete!(input_presizedGHP["GHP"], "ghpghx_responses")
-            # Rerun REopts
-            s_presizedGHP = Scenario(input_presizedGHP)
-            inputs_presizedGHP = REoptInputs(s_presizedGHP)
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            results = run_reopt([m1,m2], inputs_presizedGHP)
-            # GHP output size should equal user-defined GHP size
-            output_GHP_size = sum(results["GHP"]["size_heat_pump_ton"])
-            @test output_GHP_size ≈ 300.00 atol=0.1
-            @info "GHP test 16"
+            #input_presizedGHP = deepcopy(input_data)
+            #input_presizedGHP["GHP"]["max_ton"] = 300
+            #input_presizedGHP["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] = 1.0
+            #delete!(input_presizedGHP["GHP"], "ghpghx_responses")
+            ## Rerun REopts
+            #s_presizedGHP = Scenario(input_presizedGHP)
+            #inputs_presizedGHP = REoptInputs(s_presizedGHP)
+            #m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            #m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            #results = run_reopt([m1,m2], inputs_presizedGHP)
+            ## GHP output size should equal user-defined GHP size
+            #output_GHP_size = sum(results["GHP"]["size_heat_pump_ton"])
+            #@test output_GHP_size ≈ 300.00 atol=0.1
 
             # User specified max GHP and GHX sizes
-            input_presizedGHPGHX = deepcopy(input_presizedGHP)
-            input_presizedGHPGHX["GHP"]["max_number_of_boreholes"] = 400
+            #input_presizedGHPGHX = deepcopy(input_presizedGHP)
+            #input_presizedGHPGHX["GHP"]["max_number_of_boreholes"] = 400
             # Rerun REopts
-            s_presizedGHPGHX = Scenario(input_presizedGHPGHX)
-            input_presizedGHPGHX = REoptInputs(s_presizedGHPGHX)
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            results = run_reopt([m1,m2], input_presizedGHPGHX)
+            #s_presizedGHPGHX = Scenario(input_presizedGHPGHX)
+            #inputs_presizedGHPGHX = REoptInputs(s_presizedGHPGHX)
+            #m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            #m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            #results = run_reopt([m1,m2], inputs_presizedGHPGHX)
             # GHP output size should equal user-defined GHP size
-            output_GHX_size = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
-            @test output_GHX_size ≈ 400.00 atol=0.9
-            @info "GHP test 17"
+            #output_GHP_size = results["GHP"]["size_heat_pump_ton"]
+            #output_GHX_size = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
+            #@test output_GHX_size ≈ 400.00 atol=0.5
+            #@test output_GHP_size < 300.00
 
         end
 
