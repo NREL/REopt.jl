@@ -233,26 +233,47 @@ function add_existing_hydropower_constraints(m,p)
 					)
 					
 	end
+
 	
+	# Create an array of binary variable names for turbine or turbine and pumps
+	dvs = []
+	if p.s.existing_hydropower.model_downstream_reservoir
+		dvs = ["binTurbineActive","binPumpingWaterActive"]
+	else
+		dvs = ["binTurbineActive"]
+	end
+
+
 	# Define the minimum operating time (in time steps) for the hydropower turbine
 	if p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine > 1
 		print("\n Adding minimum operating time constraint \n")
-		@variable(m, indicator_min_operating_time[t in p.techs.existing_hydropower, ts in p.time_steps], Bin)
-		for t in p.techs.existing_hydropower, ts in 1:Int(length(p.time_steps)- p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine - 1 )
-			@constraint(m, m[:indicator_min_operating_time][t, ts] =>  { sum(m[:binTurbineActive][t,ts+i] for i in 1:p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine) >= p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine} ) 
-			@constraint(m, !m[:indicator_min_operating_time][t, ts] => { m[:binTurbineActive][t,ts+1] - m[:binTurbineActive][t,ts] <= 0  } )
+		@variable(m, indicator_min_operating_time[t in p.techs.existing_hydropower, ts in p.time_steps, dv in dvs], Bin)
+		for dv in dvs
+			for t in p.techs.existing_hydropower, ts in 1:Int(length(p.time_steps)- p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine - 1 )
+				@constraint(m, m[:indicator_min_operating_time][t, ts, dv] =>  { sum(m[Symbol(dv)][t,ts+i] for i in 1:p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine) >= p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine} ) 
+				@constraint(m, !m[:indicator_min_operating_time][t, ts, dv] => { m[Symbol(dv)][t,ts+1] - m[Symbol(dv)][t,ts] <= 0  } )
+			end
 		end
 	end
 	
 	# Define the minimum operating time for the maximum water flow (in time steps) for a hydropower turbine
 	if p.s.existing_hydropower.minimum_operating_time_steps_at_local_maximum_turbine_output > 1
-		print("\n Adding minimum operating time for the maximum water flow constraint \n")
-		@variable(m, indicator_turn_down[t in p.techs.existing_hydropower, ts in p.time_steps], Bin)
-		for t in p.techs.existing_hydropower, ts in (2 + p.s.existing_hydropower.minimum_operating_time_steps_at_local_maximum_turbine_output):Int(length(p.time_steps))
-			for i in 1:p.s.existing_hydropower.minimum_operating_time_steps_at_local_maximum_turbine_output
-				@constraint(m, m[:indicator_turn_down][t, ts] => {m[:dvWaterOutFlow][t, ts-i] == m[:dvWaterOutFlow][t,ts-i-1]})
+		print("\n Adding a constraint for the minimum operating time at a local maximum water flow \n")
+		@variable(m, indicator_turn_down[t in p.techs.existing_hydropower, ts in p.time_steps, dv in dvs], Bin)	
+		for dv in dvs
+			if dv == "binTurbineActive"
+				variable = Symbol("dvWaterOutFlow")
+			elseif dv == "binPumpingWaterActive"
+				variable = Symbol("dvPumpedWaterFlow")
+			else
+				throw(@error("Error in applying the local maximum operating time constraint"))
 			end
-			@constraint(m, !m[:indicator_turn_down][t, ts] => { m[:dvWaterOutFlow][t,ts] >= m[:dvWaterOutFlow][t,ts-1]  })
+			for t in p.techs.existing_hydropower, ts in (2 + p.s.existing_hydropower.minimum_operating_time_steps_at_local_maximum_turbine_output):Int(length(p.time_steps))
+				for i in 1:p.s.existing_hydropower.minimum_operating_time_steps_at_local_maximum_turbine_output
+					@constraint(m, m[:indicator_turn_down][t, ts, dv] => {m[variable][t, ts-i] == m[variable][t,ts-i-1]})
+				end
+				@constraint(m, !m[:indicator_turn_down][t, ts, dv] => { m[variable][t,ts] >= m[variable][t,ts-1]  })
+			end
 		end
 	end
 
@@ -264,7 +285,7 @@ function add_existing_hydropower_constraints(m,p)
 			@constraint(m, !m[:indicator_turbine_turn_off][t, ts] => { m[:binTurbineActive][t,ts+1] - m[:binTurbineActive][t,ts] >= 0  } )
 		end
 	end
-	# TODO: remove this constraint that prevents a spike in the spillway use during the first time step
+	# TODO: remove this constraint, which prevents a spike in the spillway use during the first time step
 	@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][1] == 0)
 
 end
