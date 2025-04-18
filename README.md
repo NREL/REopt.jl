@@ -1,24 +1,22 @@
 # REopt® Julia package
-This package is currently under development, but it now has all of the capabilities of the REopt® model used in the [REopt API](https://github.com/NREL/REopt_API).
+REopt.jl is the core module of the [REopt® techno-economic decision support platform](https://www.nrel.gov/reopt/), developed by the National Renewable Energy Laboratory (NREL). REopt® stands for **R**enewable **E**nergy integration and **opt**imization. REopt.jl is used within the publicly-accessible and open-source [REopt API](https://github.com/NREL/REopt_API), and the publicly available [REopt Web Tool](https://reopt.nrel.gov/tool) calls the REopt API.
 
-For more information please see the documentation:
+The REopt® techno-economic decision support platform is used by researchers to optimize energy systems for buildings, campuses, communities, microgrids, and more. REopt identifies the optimal mix of renewable energy, conventional generation, storage, and electrification technologies to meet cost savings, resilience, emissions reductions, and energy performance goals.
+
+For more information about REopt.jl please see the Julia documentation:
 <!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REopt.jl/stable) -->
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nrel.github.io/REopt.jl/dev)
 
 
 ## Quick Start
-Evaluating only `PV` and `Storage` requires a linear program solver. Adding a generator and/or multiple outages makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with `Xpress`, `Cbc`, `HiGHS` and `CPLEX`.
-
-Note that not all solvers support indicator constraints and special order sets (such as HiGHS), and so not all REopt problems can be solved with solvers lacking these capabilities.
+Evaluating simple `PV` and `ElectricStorage` scenarios requires a linear program solver. Evaluating net-metering, `Generator`, multiple outages, or other more complex scenario makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with , `HiGHS`, `Cbc`, `SCIP`, `Xpress` (commercial), and `CPLEX` (commercial).
 
 ### Example
 ```
-using Xpress
-using JuMP
-using REopt
+using REopt, JuMP, HiGHS
 
-m = Model(Xpress.Optimizer)
-results = run_reopt(m, "path/to/scenario.json")
+m = Model(HiGHS.Optimizer)
+results = run_reopt(m, "pv_storage.json")
 ```
 See the `test/scenarios` directory for examples of `scenario.json`.
 

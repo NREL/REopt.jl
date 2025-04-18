@@ -104,19 +104,18 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
+			elseif b in p.s.storage.types.hot
+				add_hot_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
-			elseif !(b in p.s.storage.types.hot)
+			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
 		end
 	end
-	if !isempty(p.s.storage.types.hot)
-		add_hot_thermal_storage_dispatch_constraints(m, p)
-	end
 
 	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.all))
-		add_storage_sum_constraints(m, p)
+		add_storage_sum_grid_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)

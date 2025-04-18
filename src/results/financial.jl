@@ -14,12 +14,18 @@
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
 - `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus expected microgrid fuel costs, assuming outages occur in first year with specified probabilities.
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
+- `year_one_total_operating_cost_before_tax` Year one total operating costs, before tax. Includes energy costs, export value, O&M, fuel, and standby costs.
+- `year_one_total_operating_cost_after_tax` Year one total operating costs, after tax. Includes energy costs, export value, O&M, fuel, and standby costs.
+- `year_one_fuel_cost_before_tax` Year one fuel costs, before tax. Does not include fuel use during outages if using multiple outage modeling.
+- `year_one_fuel_cost_after_tax` Year one fuel costs, after tax. Does not include fuel use during outages if using multiple outage modeling.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
-- `lifecycle_capital_costs_plus_om_after_tax` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. This value does not include offgrid_other_capital_costs.
-- `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
-- `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. This value does not include offgrid_other_capital_costs.
-- `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives. This value does not include offgrid_other_capital_costs.
+- `year_one_chp_standby_cost_after_tax` Year one CHP standby costs, after tax.
+- `year_one_chp_standby_cost_before_tax` Year one CHP standby costs, before tax.
+- `lifecycle_capital_costs_plus_om_after_tax` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. 
+- `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. 
+- `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. 
+- `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives. Note: the ITC and MACRS are discounted by 1 year, and 1-7 years, respectively, to obtain the present value. 
 - `replacements_future_cost_after_tax` Future cost of replacing storage and/or generator systems, after tax.
 - `replacements_present_cost_after_tax` Present value cost of replacing storage and/or generator systems, after tax.
 - `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
@@ -35,6 +41,11 @@ calculated in combine_results function if BAU scenario is run:
 	REopt performs load balances using average annual production values for technologies that include degradation. 
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
 
+
+!!! note "Two Methods for Simple Payback"
+	REopt Financial outputs include a comprehensive `simple_payback_years` calculation. This is the year in which cumulative net free cashflows become positive. For a third party analysis, the SPP is for the developer.
+    A simplified payback period can also be calculated as: `capital_costs_after_non_discounted_incentives` divided by `year_one_total_operating_cost_savings_after_tax`.
+
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Float64}()
@@ -44,11 +55,23 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !(Symbol("TotalPerUnitHourOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
         m[Symbol("TotalPerUnitHourOMCosts"*_n)] = 0.0
     end
-    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
+    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
         m[Symbol("GHPOMCosts"*_n)] = 0.0
     end
     if !(Symbol("GHPCapCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
         m[Symbol("GHPCapCosts"*_n)] = 0.0
+    end
+    if !(Symbol("OffgridOtherCapexAfterDepr"*_n) in keys(m.obj_dict))
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] = 0.0
+    end
+    if !(Symbol("AvoidedCapexByGHP"*_n) in keys(m.obj_dict))
+        m[Symbol("AvoidedCapexByGHP"*_n)] = 0.0
+    end
+    if !(Symbol("ResidualGHXCapCost"*_n) in keys(m.obj_dict))
+        m[Symbol("ResidualGHXCapCost"*_n)] = 0.0
+    end    
+    if !(Symbol("AvoidedCapexByASHP"*_n) in keys(m.obj_dict))
+        m[Symbol("AvoidedCapexByASHP"*_n)] = 0.0
     end
 
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)])
@@ -69,6 +92,8 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         m[Symbol("TotalCHPStandbyCharges"*_n)] = 0.0
     end
     r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction) # CHP standby
+    r["year_one_chp_standby_cost_after_tax"] = r["lifecycle_chp_standby_cost_after_tax"] / (p.pwf_e * p.third_party_factor)
+    r["year_one_chp_standby_cost_before_tax"] = r["year_one_chp_standby_cost_after_tax"] / (1 - p.s.financial.offtaker_tax_rate_fraction)
     r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction)  # Total utility bill 
     r["lifecycle_production_incentive_after_tax"] = value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_rate_fraction)  # Production incentives
     if p.s.settings.off_grid_flag # Offgrid other annual and capital costs
@@ -89,11 +114,12 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
+    
+    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)] +
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)])
+    
+    r["lifecycle_capital_costs_plus_om_after_tax"] = r["lifecycle_capital_costs"] + r["lifecycle_om_costs_after_tax"]
 
-    r["lifecycle_capital_costs_plus_om_after_tax"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)]) + r["lifecycle_om_costs_after_tax"]
-    
-    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)])
-    
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
@@ -131,7 +157,7 @@ Calculate and return the up-front capital costs for all technologies, in present
 incentives.
 """
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    initial_capex = 0
+    initial_capex = p.s.financial.offgrid_other_capital_costs - value(m[Symbol("AvoidedCapexByASHP"*_n)]) - value(m[Symbol("AvoidedCapexByGHP"*_n)])
 
     if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
@@ -161,34 +187,21 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if "CHP" in p.techs.all
-        # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
-        cost_list = p.s.chp.installed_cost_per_kw
-        size_list = p.s.chp.tech_sizes_for_cost_curve
-        chp_size = value.(m[Symbol("dvPurchaseSize"*_n)])["CHP"]
-        if typeof(cost_list) == Vector{Float64}
-            if chp_size <= size_list[1]
-                initial_capex += chp_size * cost_list[1]  # Currently not handling non-zero cost ($) for 0 kW size input
-            elseif chp_size > size_list[end]
-                initial_capex += chp_size * cost_list[end]
-            else
-                for s in 2:length(size_list)
-                    if (chp_size > size_list[s-1]) && (chp_size <= size_list[s])
-                        slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
-                                (size_list[s] - size_list[s-1])
-                        initial_capex += cost_list[s-1] * size_list[s-1] + (chp_size - size_list[s-1]) * slope
-                    end
-                end
-            end
-        else
-            initial_capex += cost_list * chp_size
-        #Add supplementary firing capital cost
-        # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
-        # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
-        # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
-        end
+        chp_size_kw = value.(m[Symbol("dvPurchaseSize"*_n)])["CHP"]
+        initial_capex += get_chp_initial_capex(p, chp_size_kw)
     end
 
-    # TODO thermal tech costs
+    if "SteamTurbine" in p.techs.all
+        initial_capex += p.s.steam_turbine.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["SteamTurbine"]
+    end
+
+    if "Boiler" in p.techs.all
+        initial_capex += p.s.boiler.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Boiler"]
+    end
+
+    if "AbsorptionChiller" in p.techs.all
+        initial_capex += p.s.absorption_chiller.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["AbsorptionChiller"]
+    end
 
     if !isempty(p.s.ghp_option_list)
 
@@ -202,6 +215,14 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
                 @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
         end
+    end
+
+    if "ASHPSpaceHeater" in p.techs.all
+        initial_capex += p.s.ashp.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPSpaceHeater"]
+    end
+
+    if "ASHPWaterHeater" in p.techs.all
+        initial_capex += p.s.ashp_wh.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["ASHPWaterHeater"]
     end
 
     return initial_capex
@@ -286,10 +307,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
     capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
 
-    annual_om = new_kw * tech.om_cost_per_kw # NPV of O&M charges escalated over financial life
+    annual_om = new_kw * tech.om_cost_per_kw 
 
     om_series = [annual_om * (1+p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
-    npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)])
+    npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)]) # NPV of O&M charges escalated over financial life
 
     #Incentives as calculated in the spreadsheet, note utility incentives are applied before state incentives
     utility_ibi = min(capital_costs * tech.utility_ibi_fraction, tech.utility_ibi_max)
@@ -325,21 +346,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
     npv_federal_itc = federal_itc_amount * (1.0/(1.0+discount_rate_fraction))
 
-    depreciation_schedule = zeros(years)
-    if tech.macrs_option_years in [5,7]
-        if tech.macrs_option_years == 5
-            schedule = p.s.financial.macrs_five_year
-        elseif tech.macrs_option_years == 7
-            schedule = p.s.financial.macrs_seven_year
-        end
-        macrs_bonus_basis = federal_itc_basis - (federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction)
-        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
-        for (i,r) in enumerate(schedule)
-            if i-1 < length(depreciation_schedule)
-                depreciation_schedule[i] = macrs_basis * r
-            end
-        end
-        depreciation_schedule[1] += tech.macrs_bonus_fraction * macrs_bonus_basis
+    if tech.macrs_option_years in [5 ,7]
+        depreciation_schedule = get_depreciation_schedule(p, tech, federal_itc_basis)
+    else
+        depreciation_schedule = zeros(years)
     end
 
     tax_deductions = (om_series + depreciation_schedule) * federal_tax_rate_fraction
@@ -354,4 +364,81 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     lcoe = (capital_costs + npv_om - npv_pbi - cbi - ibi - npv_federal_itc - npv_tax_deductions ) / npv_annual_energy
 
     return round(lcoe, digits=4)
+end
+
+"""
+    get_depreciation_schedule(p::REoptInputs, tech::AbstractTech, federal_itc_basis::Float64=0.0)
+
+Get the depreciation schedule for MACRS. First check if tech.macrs_option_years in [5 ,7], then call function to return depreciation schedule
+Used in results/financial.jl and results/proformal.jl multiple times
+"""
+function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,AbstractStorage}, federal_itc_basis::Float64=0.0)
+    schedule = []
+    if tech.macrs_option_years == 5
+        schedule = p.s.financial.macrs_five_year
+    elseif tech.macrs_option_years == 7
+        schedule = p.s.financial.macrs_seven_year
+    end
+
+    federal_itc_fraction = 0.0
+    try 
+        # TODO add Hot/ColdThermalStorage.total_itc_fraction to struct; currently only in ElectricStorage
+        if typeof(tech) <: AbstractStorage
+            federal_itc_fraction = tech.total_itc_fraction
+        else
+            federal_itc_fraction = tech.federal_itc_fraction
+        end
+    catch
+        @warn "Did not find $(tech).federal_itc_fraction so using 0.0 in calculation of depreciation_schedule."
+    end
+    
+    macrs_bonus_basis = federal_itc_basis - federal_itc_basis * federal_itc_fraction * tech.macrs_itc_reduction
+    macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
+
+    depreciation_schedule = zeros(p.s.financial.analysis_years)
+    for (i, r) in enumerate(schedule)
+        if i < length(depreciation_schedule)
+            depreciation_schedule[i] = macrs_basis * r
+        end
+    end
+    depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
+
+    return depreciation_schedule
+end
+
+
+""" 
+    get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
+
+CHP has a cost-curve input option, so calculating the initial CapEx requires more logic than typical tech CapEx calcs
+"""
+function get_chp_initial_capex(p::REoptInputs, size_kw::Float64)
+    # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
+    cost_list = p.s.chp.installed_cost_per_kw
+    size_list = p.s.chp.tech_sizes_for_cost_curve
+    chp_size = size_kw
+    initial_capex = 0.0
+    if typeof(cost_list) == Vector{Float64}
+        if chp_size <= size_list[1]
+            initial_capex = chp_size * cost_list[1]  # Currently not handling non-zero cost ($) for 0 kW size input
+        elseif chp_size > size_list[end]
+            initial_capex = chp_size * cost_list[end]
+        else
+            for s in 2:length(size_list)
+                if (chp_size > size_list[s-1]) && (chp_size <= size_list[s])
+                    slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                            (size_list[s] - size_list[s-1])
+                    initial_capex = cost_list[s-1] * size_list[s-1] + (chp_size - size_list[s-1]) * slope
+                end
+            end
+        end
+    else
+        initial_capex = cost_list * chp_size
+    #Add supplementary firing capital cost
+    # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
+    # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
+    # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
+    end
+
+    return initial_capex
 end
