@@ -97,15 +97,15 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
     return weatherdata
 end
 
-function normalize_response(thermal_power_produced,case_data)
+function normalize_response(thermal_power_produced,case_data,user_defined_inputs)
     model = case_data["CST"]["tech_type"]
     if model =="ptc"
-        heat_sink = case_data["CST"]["SSC_Inputs"]["q_pb_design"]
+        heat_sink = user_defined_inputs["q_pb_design"]
         rated_power_per_area = 39.37 / 60000.0 # MWt / m2, TODO: update with median values from SAM params
-        if case_data["CST"]["SSC_Inputs"]["use_solar_mult_or_aperture_area"] > 0
-            rated_power = rated_power_per_area * case_data["CST"]["SSC_Inputs"]["specified_total_aperture"]
+        if user_defined_inputs["use_solar_mult_or_aperture_area"] > 0
+            rated_power = rated_power_per_area * user_defined_inputs["specified_total_aperture"]
         else
-            rated_power = case_data["CST"]["SSC_Inputs"]["specified_solar_multiple"] * heat_sink
+            rated_power = user_defined_inputs["specified_solar_multiple"] * heat_sink
         end
     elseif model=="mst"
         heat_sink = case_data["CST"]["SSC_Inputs"]["q_pb_design"]
@@ -136,27 +136,81 @@ function run_ssc(case_data::Dict)
     user_defined_inputs_list = Dict(
         "swh_flatplate" => ["T_set","fluid","ncoll","tilt"],
         "swh_evactube" => ["T_set","fluid","ncoll","tilt"],
-        "ptc" => ["Fluid","q_pb_design","T_loop_in_des","T_loop_out","specified_total_aperture","T_tank_hot_inlet_min","use_solar_mult_or_aperture_area","hot_tank_Thtr","cold_tank_Thtr","lat"], # need to add "store_fluid",
+        "ptc" => [], # need to add "store_fluid",
         "lf" => [],
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
     # First set user defined inputs to default just in case
     defaults_file = joinpath(@__DIR__,"..","sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
     defaults = JSON.parsefile(defaults_file)
-    defaults["file_name"] = joinpath(@__DIR__,"..","sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
-
-    for i in user_defined_inputs_list[model]
-        if (i == "tilt") || (i == "lat")
-            user_defined_inputs[i] = lat
+    if model in ["swh_flatplate","swh_evactube"]
+        scaled_draw_filename = joinpath(@__DIR__,"sam","defaults","scaled_draw_500000_kg_per_day.csv")
+        scaled_draw_df = CSV.read(scaled_draw_filename, DataFrame; header=false)
+        scaled_draw_values = scaled_draw_df[:, 1]
+        defaults["scaled_draw"] = scaled_draw_values
+    end
+    println("Defaults loaded.")
+    defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
+    if haskey(case_data["CST"], "SSC_Inputs")
+        for i in user_defined_inputs_list[model]
+            if (i == "tilt") || (i == "lat")
+                user_defined_inputs[i] = lat
+            end
+        end
+        for i in keys(case_data["CST"]["SSC_Inputs"])
+            user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
+        end
+    else
+        if model != "ptc"
+            R["error"] = "SSC_Inputs must be provided for your provided CST tech type"
+            return R
         end
     end
-    for i in keys(case_data["CST"]["SSC_Inputs"])
-        user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
-    end
     if model == "ptc"
-        user_defined_inputs["h_tank_in"] = defaults["h_tank"]
-        user_defined_inputs["f_htfmin"] = 0.0
-        user_defined_inputs["f_htfmax"] = 1.0
+        if haskey(case_data["CST"], "inlet_temp_degF") && haskey(case_data["CST"], "outlet_temp_degF")
+            inlet_temp = case_data["CST"]["inlet_temp_degF"]
+            outlet_temp = case_data["CST"]["outlet_temp_degF"]
+            user_defined_inputs["h_tank_in"] = defaults["h_tank"]
+            user_defined_inputs["f_htfmin"] = 0.0
+            user_defined_inputs["f_htfmax"] = 1.0
+            if !haskey(user_defined_inputs, "T_loop_in_des")
+                user_defined_inputs["T_loop_in_des"] = inlet_temp
+            end
+            if !haskey(user_defined_inputs, "T_loop_out")
+                user_defined_inputs["T_loop_out"] = outlet_temp
+            end
+            if !haskey(user_defined_inputs, "T_tank_hot_inlet_min")
+                user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
+            end
+            if !haskey(user_defined_inputs, "hot_tank_Thtr")
+                user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
+            end
+            if !haskey(user_defined_inputs, "cold_tank_Thtr")
+                user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
+            end
+            if !haskey(user_defined_inputs, "lat")
+                user_defined_inputs["lat"] = lat
+            end
+            if !haskey(user_defined_inputs, "Fluid")
+                user_defined_inputs["Fluid"] = 21
+            end
+            if !haskey(user_defined_inputs, "q_pb_design")
+                if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
+                    user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
+                else
+                    user_defined_inputs["q_pb_design"] = 5.2
+                end
+            end
+            if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
+                if haskey(case_data["Site"], "land_acres")
+                    user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
+                    user_defined_inputs["specified_total_aperture"] = case_data["Site"]["land_acres"] * 4046.85642
+                else
+                    user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
+                    user_defined_inputs["specified_solar_multiple"] = 2.5
+                end
+            end
+        end
     end
     R = Dict()
     error = ""
@@ -214,6 +268,7 @@ function run_ssc(case_data::Dict)
             "swh_evactube" => 1           
         ) 
         outputs = outputs_dict[model]
+        println("retrieved outputs")
         
         len = 8760
         len_ref = Ref(len)
@@ -254,7 +309,7 @@ function run_ssc(case_data::Dict)
         # print(c_response)
         ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
         if model == "ptc"
-            thermal_production_norm = normalize_response(thermal_production, case_data)
+            thermal_production_norm = normalize_response(thermal_production, case_data, user_defined_inputs)
         else
             thermal_production_norm = thermal_production .* tcf ./ rated_power
         end
@@ -276,7 +331,6 @@ function run_ssc(case_data::Dict)
         end
         R["error"] = error
         #return R
-        
     end
     return R
 end
