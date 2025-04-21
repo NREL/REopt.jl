@@ -284,7 +284,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
         @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
             !m[Symbol("binNoGridPurchases"*_n)][ts] => {
                 sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) +
-                (m[Symbol("dvStorageToGrid")][ts]) + (m[Symbol("dvHydroToGrid")][ts]) <= 0
+                (m[Symbol("dvStorageToGrid")][ts]) <= 0
             }
         )
     else
@@ -295,7 +295,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
         )
         @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
             sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) +
-            (m[Symbol("dvStorageToGrid")][ts]) + (m[Symbol("dvHydroToGrid")][ts]) <= bigM_hourly_load * m[Symbol("binNoGridPurchases"*_n)][ts]
+            (m[Symbol("dvStorageToGrid")][ts]) <= bigM_hourly_load * m[Symbol("binNoGridPurchases"*_n)][ts]
         )
     end
 end

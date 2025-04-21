@@ -20,6 +20,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvPumpPowerInput"*_n)][t, ts] for t in p.techs.existing_hydropower)
         )
     else
+        @info("******************Adding load balance with export")
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )
@@ -38,12 +39,16 @@ function add_elec_load_balance_constraints(m, p; _n="")
         )
     end
 
+    #Temporary constraint for debugging:
+    #@constraint(m, [ts in [4000,4001,4002]], sum(m[Symbol("dvPumpPowerInput"*_n)][t, ts] for t in p.techs.existing_hydropower) == 1000)
+
 	for (i, cr) in enumerate(conrefs)
 		JuMP.set_name(cr, "con_load_balance"*_n*string("_t", i))
 	end
 	
     ##Constraint (8b): Electrical Load Balancing without Grid
 	if !p.s.settings.off_grid_flag # load balancing constraint for grid-connected runs
+        @info("******************Adding load balance for these outage times: $(p.time_steps_without_grid)")
         @constraint(m, [ts in p.time_steps_without_grid],
             sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec)
