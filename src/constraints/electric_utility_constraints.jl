@@ -1,6 +1,6 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_export_constraints(m, p; _n="")
-
+    print("\n #1: p.techs.all is: $(p.techs.all)")
     ##Constraint (8e): Production export and curtailment no greater than production
     @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
         p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
@@ -384,8 +384,8 @@ end
 
 
 function add_elec_utility_expressions(m, p; _n="")
-
-    if !isempty(p.s.electric_tariff.export_bins) && !isempty(p.techs.all)
+    # TODO: if prefered, change the if statement below so that the hydropower does not need to be called out separately (note: hydro is removed from p.techs.all in reopt.jl in this line of code: NonHydroTechs = filter!(x->x != hydropower_tech, p.techs.all))
+    if (!isempty(p.s.electric_tariff.export_bins) && !isempty(p.techs.all)) || (!isempty(p.techs.existing_hydropower))
         # NOTE: levelization_factor is baked into dvProductionToGrid
         m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEM_benefit"*_n)] + m[Symbol("WHL_benefit"*_n)] +
                                              m[Symbol("EXC_benefit"*_n)]

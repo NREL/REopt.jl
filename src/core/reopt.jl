@@ -274,6 +274,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
+	print("\n ****************** The no curtail techs are: $(p.techs.no_curtail)")
+
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
         
@@ -384,7 +386,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_coincident_peak_charge_constraints(m, p)
     end
 
-
 	# Remove hydropower from the calculation:
 	NonHydroTechs=[]
 	for hydropower_tech in p.techs.existing_hydropower
@@ -396,7 +397,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         m[:TotalTechCapCosts] += p.third_party_factor *
             sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(NonHydroTechs, p.techs.segmented))
     end
-
     if !isempty(p.techs.segmented)
         @warn "Adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
@@ -407,7 +407,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             )
         end
     end
-	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
@@ -518,7 +517,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
 	if "ExistingHydropower_Turbine1" in p.techs.elec
-		print("\n Adding hydro to the objective function")
+		print("\n Adding spillway water flow to the objective function to minimize the spillway water flow")
 		add_to_expression!(Costs, sum(m[:dvSpillwayWaterFlow][ts] for ts in p.time_steps)) # minimize the water that is released in the spillway
 	end
 	## Modify objective with incentives that are not part of the LCC

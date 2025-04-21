@@ -70,6 +70,7 @@ function add_existing_hydropower_constraints(m,p)
 
 	elseif p.s.existing_hydropower.computation_type == "fixed_efficiency_linearized_reservoir_head"
 		@info "Adding hydropower power output constraint using a fixed efficiency and linearized reservoir head"
+		# TODO: make an option that is like this, but linearized using discretization
 
         @variable(m, reservoir_head[ts in p.time_steps] >= 0)
 
@@ -110,6 +111,8 @@ function add_existing_hydropower_constraints(m,p)
 	else 
 		throw(@error("Invalid input for the computation_type field"))
 	end
+
+	print("*********The p.techs.elec are: $(p.techs.elec)")
 
 	# Total water volume is between the max and min levels
 	@constraint(m, [ts in p.time_steps],
@@ -288,8 +291,9 @@ function add_existing_hydropower_constraints(m,p)
 			@constraint(m, !m[:indicator_turbine_turn_off][t, ts] => { m[:binTurbineActive][t,ts+1] - m[:binTurbineActive][t,ts] >= 0  } )
 		end
 	end
+	
 	# TODO: remove this constraint, which prevents a spike in the spillway use during the first time step
-	#@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][1] == 0)
+	@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][1] == 0)
 
 end
 

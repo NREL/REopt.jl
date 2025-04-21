@@ -431,10 +431,10 @@ function setup_tech_inputs(s::AbstractScenario)
     else
         heating_cop["ElectricHeater"] = 1.0
     end
-
-    if "ExistingHydropower_Turbine1" in techs.all
+    
+    if "ExistingHydropower_Turbine1" in techs.all   # Note: the setup_existing_hydropower_inputs function adds inputs for the other turbine numbers
         print("\n Setting up Existing Hydropower in the reopt inputs file")
-        setup_existing_hydropower_inputs(s, existing_hydropower_inputs, techs_by_exportbin, production_factor)
+        setup_existing_hydropower_inputs(s, existing_hydropower_inputs, techs_by_exportbin, production_factor, techs)
     else
         print("\n Existing Hydropower is not in the techs")
         #existing_hydropower["existing_kw_per_turbine"] = 0
@@ -645,12 +645,16 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     return nothing
 end
 
-function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower_inputs, techs_by_exportbin, production_factor)
+function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower_inputs, techs_by_exportbin, production_factor, techs)
     existing_hydropower_inputs["existing_kw_per_turbine"] = s.existing_hydropower.existing_kw_per_turbine
      for i in 1:s.existing_hydropower.number_of_turbines
         # TODO: update so that hydropower works with 15 min and 30 min interval data too
         production_factor["ExistingHydropower_Turbine"*string(i),:] = ones(8760 * s.settings.time_steps_per_hour) # get_production_factor(s.existing_hydropower; s.settings.time_steps_per_hour)
         fillin_techs_by_exportbin(techs_by_exportbin, s.existing_hydropower, "ExistingHydropower_Turbine"*string(i))
+        
+        if !(s.existing_hydropower.can_curtail)
+            push!(techs.no_curtail, "ExistingHydropower_Turbine"*string(i))
+        end
         
     end
     return nothing 
