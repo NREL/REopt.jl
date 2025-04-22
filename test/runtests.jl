@@ -3340,19 +3340,20 @@ else  # run HiGHS tests
             post_name = "fixed_pv_bess" 
             post = JSON.parsefile("./scenarios/$post_name.json")
             
+            # Get optimal SOC
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m1 , post)
             lcc1 = results["Financial"]["lcc"]
+            soc_series = results["ElectricStorage"]["soc_series_fraction"]
             
             # Fix soc_series to optimal from previous run
-            soc_series = results["ElectricStorage"]["soc_series_fraction"]
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)) 
             post["ElectricStorage"]["fixed_soc_series_fraction"] =  soc_series 
             results = run_reopt(m1 , post)
             lcc2 = results["Financial"]["lcc"]
             
             @test lcc1 ≈ lcc2 rtol=0.001
-            @test sum(soc_series - results["ElectricStorage"]["soc_series_fraction"]) ≈ 0.0 atol=0.1
+            @test maximum(abs.(soc_series - results["ElectricStorage"]["soc_series_fraction"])) <= 0.0100001
         end 
     end
 end
