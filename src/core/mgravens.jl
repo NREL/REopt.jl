@@ -502,11 +502,11 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             "IdentifiedObject.name" => scenario_name,
             "IdentifiedObject.mRID" => estimated_asset_costs_uuid,
             "Ravens.cimObjectType" => "EstimatedCost",
-            "EstimatedCost.lifecycleCapacityCost" => capacity_cost,
-            "EstimatedCost.lifecycleEnergyCost" => reopt_results["ElectricTariff"]["lifecycle_energy_cost_after_tax"*bau_suffix],
-            "EstimatedCost.lifecycleCapitalCost" => lcc_capital_costs,
-            "EstimatedCost.lifecycleCost" => reopt_results["Financial"]["lcc"*bau_suffix],
-            "EstimatedCost.netPresentValue" => npv
+            "EstimatedCost.lifecycleCapacityCost" => cost_template(capacity_cost),
+            "EstimatedCost.lifecycleEnergyCost" => cost_template(reopt_results["ElectricTariff"]["lifecycle_energy_cost_after_tax"*bau_suffix]),
+            "EstimatedCost.lifecycleCapitalCost" => cost_template(lcc_capital_costs),
+            "EstimatedCost.lifecycleCost" => cost_template(reopt_results["Financial"]["lcc"*bau_suffix]),
+            "EstimatedCost.netPresentValue" => cost_template(npv)
         )
     end
 
@@ -555,16 +555,18 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             append!(mgravens["Group"]["ProposedAssetSet"][scenario_names[2]]["ProposedAssetSet.ProposedAssets"], ["ProposedEnergyProducerAsset::'$name'"])
             proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = Dict(
                 "value" => reopt_results["PV"]["size_kw"],
-                "unit" => "W",
-                "multiplier" => "k"
+                "unit" => "UnitSymbol.W",
+                "multiplier" => "UnitMultiplier.k"
             )
             proposed_asset_template["Ravens.cimObjectType"] = "ProposedEnergyProducerAsset"
             proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedPhotovoltaicUnitOption::'"*tech_name_map["PV"]*"'"
+
+            # TODO update this to look under the "Curve" key specified by the name in e.g. proposedPV1.ProposedPhotoVoltaicUnitOption.GenerationProfile [== "Curve::'PVProfile'"]
             proposed_asset_template["ProposedEnergyProducerAsset.PowerDispatchCurve"] = Dict{String, Any}(
                 "IdentifiedObject.name" => "PVProfile",
                 "IdentifiedObject.mRID" => string(uuid4()),
                 "Ravens.cimObjectType" => "DispatchCurve",
-                "Curve.xUnit" => "h",
+                "Curve.xUnit" => "UnitSymbol.h",
                 "Curve.CurveDatas" => []
                 )
             for ts in 1:8760
@@ -578,13 +580,13 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedBatteryUnitOption::'"*tech_name_map["ElectricStorage"]*"'"
             proposed_asset_template["ProposedEnergyProducerAsset.capacity"] = Dict(
                 "value" => reopt_results["ElectricStorage"]["size_kw"],
-                "unit" => "W",
-                "multiplier" => "k"
+                "unit" => "UnitSymbol.W",
+                "multiplier" => "UnitMultiplier.k"
             )
             proposed_asset_template["ProposedBatteryUnit.energyCapacity"] = Dict(
                 "value" => reopt_results["ElectricStorage"]["size_kwh"],
-                "unit" => "Wh",
-                "multiplier" => "k"
+                "unit" => "UnitSymbol.Wh",
+                "multiplier" => "UnitMultiplier.k"
             )
 
             # TODO add dispatch for Battery, even if used as a target/reference set point
@@ -594,6 +596,13 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
     end   
 end
 
+
+function cost_template(value)
+        return Dict([
+          "unit" => "Currency.USD",
+          "value" => value
+        ])
+end
 
 # THIS FUNCTION WAS COPIED FROM REOPT.JL UTILS.JL
 """
