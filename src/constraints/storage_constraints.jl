@@ -143,10 +143,10 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     if hasproperty(p.s.storage.attr[b], :fixed_soc_series_fraction) && !isnothing(p.s.storage.attr[b].fixed_soc_series_fraction)      
         @constraint(m, [ts in p.time_steps],
         # Allow for a 1 pct point buffer on user-provided fixed_soc_series_fraction
-            m[Symbol("dvStoredEnergy"*_n)][b, ts] <= (0.01 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] <= (0.02 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
         )
         @constraint(m, [ts in p.time_steps],
-            m[Symbol("dvStoredEnergy"*_n)][b, ts] >= (-0.01 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] >= (-0.02 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     end
 end
