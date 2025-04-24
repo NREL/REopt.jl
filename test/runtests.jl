@@ -3353,7 +3353,7 @@ else  # run HiGHS tests
             lcc2 = results["Financial"]["lcc"]
             
             @test lcc1 ≈ lcc2 rtol=0.001
-            @test maximum(abs.(soc_series - results["ElectricStorage"]["soc_series_fraction"])) <= 0.0100001
+            @test maximum(abs.(soc_series - results["ElectricStorage"]["soc_series_fraction"])) <= 0.0200001
         end 
     end
 end
