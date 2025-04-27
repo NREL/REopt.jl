@@ -332,18 +332,23 @@ struct ElectricStorage <: AbstractElectricStorage
 
         net_present_cost_per_kwh -= s.total_rebate_per_kwh
 
-        net_present_cost_cost_constant = effective_cost(;
-            itc_basis = s.installed_cost_constant,
-            replacement_cost = s.cost_constant_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_constant,
-            replacement_year = s.cost_constant_replacement_year,
-            discount_rate = f.owner_discount_rate_fraction,
-            tax_rate = f.owner_tax_rate_fraction,
-            itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
-            macrs_bonus_fraction = s.macrs_bonus_fraction,
-            macrs_itc_reduction = s.macrs_itc_reduction
+	    if (s.installed_cost_constant != 0) || (s.replace_cost_constant != 0)
 
-        )
+            net_present_cost_cost_constant = effective_cost(;
+                itc_basis = s.installed_cost_constant,
+                replacement_cost = s.cost_constant_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_constant,
+                replacement_year = s.cost_constant_replacement_year,
+                discount_rate = f.owner_discount_rate_fraction,
+                tax_rate = f.owner_tax_rate_fraction,
+                itc = s.total_itc_fraction,
+                macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+                macrs_bonus_fraction = s.macrs_bonus_fraction,
+                macrs_itc_reduction = s.macrs_itc_reduction
+
+            )
+        else
+            net_present_cost_cost_constant = 0
+        end
 
         if haskey(d, :degradation)
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
