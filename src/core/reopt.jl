@@ -236,6 +236,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
+				if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
+					add_elec_storage_cost_constant_constraints(m, p, b)
+				end
 			elseif b in p.s.storage.types.hot
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.cold
@@ -409,7 +412,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
 	))
-	
+
+	for b in p.s.storage.types.elec
+		if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
+			add_to_expression!(TotalStorageCapCosts, sum(p.s.storage.attr[b].net_present_cost_cost_constant * m[:binIncludeStorageCostConstant][b] ))
+		end
+	end
+
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
 		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all )
 	)
@@ -625,6 +634,17 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
 
+	if !isempty(p.s.storage.types.elec)
+		for b in p.s.storage.types.elec
+			if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
+				@warn "Adding binary variable for the battery cost constant. Some solvers are slow with binaries."	
+				dv = "binIncludeStorageCostConstant"
+				m[Symbol(dv)] = @variable(m, [p.s.storage.types.elec], base_name=dv, binary=true)
+				break # If one of the elec storages has a battery constant, then do not need to create another binIncludeStorageCostConstraint because by default the binIncludeStorageCostConstraint is index on all elec storage types
+			end
+		end
+	end
+	
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
 		@variables m begin
