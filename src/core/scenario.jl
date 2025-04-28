@@ -45,9 +45,7 @@ A Scenario struct can contain the following keys:
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Generator](@ref) (optional)
-- [DomesticHotWaterLoad](@ref) (optional)
-- [SpaceHeatingLoad](@ref) (optional)
-- [ProcessHeatLoad](@ref) (optional)
+- [HeatingLoad](@ref) (optional)
 - [CoolingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [Boiler](@ref) (optional)
@@ -58,8 +56,7 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
-- [ASHPSpaceHeater](@ref) (optional)
-- [ASHPWaterHeater](@ref) (optional)
+- [ASHP](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -162,7 +159,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             emissions_factor_series_lb_CO2_per_kwh = 0,
                                             emissions_factor_series_lb_NOx_per_kwh = 0,
                                             emissions_factor_series_lb_SO2_per_kwh = 0,
-                                            emissions_factor_series_lb_PM25_per_kwh = 0
+                                            emissions_factor_series_lb_PM25_per_kwh = 0,
+                                            renewable_energy_fraction_series = 0
                                         ) 
     end
         
@@ -221,51 +219,66 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+        year = get!(d["DomesticHotWaterLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "DomesticHotWaterLoad")
+        dhw_load = HeatingLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+                                        load_type = "domestic_hot_water",
                                         latitude=site.latitude, longitude=site.longitude, 
                                         time_steps_per_hour=settings.time_steps_per_hour,
                                         existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        dhw_load = DomesticHotWaterLoad(; 
+        dhw_load = HeatingLoad(;
+            load_type = "domestic_hot_water", 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+            year=electric_load.year
         )
     end
 
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+        year = get!(d["SpaceHeatingLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "SpaceHeatingLoad")
+        space_heating_load = HeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+                                            load_type = "space_heating",
                                             latitude=site.latitude, longitude=site.longitude, 
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             existing_boiler_efficiency = existing_boiler_efficiency
                                             )
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
-        space_heating_load = SpaceHeatingLoad(; 
+        space_heating_load = HeatingLoad(; 
+            load_type = "space_heating",        
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+            year=electric_load.year
         )
     end
 
     if haskey(d, "ProcessHeatLoad") && !haskey(d, "FlexibleHVAC")
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
-        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
-                                            latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour,
-                                            existing_boiler_efficiency = existing_boiler_efficiency
+        year = get!(d["ProcessHeatLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "ProcessHeatLoad")
+        process_heat_load = HeatingLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
+                                            load_type = "process_heat",
+                                            latitude = site.latitude, longitude = site.longitude, 
+                                            time_steps_per_hour = settings.time_steps_per_hour,
+                                            existing_boiler_efficiency = existing_boiler_efficiency                                           
                                             )
                                     
         max_heat_demand_kw = maximum(process_heat_load.loads_kw .+ max_heat_demand_kw)
     else
-        process_heat_load = ProcessHeatLoad(;
+        process_heat_load = HeatingLoad(;
+                load_type = "process_heat",                
                 fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
                 time_steps_per_hour=settings.time_steps_per_hour,
-                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY,
+                year=electric_load.year
         )
     end
 
@@ -403,6 +416,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
             end
         end
+        year = get!(d["CoolingLoad"], "year", electric_load.year)
+        validate_load_year_consistency(electric_load.year, year, "CoolingLoad")
+        # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
+        cooling_type_convert = ["monthly_fractions_of_electric_load", "per_time_step_fractions_of_electric_load", 
+                                "blended_doe_reference_percents", "monthly_tonhour", "thermal_loads_ton"]
+        for (k,v) in d["CoolingLoad"]
+            if typeof(v) <: AbstractVector{Any} && k in cooling_type_convert
+                d["CoolingLoad"][k] = convert(Vector{Float64}, v)
+            end
+        end
         cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
                                     latitude=site.latitude, longitude=site.longitude, 
                                     time_steps_per_hour=settings.time_steps_per_hour
@@ -424,7 +447,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         cooling_load = CoolingLoad(; 
             thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            year=electric_load.year
         )
     end
 
@@ -807,4 +831,10 @@ function get_existing_boiler_efficiency(d)
     end  
 
     return existing_boiler_efficiency
+end
+
+function validate_load_year_consistency(electric_load_year, year, load_type)
+    if electric_load_year != year
+        throw(@error("Inconsistent load years: ElectricLoad year ($electric_load_year) does not match the provided year ($year) for $load_type."))
+    end
 end

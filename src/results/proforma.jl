@@ -33,7 +33,8 @@ return Dict(
     "offtaker_discounted_annual_free_cashflows" => Float64[],
     "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
     "developer_annual_free_cashflows" => Float64[],
-    "initial_capital_costs_after_incentives_without_macrs" => 0.0 # Initial capital costs after ibi, cbi, and ITC incentives
+    "capital_costs_after_non_discounted_incentives_without_macrs" => 0.0 # Capital costs after (non-discounted) ibi, cbi, and ITC incentives, including present value of replacement costs
+    "capital_costs_after_non_discounted_incentives" => 0.0 # Capital costs after ibi, cbi, ITC, and MACRS incentives but without discounting out-year ITC and MACRS
 )
 """
 function proforma_results(p::REoptInputs, d::Dict)
@@ -47,7 +48,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         "offtaker_discounted_annual_free_cashflows" => Float64[],
         "offtaker_discounted_annual_free_cashflows_bau" => Float64[],
         "developer_annual_free_cashflows" => Float64[],
-        "initial_capital_costs_after_incentives_without_macrs" => 0.0
+        "capital_costs_after_non_discounted_incentives_without_macrs" => 0.0,
+        "capital_costs_after_non_discounted_incentives" => 0.0
     )
     years = p.s.financial.analysis_years
     escalate_elec(val) = [-1 * val * (1 + p.s.financial.elec_cost_escalation_rate_fraction)^yr for yr in 1:years]
@@ -69,6 +71,8 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # calculate Storage o+m costs, incentives, and depreciation
+    battery_replacement_cost = 0.0
+    battery_replacement_year = 0.0
     if "ElectricStorage" in keys(d) && d["ElectricStorage"]["size_kw"] > 0
         # TODO handle other types of storage
         storage = p.s.storage.attr["ElectricStorage"]
@@ -229,14 +233,17 @@ function proforma_results(p::REoptInputs, d::Dict)
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
     export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
+    standby_charges_series = escalate_elec(d["Financial"]["year_one_chp_standby_cost_before_tax"])
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
         total_operating_expenses = m.om_series
         tax_rate_fraction = p.s.financial.owner_tax_rate_fraction
+        discount_rate_for_battery_replacement_pv = p.s.financial.owner_discount_rate_fraction
     else
-        total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series + m.fuel_cost_series
+        total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series + m.fuel_cost_series + standby_charges_series
         tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
+        discount_rate_for_battery_replacement_pv = p.s.financial.offtaker_discount_rate_fraction
     end
 
     # Apply taxes to operating expenses
@@ -251,7 +258,9 @@ function proforma_results(p::REoptInputs, d::Dict)
     total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
-    r["initial_capital_costs_after_incentives_without_macrs"] = d["Financial"]["initial_capital_costs"] - m.total_ibi_and_cbi - m.federal_itc
+    battery_replacement_net_present_cost = -1*battery_replacement_cost * (1 - tax_rate_fraction) / (1 + discount_rate_for_battery_replacement_pv) ^ battery_replacement_year  # battery_replacement_cost is negative, from above
+    r["capital_costs_after_non_discounted_incentives_without_macrs"] = d["Financial"]["initial_capital_costs"] - m.total_ibi_and_cbi - m.federal_itc + battery_replacement_net_present_cost
+    r["capital_costs_after_non_discounted_incentives"] = r["capital_costs_after_non_discounted_incentives_without_macrs"] - sum(m.total_depreciation * tax_rate_fraction)
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
     # At this point the logic branches based on third-party ownership or not - see comments    
@@ -285,7 +294,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
         r["offtaker_annual_free_cashflows"] = append!([0.0], 
-            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series + m.om_series_bau
+            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series + m.om_series_bau + standby_charges_series
         )
         r["offtaker_annual_free_cashflows_bau"] = append!([0.0], 
             electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau + m.om_series_bau
