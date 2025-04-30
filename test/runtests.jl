@@ -13,7 +13,11 @@ using CSV
 using DataFrames
 Random.seed!(42)
 
-if "Xpress" in ARGS
+if "Debug" in ARGS
+    @testset "debugging_tests" begin
+        include("debugging_tests.jl")
+    end
+elseif "Xpress" in ARGS
     @testset "test_with_xpress" begin
         @test true  #skipping Xpress while import to HiGHS takes place
         # include("test_with_xpress.jl")
