@@ -144,13 +144,13 @@ function run_ssc(case_data::Dict)
     defaults_file = joinpath(@__DIR__,"..","sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
     defaults = JSON.parsefile(defaults_file)
     if model in ["swh_flatplate","swh_evactube"]
-        scaled_draw_filename = joinpath(@__DIR__,"sam","defaults","scaled_draw_500000_kg_per_day.csv")
+        scaled_draw_filename = joinpath(@__DIR__,"..","sam","defaults","scaled_draw_500000_kg_per_day.csv")
         scaled_draw_df = CSV.read(scaled_draw_filename, DataFrame; header=false)
         scaled_draw_values = scaled_draw_df[:, 1]
         defaults["scaled_draw"] = scaled_draw_values
     end
     println("Defaults loaded.")
-    defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
+    defaults["file_name"] = joinpath(@__DIR__,"..","sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
     if haskey(case_data["CST"], "SSC_Inputs")
         for i in user_defined_inputs_list[model]
             if (i == "tilt") || (i == "lat")
