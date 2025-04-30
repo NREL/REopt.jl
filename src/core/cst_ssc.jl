@@ -169,25 +169,25 @@ function run_ssc(case_data::Dict)
     end
     if model == "ptc"
         if haskey(case_data["CST"], "inlet_temp_degF") && haskey(case_data["CST"], "outlet_temp_degF")
-            inlet_temp = case_data["CST"]["inlet_temp_degF"]
-            outlet_temp = case_data["CST"]["outlet_temp_degF"]
+            inlet_temp = (case_data["CST"]["inlet_temp_degF"] - 32) / (9/5)
+            outlet_temp = (case_data["CST"]["outlet_temp_degF"] - 32) / (9/5)
             user_defined_inputs["h_tank_in"] = defaults["h_tank"]
             user_defined_inputs["f_htfmin"] = 0.0
             user_defined_inputs["f_htfmax"] = 1.0
             if !haskey(user_defined_inputs, "T_loop_in_des")
-                user_defined_inputs["T_loop_in_des"] = inlet_temp
+                user_defined_inputs["T_loop_in_des"] = outlet_temp
             end
             if !haskey(user_defined_inputs, "T_loop_out")
-                user_defined_inputs["T_loop_out"] = outlet_temp
+                user_defined_inputs["T_loop_out"] = inlet_temp + 50
             end
             if !haskey(user_defined_inputs, "T_tank_hot_inlet_min")
-                user_defined_inputs["T_tank_hot_inlet_min"] = outlet_temp - 50
+                user_defined_inputs["T_tank_hot_inlet_min"] = inlet_temp + 40
             end
             if !haskey(user_defined_inputs, "hot_tank_Thtr")
-                user_defined_inputs["hot_tank_Thtr"] = outlet_temp - 10
+                user_defined_inputs["hot_tank_Thtr"] = inlet_temp + 40
             end
             if !haskey(user_defined_inputs, "cold_tank_Thtr")
-                user_defined_inputs["cold_tank_Thtr"] = inlet_temp - 10
+                user_defined_inputs["cold_tank_Thtr"] = outlet_temp - 10
             end
             if !haskey(user_defined_inputs, "lat")
                 user_defined_inputs["lat"] = lat
