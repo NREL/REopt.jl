@@ -9,18 +9,14 @@ For more information about REopt.jl please see the Julia documentation:
 
 
 ## Quick Start
-Evaluating only `PV` and `Storage` requires a linear program solver. Adding a generator and/or multiple outages makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with `Xpress`, `Cbc`, `HiGHS` and `CPLEX`.
-
-Note that not all solvers support indicator constraints and special order sets (such as HiGHS), and so not all REopt problems can be solved with solvers lacking these capabilities.
+Evaluating simple `PV` and `ElectricStorage` scenarios requires a linear program solver. Evaluating net-metering, `Generator`, multiple outages, or other more complex scenario makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with , `HiGHS`, `Cbc`, `SCIP`, `Xpress` (commercial), and `CPLEX` (commercial).
 
 ### Example
 ```
-using Xpress
-using JuMP
-using REopt
+using REopt, JuMP, HiGHS
 
-m = Model(Xpress.Optimizer)
-results = run_reopt(m, "path/to/scenario.json")
+m = Model(HiGHS.Optimizer)
+results = run_reopt(m, "pv_storage.json")
 ```
 See the `test/scenarios` directory for examples of `scenario.json`.
 
