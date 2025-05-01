@@ -5,6 +5,11 @@
 REopt.add_financial_results
 ```
 
+## Financial outputs adders with BAU Scenario
+```@docs
+REopt.combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAUScenario)
+```
+
 ## ElectricTariff outputs
 ```@docs
 REopt.add_electric_tariff_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
@@ -93,4 +98,9 @@ REopt.add_flexible_hvac_results
 ## SteamTurbine outputs
 ```@docs
 REopt.add_steam_turbine_results
+```
+
+## CST outputs
+```@docs
+REopt.add_concentrating_solar_results
 ```

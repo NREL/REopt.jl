@@ -68,7 +68,7 @@ Solve the model using a `Scenario` or `BAUScenario`.
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 	
 	try
-		if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
+		if (!isnothing(s.site.CO2_emissions_reduction_min_fraction) && s.site.CO2_emissions_reduction_min_fraction > 0.0) || (!isnothing(s.site.CO2_emissions_reduction_max_fraction) && s.site.CO2_emissions_reduction_max_fraction < 1.0)
 			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
 		end
 		run_reopt(m, REoptInputs(s))
@@ -144,10 +144,6 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
-		println(string("Type of rs[1]:",string(typeof(rs[1]))))
-		println(string("Type of rs[2]:",string(typeof(rs[2]))))
-		println(string("rs[1] status:",rs[1]["status"]))
-		println(string("rs[2] status:",rs[2]["status"]))
 		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
@@ -240,20 +236,18 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
+			elseif b in p.s.storage.types.hot
+				add_hot_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
-			elseif !(b in p.s.storage.types.hot)
-				println(b)
+			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
 		end
 	end
-	if !isempty(p.s.storage.types.hot)
-		add_hot_thermal_storage_dispatch_constraints(m, p)
-	end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
+		add_storage_sum_grid_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
@@ -273,8 +267,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
-	if !isempty(p.techs.all)
-		add_tech_size_constraints(m, p)
+	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
+		if !isempty(p.techs.all)
+			add_tech_size_constraints(m, p)
+		end
         
         if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
@@ -347,10 +343,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
-			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
-			# @constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
-			# 	m[:dvProductionToWaste][t,q,ts] == 0.0
-			# )
         end
 
         if !isempty(p.techs.pbi)
@@ -472,6 +464,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive # this warning should be tied to IF condition where SOC incentive is added
+				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
+			end
+		end
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -519,6 +520,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
+
+	has_degr = false
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			has_degr = true
+			add_to_expression!(Costs, m[:degr_cost] - m[:residual_value]) # maximize residual value
+		end
+	end
 	
 	## Modify objective with incentives that are not part of the LCC
 	# 1. Comfort limit violation costs
@@ -537,15 +546,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	# Set model objective 
 	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
-
-	for b in p.s.storage.types.elec
-		if p.s.storage.attr[b].model_degradation
-			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive
-				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
-			end
-		end
-	end
     
 	nothing
 end

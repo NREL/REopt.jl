@@ -52,12 +52,13 @@ end
 
 function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
     ### Call NSRDB
-    api_jgifford = "IOEFhaZoaOxkB2l9XvkaFswXgTsJxRqob1hBbPdv"
     # attributes_tmy_updated = "ghi,dhi,dni,wind_speed,wind_direction,air_temperature,surface_pressure,dew_point" #for tmy
+    check_api_key()
+    check_api_email()
     attributes_tmy_updated = "ghi,dhi,dni,wind_speed,wind_direction,air_temperature,surface_pressure,dew_point" #for tmy
-    url = string("http://developer.nrel.gov/api/nsrdb/v2/solar/psm3-2-2-tmy-download.csv?api_key=",api_jgifford,
+    url = string("http://developer.nrel.gov/api/nsrdb/v2/solar/psm3-2-2-tmy-download.csv?api_key=",ENV["NREL_DEVELOPER_API_KEY"],
         "&wkt=POINT(",lon,"%20",lat,")&attributes=",attributes_tmy_updated,
-        "&names=tmy&utc=false&leap_day=true&interval=60&email=jeffrey.gifford@nrel.gov")
+        "&names=tmy&utc=false&leap_day=true&interval=60&email=",ENV["NREL_DEVELOPER_EMAIL"])
     r = HTTP.request("GET", url)
     s = String(r.body)
     lead_df = DataFrame(CSV.File(IOBuffer(s), silencewarnings = true, delim=",", header=1, limit=1))
@@ -120,7 +121,6 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    println("updated version as of 12/2 4:46pm")
     model = case_data["CST"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
@@ -142,24 +142,16 @@ function run_ssc(case_data::Dict)
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
     # First set user defined inputs to default just in case
-    if !(model in ["swh_flatplate","swh_evactube"])
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
-    elseif model in ["swh_flatplate"]
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_flatplate_step1.json")
-    elseif model in ["swh_evactube"]
-        defaults_file = joinpath(@__DIR__,"sam","defaults","defaults_swh_evactube_step1.json")
-    else
-        error =  error * "Model is not available at this time. \n"
-    end
+    defaults_file = joinpath(@__DIR__,"..","sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
     defaults = JSON.parsefile(defaults_file)
     if model in ["swh_flatplate","swh_evactube"]
-        scaled_draw_filename = joinpath(@__DIR__,"sam","defaults","scaled_draw_500000_kg_per_day.csv")
+        scaled_draw_filename = joinpath(@__DIR__,"..","sam","defaults","scaled_draw_500000_kg_per_day.csv")
         scaled_draw_df = CSV.read(scaled_draw_filename, DataFrame; header=false)
         scaled_draw_values = scaled_draw_df[:, 1]
         defaults["scaled_draw"] = scaled_draw_values
     end
     println("Defaults loaded.")
-    defaults["file_name"] = joinpath(@__DIR__,"sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
+    defaults["file_name"] = joinpath(@__DIR__,"..","sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
     if haskey(case_data["CST"], "SSC_Inputs")
         for i in user_defined_inputs_list[model]
             if (i == "tilt") || (i == "lat")
@@ -237,7 +229,7 @@ function run_ssc(case_data::Dict)
         elseif Sys.iswindows()
             libfile = "ssc_new.dll"
         end
-        global hdl = joinpath(@__DIR__, "sam", libfile)
+        global hdl = joinpath(@__DIR__, "..", "sam", libfile)
         chmod(hdl, filemode(hdl) | 0o755) ### added just because I saw this in the wind module
         ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
@@ -245,19 +237,14 @@ function run_ssc(case_data::Dict)
 
         ### Set defaults
         set_ssc_data_from_dict(defaults,model,data)
-        println("set defaults")
         ### Get weather data
         print_weatherdata = false # True = write a weather data csv file that can be read in the SAM UI # false = skip writing
         weatherdata = get_weatherdata(lat,lon,print_weatherdata)
         user_defined_inputs["solar_resource_data"] = weatherdata
-        println("got weather data")
         ### Set inputs
         set_ssc_data_from_dict(user_defined_inputs,model,data)
-        println("set inputs")
         ### Execute simulation
         test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
-        println(test)
-        println("execution completed")
         ### Retrieve results
         ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
@@ -315,7 +302,6 @@ function run_ssc(case_data::Dict)
         else
             mult = defaults[outputs[5]]
         end
-        # println("tpow ", tpow, " mult ", mult)
         rated_power = tpow * mult
         
         tcf = thermal_conversion_factor[model]
@@ -324,7 +310,6 @@ function run_ssc(case_data::Dict)
         # print(c_response)
         ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
         if model == "ptc"
-            
             thermal_production_norm = normalize_response(thermal_production, case_data, user_defined_inputs)
         else
             thermal_production_norm = thermal_production .* tcf ./ rated_power
@@ -335,8 +320,6 @@ function run_ssc(case_data::Dict)
             println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
         end
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
-        # R[k] = response_norm
-        # end
         ### Free SSC
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
