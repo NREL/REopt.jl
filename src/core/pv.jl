@@ -218,7 +218,7 @@ mutable struct PV <: AbstractTech
         end
 
         # Call the new function to process costs and sizes
-        installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve = get_pv_cost_scaling_params(
+        installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve = get_pv_cost_params(
             installed_cost_per_kw=installed_cost_per_kw, 
             om_cost_per_kw=om_cost_per_kw, 
             size_class=size_class, 
@@ -291,7 +291,7 @@ mutable struct PV <: AbstractTech
 end
 
 """
-    get_pv_cost_scaling_params(; installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve, 
+    get_pv_cost_params(; installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve, 
                                 use_detailed_cost_curve, electric_load_annual_kwh, site_land_acres, 
                                 site_roof_squarefeet, min_kw, max_kw, existing_kw, kw_per_square_foot, 
                                 acres_per_kw, array_type, location)
@@ -300,21 +300,21 @@ Processes and determines the cost scaling parameters for a PV system, including 
 O&M cost per kW, size class, and technology sizes for cost curves.
 
 # Arguments
-- `installed_cost_per_kw::Union{Real, AbstractVector{<:Real}}`: User-provided installed cost per kW or cost curve.
-- `om_cost_per_kw::Union{Real, AbstractVector{<:Real}}`: User-provided O&M cost per kW or cost curve.
-- `size_class::Union{Int, Nothing}`: User-specified size class or `nothing` to auto-determine.
-- `tech_sizes_for_cost_curve::AbstractVector`: Technology sizes for detailed cost curve.
-- `use_detailed_cost_curve::Bool`: Whether to use a detailed cost curve instead of average cost.
-- `electric_load_annual_kwh::Real`: Annual electric load in kWh for size class determination.
-- `site_land_acres::Union{Real, Nothing}`: Available land area in acres for ground-mounted systems.
-- `site_roof_squarefeet::Union{Real, Nothing}`: Available roof area in square feet for rooftop systems.
-- `min_kw::Real`: Minimum allowable system size in kW.
-- `max_kw::Real`: Maximum allowable system size in kW.
-- `existing_kw::Real`: Existing system size in kW.
-- `kw_per_square_foot::Real`: Conversion factor for roof area to kW capacity.
-- `acres_per_kw::Real`: Conversion factor for land area to kW capacity.
-- `array_type::Int`: PV array type (e.g., ground-mounted, rooftop).
-- `location::String`: Location type (`"roof"`, `"ground"`, or `"both"`).
+- `installed_cost_per_kw::Union{Real, AbstractVector{<:Real}} = Float64[]`: User-provided installed cost per kW or cost curve.
+- `om_cost_per_kw::Union{Real, AbstractVector{<:Real}} = Float64[]`: User-provided O&M cost per kW or cost curve.
+- `size_class::Union{Int, Nothing} = nothing`: User-specified size class or `nothing` to auto-determine.
+- `tech_sizes_for_cost_curve::AbstractVector = Float64[]`: Technology sizes for detailed cost curve.
+- `use_detailed_cost_curve::Bool = false`: Whether to use a detailed cost curve instead of average cost.
+- `electric_load_annual_kwh::Real = 0.0`: Annual electric load in kWh for size class determination.
+- `site_land_acres::Union{Real, Nothing} = nothing`: Available land area in acres for ground-mounted systems.
+- `site_roof_squarefeet::Union{Real, Nothing} = nothing`: Available roof area in square feet for rooftop systems.
+- `min_kw::Real = 0.0`: Minimum allowable system size in kW.
+- `max_kw::Real = 1.0e9`: Maximum allowable system size in kW.
+- `existing_kw::Real = 0.0`: Existing system size in kW.
+- `kw_per_square_foot::Real = 0.01`: Conversion factor for roof area to kW capacity.
+- `acres_per_kw::Real = 6e-3`: Conversion factor for land area to kW capacity.
+- `array_type::Int = 1`: PV array type (e.g., ground-mounted, rooftop).
+- `location::String = "both"`: Location type (`"roof"`, `"ground"`, or `"both"`).
 
 # Returns
 A tuple containing:
@@ -329,22 +329,22 @@ A tuple containing:
 - Applies mount type premiums for ground-mounted systems if applicable.
 
 """
-function get_pv_cost_scaling_params(; 
-    installed_cost_per_kw::Union{Real, AbstractVector{<:Real}}, 
-    om_cost_per_kw::Union{Real, AbstractVector{<:Real}}, 
-    size_class::Union{Int, Nothing}, 
-    tech_sizes_for_cost_curve::AbstractVector, 
-    use_detailed_cost_curve::Bool, 
-    electric_load_annual_kwh::Real, 
-    site_land_acres::Union{Real, Nothing}, 
-    site_roof_squarefeet::Union{Real, Nothing}, 
-    min_kw::Real, 
-    max_kw::Real, 
-    existing_kw::Real, 
-    kw_per_square_foot::Real, 
-    acres_per_kw::Real,
-    array_type::Int,
-    location::String
+function get_pv_cost_params(; 
+    installed_cost_per_kw::Union{Real, AbstractVector{<:Real}} = Float64[], 
+    om_cost_per_kw::Union{Real, AbstractVector{<:Real}} = Float64[], 
+    size_class::Union{Int, Nothing} = nothing, 
+    tech_sizes_for_cost_curve::AbstractVector = Float64[], 
+    use_detailed_cost_curve::Bool = false, 
+    electric_load_annual_kwh::Real = 0.0, 
+    site_land_acres::Union{Real, Nothing} = nothing, 
+    site_roof_squarefeet::Union{Real, Nothing} = nothing, 
+    min_kw::Real = 0.0, 
+    max_kw::Real = 1.0e9, 
+    existing_kw::Real = 0.0, 
+    kw_per_square_foot::Real = 0.01, 
+    acres_per_kw::Real = 6e-3, 
+    array_type::Int = 1, 
+    location::String = "both"
 )
 
     # Get defaults and determine mount type
