@@ -25,6 +25,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## add-cst-reopt
+### Added
+- Added new file `src/core/cst.jl` with new technology **CST**, which provides heating as output; technology-specific sets have been updated and added accordingly
+- Added new file `src/core/cst_ssc.jl` to interface with SAM when populating inputs (i.e., performance profile) with new technology **CST**
+- Added new file `src/results/cst.jl` to provide results from new technology **CST**
+- Added new file `test/scenarios/cst.json` with new test for technology **CST**
+### Changed
+- Require NREL Developer API email set as ENV["NREL_DEVELOPER_EMAIL"] = 'your contact email' for CST runs (also requires ENV["NREL_DEVELOPER_API_KEY"])
+
  
 ## fix-pbi
 ### Fixed
