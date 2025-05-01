@@ -176,3 +176,8 @@ REopt.ElectricHeater
 ```@docs
 REopt.ASHP
 ```
+
+## CST
+```@docs
+REopt.CST
+```

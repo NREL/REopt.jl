@@ -99,3 +99,8 @@ REopt.add_flexible_hvac_results
 ```@docs
 REopt.add_steam_turbine_results
 ```
+
+## CST outputs
+```@docs
+REopt.add_concentrating_solar_results
+```
