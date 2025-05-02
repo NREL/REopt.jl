@@ -626,7 +626,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
                 # If user provides undersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
-                thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] * 1/TONNE_PER_MMBTU_HOUR
+                thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] .* 1/TONNE_PER_MMBTU_HOUR
                 if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
                     thermal_load_ton .+= cooling_load_ton
@@ -654,8 +654,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
                         # if cooling load is included, cut down total thermal load and send as much heating load to GhpGhx.jl as possible
                         if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                            thermal_load_ton = heating_load_mmbtu .* 1/TONNE_PER_MMBTU_HOUR .+ cooling_load_ton
-                            peak_thermal_load_ton = maximum(thermal_load_ton)
                             # If total thermal load (heating + cooling) is more than user-defined GHP size, 
                             # first reduce heating load as much as possible while keeping cooling load the same
                             if peak_thermal_load_ton > d["GHP"]["max_ton"]
