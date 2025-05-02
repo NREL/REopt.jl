@@ -25,6 +25,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## add-cost-constraint
+### Added
+- Added new fields `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when floating-point numbers are provided, provide upper and lower bounds on initial capital costs for all technologies.  When active, this also warns the user that the problem may become infeasible when performed in combination with resilience requirements.
  
 ## fix-pbi
 ### Fixed
