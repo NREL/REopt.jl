@@ -69,6 +69,10 @@ end
 
 function add_capex_constraints(m, p; _n="")
     @warn "Adding capital costs constraints. These may cause an infeasible problem in some cases, particularly for resilience runs."
+    if (!isnothing(p.s.financial.min_initial_capital_costs_before_incentives) && !isnothing(p.s.financial.max_initial_capital_costs_before_incentives)
+            && p.s.financial.min_initial_capital_costs_before_incentives > p.s.financial.max_initial_capital_costs_before_incentives)
+        throw(@error("Minimum required capital cost is larger than maximum required capital cost - this problem is infeasible.")) 
+    end
     if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives)
         @constraint(m,
             m[:InitialCapexNoIncentives] >= p.s.financial.min_initial_capital_costs_before_incentives
