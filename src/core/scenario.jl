@@ -626,7 +626,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
                 # If user provides undersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
-                thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
+                thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1/TONNE_PER_MMBTU_HOUR
                 if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
                     thermal_load_ton .+= cooling_load_ton
@@ -654,7 +654,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
                         # if cooling load is included, cut down total thermal load and send as much heating load to GhpGhx.jl as possible
                         if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                            thermal_load_ton = heating_load_mmbtu.*1000000/12000 .+ cooling_load_ton
+                            thermal_load_ton = heating_load_mmbtu.*1/TONNE_PER_MMBTU_HOUR .+ cooling_load_ton
                             peak_thermal_load_ton = maximum(thermal_load_ton)
                             # If total thermal load (heating + cooling) is more than user-defined GHP size, 
                             # first reduce heating load as much as possible while keeping cooling load the same
@@ -672,12 +672,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     cooling_load_ton = updated_thermal_load_ton .- heating_load_ton
                                     ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton
                                 end
-                                heating_load_mmbtu = heating_load_ton.*12000/1000000
+                                heating_load_mmbtu = heating_load_ton.*TONNE_PER_MMBTU_HOUR
                                 ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                             end
                         # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
                         else
-                            heating_load_mmbtu[heating_load_mmbtu .>=d["GHP"]["max_ton"]*12000/1000000] .= d["GHP"]["max_ton"]*12000/1000000
+                            heating_load_mmbtu[heating_load_mmbtu .>=d["GHP"]["max_ton"]*TONNE_PER_MMBTU_HOUR] .= d["GHP"]["max_ton"]*TONNE_PER_MMBTU_HOUR
                             ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
                         end                         
                     end
