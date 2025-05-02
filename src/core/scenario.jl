@@ -625,7 +625,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # Call GhpGhx.jl to size GHP and GHX
                 @info "Starting GhpGhx.jl"
                 # Call GhpGhx.jl to size GHP and GHX
-                # If user provides udersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
+                # If user provides undersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
                 thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]*1000000/12000
                 if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
                     cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
