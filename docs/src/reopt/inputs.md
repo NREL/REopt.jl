@@ -1,5 +1,5 @@
 # REopt Inputs
-Inputs to `run_reopt` can be provided in one of four formats:
+Inputs to the `run_reopt` function can be provided in one of four formats:
 1. a file path (string) to a JSON file,
 2. a `Dict`, 
 3. using the `Scenario` struct, or
@@ -139,7 +139,12 @@ REopt.ColdThermalStorageDefaults
 
 ## HeatingLoad
 ```@docs
-REopt.HeatingLoad
+REopt.HeatingLoad()
+```
+
+## CoolingLoad
+```@docs
+REopt.CoolingLoad
 ```
 
 ## FlexibleHVAC
