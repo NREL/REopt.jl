@@ -609,8 +609,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
 				print("track_data dict to reopt-track API = ", track_data)
 				headers = Dict("Content-Type" => "application/json")
-				# HTTP.post("http://localhost:7800/reopt/post/", headers, JSON.json(track_data))
-				HTTP.post("http://host.docker.internal:7800/reopt/post/", headers, JSON.json(track_data))
+				HTTP.post("https://reopttracking-dev.stratus.nrel.gov/post/", headers, JSON.json(track_data))
+				# HTTP.post("http://localhost:7800/post/", headers, JSON.json(track_data))
+				# HTTP.post("http://host.docker.internal:7800/post/", headers, JSON.json(track_data))
 			catch #e
 				@warn "Could not post tracking data to REopt API"
 				# @info e.message
