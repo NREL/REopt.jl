@@ -128,6 +128,8 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     iterations_flipped_guess::Float64 = -1.0
     iterations_nonhybrid::Float64 = -1.0
 
+    solve_time_min::Float64 = -1.0
+
     # Account for expenses avoided by addition of GHP.
     avoided_capex_by_ghp_present_value::Float64 = 0.0
 end

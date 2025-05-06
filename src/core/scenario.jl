@@ -355,6 +355,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
+        # print("\nCREATE EXISTING BOILER\n")
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -552,6 +553,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
             
+            start_time = now()
+
             ## Deal with hybrid
             hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
 
@@ -710,7 +713,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     d["GHP"]["test_hybrid_case"] = "automatic_guess_correct"
                 end
             end
-                        
+
+            end_time = now()
+            d["GHP"]["solve_time_min"] = (end_time - start_time).value/1000/60
+
             ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
             ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
             for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
