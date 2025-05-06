@@ -829,13 +829,9 @@ else  # run HiGHS tests
                 init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
                 lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
             
-                init_capex_total = results["Financial"]["initial_capital_costs"]
-                lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
-            
-            
                 # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
-                @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
-                @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
+                @test init_capex_total_expected ≈ results["Financial"]["initial_capital_costs"] atol=0.0001*init_capex_total_expected
+                @test lifecycle_capex_total_expected ≈ results["Financial"]["initial_capital_costs_after_incentives"] atol=0.0001*lifecycle_capex_total_expected
             
                 # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
                 @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1

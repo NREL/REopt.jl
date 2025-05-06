@@ -156,11 +156,11 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
         else
             add_to_expression!(m[:CHPCapexNoIncentives], cost_list * m[Symbol("dvPurchaseSize"*_n)]["CHP"])
         end
-        # TODO: include supplementary firing costs?
-        #Add supplementary firing capital cost
-        # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
-        # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
-        # add_to_expression!(m[:CHPCapexNoIncentives], chp_supp_firing_size * chp_supp_firing_cost)
+        if p.s.chp.supplementary_firing_capital_cost_per_kw > 0
+            add_to_expression!(m[:CHPCapexNoIncentives], 
+                p.s.chp.supplementary_firing_capital_cost_per_kw * m[Symbol("dvSupplementaryFiringSize"*_n)]["CHP"]
+            )
+        end
         add_to_expression!(m[:InitialCapexNoIncentives], m[:CHPCapexNoIncentives])
     end
 
