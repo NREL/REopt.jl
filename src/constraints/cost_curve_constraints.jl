@@ -209,4 +209,10 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
             p.s.ashp_wh.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPWaterHeater"]
         )
     end
+
+    if !isempty(p.s.electric_utility.outage_durations)
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost]
+        )
+    end
 end

@@ -119,8 +119,11 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
     
     r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)] +
-        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)])
-    #TODO: Should lifecycle_capital_costs include m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost]? 
+        m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)]
+    )
+    if !isempty(p.s.electric_utility.outage_durations)
+        r["lifecycle_capital_costs"]  += value(m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost])
+    end
     r["lifecycle_capital_costs_plus_om_after_tax"] = r["lifecycle_capital_costs"] + r["lifecycle_om_costs_after_tax"]
 
     r["initial_capital_costs"] = value(m[Symbol("InitialCapexNoIncentives"*_n)]) 
