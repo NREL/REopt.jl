@@ -27,8 +27,9 @@ Classify the change according to the following categories:
 
 ## v0.52.0
 ### Added
-- Add new **Financial** fields `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.  When active, this also warns the user that the problem may become infeasible when performed in combination with resilience requirements.
-- Add **SteamTurbine** fields `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw`
+- Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
+- Add **SteamTurbine** inputs `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw`
+- Add **CHP** output `initial_capital_costs`
 ### Fixed
 - Fix implementation of production-based incentives
 
