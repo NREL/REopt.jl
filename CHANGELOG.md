@@ -25,15 +25,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## add-cost-constraint
+## v0.52.0
 ### Added
-- Added new fields `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when floating-point numbers are provided, provide upper and lower bounds on initial capital costs for all technologies.  When active, this also warns the user that the problem may become infeasible when performed in combination with resilience requirements.
- 
-## fix-pbi
+- Add new **Financial** fields `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.  When active, this also warns the user that the problem may become infeasible when performed in combination with resilience requirements.
+- Add **SteamTurbine** fields `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw`
 ### Fixed
 - Fix implementation of production-based incentives
-### Added
-- Added the fields `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw` to the **SteamTurbine** struct.
 
 ## v0.51.1
 ### Added
