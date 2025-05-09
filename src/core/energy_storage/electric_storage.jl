@@ -147,6 +147,7 @@ Note that not all of the above inputs are necessary. When not providing `calenda
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
     cycle_fade_coefficient::Vector{<:Real} = [9.83E-05]
+    cycle_fade_fraction::Vector{<:Real} = [1.0]
     time_exponent::Real = 0.42
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
