@@ -19,11 +19,14 @@ struct with outer constructor:
     installed_cost_ghx_per_ft::Float64 = 14.0
     installed_cost_building_hydronic_loop_per_sqft = 1.70
     om_cost_per_sqft_year::Float64 = -0.51
-    building_sqft::Float64 # Required input
+    building_sqft::Float64                                  # Required input
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
-    cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
+    cooling_efficiency_thermal_factor::Float64 = NaN        # Default depends on building and location
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
+    max_ton::Real                                           # Maximum heat pump capacity size. Default at a big number
+    max_number_of_boreholes::Real                           # Maximum GHX size
+    load_served_by_ghp::String                              # "scaled" or "nonpeak"
 
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.6
@@ -77,6 +80,9 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
     can_supply_steam_turbine::Bool = false
+    max_ton::Real = BIG_NUMBER
+    max_number_of_boreholes::Real = BIG_NUMBER
+    load_served_by_ghp::String = "nonpeak"
 
     aux_heater_type::String = "electric"
     is_ghx_hybrid::Bool = false
@@ -154,7 +160,7 @@ function GHP(response::Dict, d::Dict)
     end
     # incentives = IncentivesNoProdBased(**d_mod)
     
-    setup_installed_cost_curve!(ghp, response)
+    setup_installed_cost_curve!(d, ghp, response)
 
     setup_om_cost!(ghp)
 
@@ -168,10 +174,10 @@ function GHP(response::Dict, d::Dict)
 end
 
 """
-    setup_installed_cost_curve!(response::Dict, ghp::GHP)
+    setup_installed_cost_curve!(d::Dict, response::Dict, ghp::GHP)
 
 """
-function setup_installed_cost_curve!(ghp::GHP, response::Dict)
+function setup_installed_cost_curve!(d::Dict, ghp::GHP, response::Dict)
     big_number = 1.0e10
     # GHX and GHP sizing metrics for cost calculations
     total_ghx_ft = response["outputs"]["number_of_boreholes"] * response["outputs"]["length_boreholes_ft"]
