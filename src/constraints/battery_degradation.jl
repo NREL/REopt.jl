@@ -68,13 +68,13 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
     @constraint(
         m,
         [ts in p.time_steps, j in 1:J],
-        m[:dvSegmentChargePower][ts, j]*p.hours_per_time_step <= p.s.storage.attr[b].degradation.cycle_fade_coefficient[j]*m[:dvStorageEnergy][b]
+        m[:dvSegmentChargePower][ts, j]*p.hours_per_time_step <= p.s.storage.attr[b].degradation.cycle_fade_fraction[j]*m[:dvStorageEnergy][b]
     )
 
     @constraint(
         m,
         [ts in p.time_steps, j in 1:J],
-        m[:dvSegmentDischargePower][ts, j]*p.hours_per_time_step <= p.s.storage.attr[b].degradation.cycle_fade_coefficient[j]*m[:dvStorageEnergy][b]
+        m[:dvSegmentDischargePower][ts, j]*p.hours_per_time_step <= p.s.storage.attr[b].degradation.cycle_fade_fraction[j]*m[:dvStorageEnergy][b]
     )
 end
 
