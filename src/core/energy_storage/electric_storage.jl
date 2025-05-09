@@ -6,7 +6,8 @@ Inputs used when `ElectricStorage.model_degradation` is `true`:
 ```julia
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
-    cycle_fade_coefficient::Real = 9.83E-05
+    cycle_fade_coefficient::Vector{<:Real} = [9.83E-05]
+    cycle_fade_fraction::Vector{<:Real} = [1.0]
     time_exponent::Real = 0.42
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
@@ -133,7 +134,8 @@ The following shows how one would use the degradation model in REopt via the [Sc
         "model_degradation": true,
         "degradation": {
             "calendar_fade_coefficient": 2.86E-03,
-            "cycle_fade_coefficient": 6.22E-05,
+            "cycle_fade_coefficient": [9.83E-05],
+            cycle_fade_fraction: [1.0],
             "installed_cost_per_kwh_declination_rate": 0.06,
             "maintenance_strategy": "replacement",
             ...
@@ -326,7 +328,9 @@ struct ElectricStorage <: AbstractElectricStorage
 
         if haskey(d, :degradation)
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
-            
+            if length(degr.cycle_fade_coefficient) != length(degr.cycle_fade_fraction)
+                throw(@error("The fields cycle_fade_coefficient and cycle_fade_fraction in ElectricStorage Degradation inputs must have equal length."))
+            end
             if length(degr.cycle_fade_coefficient) > 1
                 @info "Modeling segmented cycle fade battery degradation costing"
             end
