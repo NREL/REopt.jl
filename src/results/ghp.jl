@@ -29,10 +29,6 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # r["size_wwhp_heating_pump_ton"] = 0.0
     # r["size_wwhp_cooling_pump_ton"] = 0.0
 
-    # Set sizing factor = 1 if user inputs their own GHP size
-    if haskey(d, "GHP") && haskey(d["GHP"],"max_ton")
-        p.s.ghp_option_list[ghp_option_chosen].heatpump_capacity_sizing_factor_on_peak_load = 1.0
-    end
     if ghp_option_chosen >= 1
         r["ghpghx_chosen_outputs"] = p.s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]
 
