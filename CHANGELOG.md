@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fixed-bess-soc
+### Added
+- Add **ElectricStorage** input field `fixed_soc_series_fraction` to allow users to fix the SOC timeseries
+ 
 ## v0.52.0
 ### Added
 - Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
