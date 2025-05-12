@@ -160,6 +160,15 @@ else  # run HiGHS tests
             @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
             @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
             @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+
+            # Test constrained CAPEX 
+            initial_capex_no_incentives = r["Financial"]["initial_capital_costs"]
+            max_capex = initial_capex_no_incentives * 0.60
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data = JSON.parsefile("./scenarios/pv_storage.json")
+            data["Financial"]["max_initial_capital_costs_before_incentives"] = max_capex
+            r = run_reopt(model, data)
+            @test r["Financial"]["initial_capital_costs"] ≈ max_capex rtol=1e-5
         end
 
         # TODO test MPC with outages
@@ -195,6 +204,28 @@ else  # run HiGHS tests
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/incentives.json")
             @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
+        end
+        @testset "Production Based Incentives" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            d = JSON.parsefile("scenarios/pbi.json")
+            results = run_reopt(model, d)
+            s = Scenario(d)
+            i = REoptInputs(s)
+            @test i.pbi_benefit_per_kwh["Wind"] == 0.05
+            @test i.pbi_benefit_per_kwh["Generator"] == 0.08
+            @test i.pbi_benefit_per_kwh["CHP"] == 0.02
+            @test i.pbi_benefit_per_kwh["PV"] == 0.1
+            @test i.pbi_benefit_per_kwh["SteamTurbine"] == 0.07
+            
+            @test i.pbi_max_benefit["Wind"] == 1000000
+            @test i.pbi_max_benefit["Generator"] == 100
+            @test i.pbi_max_benefit["CHP"] == 10000
+            @test i.pbi_max_benefit["PV"] == 10
+            @test i.pbi_pwf["Wind"] < i.pbi_pwf["PV"]  #PV has more years of benefit than wind
+            @test i.pbi_pwf["PV"] < i.pbi_pwf["SteamTurbine"]  #SteamTurbine has more years of benefit than PV
+
+            # No generator or CHP production and SteamTurbine min size is larger than prod incentive max size, so just testing against wind prod plus the PV max benefit
+            @test results["Financial"]["lifecycle_production_incentive_after_tax"] ≈ i.pbi_pwf["PV"]*i.pbi_max_benefit["PV"] + i.pbi_pwf["Wind"]*d["Wind"]["production_incentive_per_kwh"]*results["Wind"]["annual_energy_produced_kwh"] rtol=1e-4
         end
 
         @testset "Fifteen minute load" begin
@@ -737,6 +768,14 @@ else  # run HiGHS tests
             
                 @test round(results["CHP"]["size_kw"], digits=0) ≈ 263.0 atol=50.0
                 @test round(results["Financial"]["lcc"], digits=0) ≈ 1.11e7 rtol=0.05
+
+                # Test constrained CAPEX
+                initial_capex_no_incentives = results["Financial"]["initial_capital_costs"]
+                min_capex = initial_capex_no_incentives * 1.3
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                data_sizing["Financial"]["min_initial_capital_costs_before_incentives"] = min_capex
+                results = run_reopt(model, data_sizing)
+                @test results["Financial"]["initial_capital_costs"] ≈ min_capex rtol=1e-5
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
@@ -790,13 +829,9 @@ else  # run HiGHS tests
                 init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
                 lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
             
-                init_capex_total = results["Financial"]["initial_capital_costs"]
-                lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
-            
-            
                 # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
-                @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
-                @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
+                @test init_capex_total_expected ≈ results["Financial"]["initial_capital_costs"] atol=0.0001*init_capex_total_expected
+                @test lifecycle_capex_total_expected ≈ results["Financial"]["initial_capital_costs_after_incentives"] atol=0.0001*lifecycle_capex_total_expected
             
                 # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
                 @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1
@@ -2798,7 +2833,7 @@ else  # run HiGHS tests
             
                 s = Scenario(d)
                 p = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.05))
                 results = run_reopt(m, p)
             
                 #Case 3: ASHP present but does not run because dispatch is not forced and boiler fuel is cheap
@@ -2931,8 +2966,8 @@ else  # run HiGHS tests
             # Throw a handled error
             d = JSON.parsefile("./scenarios/logger.json")
 
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([m1,m2], d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2942,7 +2977,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["warnings"]) > 0
             @test r["Messages"]["has_stacktrace"] == false
 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(m, d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2955,8 +2990,8 @@ else  # run HiGHS tests
             @test isa(REoptInputs(d), Dict)
 
             # Using filepath
-            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([n1,n2], "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2965,7 +3000,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
 
-            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(n, "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2978,8 +3013,8 @@ else  # run HiGHS tests
             d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
             d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387x"
 
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([m1,m2], d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -2988,7 +3023,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(m, d)
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -3001,8 +3036,8 @@ else  # run HiGHS tests
             @test isa(REoptInputs(d), Dict)
 
             # Using filepath
-            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+            n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt([n1,n2], "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -3011,7 +3046,7 @@ else  # run HiGHS tests
             @test length(r["Messages"]["errors"]) > 0
             @test length(r["Messages"]["warnings"]) > 0
 
-            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
             r = run_reopt(n, "./scenarios/logger.json")
             @test r["status"] == "error"
             @test "Messages" ∈ keys(r)
@@ -3168,7 +3203,7 @@ else  # run HiGHS tests
                 input_data["ElectricLoad"]["loads_kw"][31*24+29*24+3*24+16] = peak_load
                 s = Scenario(input_data)
                 inputs = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.05, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, inputs)
 
                 # TOU Energy charges
@@ -3227,7 +3262,7 @@ else  # run HiGHS tests
         
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.1, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, inputs)
         
             electric_load = results["ElectricLoad"]["load_series_kw"]
@@ -3312,6 +3347,6 @@ else  # run HiGHS tests
             results = run_reopt([m1,m2], inputs)
             payback = results["Financial"]["capital_costs_after_non_discounted_incentives"] / results["Financial"]["year_one_total_operating_cost_savings_after_tax"]
             @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
-        end        
+        end
     end
 end

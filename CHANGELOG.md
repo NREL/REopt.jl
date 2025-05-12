@@ -25,6 +25,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.52.0
+### Added
+- Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
+- Add **SteamTurbine** inputs `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw`
+- Add **CHP** output `initial_capital_costs`
+### Fixed
+- Fix implementation of production-based incentives
 
 ## v0.51.1
 ### Added
@@ -37,7 +44,7 @@ Classify the change according to the following categories:
 ### Fixed
 - Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies).
 - Included the following in the `Financial.lifecycle_capital_costs` and `Financial.initial_capital_costs`: `m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)]`
- 
+
 ## v0.51.0
 ### Added 
 - Add the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
