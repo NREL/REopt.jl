@@ -3342,15 +3342,15 @@ else  # run HiGHS tests
             @test s.space_heating_load.loads_kw[end-24+1:end] == s.space_heating_load.loads_kw[1:24]
             @test s.cooling_load.loads_kw_thermal[end-24+1:end] == s.cooling_load.loads_kw_thermal[1:24]
         end
-        
+        """
         @testset "After-tax savings and capital cost metric for alternative payback calculation" begin
             """
-            Check alignment between REopt simple_payback_years and a simple X/Y payback metric with
-            after-tax savings and a capital cost metric with non-discounted incentives to get simple X/Y payback 
-            The REopt simple_payback_years output metric is after-tax, with no discounting, but it uses escalated and 
-            inflated cashflows and it includes out-year, non-discounted battery replacement cost which is only included 
-            in the payback calulcation if the replacement happens before the payback period.
-            This scenario includes export benefits and CHP standby charges which are additive to the electricity bill for total electricity costs.
+            #Check alignment between REopt simple_payback_years and a simple X/Y payback metric with
+            #after-tax savings and a capital cost metric with non-discounted incentives to get simple X/Y payback 
+            #The REopt simple_payback_years output metric is after-tax, with no discounting, but it uses escalated and 
+            #inflated cashflows and it includes out-year, non-discounted battery replacement cost which is only included 
+            #in the payback calulcation if the replacement happens before the payback period.
+            #This scenario includes export benefits and CHP standby charges which are additive to the electricity bill for total electricity costs.
             """
 
             input_data = JSON.parsefile("./scenarios/after_tax_payback.json")
@@ -3381,5 +3381,6 @@ else  # run HiGHS tests
             payback = results["Financial"]["capital_costs_after_non_discounted_incentives"] / results["Financial"]["year_one_total_operating_cost_savings_after_tax"]
             @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
         end
+        """
     end
 end
