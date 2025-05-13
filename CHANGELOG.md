@@ -25,12 +25,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
- 
-## fix-pbi
+## v0.52.0
+### Added
+- Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
+- Add **SteamTurbine** inputs `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw`
+- Add **CHP** output `initial_capital_costs`
 ### Fixed
 - Fix implementation of production-based incentives
-### Added
-- Added the fields `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw` to the **SteamTurbine** struct.
 
 ## v0.51.1
 ### Added

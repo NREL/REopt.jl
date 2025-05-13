@@ -363,7 +363,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0
     new_kw = total_kw - existing_kw
     if tech_name == "CHP"
-        capital_cost = get_chp_initial_capex(p, results["CHP"]["size_kw"])
+        capital_cost = results["CHP"]["initial_capital_costs"]
     else
         capital_cost = new_kw * tech.installed_cost_per_kw
     end
