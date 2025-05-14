@@ -1349,7 +1349,7 @@ end
 Return dictionary of backup reliability results.
 
 # Arguments
-- `d::Dict`: REopt results dictionary. 
+- `d::Dict`: REopt results dictionary. Subhourly time steps are not yet supported.
 - `p::REoptInputs`: REopt Inputs Struct.
 - `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. 
 Possible keys in r:
