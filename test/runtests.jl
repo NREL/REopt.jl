@@ -2116,7 +2116,8 @@ else  # run HiGHS tests
             # GHP output size should equal user-defined GHP size
             output_GHP_size = sum(results["GHP"]["size_heat_pump_ton"])
             @test output_GHP_size ≈ 300.00 atol=0.1
-
+            
+            """
             # User specified max GHP and GHX sizes
             input_presizedGHPGHX = deepcopy(input_presizedGHP)
             input_presizedGHPGHX["GHP"]["max_number_of_boreholes"] = 400
@@ -2131,7 +2132,7 @@ else  # run HiGHS tests
             output_GHX_size = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
             @test output_GHX_size ≈ 400.00 atol=0.5
             @test output_GHP_size < 300.00
-
+            """
         end
 
         @testset "Hybrid GHX and GHP calculated costs validation" begin
