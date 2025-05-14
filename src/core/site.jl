@@ -17,8 +17,10 @@ Inputs related to the physical location:
     bau_grid_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
     renewable_electricity_min_fraction::Real = 0.0,
     renewable_electricity_max_fraction::Union{Float64, Nothing} = nothing,
+    include_grid_renewable_fraction_in_RE_constraints::Bool = false,
     include_exported_elec_emissions_in_total::Bool = true,
     include_exported_renewable_electricity_in_total::Bool = true,
+    outdoor_air_temperature_degF::Union{Nothing, Array{<:Real,1}} = nothing,
 ```
 """
 mutable struct Site
@@ -36,8 +38,10 @@ mutable struct Site
     bau_grid_emissions_lb_CO2_per_year
     renewable_electricity_min_fraction
     renewable_electricity_max_fraction
+    include_grid_renewable_fraction_in_RE_constraints
     include_exported_elec_emissions_in_total
     include_exported_renewable_electricity_in_total
+    outdoor_air_temperature_degF
     node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
     function Site(;
         latitude::Real, 
@@ -52,8 +56,10 @@ mutable struct Site
         bau_grid_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
         renewable_electricity_min_fraction::Union{Float64, Nothing} = nothing,
         renewable_electricity_max_fraction::Union{Float64, Nothing} = nothing,
+        include_grid_renewable_fraction_in_RE_constraints::Bool = false,
         include_exported_elec_emissions_in_total::Bool = true,
         include_exported_renewable_electricity_in_total::Bool = true,
+        outdoor_air_temperature_degF::Union{Nothing, Array{<:Real,1}} = nothing,
         node::Int = 1, 
         )
         invalid_args = String[]
@@ -76,7 +82,7 @@ mutable struct Site
             mg_tech_sizes_equal_grid_sizes, CO2_emissions_reduction_min_fraction, 
             CO2_emissions_reduction_max_fraction, bau_emissions_lb_CO2_per_year,
             bau_grid_emissions_lb_CO2_per_year, renewable_electricity_min_fraction,
-            renewable_electricity_max_fraction, include_exported_elec_emissions_in_total,
-            include_exported_renewable_electricity_in_total, node)
+            renewable_electricity_max_fraction, include_grid_renewable_fraction_in_RE_constraints, include_exported_elec_emissions_in_total,
+            include_exported_renewable_electricity_in_total, outdoor_air_temperature_degF, node)
     end
 end

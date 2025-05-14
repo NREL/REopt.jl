@@ -1,10 +1,10 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `PV` results keys:
-- `size_kw` Optimal PV capacity
+- `size_kw` Optimal PV DC capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_energy_produced_kwh` Energy produced over the first year
-- `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
+- `annual_energy_produced_kwh` Average annual energy produced, accounting for degradation. Includes curtailed energy.
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `electric_to_load_series_kw` Vector of power used to meet load over the first year
 - `electric_to_storage_series_kw` Vector of power used to charge the battery over the first year

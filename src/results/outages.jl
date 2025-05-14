@@ -37,10 +37,7 @@
 	The output keys for "Outages" are subject to change.
 
 !!! note 
-	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
-
-!!! note
-	When modeling PV the name of the PV system is used for the output keys to allow for modeling multiple PV systems. The default PV name is `PV`.
+	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_start_time_steps` and `ElectricUtility.outage_durations` inputs.
 	
 !!! warn
 	The Outage results can be very large when many outages are modeled and can take a long time to generate.
@@ -95,7 +92,7 @@ function add_outage_results(m, p, d::Dict)
     for ts in p.s.electric_utility.outage_time_steps
         for (t, tz) in enumerate(p.s.electric_utility.outage_start_time_steps)
             for s in p.s.electric_utility.scenarios
-                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[tz+ts-1]
+                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
             end
         end
     end
@@ -267,6 +264,22 @@ function add_outage_results(m, p, d::Dict)
 					(
 						value.(
 							m[:dvMGCurtail][t, s, tz, ts] 
+							for s in p.s.electric_utility.scenarios,
+								tz in p.s.electric_utility.outage_start_time_steps,
+								ts in p.s.electric_utility.outage_time_steps
+						) 
+						for t in tech_set
+					)
+				), 
+				digits=3
+			)
+			r[tech_type_name * "_to_load_series_kw"] = round.(
+				sum(
+					(
+						value.(
+							m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
+							- m[:dvMGCurtail][t, s, tz, ts]
+							- m[:dvMGProductionToStorage][t, s, tz, ts]
 							for s in p.s.electric_utility.scenarios,
 								tz in p.s.electric_utility.outage_start_time_steps,
 								ts in p.s.electric_utility.outage_time_steps

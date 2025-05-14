@@ -1,10 +1,11 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ExistingBoiler` results keys:
-- `fuel_consumption_series_mmbtu_per_hour` 
-- `annual_fuel_consumption_mmbtu`
-- `thermal_production_series_mmbtu_per_hour`
-- `annual_thermal_production_mmbtu`
+- `size_mmbtu_per_hour`  # Thermal production capacity size of the Boiler [MMBtu/hr]
+- `fuel_consumption_series_mmbtu_per_hour`  # Fuel consumption series [MMBtu/hr] 
+- `annual_fuel_consumption_mmbtu`  # Fuel consumed in a year [MMBtu]
+- `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
+- `annual_thermal_production_mmbtu`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_storage_series_mmbtu_per_hour` # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`
 - `thermal_to_load_series_mmbtu_per_hour`
@@ -21,14 +22,14 @@
 """
 function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-
+    r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ExistingBoiler"]) / KWH_PER_MMBTU, digits=3)
 	r["fuel_consumption_series_mmbtu_per_hour"] = 
         round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) ./ KWH_PER_MMBTU, digits=5)
     r["annual_fuel_consumption_mmbtu"] = round(sum(r["fuel_consumption_series_mmbtu_per_hour"]), digits=5)
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
-        round.(sum(value.(m[:dvHeatingProduction]["ExistingBoiler", q, ts] for q in p.heating_loads) for ts in p.time_steps) ./ KWH_PER_MMBTU, digits=5)
-	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=5)
+        round.(sum(value.(m[:dvHeatingProduction]["ExistingBoiler", q, ts] for ts in p.time_steps) for q in p.heating_loads) ./ KWH_PER_MMBTU, digits=5)
+    r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=5)
 
 	if !isempty(p.s.storage.types.hot)
         @expression(m, BoilerToHotTESKW[ts in p.time_steps],
@@ -90,6 +91,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     )
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalExistingBoilerFuelCosts]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalExistingBoilerFuelCosts]) / p.pwf_fuel["ExistingBoiler"], digits=3)
+    r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
     d["ExistingBoiler"] = r
 	nothing

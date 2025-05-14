@@ -9,8 +9,12 @@ GHP results:
 - `ghp_option_chosen` Integer option # chosen by model, possible 0 for no GHP
 - `ghpghx_chosen_outputs` Dict of all outputs from GhpGhx.jl results of the chosen GhpGhx system
 - `size_heat_pump_ton` Total heat pump capacity [ton]
+- `avoided_capex_by_ghp_present_value` Present value of avoided capital cost by choosing GHP
 - `space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour`
 - `cooling_thermal_load_reduction_with_ghp_ton`
+- `thermal_to_space_heating_load_series_mmbtu_per_hour`
+- `thermal_to_dhw_load_series_mmbtu_per_hour`
+- `thermal_to_load_series_ton`
 """
 
 function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -40,11 +44,22 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		    sum(p.cooling_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))
         r["cooling_thermal_load_reduction_with_ghp_ton"] = round.(value.(CoolingThermalReductionWithGHP) ./ KWH_THERMAL_PER_TONHOUR, digits=3)
         r["ghx_residual_value_present_value"] = value(m[:ResidualGHXCapCost])
+        r["avoided_capex_by_ghp_present_value"] = value(m[:AvoidedCapexByGHP])
+        r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = d["HeatingLoad"]["space_heating_thermal_load_series_mmbtu_per_hour"] .- r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"]
+        r["thermal_to_load_series_ton"] = d["CoolingLoad"]["load_series_ton"] .- r["cooling_thermal_load_reduction_with_ghp_ton"]
+        if p.s.ghp_option_list[ghp_option_chosen].can_serve_dhw
+            r["thermal_to_dhw_load_series_mmbtu_per_hour"] = d["HeatingLoad"]["dhw_thermal_load_series_mmbtu_per_hour"]
+        else
+            r["thermal_to_dhw_load_series_mmbtu_per_hour"] = zeros(length(p.time_steps))
+        end
     else
         r["ghpghx_chosen_outputs"] = Dict()
         r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"] = zeros(length(p.time_steps))
         r["cooling_thermal_load_reduction_with_ghp_ton"] = zeros(length(p.time_steps))
         r["ghx_residual_value_present_value"] = 0.0
+        r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = zeros(length(p.time_steps))
+        r["thermal_to_load_series_ton"] = zeros(length(p.time_steps))
+        r["thermal_to_dhw_load_series_mmbtu_per_hour"] = zeros(length(p.time_steps))
     end
     d["GHP"] = r
     nothing
