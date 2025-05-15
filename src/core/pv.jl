@@ -218,7 +218,8 @@ mutable struct PV <: AbstractTech
         end
 
         # Call the new function to process costs and sizes
-        installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve = get_pv_cost_params(
+        installed_cost_per_kw, om_cost_per_kw, size_class, 
+        tech_sizes_for_cost_curve, size_kw_for_size_class = get_pv_cost_params(;
             installed_cost_per_kw=installed_cost_per_kw, 
             om_cost_per_kw=om_cost_per_kw, 
             size_class=size_class, 
@@ -233,7 +234,9 @@ mutable struct PV <: AbstractTech
             kw_per_square_foot=kw_per_square_foot, 
             acres_per_kw=acres_per_kw, 
             array_type=array_type,
-            location=location
+            location=location,
+            capacity_factor_estimate=0.2,
+            fraction_of_annual_kwh_to_size_pv=0.5
         )
 
         # Instantiate the PV struct
@@ -315,6 +318,8 @@ O&M cost per kW, size class, and technology sizes for cost curves.
 - `acres_per_kw::Real = 6e-3`: Conversion factor for land area to kW capacity.
 - `array_type::Int = 1`: PV array type (e.g., ground-mounted, rooftop).
 - `location::String = "both"`: Location type (`"roof"`, `"ground"`, or `"both"`).
+- `capacity_factor_estimate::Real = 0.2`: Estimated capacity factor for the PV system.
+- `fraction_of_annual_kwh_to_size_pv::Real = 0.5`: Fraction of annual kWh to size the PV system.
 
 # Returns
 A tuple containing:
@@ -322,6 +327,7 @@ A tuple containing:
 2. `om_cost_per_kw`: Final O&M cost per kW or cost curve.
 3. `size_class`: Determined size class.
 4. `tech_sizes_for_cost_curve`: Final technology sizes for the cost curve.
+5. `size_kw_for_size_class`: Maximum kW for determining the size class.
 
 # Notes
 - If `size_class` is not provided, it is determined based on available space, load, or user-provided cost data.
@@ -344,7 +350,9 @@ function get_pv_cost_params(;
     kw_per_square_foot::Real = 0.01, 
     acres_per_kw::Real = 6e-3, 
     array_type::Int = 1, 
-    location::String = "both"
+    location::String = "both",
+    capacity_factor_estimate::Real = 0.2,
+    fraction_of_annual_kwh_to_size_pv::Real = 0.5
 )
 
     # Get defaults and determine mount type
@@ -357,6 +365,7 @@ function get_pv_cost_params(;
     local final_tech_sizes
     local final_installed_cost
     local final_om_cost
+    local size_kw_for_size_class = max_kw
 
     # STEP 1: Determine size class
     determined_size_class = if !isnothing(size_class)
@@ -377,13 +386,16 @@ function get_pv_cost_params(;
         # User provided tech sizes but no costs, need size class for costs
         if isnothing(size_class)
             tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
-            get_pv_size_class(
+            size_class, size_kw_for_size_class = get_pv_size_class(
                 electric_load_annual_kwh,
-                tech_sizes,
+                tech_sizes;
                 min_kw=min_kw,
                 max_kw=max_kw,
-                existing_kw=existing_kw
+                existing_kw=existing_kw,
+                capacity_factor_estimate=capacity_factor_estimate,
+                fraction_of_annual_kwh_to_size_pv=fraction_of_annual_kwh_to_size_pv
             )
+            size_class
         else
             size_class
         end
@@ -391,13 +403,16 @@ function get_pv_cost_params(;
         # Vector of costs provided
         if isnothing(size_class)
             tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
-            get_pv_size_class(
+            size_class, size_kw_for_size_class = get_pv_size_class(
                 electric_load_annual_kwh,
-                tech_sizes,
+                tech_sizes;
                 min_kw=min_kw,
                 max_kw=max_kw,
-                existing_kw=existing_kw
+                existing_kw=existing_kw,
+                capacity_factor_estimate=capacity_factor_estimate,
+                fraction_of_annual_kwh_to_size_pv=fraction_of_annual_kwh_to_size_pv
             )
+            size_class
         else
             size_class
         end
@@ -421,14 +436,17 @@ function get_pv_cost_params(;
         end
         tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
         # Include both roof and land for size class -> cost determination
-        get_pv_size_class(
+        size_class, size_kw_for_size_class = get_pv_size_class(
             electric_load_annual_kwh,
-            tech_sizes,
+            tech_sizes;
             min_kw=min_kw,
             max_kw=max_kw_for_size_class,
             existing_kw=existing_kw,
-            space_constrained=space_constrained
+            space_constrained=space_constrained,
+            capacity_factor_estimate=capacity_factor_estimate,
+            fraction_of_annual_kwh_to_size_pv=fraction_of_annual_kwh_to_size_pv
         )
+        size_class
     end
 
     # Get default data for determined size class
@@ -542,7 +560,7 @@ function get_pv_cost_params(;
     size_class = determined_size_class
     tech_sizes_for_cost_curve = final_tech_sizes
 
-    return installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve
+    return installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve, size_kw_for_size_class
 end
 
 # Get a specific PV by name from an array of PVs
@@ -562,25 +580,30 @@ function get_pv_defaults_size_class()
 end
 
 # Determine appropriate size class based on system parameters
+"""
+    get_pv_size_class(electric_load_annual_kwh::Real, tech_sizes_for_cost_curve::AbstractVector;
+                            min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0, space_constrained=false,
+                            capacity_factor_estimate::Real=0.2, fraction_of_annual_kwh_to_size_pv::Real=0.5)
+
+Returns the size_class and size_kw_for_size_class of the PV based on the inputs.
+
+"""
 function get_pv_size_class(electric_load_annual_kwh::Real, tech_sizes_for_cost_curve::AbstractVector;
-                          min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0, space_constrained=false)
-    
-    # TODO pass in Site.[land and roof space] to include that in the size class determination
+                            min_kw::Real=0.0, max_kw::Real=1.0e9, existing_kw::Real=0.0, space_constrained=false,
+                            capacity_factor_estimate::Real=0.2, fraction_of_annual_kwh_to_size_pv::Real=0.5)
 
     # Estimate size based on electric load and estimated PV capacity factor
-    capacity_factor_estimate = 0.2
-    fraction_of_annual_kwh_to_size_pv = 0.5
-    size_to_serve_all_load = electric_load_annual_kwh / (8760.0* capacity_factor_estimate)
-    effective_size = fraction_of_annual_kwh_to_size_pv * size_to_serve_all_load
+    size_to_serve_all_load = electric_load_annual_kwh / (8760.0 * capacity_factor_estimate)
+    size_kw = fraction_of_annual_kwh_to_size_pv * size_to_serve_all_load
     if space_constrained 
         # max_kw was adjusted down based on space available
-        effective_size = min(max_kw, size_to_serve_all_load)
+        size_kw = min(max_kw, size_to_serve_all_load)
     end
     if max_kw != 1.0e9 
-        effective_size = min(effective_size, max_kw)
+        size_kw = min(size_kw, max_kw)
     end
     if min_kw != 0.0
-        effective_size = max(effective_size, min_kw)
+        size_kw = max(size_kw, min_kw)
     end
     
     # Find the appropriate size class for the effective size
@@ -588,15 +611,15 @@ function get_pv_size_class(electric_load_annual_kwh::Real, tech_sizes_for_cost_c
         min_size = convert(Float64, size_range[1])
         max_size = convert(Float64, size_range[2])
         
-        if effective_size >= min_size && effective_size <= max_size
-            return i
+        if size_kw >= min_size && size_kw <= max_size
+            return i, size_kw
         end
     end
     
     # Handle edge cases
-    if effective_size > convert(Float64, tech_sizes_for_cost_curve[end][2])
-        return length(tech_sizes_for_cost_curve)
+    if size_kw > convert(Float64, tech_sizes_for_cost_curve[end][2])
+        return length(tech_sizes_for_cost_curve), size_kw
     end
     
-    return 1  # Default to smallest size class
+    return 1, size_kw  # Default to smallest size class
 end
