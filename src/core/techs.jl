@@ -348,6 +348,7 @@ function Techs(s::Scenario)
         if s.settings.off_grid_flag
             push!(providing_oper_res, "FuelCell")
         end
+    end
     # check for ability of new technologies to meet heating loads if retire_in_optimal
     if !isnothing(s.existing_boiler) && s.existing_boiler.retire_in_optimal
         if !isnothing(s.dhw_load) && s.dhw_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_dhw, "ExistingBoiler"))
@@ -496,6 +497,7 @@ function Techs(s::MPCScenario)
         techs_can_serve_space_heating,
         techs_can_serve_dhw,
         techs_can_serve_process_heat,
+        String[],
         String[],
         String[]
     )
