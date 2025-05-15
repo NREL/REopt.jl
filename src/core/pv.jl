@@ -560,7 +560,7 @@ function get_pv_cost_params(;
     size_class = determined_size_class
     tech_sizes_for_cost_curve = final_tech_sizes
 
-    return installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve, size_kw_for_size_class
+    return installed_cost_per_kw, om_cost_per_kw, size_class, tech_sizes_for_cost_curve, round(size_kw_for_size_class, digits=0)
 end
 
 # Get a specific PV by name from an array of PVs
