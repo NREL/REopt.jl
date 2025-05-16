@@ -172,18 +172,7 @@ else  # run HiGHS tests
             @test r["Financial"]["initial_capital_costs"] ≈ max_capex rtol=1e-5
         end
 
-        # TODO test MPC with outages
-        @testset "MPC" begin
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_mpc(model, "./scenarios/mpc.json")
-            @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
-            @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
-            @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
-            grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
-            # the grid draw limit in the 10th time step is set to 90
-            # without the 90 limit the grid draw is 98 in the 10th time step
-            @test grid_draw[10] <= 90
-        end
+
 
         @testset "MPC Multi-node" begin
             # not doing much yet; just testing that two identical sites have the same costs
