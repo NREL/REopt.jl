@@ -128,12 +128,9 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec))  #TODO reconcile storage sum, storage sum grid constraints
-		add_storage_sum_constraints(m, p)
+	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec)) 
+		add_storage_sum_grid_constraints(m, p)
 	elseif any(size_kg->size_kg > 0, (p.s.storage.attr[b].size_kg for b in p.s.storage.types.hydrogen))
-		add_storage_sum_constraints(m, p)
-	end
-	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.all))
 		add_storage_sum_grid_constraints(m, p)
 	end
 
