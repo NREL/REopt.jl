@@ -391,7 +391,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs.all, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
+			dvMGProductionToStorage[union(p.s.storage.types.elec, p.s.storage.types.hydrogen), union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor), S, tZeros, outage_time_steps]  >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
 			dvMGRatedProduction[p.techs.all, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system

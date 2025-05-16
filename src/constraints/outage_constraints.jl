@@ -7,7 +7,7 @@ function add_dv_UnservedLoad_constraints(m,p)
                 p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + 
                 p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
                 ) * p.levelization_factor[t]
-              - m[:dvMGProductionToStorage][t, s, tz, ts] # TODO verify vs. sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec)
+              - sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec)
               - m[:dvMGCurtail][t, s, tz, ts]
               - m[:dvMGProductionToElectrolyzer][t, s, tz, ts]
               - m[:dvMGProductionToCompressor][t, s, tz, ts]
@@ -124,7 +124,7 @@ function add_MG_production_constraints(m,p)
 
 	# Electrical production sent to storage or export must be less than technology's rated production
 	@constraint(m, [t in p.techs.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-		m[:dvMGProductionToStorage][t, s, tz, ts]  # TODO check against sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec) 
+		sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec) 
         + m[:dvMGCurtail][t, s, tz, ts] 
         + m[:dvMGProductionToElectrolyzer][t, s, tz, ts] 
         + m[:dvMGProductionToCompressor][t, s, tz, ts] 
@@ -304,7 +304,7 @@ function add_MG_storage_dispatch_constraints(m,p)
 	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
     @constraint(m, [ts in p.time_steps_without_grid],
         m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (  
-            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) 
+            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage]["ElectricStorage",t, s, tz, ts] for t in p.techs.elec) 
         )
     )
 
