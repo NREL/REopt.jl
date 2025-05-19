@@ -2314,6 +2314,37 @@ else  # run HiGHS tests
             @test ghp_size ≈ 0.0 atol = 0.01
             # LCCC should be around 52% of initial capital cost due to incentive and bonus
             @test ghx_lccc/ghx_lccc_initial ≈ 0.518 atol = 0.01
+            
+            # User specified GHP size
+            input_presizedGHP = deepcopy(input_data)
+            input_presizedGHP["GHP"]["max_ton"] = 300
+            input_presizedGHP["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] = 1.0
+            delete!(input_presizedGHP["GHP"], "ghpghx_responses")
+            # Rerun REopts
+            s_presizedGHP = Scenario(input_presizedGHP)
+            inputs_presizedGHP = REoptInputs(s_presizedGHP)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt([m1,m2], inputs_presizedGHP)
+            # GHP output size should equal user-defined GHP size
+            output_GHP_size = sum(results["GHP"]["size_heat_pump_ton"])
+            @test output_GHP_size ≈ 300.00 atol=0.1
+            
+            # User specified max GHP and GHX sizes
+            input_presizedGHPGHX = deepcopy(input_presizedGHP)
+            input_presizedGHPGHX["GHP"]["max_number_of_boreholes"] = 400
+            # Rerun REopts
+            s_presizedGHPGHX = Scenario(input_presizedGHPGHX)
+            inputs_presizedGHPGHX = REoptInputs(s_presizedGHPGHX)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt([m1,m2], inputs_presizedGHPGHX)
+            # GHP output size should equal user-defined GHP size
+            output_GHP_size = results["GHP"]["size_heat_pump_ton"]
+            output_GHX_size = results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"]
+            @test output_GHX_size ≈ 400.00 atol=0.5
+            @test output_GHP_size < 300.00
+            
             finalize(backend(m))
             empty!(m)
             GC.gc()
