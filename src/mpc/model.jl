@@ -34,13 +34,24 @@ Returns a Dict of results with keys matching those in the `MPCScenario`.
 function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     build_mpc!(m, p)
 
-    if !p.s.settings.add_soc_incentive || !("ElectricStorage" in p.s.storage.types.elec)
-		@objective(m, Min, m[:Costs])
-	else # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
+	m[:ObjectivePenalties] = 0.0
+
+    if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
+		m[:ObjectivePenalties] += -1 * sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
 									   (8760. / p.hours_per_time_step)
-		)
 	end
+
+	if !(isempty(p.s.storage.types.hydrogen)) && p.s.settings.add_soc_incentive
+		#TODO Need to test if using a roundtrip efficiency would be better for hydrogen SOC incentive
+		# hydrogen_roundtrip_efficiency = (p.s.compressor.efficiency_kwh_per_kg * p.s.electrolyzer.efficiency_kwh_per_kg *
+		# 								p.s.fuel_cell.efficiency_kwh_per_kg)
+		hydrogen_roundtrip_efficiency = 1
+		m[:ObjectivePenalties] += -1 * sum(
+				hydrogen_roundtrip_efficiency * m[:dvStoredEnergy][b, ts-1] for b in p.s.storage.types.hydrogen, ts in p.time_steps
+			) / (8760. / p.hours_per_time_step)
+	end
+	
+	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
 
 	@info "Model built. Optimizing..."
 	tstart = time()
@@ -100,11 +111,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 					m[:dvProductionToStorage][b, t, ts] == 0)
 			else
 				add_general_storage_dispatch_constraints(m, p, b)
-				if b in p.s.storage.types.hydrogen_lp
-					add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
-				elseif b in p.s.storage.types.hydrogen_hp
-					add_hp_hydrogen_storage_dispatch_constraints(m, p, b)
-				end
+				add_hydrogen_storage_dispatch_constraints(m, p, b)
 			end
 		elseif p.s.storage.attr[b].size_kw == 0 || p.s.storage.attr[b].size_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
@@ -128,19 +135,32 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
-	elseif any(size_kg->size_kg > 0, (p.s.storage.attr[b].size_kg for b in p.s.storage.types.hydrogen))
-		add_storage_sum_constraints(m, p)
-	end
-
+	add_storage_sum_constraints(m, p)
 	add_production_constraints(m, p)
 
 	if !isempty(p.techs.no_turndown)
 		@constraint(m, [t in p.techs.no_turndown, ts in p.time_steps],
             m[:dvRatedProduction][t,ts] == m[:dvSize][t]
         )
-	end
+	end  
+
+    if !isempty(p.techs.electrolyzer)
+        @constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
+			m[:dvRatedProduction][t,ts]  <= m[:dvSize][t]
+        )
+    end  
+
+    if !isempty(p.techs.compressor)
+        @constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+			m[:dvRatedProduction][t,ts]  <= m[:dvSize][t]
+        )
+    end
+    
+    if !isempty(p.techs.fuel_cell)
+        @constraint(m, [t in p.techs.fuel_cell, ts in p.time_steps],
+			m[:dvRatedProduction][t,ts]  <= m[:dvSize][t]
+        )
+    end
 
 	add_elec_load_balance_constraints(m, p)
 
@@ -199,9 +219,6 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 				m[:dvStorageToElectrolyzer][b, ts] == 0)
 		@constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
 				m[:dvRatedProduction][t,ts] == 0)
-		@constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
-				m[:dvProductionToStorage]["HydrogenStorageLP",t,ts] == 0)
-
 		@constraint(m, [t in p.techs.elec, ts in p.time_steps],
 				m[:dvProductionToCompressor][t, ts] == 0)
 		@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
@@ -210,7 +227,29 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
 				m[:dvRatedProduction][t,ts] == 0)
 		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
-				m[:dvProductionToStorage]["HydrogenStorageHP",t,ts] == 0)
+				m[:dvProductionToStorage]["HydrogenStorage",t,ts] == 0)
+	end
+
+	if !isempty(p.techs.compressor)
+		if !p.s.electrolyzer.require_compression
+			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+					m[:dvProductionToCompressor][t, ts] == 0)
+			@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+			@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+					m[:dvStorageToCompressor][b, ts] == 0)
+		end
+		add_compressor_constraints(m, p)
+		m[:TotalPerUnitProdOMCosts] += m[:TotalCompressorPerUnitProdOMCosts]
+	else
+		@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+				m[:dvProductionToCompressor][t, ts] == 0)
+		@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+		@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+				m[:dvStorageToCompressor][b, ts] == 0)
+		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+				m[:dvRatedProduction][t,ts] == 0)
+		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+				m[:dvProductionToStorage]["HydrogenStorage",t,ts] == 0)
 	end
 
 	if !isempty(p.techs.fuel_cell)
@@ -221,21 +260,6 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	else
 		@constraint(m, [t in p.techs.fuel_cell, ts in p.time_steps],
 			m[:dvRatedProduction][t,ts] == 0)
-	end
-
-	if !isempty(p.techs.compressor)
-		add_compressor_constraints(m, p)
-		add_hydrogen_load_balance_constraints(m, p)
-	else
-		@constraint(m, [t in p.techs.elec, ts in p.time_steps],
-				m[:dvProductionToCompressor][t, ts] == 0)
-		@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
-		@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
-				m[:dvStorageToCompressor][b, ts] == 0)
-		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
-				m[:dvRatedProduction][t,ts] == 0)
-		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
-				m[:dvProductionToStorage]["HydrogenStorageHP",t,ts] == 0)
 	end
 
 	add_elec_utility_expressions(m, p)
@@ -351,10 +375,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		if b in p.s.storage.types.elec
 			fix(m[:dvStoragePower][b], p.s.storage.attr["ElectricStorage"].size_kw, force=true)
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["ElectricStorage"].size_kwh, force=true)
-		elseif b in p.s.storage.types.hydrogen_lp
-			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageLP"].size_kg, force=true)
-		elseif b in p.s.storage.types.hydrogen_hp
-			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageHP"].size_kg, force=true)
+		elseif b in p.s.storage.types.hydrogen
+			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorage"].size_kg, force=true)
 		elseif b in p.s.storage.types.hot
 			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_limit_kw, force=true)
 			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_limit_kw, force=true)

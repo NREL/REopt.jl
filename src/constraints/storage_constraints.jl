@@ -39,7 +39,7 @@ end
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
-    if (p.s.storage.attr[b] isa ElectricStorage) || (p.s.storage.attr[b] isa MPCElectricStorage) || (p.s.storage.attr[b] isa HydrogenStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal)
+    if (p.s.storage.attr[b] isa ElectricStorage) || (p.s.storage.attr[b] isa MPCElectricStorage) || (p.s.storage.attr[b] isa HydrogenStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal) || (p.s.storage.attr[b] isa MPCHydrogenStorage)
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )

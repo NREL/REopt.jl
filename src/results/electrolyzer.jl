@@ -96,7 +96,7 @@ function add_electrolyzer_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; 
     r["electricity_consumed_series_kw"] = round.(value.(ElectrolyzerConsumption), digits=6)
 
     ElectrolyzerProduction = @expression(m, [ts in p.time_steps],
-                            sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageLP", t, ts] for t in p.techs.electrolyzer)
+                            sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorage", t, ts] for t in p.techs.electrolyzer)
                         )
     r["hydrogen_produced_series_kg"] = round.(value.(ElectrolyzerProduction), digits=6)
     d["Electrolyzer"] = r

@@ -90,7 +90,7 @@ function add_compressor_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n
 
     r = Dict{String, Any}()
     CompressorProduction = @expression(m, [ts in p.time_steps],
-                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageHP", t, ts] for t in p.techs.compressor)
+                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorage", t, ts] for t in p.techs.compressor)
                             )
     r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)
     
