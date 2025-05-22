@@ -25,6 +25,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## segmented_cycle_degr
+### Added
+- Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
+- Added **cycle_fade_fraction** as an input for portion of BESS that is tied to each cycle fade coefficient.
+### Changed
+- Changed **cycle_fade_fraction** input to be a vector and accept vector of inputs.
+
 ## test-runners
 ### Added
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
