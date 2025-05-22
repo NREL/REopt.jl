@@ -135,7 +135,10 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	add_storage_sum_constraints(m, p)
+	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec))
+		add_storage_sum_constraints(m, p)
+	end
+
 	add_production_constraints(m, p)
 
 	if !isempty(p.techs.no_turndown)
