@@ -590,16 +590,53 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
 end
 
 
-function process_simple_powerflow_results(Multinode_Inputs, pm)
+function process_simple_powerflow_results(Multinode_Inputs, m, data_eng)
+   # Process the results from the simple powerflow model, which is applied to the time steps that the PMD model isn't applied to
 
-    # For the original test model:
+    simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][collect(keys(data_eng["line"]))[1],:].data))) # pull the total number of timesteps from the first line in the simplified powerflow model
+    REoptTimeSteps = collect(1:Int(8760* Multinode_Inputs.time_steps_per_hour))
+    time_steps_without_PMD = setdiff(REoptTimeSteps, Multinode_Inputs.PMD_time_steps)
 
-    # At time step 12, all of these values are the same, as expected:
-    LineFlowOnline4_5 = value.(m[:dvPline]["line4_5",12])
-    ExportFromNode5_SolarPV = value.(m[:dvP][5,12])
-    PowerDemandNode4 = results["REopt_results"][4]["ElectricLoad"]["load_series_kw"][12]
+    if length(time_steps_without_PMD) != length(simplified_powerflow_model_timesteps)
+        throw(@error("The lengths of the time step arrays should be the same. This indicates that there is an issue with how the simple powerflow model and/or PMD model was formulated."))
+    end
 
+    simple_powerflow_line_results = Dict()
+    lines = collect(keys(data_eng["line"]))   
+    for line in lines
+        simple_powerflow_line_results[line] = Dict("line_power_flow_series" => value.(m[:dvPline][line,:].data),
+                                                   "line_maximum_power_flow" => maximum(value.(m[:dvPline][line,:].data)),
+                                                   "line_average_power_flow" => mean(value.(m[:dvPline][line,:].data)),
+                                                   "line_minimum_power_flow" => minimum(value.(m[:dvPline][line,:].data)),
+                                                   "associated_REopt_timesteps" => time_steps_without_PMD,
+                                                   "simplified_powerflow_model_timesteps" => simplified_powerflow_model_timesteps
 
+                                                    )
+    end
+
+    simple_powerflow_bus_results = Dict()
+    busses = axes(m[:dvP][:,1])[1]   
+    for bus in busses
+        simple_powerflow_bus_results[bus] = Dict("bus_power_series" => value.(m[:dvP][bus,:].data),
+                                                   "bus_maximum_power" => maximum(value.(m[:dvP][bus,:].data)),
+                                                   "bus_average_power" => mean(value.(m[:dvP][bus,:].data)),
+                                                   "bus_minimum_power" => minimum(value.(m[:dvP][bus,:].data)),
+                                                   "associated_REopt_timesteps" => time_steps_without_PMD,
+                                                   "simplified_powerflow_model_timesteps" => simplified_powerflow_model_timesteps
+                                                    )
+    end
+
+    simple_powerflow_results = Dict("lines" => simple_powerflow_line_results,
+                                    "busses" => simple_powerflow_bus_results)
+
+    # For the original test model: At time step 12, all of these values are the same, as expected:
+        #LineFlowOnline4_5 = value.(m[:dvPline]["line4_5",12])
+        #ExportFromNode5_SolarPV = value.(m[:dvP][5,12])
+        #PowerDemandNode4 = results["REopt_results"][4]["ElectricLoad"]["load_series_kw"][12]
+    
+    #substation_line = Multinode_Inputs.substation_line
+                                    
+    return simple_powerflow_results
 end
 
 

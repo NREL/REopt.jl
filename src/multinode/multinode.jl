@@ -69,7 +69,9 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         time_results["ComputationTime_EntireModel_Minutes"] = ComputationTime_EntireModel_Minutes
         
         system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel_Minutes; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_minutes)
-
+        
+        simple_powerflow_model_results = process_simple_powerflow_results(Multinode_Inputs, pm.model, data_eng)
+        
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
@@ -77,6 +79,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("Multinode_Inputs", Multinode_Inputs), 
                                 ("Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
                                 ("PMD_results", PMD_Results),
+                                ("simple_powerflow_model_results", simple_powerflow_model_results),
                                 ("PMD_data_eng", data_eng),
                                 ("REopt_results", REopt_Results),
                                 ("REopt_results_BAU", REopt_Results_BAU),
@@ -84,7 +87,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                                 ("Computation_Time_Data", time_results),
                                 ("Line_Info_PMD", LineInfo_PMD),
-                                ("pm", pm), # This can be a very large variable and it can be slow to load
+                                #("pm", pm), # This can be a very large variable and it can be slow to load
                                 ("line_upgrade_options", line_upgrade_options_each_line),
                                 ("line_upgrade_results", line_upgrade_results),
                                 ("single_outage_simulator_model", single_model_outage_simulator),
