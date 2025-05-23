@@ -834,8 +834,10 @@ function CreateResultsMap(results, Multinode_Inputs, TimeStamp)
     
     p = PlotlyJS.plot(traces,layout)
     PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_and_Layout.html")
-    display(p)
 
+    if Multinode_Inputs.display_results
+        display(p)
+    end
 end
 
 
@@ -880,9 +882,10 @@ function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_su
     end       
 
     p = PlotlyJS.plot(traces, layout)
-    display(p)
     PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/VoltagePlot_InteractivePlot"*file_suffix*".html")
-
+    if Multinode_Inputs.display_results
+        display(p)
+    end
 end
 
 
@@ -985,8 +988,10 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Multinode_Inputs, REoptI
     else
         Plots.xlims!(0,7*Multinode_Inputs.time_steps_per_hour) # Show the first week of results
     end
-    display(Plots.title!("System Wide Power Demand and Generation"))
-    print("\n The static plot has been generated")
+
+    if Multinode_Inputs.display_results
+        display(Plots.title!("System Wide Power Demand and Generation"))
+    end
 
     # Interactive plot using PlotlyJS
     traces = PlotlyJS.GenericTrace[]
@@ -1100,8 +1105,10 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Multinode_Inputs, REoptI
     end
 
     p = PlotlyJS.plot(traces, layout)
-    display(p)
     PlotlyJS.savefig(p, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/CombinedResults_PowerOutput_InteractivePlot.html")
+    if Multinode_Inputs.display_results
+        display(p)
+    end
 end
  
 

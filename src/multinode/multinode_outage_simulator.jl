@@ -700,7 +700,10 @@ function CreatePlotsForOutageSimulatorModel(Multinode_Inputs, m_outagesimulator,
         Plots.plot!(DataDictionaryForEachNode[n]["loads_kw"][i:(i+OutageLength_TimeSteps_Input-1)], label = "Total Load", linecolor = (:black), line = (:dash), linewidth = 3)
         Plots.xlabel!("Time Step") 
         Plots.ylabel!("Power (kW)") 
-        display(Plots.title!("Node "*n*": Load Balance, outage timestep: "*string(i)*" of "*string(TotalTimeSteps)))
+        Plots.title!("Node "*n*": Load Balance, outage timestep: "*string(i)*" of "*string(TotalTimeSteps))
+        if Multinode_Inputs.display_results
+            display(Plots.ylabel!("Power (kW)"))
+        end
         Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Load_Balance_"*TimeStamp*".png")
     end 
 
@@ -712,7 +715,10 @@ function CreatePlotsForOutageSimulatorModel(Multinode_Inputs, m_outagesimulator,
         Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
         Plots.xlabel!("Time Step")
         Plots.ylabel!("Power (kW)")
-        display(Plots.title!("Node "*n*": Power Export, outage timestep "*string(i)*" of "*string(TotalTimeSteps)))
+        Plots.title!("Node "*n*": Power Export, outage timestep "*string(i)*" of "*string(TotalTimeSteps))
+        if Multinode_Inputs.display_results
+            display(Plots.ylabel!("Power (kW)"))
+        end
         Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Power_Export_"*TimeStamp*".png")
     
         # Plot the battery flows
@@ -722,14 +728,20 @@ function CreatePlotsForOutageSimulatorModel(Multinode_Inputs, m_outagesimulator,
         Plots.plot!(value.(m_outagesimulator[Symbol("dvPVToBat_"*n)]), label = "PV to Battery")
         Plots.xlabel!("Time Step")
         Plots.ylabel!("Power (kW)")
-        display(Plots.title!("Node "*n*": Battery Flows, outage "*string(i)*" of "*string(TotalTimeSteps)))
+        Plots.title!("Node "*n*": Battery Flows, outage "*string(i)*" of "*string(TotalTimeSteps))
+        if Multinode_Inputs.display_results
+            display(Plots.ylabel!("Power (kW)"))
+        end
         Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Battery_Flows_"*TimeStamp*".png")
     
         # Plot the battery charge:
         Plots.plot(value.(m_outagesimulator[Symbol("BatteryCharge_"*n)]), label = "Battery Charge")
         Plots.xlabel!("Time Step")
         Plots.ylabel!("Charge (kWh)")
-        display(Plots.title!("Node "*n*": Battery Charge, outage "*string(i)*" of "*string(TotalTimeSteps)))
+        Plots.title!("Node "*n*": Battery Charge, outage "*string(i)*" of "*string(TotalTimeSteps))
+        if Multinode_Inputs.display_results
+            display(Plots.ylabel!("Power (kW)"))
+        end
         Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Battery_Charge_"*TimeStamp*".png")
     end
 end
@@ -765,15 +777,19 @@ function MapOutageSimulatorResultsPlots(Multinode_Inputs, outage_survival_result
     layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps_Input) Time Step Outage: Distribution of Survival by time of day", xaxis_title = "Time of Day (hour)", yaxis_title="Count")
     p1 = PlotlyJS.plot(traces, layout)
     PlotlyJS.savefig(p1, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Time_Of_Day_$(OutageLength_TimeSteps_Input)_Timestep_Outage.html")
-    display(p1)
-    
+    if Multinode_Inputs.display_results
+        display(p1)
+    end
+
     traces = PlotlyJS.GenericTrace[]
     push!(traces, PlotlyJS.histogram(x=day_of_year_survived, name="Survived", xbins_start=0, xbins_end=371, xbins_size=7))
     push!(traces, PlotlyJS.histogram(x=day_of_year_not_survived, name="Not Survived", xbins_start=0, xbins_end=371, xbins_size=7)) 
     layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps_Input) Time Step Outage: Distribution of Survival by day of year", xaxis_title = "Day of Year (binned in weekly intervals)", yaxis_title="Count")
     p2 = PlotlyJS.plot(traces, layout)
     PlotlyJS.savefig(p2, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Day_Of_Year_$(OutageLength_TimeSteps_Input)_Timestep_Outage.html")
-    display(p2)
+    if Multinode_Inputs.display_results
+        display(p2)
+    end
 end
 
 

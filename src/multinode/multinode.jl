@@ -174,7 +174,7 @@ function PrepareElectricLoads(Multinode_Inputs)
                 if sum(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
                     load_segment_initial = deepcopy(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
                     load_segment_modified = deepcopy(load_segment_initial)
-                    if !(string(node) in keys(critical_load_fraction))
+                    if !(string(node) in keys(Multinode_Inputs.critical_load_fraction))
                         throw(@error("Node $(node) is not listed in the critical_load_fraction dictionary"))
                     end
                     load_segment_modified[OutageStart:OutageEnd] = Multinode_Inputs.critical_load_fraction[string(node)] * load_segment_initial[OutageStart:OutageEnd]                    
