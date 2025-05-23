@@ -25,6 +25,7 @@
     allow_export_beyond_substation::Bool=false,
     substation_export_limit::Real=0,
     substation_import_limit::Real=0,
+    base_voltage_kv::Real=0, # This must be redefined based on the base voltage defined in the dss inputs file in units of kV
     model_switches::Bool=false,
     model_line_upgrades::Bool=false,
     line_upgrade_options::Dict=Dict(), 
@@ -86,6 +87,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     allow_export_beyond_substation
     substation_export_limit
     substation_import_limit
+    base_voltage_kv
     model_switches
     model_line_upgrades
     line_upgrade_options 
@@ -147,6 +149,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         allow_export_beyond_substation::Bool=false,
         substation_export_limit::Real=0,
         substation_import_limit::Real=0,
+        base_voltage_kv::Real=0,
         model_switches::Bool=false,
         model_line_upgrades::Bool=false,
         line_upgrade_options::Dict=Dict(), 
@@ -243,6 +246,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         allow_export_beyond_substation,
         substation_export_limit,
         substation_import_limit,
+        base_voltage_kv,
         model_switches,
         model_line_upgrades,
         line_upgrade_options, 

@@ -18,7 +18,7 @@ function CalculateComputationTime(StartTime)
     # Function to calculate the elapsed time between a time (input into the function) and the current time
     EndTime = now()
     ComputationTime_milliseconds = EndTime - StartTime
-    print("The computation time in milliseconds is: $(ComputationTime_milliseconds)")
+    #print("The computation time in milliseconds is: $(ComputationTime_milliseconds)")
 
     if Dates.value(ComputationTime_milliseconds) > 1000
         ComputationTime_minutes = round(Dates.value(ComputationTime_milliseconds)/60000, digits=2)
@@ -590,6 +590,19 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
 end
 
 
+function process_simple_powerflow_results(Multinode_Inputs, pm)
+
+    # For the original test model:
+
+    # At time step 12, all of these values are the same, as expected:
+    LineFlowOnline4_5 = value.(m[:dvPline]["line4_5",12])
+    ExportFromNode5_SolarPV = value.(m[:dvP][5,12])
+    PowerDemandNode4 = results["REopt_results"][4]["ElectricLoad"]["load_series_kw"][12]
+
+
+end
+
+
 function process_model_diagnostics_bus_voltage_violations(Multinode_Inputs, pm)
     model = pm.model
 
@@ -829,7 +842,7 @@ end
 function Create_Voltage_Plot(results, TimeStamp, voltage_plot_time_step; file_suffix="")
     Multinode_Inputs = results["Multinode_Inputs"]
     # Generate list of lengths from the node to the substation
-    DistancesToSourcebus, lengths_dict, paths_dict = DetermineDistanceFromSourcebus(results)
+    DistancesToSourcebus, lengths_dict, paths_dict, paths, neighbors = DetermineDistanceFromSourcebus(Multinode_Inputs, results["PMD_data_eng"])
 
     # Determine the per unit voltage at each node
     timestep = voltage_plot_time_step
@@ -1380,11 +1393,11 @@ function DetermineOutageStartsAndEnds(Multinode_Inputs, outages_vector)
 end
 
 
-function DetermineDistanceFromSourcebus(results)
-    neighbors = REopt.modified_calc_connected_components_eng(results["PMD_data_eng"])
+function DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
+    neighbors = REopt.modified_calc_connected_components_eng(data_eng)
     paths = REopt.DeterminePathToSourcebus(neighbors)
 
-    Multinode_Inputs = results["Multinode_Inputs"]
+    #Multinode_Inputs = results["Multinode_Inputs"]
 
     line_names_to_sourcebus_dict = Dict()
     lengths_to_sourcebus_dict = Dict()
@@ -1400,9 +1413,9 @@ function DetermineDistanceFromSourcebus(results)
                 firstnode = string(Multinode_Inputs.substation_node)
             end
             line_name = string("line"*firstnode*"_"*path[j+1])
-            if haskey(results["PMD_data_eng"]["line"], line_name)
+            if haskey(data_eng["line"], line_name)
                 push!(line_names_temp, line_name)
-                push!(line_lengths_temp, results["PMD_data_eng"]["line"][line_name]["length"])
+                push!(line_lengths_temp, data_eng["line"][line_name]["length"])
             end
         end
         line_names_to_sourcebus_dict[i] = line_names_temp
@@ -1418,7 +1431,7 @@ function DetermineDistanceFromSourcebus(results)
         end
     end
 
-    return summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict
+    return summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors
 end
 
 

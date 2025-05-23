@@ -174,6 +174,9 @@ function PrepareElectricLoads(Multinode_Inputs)
                 if sum(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
                     load_segment_initial = deepcopy(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
                     load_segment_modified = deepcopy(load_segment_initial)
+                    if !(string(node) in keys(critical_load_fraction))
+                        throw(@error("Node $(node) is not listed in the critical_load_fraction dictionary"))
+                    end
                     load_segment_modified[OutageStart:OutageEnd] = Multinode_Inputs.critical_load_fraction[string(node)] * load_segment_initial[OutageStart:OutageEnd]                    
                     delete!(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"],"loads_kw")
                     Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"] = load_segment_modified
@@ -182,6 +185,9 @@ function PrepareElectricLoads(Multinode_Inputs)
                 if sum(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"]) > 0 
                     load_segment_initial = deepcopy(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"])
                     load_segment_modified = deepcopy(load_segment_initial)
+                    if !(string(node) in keys(critical_load_timeseries))
+                        throw(@error("Node $(node) is not listed in the critical_load_timeseries dictionary"))
+                    end
                     load_segment_modified[OutageStart:OutageEnd] = Multinode_Inputs.critical_load_timeseries[string(node)][OutageStart:OutageEnd]                    
                     delete!(Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"],"loads_kw")
                     Multinode_Inputs.REopt_inputs_list[i]["ElectricLoad"]["loads_kw"] = load_segment_modified
@@ -204,20 +210,8 @@ function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, 
     
     pm, data_math_mn, data_eng = Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps, time_results; combined_REopt_inputs = combined_REopt_inputs, BAU_case = BAU_case)
         
-    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn)
+    LineInfo_PMD, data_math_mn, REoptInputs_Combined, pm, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, line_upgrade_options_each_line = Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn, data_eng; allow_upgrades=allow_upgrades)
     
-    line_upgrade_options_each_line = "N/A"
-    if allow_upgrades == true
-        if Multinode_Inputs.model_line_upgrades == true
-            pm, line_upgrade_options_each_line = model_line_upgrades(pm, Multinode_Inputs, LineInfo_PMD, data_eng)          
-        end
-
-        if Multinode_Inputs.model_transformer_upgrades == true
-            #pm = model_transformer_upgrades(pm, Multinode_Inputs)
-        end
-
-    end
-
     add_objective(pm, Multinode_Inputs, REoptInputs_Combined)
 
     results, TerminationStatus = Run_REopt_PMD_Model(pm, Multinode_Inputs)
@@ -226,6 +220,7 @@ function build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, 
     
     return REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, pm.model, pm, line_upgrade_options_each_line, line_upgrade_results, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e
 end
+
 
 function create_list_of_upgradable_lines(Multinode_Inputs)
     # Create a list lines that are upgradable
@@ -239,6 +234,40 @@ function create_list_of_upgradable_lines(Multinode_Inputs)
     return lines_for_upgrades
 end
 
+
+function CreateDictionaryOfLineUpgradeOptions(Multinode_Inputs)
+    # Generate a dictionary for the options, organized so that the keys are the lines and the values are options for each line
+    
+    lines_for_upgrades = create_list_of_upgradable_lines(Multinode_Inputs)
+    
+    line_upgrade_options_each_line = Dict([])
+
+    for line in lines_for_upgrades
+        for i in keys(Multinode_Inputs.line_upgrade_options), j in Multinode_Inputs.line_upgrade_options[i]["locations"]
+            if line == j
+
+                if line ∉ keys(line_upgrade_options_each_line) # create a new entry for that line if it is not in the line_upgrade_options_each_line dictionary
+
+                    line_upgrade_options_each_line[line] = Dict([("max_amperage", [Multinode_Inputs.line_upgrade_options[i]["max_amps"]]),
+                                                                    ("cost_per_length", [Multinode_Inputs.line_upgrade_options[i]["cost_per_meter"]]),
+                                                                    ("voltage_kv", Multinode_Inputs.line_upgrade_options[i]["voltage_kv"]) # all upgrade options for a given line should have the same voltage
+                                                                    #("rvalues", [Multinode_Inputs.line_upgrade_options[i]["rvalues"]]),
+                                                                    #("xvalues", [Multinode_Inputs.line_upgrade_options[i]["xvalues"]])
+                                                                            ])            
+                else
+                    push!(line_upgrade_options_each_line[line]["max_amperage"], Multinode_Inputs.line_upgrade_options[i]["max_amps"])
+                    push!(line_upgrade_options_each_line[line]["cost_per_length"], Multinode_Inputs.line_upgrade_options[i]["cost_per_meter"])
+                    #push!(line_upgrade_options_each_line[line_name]["rvalues"], Multinode_Inputs.line_upgrade_options[i]["rvalues"])
+                    #push!(line_upgrade_options_each_line[line_name]["xvalues"], Multinode_Inputs.line_upgrade_options[i]["xvalues"])
+                end
+            end
+        end
+    end
+
+    return line_upgrade_options_each_line
+end
+
+
 function model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)
     # Function for modeling line upgrades
 
@@ -250,29 +279,9 @@ function model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)
     @variable(pm.model, line_cost[lines_for_upgrades] >= 0 )
     @variable(pm.model, line_max_amps[lines_for_upgrades] >= 0)
     
-    # Generate a dictionary for the options, organized so that the keys are the lines and the values are options for each line
-    line_upgrade_options_each_line = Dict([])
+    line_upgrade_options_each_line = CreateDictionaryOfLineUpgradeOptions(Multinode_Inputs)
+    
     for line in lines_for_upgrades
-
-        for i in keys(Multinode_Inputs.line_upgrade_options), j in Multinode_Inputs.line_upgrade_options[i]["locations"]
-            if line == j
-
-                if line ∉ keys(line_upgrade_options_each_line) # create a new entry for that line if it is not in the line_upgrade_options_each_line dictionary
-
-                    line_upgrade_options_each_line[line] = Dict([("max_amperage", [Multinode_Inputs.line_upgrade_options[i]["max_amps"]]),
-                                                                 ("cost_per_length", [Multinode_Inputs.line_upgrade_options[i]["cost_per_meter"]]),
-                                                                 ("voltage_kv", Multinode_Inputs.line_upgrade_options[i]["voltage_kv"]) # all upgrade options for a given line should have the same voltage
-                                                                 #("rvalues", [Multinode_Inputs.line_upgrade_options[i]["rvalues"]]),
-                                                                 #("xvalues", [Multinode_Inputs.line_upgrade_options[i]["xvalues"]])
-                                                                            ])            
-                else
-                    push!(line_upgrade_options_each_line[line]["max_amperage"], Multinode_Inputs.line_upgrade_options[i]["max_amps"])
-                    push!(line_upgrade_options_each_line[line]["cost_per_length"], Multinode_Inputs.line_upgrade_options[i]["cost_per_meter"])
-                    #push!(line_upgrade_options_each_line[line_name]["rvalues"], Multinode_Inputs.line_upgrade_options[i]["rvalues"])
-                    #push!(line_upgrade_options_each_line[line_name]["xvalues"], Multinode_Inputs.line_upgrade_options[i]["xvalues"])
-                end
-            end
-        end
 
         number_of_entries = length(line_upgrade_options_each_line[line]["max_amperage"])
         dv = "Bin"*line
@@ -322,6 +331,7 @@ function model_transformer_upgrades(pm, Multinode_Inputs)
 
     return pm
 end
+
 
 function PrepareREoptInputs(Multinode_Inputs)  
     # Generate the scenarios, REoptInputs, and list of REoptInputs
@@ -698,28 +708,260 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
 end
 
 
-function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn; OutageSimulator=false, OutageLength_Timesteps=0)
+function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
+   # Create dictionary with information about which lines are connected to each bus
+   # TODO: this function could likely be simplified
+
+    lines = collect(keys(data_eng["line"]))
+
+    summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors = DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
+
+    # Create a new dictionary based on the paths (which will include the transformer path)
+    line_names_to_sourcebus_dict_including_transformers = Dict()
+
+    for bus in collect(keys(paths))
+        bus_original = deepcopy(bus)
+        if bus == "sourcebus"
+            bus = Multinode_Inputs.substation_node
+        end
+        line_names_to_sourcebus_dict_including_transformers[bus] = []
+        for i in collect(1:Int(length(paths[bus_original])-1))
+
+            bus1 = paths[bus_original][i]
+            if bus1 == "sourcebus"
+                bus1 = Multinode_Inputs.substation_node
+            end
+
+            bus2 = paths[bus_original][i+1]
+            if bus2 == "sourcebus"
+                bus2 = Multinode_Inputs.substation_node
+            end
+            
+            push!(line_names_to_sourcebus_dict_including_transformers[bus], "line"*string(bus1)*"_"*string(bus2))
+        end
+    end
+
+    # Represent transformers as lines because voltage is not modeled in the simple powerflow representation without PMD
+    transformers = collect(keys(data_eng["transformer"]))
+    transformer_busses = Dict()
+    for transformer_name in transformers
+        transformer_bus1 = data_eng["transformer"][transformer_name]["bus"][1]
+        transformer_bus2 = data_eng["transformer"][transformer_name]["bus"][2]
+        transformer_line = "line"*string(transformer_bus1)*"_"*string(transformer_bus2) 
+        transformer_busses[transformer_line] = [transformer_bus1, transformer_bus2]     
+        push!(lines, transformer_line)
+    end
+
+    all_connections_lines_to_busses = Dict()
+    connections_upstream = Dict()
+    connections_downstream = Dict()
+    
+    for line in lines
+        if line in keys(data_eng["line"])
+            line_busses = [data_eng["line"][line]["f_bus"], data_eng["line"][line]["t_bus"]]
+        else
+            line_busses = transformer_busses[line]
+        end
+
+        for bus in line_busses
+            bus_original = deepcopy(bus)
+            if bus == "sourcebus"
+                bus = Multinode_Inputs.substation_node
+            end
+
+            connecting_bus = setdiff(line_busses, [bus_original])[1]
+            if connecting_bus == "sourcebus"
+                connecting_bus = Multinode_Inputs.substation_node
+            end
+            
+            for i in collect(1:2)
+                if i ==1 
+                    connecting_line = "line"*string(bus)*"_"*string(connecting_bus)
+                else
+                    connecting_line = "line"*string(connecting_bus)*"_"*string(bus)
+                end
+                                
+                if string(connecting_line) in lines
+                    if bus in keys(all_connections_lines_to_busses)
+                        push!(all_connections_lines_to_busses[bus], connecting_line)
+                    else
+                        all_connections_lines_to_busses[bus] = [connecting_line]
+                    end
+                
+                    if connecting_line in line_names_to_sourcebus_dict_including_transformers[bus] # this dictionary contains all of the upstream lines to the bus_original
+                        if bus in keys(connections_upstream)
+                            push!(connections_upstream[bus], connecting_line)
+                        else
+                            connections_upstream[bus] = [connecting_line]
+                        end
+
+                    else
+                        if bus in keys(connections_downstream)
+                            push!(connections_downstream[bus], connecting_line)
+                        else
+                            connections_downstream[bus] = [connecting_line]
+                        end
+                        
+                    end
+                end
+            end
+        end
+    end
+
+    return all_connections_lines_to_busses, connections_upstream, connections_downstream, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers
+end
+
+
+function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
+    print("\n Adding Simple Powerflow Constraints to Non-PMD Timesteps")
+    
+    time_steps_without_PMD = setdiff(REoptTimeSteps, Multinode_Inputs.PMD_time_steps)
+
+    indeces = collect(1:length(time_steps_without_PMD))
+
+    connections, connections_upstream, connections_downstream, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers = CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)  # Note: the lines variable here includes lines that represent the transformer
+    
+    @variable(m, dvP[REopt_nodes, indeces] >= -1000000)
+    #@variable(m, Q[REopt_nodes] >= -10000000)
+    
+    @variable(m, dvPline[lines, indeces] >= -1000000)
+    #@variable(m, dvQline[lines, indeces])
+    
+    # Add constraints for maximum power through each line
+    if Multinode_Inputs.model_line_upgrades
+        print("Adding simple powerflow constraints to allow for line upgrades")
+        line_upgrade_options_each_line = CreateDictionaryOfLineUpgradeOptions(Multinode_Inputs)
+        for line in lines
+            if line in keys(line_upgrade_options_each_line)
+                @constraint(m, [t in indeces], dvPline[line, t] <= m[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"])
+                @constraint(m, [t in indeces], dvPline[line, t] >= -m[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"])
+
+            elseif line in keys(transformer_busses)
+                @constraint(m, [t in indeces], m[:dvPline][line, t] <= 100000000) # TODO: add maximum transformer voltage
+                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -100000000)
+            else
+                @constraint(m, [t in indeces], m[:dvPline][line, t] <= LineInfo[line]["maximum_power_kw"]) # Defines the maximum real power flow through the line
+                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -LineInfo[line]["maximum_power_kw"])
+            end
+        end
+    else
+        
+        for line in lines
+            if line in keys(transformer_busses)
+                @constraint(m, [t in indeces], m[:dvPline][line, t] <= 100000000) # TODO: add maximum transformer voltage
+                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -100000000)
+            else
+                @constraint(m, [t in indeces], m[:dvPline][line, t] <= LineInfo[line]["maximum_power_kw"]) # Defines the maximum real power flow through the line
+                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -LineInfo[line]["maximum_power_kw"])
+                #@constraint(m, m[:dvQline][line, t] <= )
+                #@constraint(m, m[:dvQline][line, t] >= 0)
+            end
+        end
+    end
+    
+    counter = 0
+
+    # Link this simple powerflow model to the REopt nodes
+    for t in REoptTimeSteps
+        if t in time_steps_without_PMD
+            index = findall(x->x==t, time_steps_without_PMD)
+            counter = counter + 1
+            for node in REopt_nodes
+                if string(node) != Multinode_Inputs.substation_node
+                    if counter < 3
+                        print("\n Connecting node $(node) to the simple powerflow model")
+                    end
+                    @constraint(m, m[:dvP][node,index] .== (m[Symbol("TotalExport_"*string(node))][t]) .- (m[Symbol("dvGridPurchase_"*string(node))][t]) ) # check that these variable names are correct
+                else
+                    # I don't think this is necessary because the substation node isn't part of REopt nodes
+                    #if counter < 3
+                    #    print("\n ****** Not connecting simple powerflow model to REopt for node $(node), which is the substation node")
+                    #end
+                end
+            end
+        end
+    end
+  
+    # Conservation of energy for each bus
+    for bus in collect(keys(connections))
+        bus_connections = connections[bus]
+        
+        if bus == Multinode_Inputs.substation_node
+            print("\n Adding constraint for substation bus $(bus)")
+            # TODO: does this constraint need to exist?
+            #@constraint(m, [t in indeces], m[:dvP][bus, t] - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
+
+        elseif parse(Int, bus) in REopt_nodes  # for buses that have an associated REopt node
+            print("\n Adding constraint for REopt bus $(bus):")
+            if bus in keys(connections_downstream)
+                print(" mid-branch")
+                # For nodes that have upstream and downstream lines
+                @constraint(m, [t in indeces], m[:dvP][parse(Int, bus), t] + sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
+            else
+                print(" at the end of a branch")
+                # For nodes that are at the end of branch
+                @constraint(m, [t in indeces], m[:dvP][parse(Int,bus), t] + sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) == 0)
+            end
+            
+        else # for buses in the model without a REopt node
+            print("\n Adding constraint for non-REopt bus $(bus):")
+            if bus in keys(connections_downstream)
+                print(" mid-branch")
+                @constraint(m, [t in indeces], sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
+            else
+                print(" at the end of a branch")
+                @constraint(m, [t in indeces], sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) == 0)
+            end
+        end
+    end
+end
+
+
+function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined, data_math_mn, data_eng; OutageSimulator=false, OutageLength_Timesteps=0, allow_upgrades=false)
     
     m = pm.model   
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs)
     REoptInputs_Combined = REopt_inputs_combined 
-    
+    print("\n The REopt nodes are: *************")
+    print(REopt_nodes)
     print("\n Building the REopt model\n")
     REopt.build_reopt!(m, REoptInputs_Combined) # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     
     CreateREoptTotalExportVariables(m, REoptInputs_Combined)
     REopt_gen_ind_e, load_phase_dictionary, gen_ind_e_to_REopt_node = LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REoptInputs_Combined)
-    LineInfo = CreateLineInfoDictionary(pm)
+    LineInfo = CreateLineInfoDictionary(Multinode_Inputs, pm, data_math_mn)
     REoptTimeSteps = collect(1:(Multinode_Inputs.time_steps_per_hour * 8760))
+    
+    line_upgrade_options_each_line = "N/A"
+    
+    # Only allow for upgrades and add simple power flow constraints if not running the outage simulator
+
+    if allow_upgrades == true
+        if Multinode_Inputs.model_line_upgrades == true
+            pm, line_upgrade_options_each_line = model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)          
+        end
+
+        if Multinode_Inputs.model_transformer_upgrades == true
+            #pm = model_transformer_upgrades(pm, Multinode_Inputs) # TODO: add transformer upgrades
+        end
+    end
+        
+    if OutageSimulator == false
+        # Don't apply these constraints if the outage simulator is being used because the outage simulator applies PMD constraints to all time steps
+        #AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
+    end
+
     ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
+    
     LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn)
+    
     Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
 
     if Multinode_Inputs.generators_only_run_during_grid_outage == true
         LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
     end
 
-    return LineInfo, data_math_mn, REoptInputs_Combined, pm, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e
+    return LineInfo, data_math_mn, REoptInputs_Combined, pm, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, line_upgrade_options_each_line
 end
 
 
@@ -997,13 +1239,32 @@ function LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
 end
 
 
-function CreateLineInfoDictionary(pm)
+function CreateLineInfoDictionary(Multinode_Inputs, pm, data_math_mn)
     # Creates a dictionary with the line names and corresponding indeces for the :p decision variable
     LineInfo = Dict([])
     NumberOfBranches = length(ref(pm,1,:branch))
+
+    if length(collect(values(data_math_mn["nw"]["1"]["settings"]["vbases_default"]))) != 1
+        throw(@error("The length of vbases_default is not 1"))
+    end
+
+    vbases_default = collect(values(data_math_mn["nw"]["1"]["settings"]["vbases_default"]))[1]
+   
     for i in 1:NumberOfBranches
         LineData = PMD.ref(pm, 1, :branch, i)
-        LineInfo[LineData["name"]] = Dict(["index"=>LineData["index"], "t_bus"=>LineData["t_bus"], "f_bus"=>LineData["f_bus"]])
+        
+        branch_vbase = LineData["vbase"]
+        line_voltage = round(Multinode_Inputs.base_voltage_kv * (LineData["vbase"]/vbases_default), digits=3)
+        maximum_power = round((LineData["c_rating_a"][1]/branch_vbase) * line_voltage, digits=3)
+
+        LineInfo[LineData["name"]] = Dict(["index"=>LineData["index"], 
+                                           "t_bus"=>LineData["t_bus"], 
+                                           "f_bus"=>LineData["f_bus"], 
+                                           "c_rating_a"=>LineData["c_rating_a"], 
+                                           "vbase"=>LineData["vbase"],
+                                           "line_voltage_kv"=>line_voltage,
+                                           "maximum_power_kw"=>maximum_power
+                                           ])
     end
     return LineInfo
 end
