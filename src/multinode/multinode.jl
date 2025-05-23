@@ -955,8 +955,6 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
     
     LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn)
     
-    Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
-
     if Multinode_Inputs.generators_only_run_during_grid_outage == true
         LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
     end
