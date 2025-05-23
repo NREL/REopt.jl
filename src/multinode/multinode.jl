@@ -948,7 +948,7 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
         
     if OutageSimulator == false
         # Don't apply these constraints if the outage simulator is being used because the outage simulator applies PMD constraints to all time steps
-        #AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
+        AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
     end
 
     ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
@@ -1045,18 +1045,6 @@ function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
     @variable(model, dvBusVoltageViolationCost, lower_bound = 0)
 
     @constraint(model, model[:dvBusVoltageViolationCost] == sum(model[:binBusVoltageViolation][bus_name, PMD_time_step] for bus_name in bus_names, PMD_time_step in PMD_time_steps))
-
-end
-
-
-function Node_Import_Export_Constraints_For_Non_PMD_Timesteps(m, Multinode_Inputs, LineInfo)
-    # Apply basic constraints to limit export from and import to nodes
-
-    # TODO: finish this function
-
-    # For each node:
-
-        # Power import and export must be less than the sum of the line capacities connected to that node
 
 end
 
