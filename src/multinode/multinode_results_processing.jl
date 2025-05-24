@@ -590,7 +590,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
 end
 
 
-function process_simple_powerflow_results(Multinode_Inputs, m, data_eng)
+function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connections, connections_upstream, connections_downstream)
    # Process the results from the simple powerflow model, which is applied to the time steps that the PMD model isn't applied to
 
     simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][collect(keys(data_eng["line"]))[1],:].data))) # pull the total number of timesteps from the first line in the simplified powerflow model
@@ -627,7 +627,10 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng)
     end
 
     simple_powerflow_results = Dict("lines" => simple_powerflow_line_results,
-                                    "busses" => simple_powerflow_bus_results)
+                                    "busses" => simple_powerflow_bus_results,
+                                    "all_bus_line_connections" => connections,
+                                    "downstream_bus_line_connections" => connections_downstream,
+                                    "upstream_bus_line_connections" => connections_upstream)
 
     # For the original test model: At time step 12, all of these values are the same, as expected:
         #LineFlowOnline4_5 = value.(m[:dvPline]["line4_5",12])
