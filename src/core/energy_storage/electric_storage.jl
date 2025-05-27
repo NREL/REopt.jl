@@ -359,7 +359,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.soc_min_fraction,
             s.soc_min_applies_during_outages,
             s.soc_init_fraction,
-            s.can_grid_charge,
+            # s.can_grid_charge,
             s.can_net_meter,
             s.can_wholesale,
             s.can_export_beyond_nem_limit,

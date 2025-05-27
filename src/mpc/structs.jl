@@ -226,7 +226,10 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
-    can_export_to_grid::Bool = false
+    # can_export_to_grid::Bool = false
+    can_net_meter::Bool = true
+    can_wholesale::Bool = false
+    can_export_beyond_nem_limit = false
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
 end
 ```
@@ -239,7 +242,10 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
-    can_export_to_grid::Bool = false
+    # can_export_to_grid::Bool = false
+    can_net_meter::Bool = true
+    can_wholesale::Bool = false
+    can_export_beyond_nem_limit = false
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
