@@ -104,10 +104,9 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         PrepareOptimizer(pm, Multinode_Inputs)
         results = PMD.optimize_model!(pm) 
         TerminationStatus = string(results["termination_status"])
-        print("\n The result from run #"*string(RunsTested)*" is: "*TerminationStatus)
-        
+                
         outage_survival_results[x], SuccessfullySolved, TimeStepsNotSolved = InterpretResult(TimeStepsNotSolved, TerminationStatus, SuccessfullySolved, Multinode_Inputs, x, i, pm.model, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList)
-        print("\n  Outages survived so far: "*string(SuccessfullySolved)*", Outages tested so far: "*string(RunsTested))
+        print("\n The result from run #"*string(RunsTested)*" is: "*TerminationStatus*". Outages survived so far: "*string(SuccessfullySolved)*", Outages tested so far: "*string(RunsTested))
         
         if Multinode_Inputs.allow_dropped_load && (TerminationStatus == "OPTIMAL")
             dropped_load_results[x] = ProcessDroppedLoadResults(Multinode_Inputs, pm.model, i, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, NodeList, RunsTested)
@@ -173,8 +172,10 @@ function SummarizeDroppedLoadResults(dropped_load_results)
     for i in collect(1:length(dropped_load_results))
         push!(load_met_fraction_list, dropped_load_results[i]["load_met_fraction"])
     end
-    print("\n The load met fraction list is: ")
-    print(load_met_fraction_list)
+    if Multinode_Inputs.display_information_during_modeling_run
+        print("\n The load met fraction list is: ")
+        print(load_met_fraction_list)
+    end
 
     minimum_value = minimum(load_met_fraction_list)
     average_value = mean(load_met_fraction_list)
@@ -352,10 +353,11 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
     elseif Multinode_Inputs.number_of_phases in [2,3]
 
         REopt_gen_ind_e = []
+        if Multinode_Inputs.display_information_during_modeling_run 
+            print("\n Gen name to index, outage simulator: ")
+            print(gen_name2ind)
+        end
         
-        print("\n Gen name to index, outage simulator: ")
-        print(gen_name2ind)
-
         for e in REopt_nodes
             for phase in load_phase_dictionary[e]
                 # Add the gen index to the REopt_gen_ind_e list

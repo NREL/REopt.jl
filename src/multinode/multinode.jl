@@ -70,8 +70,12 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         
         system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel_Minutes; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_minutes)
         
-        simple_powerflow_model_results = process_simple_powerflow_results(Multinode_Inputs, pm.model, data_eng, connections, connections_upstream, connections_downstream)
-        
+        if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
+            simple_powerflow_model_results = process_simple_powerflow_results(Multinode_Inputs, pm.model, data_eng, connections, connections_upstream, connections_downstream)
+        else
+            simple_powerflow_model_results = "This model did not use the simple powerflow constraints and variables."
+        end
+
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
@@ -824,16 +828,18 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
 
     connections, connections_upstream, connections_downstream, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers = CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)  # Note: the lines variable here includes lines that represent the transformer
     
-    print("\n")
-    print("\n Connectivity information used in the simple power flow model:")
-    print("\n The connections are: ")
-    print(connections)
-    print("\n The upstream connections are: ")
-    print(connections_upstream)  
-    print("\n The downstream connections are: ")
-    print(connections_downstream)
-    print("\n")
-    print("\n")
+    if Multinode_Inputs.display_information_during_modeling_run
+        print("\n")
+        print("\n Connectivity information used in the simple power flow model:")
+        print("\n The connections are: ")
+        print(connections)
+        print("\n The upstream connections are: ")
+        print(connections_upstream)  
+        print("\n The downstream connections are: ")
+        print(connections_downstream)
+        print("\n")
+        print("\n")
+    end
 
     @variable(m, dvP[REopt_nodes, indeces] >= -1000000)
     #@variable(m, Q[REopt_nodes] >= -10000000)
@@ -883,7 +889,9 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             for node in REopt_nodes
                 if string(node) != Multinode_Inputs.substation_node
                     if counter < 3
-                        print("\n Connecting node $(node) to the simple powerflow model")
+                        if Multinode_Inputs.display_information_during_modeling_run
+                            print("\n Connecting node $(node) to the simple powerflow model")
+                        end
                     end
                     @constraint(m, m[:dvP][node,index] .== (m[Symbol("TotalExport_"*string(node))][t]) .- (m[Symbol("dvGridPurchase_"*string(node))][t]) ) # check that these variable names are correct
                 else
@@ -901,29 +909,29 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
         bus_connections = connections[bus]
         
         if bus == Multinode_Inputs.substation_node
-            print("\n Adding constraint for substation bus $(bus)")
+            #print("\n Adding constraint for substation bus $(bus)")
             # TODO: does this constraint need to exist?
             #@constraint(m, [t in indeces], m[:dvP][bus, t] - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
 
         elseif parse(Int, bus) in REopt_nodes  # for buses that have an associated REopt node
-            print("\n Adding constraint for REopt bus $(bus):")
+            Multinode_Inputs.display_information_during_modeling_run ? print("\n Adding constraint for REopt bus $(bus):") : nothing
             if bus in keys(connections_downstream)
-                print(" mid-branch")
+                Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
                 # For nodes that have upstream and downstream lines
                 @constraint(m, [t in indeces], m[:dvP][parse(Int, bus), t] + sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
             else
-                print(" at the end of a branch")
+                Multinode_Inputs.display_information_during_modeling_run ? print(" at the end of a branch") : nothing
                 # For nodes that are at the end of branch
                 @constraint(m, [t in indeces], m[:dvP][parse(Int,bus), t] + sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) == 0)
             end
             
         else # for buses in the model without a REopt node
-            print("\n Adding constraint for non-REopt bus $(bus):")
+            Multinode_Inputs.display_information_during_modeling_run ? print("\n Adding constraint for non-REopt bus $(bus):") : nothing
             if bus in keys(connections_downstream)
-                print(" mid-branch")
+                Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
                 @constraint(m, [t in indeces], sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
             else
-                print(" at the end of a branch")
+                Multinode_Inputs.display_information_during_modeling_run ? print(" at the end of a branch") : nothing
                 @constraint(m, [t in indeces], sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) == 0)
             end
         end
@@ -938,8 +946,7 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
     m = pm.model   
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs)
     REoptInputs_Combined = REopt_inputs_combined 
-    print("\n The REopt nodes are: *************")
-    print(REopt_nodes)
+    Multinode_Inputs.display_information_during_modeling_run ? print("\n The REopt nodes are: $(REopt_nodes)") : nothing
     print("\n Building the REopt model\n")
     REopt.build_reopt!(m, REoptInputs_Combined) # Pass the PMD JuMP model (with the PowerModelsDistribution variables and constraints) as the JuMP model that REopt should build onto
     
@@ -962,7 +969,7 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
         end
     end
         
-    if OutageSimulator == false
+    if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD && (OutageSimulator == false)
         # Don't apply these constraints if the outage simulator is being used because the outage simulator applies PMD constraints to all time steps
         connections, connections_upstream, connections_downstream = AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
     else
@@ -1038,17 +1045,15 @@ function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
             index = BusInfo[bus_name]["index"]
             voltage_squared = [PMD.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]]
             
-            #=
-            # Optional: print out information to understand the approach in the code:
-            print("\n For bus $(bus_name) the terminals are: ")
-            print(BusInfo[bus_name]["terminals"])
-            print("\n")
-            print("\n For bus $(bus_name) the voltage_squared variable is: ")
-            print(voltage_squared)
-            print("\n")
-            index_temp = findall(x -> x== BusInfo[bus_name]["terminals"][1], BusInfo[bus_name]["terminals"])[1]
-            print("The index in voltage_squared for terminal $(BusInfo[bus_name]["terminals"][1]) is $(index_temp) ")
-            =#
+            if Multinode_Inputs.display_information_during_modeling_run 
+                # print out information to understand the approach in the code:
+                print("\n For bus $(bus_name) the terminals are: ")
+                print(BusInfo[bus_name]["terminals"])
+                print("\n For bus $(bus_name) the voltage_squared variable is: ")
+                print(voltage_squared)
+                index_temp = findall(x -> x== BusInfo[bus_name]["terminals"][1], BusInfo[bus_name]["terminals"])[1]
+                print("The index in voltage_squared for terminal $(BusInfo[bus_name]["terminals"][1]) is $(index_temp) ")
+            end
 
             for terminal in BusInfo[bus_name]["terminals"]
                 terminal_index = findall(x -> x== terminal, BusInfo[bus_name]["terminals"])[1]
@@ -1104,7 +1109,7 @@ function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combi
     # Open switches if defined by the user
         # Note: the switch capability in PMD is not used currently in this model, but the switch openings are modeling with these constraints
     if (Multinode_Inputs.switch_open_timesteps != "") && (Multinode_Inputs.model_switches == true)
-        print("\n Switches modeled:")
+        print("\n Switches are included in the model")
         for i in keys(Multinode_Inputs.switch_open_timesteps)
             #print("\n   Opening the switch on line $(i) from timesteps $(minimum(Multinode_Inputs.switch_open_timesteps[i])) to $(maximum(Multinode_Inputs.switch_open_timesteps[i])) \n")
             RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, i, Multinode_Inputs.switch_open_timesteps[i], LineInfo; Switches_Open=true)
@@ -1265,8 +1270,10 @@ function CreateLineInfoDictionary(Multinode_Inputs, pm, data_math_mn)
         
         c_rating_a = LineData["c_rating_a"][1]
         line_name = LineData["name"]
-        print("\n For line $(line_name), the data is max power: $(maximum_power), line voltage: $(line_voltage), c_rating_a: $(c_rating_a), branch_vbase: $(branch_vbase)")
-        
+        if Multinode_Inputs.display_information_during_modeling_run
+            print("\n For line $(line_name), the data is max power: $(maximum_power), line voltage: $(line_voltage), c_rating_a: $(c_rating_a), branch_vbase: $(branch_vbase)")
+        end
+
         LineInfo[LineData["name"]] = Dict(["index"=>LineData["index"], 
                                            "t_bus"=>LineData["t_bus"], 
                                            "f_bus"=>LineData["f_bus"], 

@@ -14,6 +14,7 @@
     optimizer_tolerance::Float64=0.001, # Only works for Xpress, HiGHS, and Gurobi
     log_solver_output_to_console::Bool=true, # Log the output from the solver to the console
     PMD_time_steps::Any=[1:24], # By default, apply the PMD model to the first 24 timesteps of the model
+    apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD::Bool=true,
     REopt_inputs_list::Array=[],
     number_of_phases::Real=1,
     bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
@@ -55,13 +56,15 @@
     generate_same_pv_production_profile_for_each_node::Bool=false,
     pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
     display_results::Bool=true,
+    display_information_during_modeling_run::Bool=false, # This can be helpful for debugging a model
     fault_analysis::Dict=Dict(),
     allow_bus_voltage_violations::Bool=false,
     bus_per_unit_voltage_target_upper_bound::Real=1.05,
     bus_per_unit_voltage_target_lower_bound::Real=0.95,
     cost_per_voltage_violation_per_timestep::Real=1000,
     allow_dropped_load_in_main_optimization::Bool=false,
-    cost_per_kwh_dropped_load::Real=100
+    cost_per_kwh_dropped_load::Real=100,
+    
 """
 
 mutable struct MultinodeInputs <: AbstractMultinode
@@ -76,6 +79,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     optimizer_tolerance
     log_solver_output_to_console
     PMD_time_steps
+    apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
     REopt_inputs_list
     number_of_phases
     bus_phase_voltage_lower_bound_per_unit
@@ -117,6 +121,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     generate_same_pv_production_profile_for_each_node
     pv_inputs_for_standardized_pv_production_profile 
     display_results
+    display_information_during_modeling_run
     fault_analysis
     allow_bus_voltage_violations
     bus_per_unit_voltage_target_upper_bound
@@ -138,6 +143,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         optimizer_tolerance::Float64=0.001,
         log_solver_output_to_console::Bool=true,
         PMD_time_steps::Any=[1:24],
+        apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD::Bool=true,
         REopt_inputs_list::Array=[],
         number_of_phases::Real=1,
         bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
@@ -179,6 +185,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         generate_same_pv_production_profile_for_each_node::Bool=false,
         pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
         display_results::Bool=true,
+        display_information_during_modeling_run::Bool=false,
         fault_analysis::Dict=Dict(),
         allow_bus_voltage_violations::Bool=false,
         bus_per_unit_voltage_target_upper_bound::Real=1.05,
@@ -235,6 +242,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         optimizer_tolerance,
         log_solver_output_to_console,
         PMD_time_steps,
+        apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD,
         REopt_inputs_list,
         number_of_phases,
         bus_phase_voltage_lower_bound_per_unit,
@@ -276,6 +284,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         generate_same_pv_production_profile_for_each_node,
         pv_inputs_for_standardized_pv_production_profile, 
         display_results,
+        display_information_during_modeling_run,
         fault_analysis,
         allow_bus_voltage_violations,
         bus_per_unit_voltage_target_upper_bound,

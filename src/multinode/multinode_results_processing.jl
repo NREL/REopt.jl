@@ -636,9 +636,7 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
         #LineFlowOnline4_5 = value.(m[:dvPline]["line4_5",12])
         #ExportFromNode5_SolarPV = value.(m[:dvP][5,12])
         #PowerDemandNode4 = results["REopt_results"][4]["ElectricLoad"]["load_series_kw"][12]
-    
-    #substation_line = Multinode_Inputs.substation_line
-                                    
+                                        
     return simple_powerflow_results
 end
 
@@ -952,8 +950,11 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Multinode_Inputs, REoptI
             push!(NodesWithPV, i)
         end
     end
-    #print("\n The nodes with PV are: ")
-    #print(NodesWithPV)
+    
+    if Multinode_Inputs.display_information_during_modeling_run
+        print("\n The nodes with PV are: ")
+        print(NodesWithPV)
+    end
 
     # TODO: account for the situation where one node might be exporting PV and then another node might use that power to charge a battery
     PVOutput = zeros(Multinode_Inputs.time_steps_per_hour * 8760)
@@ -988,23 +989,19 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Multinode_Inputs, REoptI
     end
     
     # Save the REopt Inputs for the site not to a variable
-    print("\n The facility meter node REopt inputs are being recorded")
     FacilityMeterNode_REoptInputs = ""
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
             FacilityMeterNode_REoptInputs = p        
         end
     end
-    print("\n The facility meter node REopt inputs have been recorded")
     
     # Save power input from the grid to a variable for plotting
     PowerFromGrid = zeros(Multinode_Inputs.time_steps_per_hour * 8760)
     if Multinode_Inputs.model_type == "PowerModelsDistribution"    
         PowerFromGrid = value.(model[Symbol("dvSubstationPowerFlow")]).data  
     end 
-    print("\n The grid power has been recorded")
-    
-    
+       
     #Plot the network-wide power use 
     print("\n Making the static plot")
     
@@ -1158,7 +1155,9 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     Multinode_Inputs = results["Multinode_Inputs"]
     bus_key_values, line_key_values, bus_cords, line_cords, busses, substation_cords = CollectMapInformation(results, Multinode_Inputs) 
     results_by_node = CollectResultsByNode(results, busses)
-    print("\n The substation coordinates are: $(substation_cords)")
+
+    Multinode_Inputs.display_information_during_modeling_run ? print("\n The substation coordinates are: $(substation_cords)") : nothing
+
     # Determine the timesteps to plot based on the timesteps the user requested to plot in the dashboard
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
@@ -1194,11 +1193,13 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         PowerOutageIndicator = repeat([""], 8760)
     end
 
-    print("\n Timesteps for dashboard in the PMD times are: ")
-    print(PMDTimeSteps_for_dashboard_InPMDTimes)
-    print("\n Timesteps for dashboard in the associated REopt times are: ")
-    print(REopt_timesteps_for_dashboard_InREoptTimes)
-
+    if Multinode_Inputs.display_information_during_modeling_run
+        print("\n Timesteps for dashboard in the PMD times are: ")
+        print(PMDTimeSteps_for_dashboard_InPMDTimes)
+        print("\n Timesteps for dashboard in the associated REopt times are: ")
+        print(REopt_timesteps_for_dashboard_InREoptTimes)
+    end
+    
     timesteps = PMDTimeSteps_for_dashboard_InPMDTimes 
 
     # *******
