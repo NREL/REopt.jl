@@ -399,7 +399,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         @warn "Adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
-            m[:TotalTechCapCosts] += p.third_party_factor * (
+			m[:TotalTechCapCosts] += p.third_party_factor * (
                 sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                     p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
             )
@@ -476,6 +476,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
 			end
 		end
+	end
+
+	# Get CAPEX expressions and optionally constrain CAPEX 
+	initial_capex_no_incentives(m, p)
+	if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives) || !isnothing(p.s.financial.max_initial_capital_costs_before_incentives)
+		add_capex_constraints(m, p)
 	end
 
 	#################################  Objective Function   ########################################
