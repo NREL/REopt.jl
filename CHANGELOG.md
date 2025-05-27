@@ -29,6 +29,11 @@ Classify the change according to the following categories:
 ### Added
 - Add **ElectricStorage** input field `fixed_soc_series_fraction` to allow users to fix the SOC timeseries
  
+## test-runners
+### Added
+- Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
+- Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
+
 ## v0.52.0
 ### Added
 - Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
@@ -105,6 +110,7 @@ Classify the change according to the following categories:
 
 ## v0.48.2
 ### Added
+- Add new optional parameter **max_ton** to GHP module to allow user to size GHP smaller than peak load
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 ### Changed
