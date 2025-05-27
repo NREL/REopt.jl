@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fixed-bess-soc
+### Added
+- Add **ElectricStorage** input field `fixed_soc_series_fraction` to allow users to fix the SOC timeseries
+ 
 ## test-runners
 ### Added
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
