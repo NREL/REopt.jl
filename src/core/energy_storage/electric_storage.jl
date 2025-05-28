@@ -5,17 +5,20 @@
 Inputs used when `ElectricStorage.model_degradation` is `true`:
 ```julia
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Real = 2.46E-03
-    cycle_fade_coefficient::Real = 7.82E-05
-    time_exponent::Real = 0.5
-    installed_cost_per_kwh_declination_rate::Float64 = 0.05
+    calendar_fade_coefficient::Real = 2.55E-03
+    cycle_fade_coefficient::Real = 9.83E-05
+    time_exponent::Real = 0.42
+    installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
 end
 ```
 
 None of the above values are required. If `ElectricStorage.model_degradation` is `true` then the 
-defaults above are used. If the `maintenance_cost_per_kwh` is not provided then it is determined using the `ElectricStorage.installed_cost_per_kwh` and the `installed_cost_per_kwh_declination_rate` along with a present worth factor ``f`` to account for the present cost of buying a battery in the future. The present worth factor for each day is:
+defaults above are used. If the `maintenance_cost_per_kwh` is not provided then it is determined 
+using the `ElectricStorage.installed_cost_per_kwh` and the `installed_cost_per_kwh_declination_rate` 
+along with a present worth factor ``f`` to account for the present cost of buying a battery in the 
+future. The present worth factor for each day is:
 
 ``
 f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
@@ -141,7 +144,6 @@ The following shows how one would use the degradation model in REopt via the [Sc
 ```
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
-
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Real = 2.55E-03
     cycle_fade_coefficient::Real = 9.83E-05
@@ -189,7 +191,10 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on the rated kWh capacity of the sized storage system. 
     soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
-``` 
+    optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
+    min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
+    max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+```
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
@@ -226,6 +231,9 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0
     soc_based_per_ts_self_discharge_fraction::Float64 = 0.0
+    optimize_soc_init_fraction::Bool = false
+    min_duration_hours::Real = 0.0
+    max_duration_hours::Real = 100000.0
 end
 
 
@@ -271,6 +279,9 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     capacity_based_per_ts_self_discharge_fraction::Float64
     soc_based_per_ts_self_discharge_fraction::Float64
+    optimize_soc_init_fraction::Bool
+    min_duration_hours::Real
+    max_duration_hours::Real
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -292,6 +303,10 @@ struct ElectricStorage <: AbstractElectricStorage
             end
             replace_cost_per_kwh = 0.0 # Always modeled using maintenance_cost_vector in degradation model.
             # replace_cost_per_kw is unchanged here.
+        end
+
+        if s.min_duration_hours > s.max_duration_hours
+            throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
 
         net_present_cost_per_kw = effective_cost(;
@@ -361,7 +376,10 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.capacity_based_per_ts_self_discharge_fraction,
-            s.soc_based_per_ts_self_discharge_fraction
+            s.soc_based_per_ts_self_discharge_fraction,
+            s.optimize_soc_init_fraction,
+            s.min_duration_hours,
+            s.max_duration_hours
         )
     end
 end
