@@ -5,7 +5,7 @@
 - `fuel_consumption_series_mmbtu_per_hour`  # Fuel consumption series [MMBtu/hr] 
 - `annual_fuel_consumption_mmbtu`  # Fuel consumed in a year [MMBtu]
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
-- `annual_thermal_production_mmbtu`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
+- `annual_thermal_production_mmbtu`  # Thermal power production in a year [MMBtu]
 - `thermal_to_storage_series_mmbtu_per_hour` # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`
 - `thermal_to_load_series_mmbtu_per_hour`

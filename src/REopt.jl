@@ -62,11 +62,12 @@ function __init__()
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
-const GAL_PER_M3 = 264.172  # [gal/m^3]
-const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel] higher heating value of diesel
-const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
+const GAL_PER_M3 = 264.172              # [gal/m^3]
+const KWH_PER_GAL_DIESEL = 40.7         # [kWh/gal_diesel] higher heating value of diesel
+const KWH_PER_MMBTU = 293.07107         # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
-const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
+const TONNE_PER_LB = 1/2204.62          # [tonne/lb]
+const TONNE_PER_MMBTU_HOUR = 0.012      # [tonne/mmbtu-hour]
 const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
 const BIG_NUMBER = 1.0e10  #used for max size.  TODO use this number elsewhere.
 const PRIME_MOVERS = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]  #TODO replace `prime_movers` references in CHP code
