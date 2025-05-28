@@ -15,31 +15,36 @@ function add_export_constraints(m, p; _n="")
     WHL_benefit = 0
     NEM_techs = String[t for t in p.techs.elec if :NEM in p.export_bins_by_tech[t]]
     WHL_techs = String[t for t in p.techs.elec if :WHL in p.export_bins_by_tech[t]]
+    NEM_storage = String[b for b in p.s.storage.types.elec if :NEM in p.export_bins_by_storage[b]]
+    WHL_storage = String[b for b in p.s.storage.types.elec if :WHL in p.export_bins_by_storage[b]]
 
-    if !isempty(NEM_techs)
+    if !isempty(NEM_techs + NEM_storage)
         # Constraint (9c): Net metering only -- can't sell more than you purchase
         # hours_per_time_step is cancelled on both sides, but used for unit consistency (convert power to energy)
         @constraint(m,
             p.hours_per_time_step * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
-            for t in NEM_techs, ts in p.time_steps)
+            for t in NEM_techs, ts in p.time_steps) # TODO: add storage
             <= p.hours_per_time_step * sum( m[Symbol("dvGridPurchase"*_n)][ts, tier]
                 for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
         )
 
-        if p.s.electric_utility.net_metering_limit_kw == p.s.electric_utility.interconnection_limit_kw && isempty(WHL_techs)
+        if p.s.electric_utility.net_metering_limit_kw == p.s.electric_utility.interconnection_limit_kw && isempty(WHL_techs + WHL_storage)
             # no need for binNEM nor binWHL
             binNEM = 1
+            # TODO: Decide whether to ignore BESS size in this constraint? 
             @constraint(m,
                 sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw
             )
             NEM_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
                 sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
                     for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                        # TODO: add storage
             )
             if :EXC in p.s.electric_tariff.export_bins
                 EXC_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
                     sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
                         for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                            # TODO: add storage
                 )
             end
         else
@@ -57,6 +62,7 @@ function add_export_constraints(m, p; _n="")
 
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+                # TODO: Decide whether to ignore BESS size in these constraints? 
                 @constraint(m,
                     binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
                 )
@@ -88,23 +94,24 @@ function add_export_constraints(m, p; _n="")
                     binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_time_step *
                         sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
                             for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                                # TODO: add storage
                     }
                 )
                 @constraint(m, !binNEM => {NEM_benefit >= 0})
                 @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
                     !binNEM => { m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] == 0
-                        }
+                        } # TODO: add storage
                 )
             else
                 @constraint(m,
                     NEM_benefit >= p.pwf_e * p.hours_per_time_step *
                         sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
-                            for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                            for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps) # TODO: add storage
                 )
                 @constraint(m, NEM_benefit >= max_bene * binNEM)
                 @constraint(m,[ts in p.time_steps_with_grid, t in p.techs_by_exportbin[:NEM]], 
                     m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] <= binNEM * sum(p.s.electric_load.loads_kw)
-                )
+                ) # TODO: add storage
             end
 
             EXC_benefit = 0
@@ -115,7 +122,7 @@ function add_export_constraints(m, p; _n="")
                         binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
                             sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
                                 for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
-                        }
+                        } # TODO: add storage
                     )
                     @constraint(m, !binNEM => {EXC_benefit >= 0})
                 else
@@ -123,14 +130,14 @@ function add_export_constraints(m, p; _n="")
                         EXC_benefit >= p.pwf_e * p.hours_per_time_step *
                             sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
                                 for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
-                    )
+                    ) # TODO: add storage
                     @constraint(m, EXC_benefit >= max_bene * binNEM)
                 end
             end
         end
     end
 
-    if !isempty(WHL_techs)
+    if !isempty(WHL_techs + WHL_storage)
 
         if typeof(binNEM) <: Real  # no need for wholesale binary
             binWHL = 1
@@ -139,7 +146,7 @@ function add_export_constraints(m, p; _n="")
                 #         for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
                 sum(p.s.electric_tariff.export_rates[:WHL][ts] *
                 (
-                    sum(m[Symbol("dvStorageToGrid"*_n)][b, ts] for b in p.s.storage.types.elec) + ## TODO: index on metering type?
+                    sum(m[Symbol("dvStorageToGrid"*_n)][b, :WHL, ts] for b in p.storage_by_exportbin[:WHL]) + # TODO: add storage_by_exportbin 
                     sum(m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] for t in p.techs_by_exportbin[:WHL])
                 ) for ts in p.time_steps
             )
@@ -154,8 +161,14 @@ function add_export_constraints(m, p; _n="")
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
                 @constraint(m,
                     binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
-                        sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                                for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                        # sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                        #         for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                        sum(p.s.electric_tariff.export_rates[:WHL][ts] *
+                        (
+                            sum(m[Symbol("dvStorageToGrid"*_n)][b, :WHL, ts] for b in p.storage_by_exportbin[:WHL]) +
+                            sum(m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] for t in p.techs_by_exportbin[:WHL])
+                        ) for ts in p.time_steps
+                        )
                     }
                 )
                 @constraint(m, !binWHL => {WHL_benefit >= 0})
@@ -164,7 +177,7 @@ function add_export_constraints(m, p; _n="")
                     WHL_benefit >= p.pwf_e * p.hours_per_time_step *
                         sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                                 for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
-                )
+                ) # TODO: add storage
                 @constraint(m, WHL_benefit >= max_bene * binWHL)
             end
         end
@@ -195,7 +208,7 @@ function add_monthly_peak_constraint(m, p; _n="")
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts] for t in p.techs.chp) - 
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for t in p.techs.chp) -
             sum(sum(m[Symbol("dvProductionToGrid")][t,u,ts] for u in p.export_bins_by_tech[t]) for t in p.techs.chp)
-                
+            # TODO: add storage
         )
     else
         @constraint(m, [mth in p.months, ts in p.s.electric_tariff.time_steps_monthly[mth]],
@@ -282,7 +295,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
         @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
             !m[Symbol("binNoGridPurchases"*_n)][ts] => {
                 sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= 0
-            }
+            } # TODO: add storage
         )
     else
         bigM_hourly_load = maximum(p.s.electric_load.loads_kw)+maximum(p.s.space_heating_load.loads_kw)+maximum(p.s.process_heat_load.loads_kw)+maximum(p.s.dhw_load.loads_kw)+maximum(p.s.cooling_load.loads_kw_thermal)
@@ -292,7 +305,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
         )
         @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
             sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= bigM_hourly_load * m[Symbol("binNoGridPurchases"*_n)][ts]
-        )
+        ) # TODO: add storage
     end
 end
 

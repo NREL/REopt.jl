@@ -35,6 +35,8 @@ struct REoptInputs <: AbstractInputs
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
+    storage_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL]
+    export_bins_by_storage::Dict
     n_segs_by_tech::Dict{String, Int}
     seg_min_size::Dict{String, Dict{Int, <:Real}}
     seg_max_size::Dict{String, Dict{Int, <:Real}}
@@ -100,6 +102,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
+    storage_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL]
+    export_bins_by_storage::Dict
     n_segs_by_tech::Dict{String, Int}
     seg_min_size::Dict{String, Dict{Int, Real}}
     seg_max_size::Dict{String, Dict{Int, Real}}
@@ -170,7 +174,8 @@ function REoptInputs(s::AbstractScenario)
     hours_per_time_step = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
-        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
+        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, 
+        storage_by_exportbin, export_bins_by_storage, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
         heating_cop, cooling_cop, heating_cf, cooling_cf, avoided_capex_by_ashp_present_value, 
@@ -290,6 +295,8 @@ function REoptInputs(s::AbstractScenario)
         1:length(s.electric_tariff.tou_demand_ratchet_time_steps),  # ratchets
         techs_by_exportbin,
         export_bins_by_tech,
+        storage_by_exportbin,
+        export_bins_by_storage,
         n_segs_by_tech,
         seg_min_size,
         seg_max_size,
@@ -374,6 +381,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+    storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in p.s.electric_tariff.export_bins)
+    export_bin_by_storage = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
@@ -484,6 +493,15 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
+    
+    if !isempty(s.storage.types.elec)
+        for b in s.storage.types.elec
+            fillin_storage_by_exportbin(storage_by_exportbin, b, "Temp") # TODO: figure out if a name should be used. 
+            export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
+            println(storage_by_exportbin)
+            println(export_bins_by_storage)
+        end
+    end
 
     if s.settings.off_grid_flag
         setup_operating_reserve_fraction(s, techs_operating_reserve_req_fraction)
@@ -491,7 +509,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
-    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
+    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, 
+    storage_by_exportbin, export_bins_by_storage, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
     tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
     heating_cop, cooling_cop, heating_cf, cooling_cf, avoided_capex_by_ashp_present_value,
@@ -1206,6 +1225,21 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
     
     if tech.can_wholesale && :WHL in keys(techs_by_exportbin)
         push!(techs_by_exportbin[:WHL], tech_name)
+    end
+    return nothing
+end
+
+function fillin_storage_by_exportbin(storage_by_exportbin::Dict, stor::AbstractStorage, storage_name::String)
+    #TODO: assess what stor and storage_name will/should be. 
+    if stor.can_net_meter && :NEM in keys(storage_by_exportbin)
+        push!(storage_by_exportbin[:NEM], storage_name)
+        if stor.can_export_beyond_nem_limit && :EXC in keys(storage_by_exportbin)
+            push!(storage_by_exportbin[:EXC], storage_name)
+        end
+    end
+    
+    if stor.can_wholesale && :WHL in keys(storage_by_exportbin)
+        push!(storage_by_exportbin[:WHL], storage_name)
     end
     return nothing
 end
