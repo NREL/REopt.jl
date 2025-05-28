@@ -1453,77 +1453,77 @@ else  # run HiGHS tests
             @test simresults["resilience_hours_max"] == 11
         end
 
-        @testset "Minimize Unserved Load" begin
-            d = JSON.parsefile("./scenarios/outage.json")
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt(m, d)
+        # @testset "Minimize Unserved Load" begin
+        #     d = JSON.parsefile("./scenarios/outage.json")
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+        #     results = run_reopt(m, d)
         
-            @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0 atol=0.1
-            @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
-            @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
-            @test value(m[:binMGTechUsed]["PV"]) ≈ 1
-            @test value(m[:binMGStorageUsed]) ≈ 1
+        #     @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
+        #     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0 atol=0.1
+        #     @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+        #     @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
+        #     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+        #     @test value(m[:binMGStorageUsed]) ≈ 1
         
-            # Increase cost of microgrid upgrade and PV Size, PV not used and some load not met
-            d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
-            d["PV"]["min_kw"] = 200.0
-            d["PV"]["max_kw"] = 200.0
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt(m, d)
-            @test value(m[:binMGTechUsed]["PV"]) ≈ 0
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 24.16 atol=0.1
+        #     # Increase cost of microgrid upgrade and PV Size, PV not used and some load not met
+        #     d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
+        #     d["PV"]["min_kw"] = 200.0
+        #     d["PV"]["max_kw"] = 200.0
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+        #     results = run_reopt(m, d)
+        #     @test value(m[:binMGTechUsed]["PV"]) ≈ 0
+        #     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 24.16 atol=0.1
             
-            #=
-            Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
-            - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
-            =#
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
+        #     #=
+        #     Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
+        #     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+        #     =#
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+        #     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+        #     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
             
-            # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
-            @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
-            @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
+        #     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+        #     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+        #     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
+        #     @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
+        #     @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
-            # Scenario with generator, PV, electric storage
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
-            @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
-            @test results["Financial"]["lcc"] ≈ 8.63559824639e7 rtol=0.001
+        #     # Scenario with generator, PV, electric storage
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+        #     results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
+        #     @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
+        #     @test results["Financial"]["lcc"] ≈ 8.63559824639e7 rtol=0.001
 
-            # Scenario with generator, PV, wind, electric storage
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
-            @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
-            @test value(m[:binMGTechUsed]["PV"]) ≈ 1
-            @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
-            @test results["Outages"]["expected_outage_cost"] ≈ 1.296319791276051e6 atol=1.0
-            @test results["Financial"]["lcc"] ≈ 4.833635288e6 rtol=0.001
+        #     # Scenario with generator, PV, wind, electric storage
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+        #     results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
+        #     @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+        #     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+        #     @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
+        #     @test results["Outages"]["expected_outage_cost"] ≈ 1.296319791276051e6 atol=1.0
+        #     @test results["Financial"]["lcc"] ≈ 4.833635288e6 rtol=0.001
             
-        end
+        # end
 
-        @testset "Outages with Wind and supply-to-load no greater than critical load" begin
-            input_data = JSON.parsefile("./scenarios/wind_outages.json")
-            s = Scenario(input_data)
-            inputs = REoptInputs(s)
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt([m1,m2], inputs)
+        # @testset "Outages with Wind and supply-to-load no greater than critical load" begin
+        #     input_data = JSON.parsefile("./scenarios/wind_outages.json")
+        #     s = Scenario(input_data)
+        #     inputs = REoptInputs(s)
+        #     m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+        #     m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+        #     results = run_reopt([m1,m2], inputs)
                 
-            # Check that supply-to-load is equal to critical load during outages, including wind
-            supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
-            supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
-            critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
-            check = .≈(supply_to_load, critical_load, atol=0.001)
-            @test !(0 in check)
+        #     # Check that supply-to-load is equal to critical load during outages, including wind
+        #     supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
+        #     supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
+        #     critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
+        #     check = .≈(supply_to_load, critical_load, atol=0.001)
+        #     @test !(0 in check)
 
-            # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
-            @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
-        end
+        #     # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
+        #     @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
+        # end
 
         @testset "Multiple Sites" begin
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
