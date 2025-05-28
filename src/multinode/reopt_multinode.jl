@@ -181,7 +181,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 			add_elec_load_balance_constraints(m, p; _n=_n)
 			add_production_constraints(m, p; _n=_n)
 		else
-			print("\n  Not applying the REopt load balance constraint to the node $(_n) because it is the facility meter node. No technologies should be applied to it. \n")
+			print("\n Not applying the REopt load balance constraint to the node $(_n) because it is the facility meter node. No technologies should be applied to it. \n")
 		end       
         
         if !isempty(p.s.electric_tariff.monthly_demand_rates)

@@ -1002,10 +1002,7 @@ function Aggregated_PowerFlows_Plot(results, TimeStamp, Multinode_Inputs, REoptI
         PowerFromGrid = value.(model[Symbol("dvSubstationPowerFlow")]).data  
     end 
        
-    #Plot the network-wide power use 
-    print("\n Making the static plot")
-    
-    # Static plot
+    #Plot the network-wide power use in a static plot
     days = collect(1:(Multinode_Inputs.time_steps_per_hour * 8760))/(Multinode_Inputs.time_steps_per_hour * 24)
     Plots.plot(days, TotalLoad_series, label="Total Load")
     Plots.plot!(days, PVOutput, label="Combined PV Output")
@@ -1199,7 +1196,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         print("\n Timesteps for dashboard in the associated REopt times are: ")
         print(REopt_timesteps_for_dashboard_InREoptTimes)
     end
-    
+
     timesteps = PMDTimeSteps_for_dashboard_InPMDTimes 
 
     # *******
