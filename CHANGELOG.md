@@ -26,6 +26,10 @@ Classify the change according to the following categories:
     ### Removed
 
 
+# non-hourly-fuel-cost
+### Fixed
+- Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
+
 ## v0.51.1
 ### Added
 - Added the following output fields: `year_one_fuel_cost_after_tax` for `ExistingBoiler`, `CHP`, `Generator`, and `Boiler`; `ElectricTariff`: `year_one_bill_after_tax` and `year_one_export_benefit_after_tax`, `Financial`: `capital_costs_after_non_discounted_incentives`, `year_one_total_operating_cost_savings_before_tax`, `year_one_total_operating_cost_savings_after_tax`, `year_one_total_operating_cost_before_tax`, `year_one_total_operating_cost_after_tax`, `year_one_fuel_cost_before_tax`, `year_one_fuel_cost_after_tax`, `year_one_chp_standby_cost_after_tax`, `year_one_chp_standby_cost_after_tax`, `GHP.avoided_capex_by_ghp_present_value`
