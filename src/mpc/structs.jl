@@ -349,32 +349,36 @@ end
 ```julia
 Base.@kwdef struct MPCElectrolyzer < AbstractElectrolyzer
     size_kw::Float64
-    efficiency_kwh_per_kg::Float64 =  54.3
-    om_cost_per_kwh::Float64 = 0.006
+    require_compression::Bool = true
+    efficiency_kwh_per_kg::Float64 =  55.8
+    om_cost_per_kw::Float64 = 66.16
+    om_cost_per_kwh::Float64 = 0.0005
 end
 ```
 """
 Base.@kwdef struct MPCElectrolyzer <: AbstractElectrolyzer
     size_kw::Float64
-    efficiency_kwh_per_kg::Float64 =  54.3
-    om_cost_per_kwh::Float64 = 0.006
+    require_compression::Bool = true
+    efficiency_kwh_per_kg::Float64 =  55.8
+    om_cost_per_kw::Float64 = 66.16
+    om_cost_per_kwh::Float64 = 0.0005
 end
 
 """
-    MPCHydrogenStorageLP
+    MPCHydrogenStorage
 
 ```julia
-Base.@kwdef struct MPCHydrogenStorageLP < AbstractHydrogenStorage
+Base.@kwdef struct MPCHydrogenStorage < AbstractHydrogenStorage
     size_kg::Float64
-    soc_min_fraction::Float64 = 0.01
+    soc_min_fraction::Float64 = 0.05
     soc_init_fraction::Float64 = 0.5
-    daily_leakage_fraction::Float64 = 0.0006667
+    daily_leakage_fraction::Float64 = 0.0
     max_kg::Float64 = size_kg
     minimum_avg_soc_fraction::Float64 = 0.0
 end
 ```
 """
-Base.@kwdef struct MPCHydrogenStorageLP <: AbstractHydrogenStorage
+Base.@kwdef struct MPCHydrogenStorage <: AbstractHydrogenStorage
     size_kg::Float64
     soc_min_fraction::Float64 = 0.01
     soc_init_fraction::Float64 = 0.5
@@ -389,15 +393,17 @@ end
 ```julia
 Base.@kwdef struct MPCFuelCell < AbstractFuelCell
     size_kw::Float64
-    efficiency_kwh_per_kg::Float64 =  16.745
-    om_cost_per_kwh::Float64 = 0.0013
+    efficiency_kwh_per_kg::Float64 =  15.98
+    om_cost_per_kwh::Float64 = 0.0016
+    om_cost_per_kw::Float64 = 16
 end
 ```
 """
 Base.@kwdef struct MPCFuelCell <: AbstractFuelCell
     size_kw::Float64
-    efficiency_kwh_per_kg::Float64 =  16.745
-    om_cost_per_kwh::Float64 = 0.0013
+    efficiency_kwh_per_kg::Float64 =  15.98
+    om_cost_per_kwh::Float64 = 0.0016
+    om_cost_per_kw::Float64 = 16
 end
 
 """
@@ -419,38 +425,17 @@ end
 ```julia
 Base.@kwdef struct MPCCompressor < AbstractCompressor
     size_kw::Float64
-    efficiency_kwh_per_kg::Float64 = 3.5
-    om_cost_per_kg::Float64 = 0.0
+    efficiency_kwh_per_kg::Float64 = 3.3
+    om_cost_per_kwh::Float64 = 0
+    om_cost_per_kw::Float64 = 0
 end
 ```
 """
 Base.@kwdef struct MPCCompressor <: AbstractCompressor
     size_kw::Float64
-    efficiency_kwh_per_kg::Float64 = 3.5
-    om_cost_per_kg::Float64 = 0.0
-end
-
-"""
-    MPCHydrogenStorageHP
-
-```julia
-Base.@kwdef struct MPCHydrogenStorageHP < AbstractHydrogenStorage
-    size_kg::Float64
-    soc_min_fraction::Float64 = 0.01
-    soc_init_fraction::Float64 = 0.5
-    daily_leakage_fraction::Float64 = 0.0006667
-    max_kg::Float64 = size_kg
-    minimum_avg_soc_fraction::Float64 = 0.0
-end
-```
-"""
-Base.@kwdef struct MPCHydrogenStorageHP <: AbstractHydrogenStorage
-    size_kg::Float64
-    soc_min_fraction::Float64 = 0.01
-    soc_init_fraction::Float64 = 0.5
-    daily_leakage_fraction::Float64 = 0.0006667
-    max_kg::Float64 = size_kg
-    minimum_avg_soc_fraction::Float64 = 0.0
+    efficiency_kwh_per_kg::Float64 = 3.3
+    om_cost_per_kwh::Float64 = 0
+    om_cost_per_kw::Float64 = 0
 end
 
 

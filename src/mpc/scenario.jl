@@ -69,11 +69,10 @@ Other options include:
     - "HighTempThermalStorage"
     - "ElectricHeater"
     - "Electrolyzer"
-    - "HydrogenStorageLP"
+    - "HydrogenStorage"
     - "FuelCell"
     - "HydrogenLoad"
     - "Compressor"
-    - "HydrogenStorageHP"
     - "ElectricUtility"
     - "Settings"
     - "Financial"
@@ -142,7 +141,7 @@ function MPCScenario(d::Dict)
             electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
                                                  mpc_timesteps = length(d["ElectricLoad"]["loads_kw"]))
         else
-            electric_utility = ElectricUtility()
+            electric_utility = ElectricUtility(mpc_timesteps = length(d["ElectricLoad"]["loads_kw"]))
         end
     end
 
@@ -154,11 +153,8 @@ function MPCScenario(d::Dict)
     end
     storage_structs["ElectricStorage"] = MPCElectricStorage(; storage_dict...)
 
-    if haskey(d, "HydrogenStorageLP")
-        storage_structs["HydrogenStorageLP"] = MPCHydrogenStorageLP(; dictkeys_tosymbols(d["HydrogenStorageLP"])...)
-    end
-    if haskey(d, "HydrogenStorageHP")
-        storage_structs["HydrogenStorageHP"] = MPCHydrogenStorageHP(; dictkeys_tosymbols(d["HydrogenStorageHP"])...)
+    if haskey(d, "HydrogenStorage")
+        storage_structs["HydrogenStorage"] = MPCHydrogenStorage(; dictkeys_tosymbols(d["HydrogenStorage"])...)
     end
 
     if haskey(d, "HighTempThermalStorage")
@@ -200,8 +196,22 @@ function MPCScenario(d::Dict)
 
     if haskey(d, "Electrolyzer")
         electrolyzer = MPCElectrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
+        if !electrolyzer.require_compression
+            compressor = MPCCompressor(; size_kw = 0.0, 
+                                      om_cost_per_kw = 0.0,
+                                      om_cost_per_kwh = 0.0,
+                                      efficiency_kwh_per_kg = 0.0
+            )
+        else
+            if haskey(d, "Compressor")
+                compressor = MPCCompressor(; dictkeys_tosymbols(d["Compressor"])...)
+            else
+                throw(@error("Must include Conmpressor size or set require_compression in Electrolyzer as true"))
+            end
+        end
     else
-        electrolyzer = MPCElectrolyzer(; size_kw=0)
+        electrolyzer = MPCElectrolyzer(; size_kw = 0)
+        compressor = MPCCompressor(; size_kw = 0)
     end
 
     if haskey(d, "FuelCell")
@@ -214,12 +224,6 @@ function MPCScenario(d::Dict)
         hydrogen_load = MPCHydrogenLoad(; dictkeys_tosymbols(d["HydrogenLoad"])...)
     else
         hydrogen_load = MPCHydrogenLoad(; loads_kg = zeros(length(electric_load.loads_kw)))
-    end
-
-    if haskey(d, "Compressor")
-        compressor = MPCCompressor(; dictkeys_tosymbols(d["Compressor"])...)
-    else
-        compressor = MPCCompressor(; size_kw=0)
     end
 
     # Placeholder/dummy cooling load set to zeros

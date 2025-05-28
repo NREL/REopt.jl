@@ -83,9 +83,6 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
     r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=5)
 
-    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-    r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
-
     if !isempty(p.techs.electrolyzer)
         BattToElectrolyzer = (m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] for ts in p.time_steps)
         r["storage_to_electrolyzer_series_kw"] = round.(value.(BattToElectrolyzer), digits=3)
@@ -95,6 +92,11 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
         BattToCompressor = (m[Symbol("dvStorageToCompressor"*_n)][b, ts] for ts in p.time_steps)
         r["storage_to_compressor_series_kw"] = round.(value.(BattToCompressor), digits=3)
     end
+
+    BattToLoad = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+                    - m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
+                    - m[Symbol("dvStorageToCompressor"*_n)][b, ts] for ts in p.time_steps)
+    r["storage_to_load_series_kw"] = round.(value.(BattToLoad), digits=3)
 
     d[b] = r
     nothing
