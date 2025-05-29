@@ -78,6 +78,17 @@ function add_re_elec_calcs(m,p)
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
 	)		
+	if :fuel_cell in fieldnames(typeof(p.s)) && !isnothing(p.s.fuel_cell)
+		add_to_expression!(m[:AnnualOnsiteREEleckWh], 
+				-sum(m[:dvProductionToElectrolyzer][t,ts]*p.tech_renewable_energy_fraction[t]*(
+					1-(p.s.fuel_cell.efficiency_kwh_per_kg/(p.s.electrolyzer.efficiency_kwh_per_kg + p.s.compressor.efficiency_kwh_per_kg))) 
+					for t in p.techs.elec, ts in p.time_steps
+				) -
+				sum(m[:dvProductionToCompressor][t,ts]*p.tech_renewable_energy_fraction[t]*(
+					1-(p.s.fuel_cell.efficiency_kwh_per_kg/(p.s.electrolyzer.efficiency_kwh_per_kg + p.s.compressor.efficiency_kwh_per_kg))) 
+					for t in p.techs.elec, ts in p.time_steps)
+		)
+	end
 
 	# Note: when we add capability for battery to discharge to grid, need to subtract out *grid RE* discharged from battery 
 	# 		back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!

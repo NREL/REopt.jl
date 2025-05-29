@@ -95,6 +95,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         m[Symbol("TotalCHPStandbyCharges"*_n)] = 0.0
     end
     r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction) # CHP standby
+    r["lifecycle_elecbill_before_tax"] = value(m[Symbol("TotalElecBill"*_n)])  # Total utility bill 
     r["year_one_chp_standby_cost_after_tax"] = r["lifecycle_chp_standby_cost_after_tax"] / (p.pwf_e * p.third_party_factor)
     r["year_one_chp_standby_cost_before_tax"] = r["year_one_chp_standby_cost_after_tax"] / (1 - p.s.financial.offtaker_tax_rate_fraction)
     r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction)  # Total utility bill 
@@ -153,6 +154,108 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     d["Financial"] = Dict{String,Float64}(k => round(v, digits=4) for (k,v) in r)
     nothing
+end
+
+
+"""
+    initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+
+Calculate and return the up-front capital costs for all technologies, in present value, excluding replacement costs and 
+incentives.
+"""
+function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    initial_capex = 0
+
+    if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
+        initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+    end
+
+    if !isempty(p.techs.pv)
+        for pv in p.s.pvs
+            initial_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
+        end
+    end
+
+    for b in p.s.storage.types.elec
+        if p.s.storage.attr[b].max_kw > 0
+            initial_capex += p.s.storage.attr[b].installed_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
+                p.s.storage.attr[b].installed_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        end
+    end
+
+    for b in p.s.storage.types.hydrogen
+        if p.s.storage.attr[b].max_kg > 0
+            initial_capex += p.s.storage.attr[b].installed_cost_per_kg * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        end
+    end
+
+    for b in p.s.storage.types.thermal
+        if p.s.storage.attr[b].max_kw > 0
+            initial_capex += p.s.storage.attr[b].installed_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        end
+    end
+
+    if "Wind" in p.techs.all
+        initial_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
+    end
+
+    if "CHP" in p.techs.all
+        # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
+        cost_list = p.s.chp.installed_cost_per_kw
+        size_list = p.s.chp.tech_sizes_for_cost_curve
+        chp_size = value.(m[Symbol("dvPurchaseSize"*_n)])["CHP"]
+        if typeof(cost_list) == Vector{Float64}
+            if chp_size <= size_list[1]
+                initial_capex += chp_size * cost_list[1]  # Currently not handling non-zero cost ($) for 0 kW size input
+            elseif chp_size > size_list[end]
+                initial_capex += chp_size * cost_list[end]
+            else
+                for s in 2:length(size_list)
+                    if (chp_size > size_list[s-1]) && (chp_size <= size_list[s])
+                        slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                                (size_list[s] - size_list[s-1])
+                        initial_capex += cost_list[s-1] * size_list[s-1] + (chp_size - size_list[s-1]) * slope
+                    end
+                end
+            end
+        else
+            initial_capex += cost_list * chp_size
+        #Add supplementary firing capital cost
+        # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
+        # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
+        # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
+        end
+    end
+
+    if "Electrolyzer" in p.techs.all
+        initial_capex += p.s.electrolyzer.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Electrolyzer"]
+    end
+
+    if "Compressor" in p.techs.all
+        initial_capex += p.s.compressor.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Compressor"]
+    end
+
+    if "FuelCell" in p.techs.all
+        initial_capex += p.s.fuel_cell.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["FuelCell"]
+    end
+
+    # TODO thermal tech costs
+
+    if !isempty(p.s.ghp_option_list)
+
+        for option in enumerate(p.s.ghp_option_list)
+
+            if option[2].heat_pump_configuration == "WSHP"
+                initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
+            elseif option[2].heat_pump_configuration == "WWHP"
+                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+            else
+                @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
+            end
+        end
+    end
+
+    return initial_capex
 end
 
 

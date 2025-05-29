@@ -192,15 +192,19 @@ struct ElectricUtility
         emissions_factor_NOx_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["NOx"], 
         emissions_factor_SO2_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["SO2"],
         emissions_factor_PM25_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["PM25"],
+        # MPC
+        mpc_timesteps::Union{Nothing,Real} = nothing,
 
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
-        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
+        renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[] # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
         )
+        
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
         cambium_region = "NA - Cambium data not used" # will be overwritten if Cambium is used
-        
+
+        meters_to_region = nothing
         if !is_MPC
             # Check some inputs 
             error_if_series_vals_not_0_to_1(renewable_energy_fraction_series, "ElectricUtility", "renewable_energy_fraction_series")
@@ -315,6 +319,34 @@ struct ElectricUtility
                     end
                 end
             end
+        else # Is MPC
+            emissions_and_cef_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
+            for (eseries, ekey) in [
+                (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
+                (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
+                (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
+                (emissions_factor_series_lb_PM25_per_kwh, "PM25")
+            ]
+                if off_grid_flag # no grid emissions for off-grid
+                    emissions_and_cef_series_dict[ekey] = zeros(Float64, mpc_timesteps)
+                elseif isempty(eseries)  # no user input
+                    emissions_and_cef_series_dict[ekey] = zeros(Float64, mpc_timesteps)
+                    @warn("No value was entered for $(ekey) emissions, setting to zero.")
+                elseif length(eseries) == 1  # user provided scalar or array of one value
+                    emissions_and_cef_series_dict[ekey] = repeat(eseries, mpc_timesteps)
+                elseif length(eseries) == mpc_timesteps  # user provided array with correct length
+                    emissions_and_cef_series_dict[ekey] = eseries
+                else
+                    emissions_and_cef_series_dict[ekey] = zeros(Float64, mpc_timesteps)
+                    @warn("The $(ekey) emissions factor input must be a scalar, a 1 element array, or an array with length matching the provided loads_kw. The emissions factor series for $(ekey) has been set to zero.")
+                end
+            end
+
+            if isnothing(emissions_factor_CO2_decrease_fraction)
+                emissions_factor_CO2_decrease_fraction = 0.0
+            end
+            emissions_and_cef_series_dict["renewable_energy_fraction_series"] = Float64[]
+
         end
         
         if !isempty(outage_durations) && min_resil_time_steps > maximum(outage_durations)
@@ -347,10 +379,10 @@ struct ElectricUtility
             is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
             cambium_region,
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["CO2"],
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["NOx"],
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["SO2"],
-            is_MPC ? Float64[] : emissions_and_cef_series_dict["PM25"],
+            emissions_and_cef_series_dict["CO2"],
+            emissions_and_cef_series_dict["NOx"],
+            emissions_and_cef_series_dict["SO2"],
+            emissions_and_cef_series_dict["PM25"],
             emissions_factor_CO2_decrease_fraction,
             emissions_factor_NOx_decrease_fraction,
             emissions_factor_SO2_decrease_fraction,
