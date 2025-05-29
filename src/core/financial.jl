@@ -45,7 +45,7 @@
         end
     ```
 """
-struct Financial
+mutable struct Financial
     om_cost_escalation_rate_fraction::Float64
     elec_cost_escalation_rate_fraction::Float64
     existing_boiler_fuel_cost_escalation_rate_fraction::Float64
