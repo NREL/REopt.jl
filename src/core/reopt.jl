@@ -649,7 +649,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
-		@warn "Adding binary variable to prevent simultaneous grid import/export. Some solvers are very slow with integer variables"
+		@warn "Adding binary variable to prevent simultaneous grid import/export. Some solvers are very slow with integer variables."
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
@@ -681,7 +681,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
-		@warn "Adding binary variable to model outages. Some solvers are very slow with integer variables"
+		@warn "Adding binary variable to model outages. Some solvers are very slow with integer variables."
 		max_outage_duration = maximum(p.s.electric_utility.outage_durations)
 		outage_time_steps = p.s.electric_utility.outage_time_steps
 		tZeros = p.s.electric_utility.outage_start_time_steps
