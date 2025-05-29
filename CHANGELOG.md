@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fix-bau-capex
+### Fixed
+- Fixed bug by setting `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` to nothing for BAU Scenario
+
 ## test-runners
 ### Added
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
