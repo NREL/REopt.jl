@@ -66,6 +66,7 @@ function build_mpc!(m::JuMP.AbstractModel, ps::AbstractVector{MPCInputs})
 				@constraint(m, [ts in p.time_steps], m[Symbol("dvDischargeFromStorage"*_n)][b, ts] == 0)
 				if b in p.s.storage.types.elec
 					@constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
+					# TODO: add constraint on storage to grid here
 				end
 			else
 				add_general_storage_dispatch_constraints(m, p, b; _n=_n)

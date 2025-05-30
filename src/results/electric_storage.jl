@@ -29,8 +29,18 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
+        if !isempty(p.s.electric_tariff.export_bins)
+            StorageToGrid = @expression(m, [ts in p.time_steps],
+                sum(m[Symbol("dvStorageToGrid"*_n)][b, u, ts] for u in p.export_bins_by_storage[b]))
+        else
+            StorageToGrid = repeat([0], length(p.time_steps))
+        end
+
+        StorageToLoad = ( m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+                         - StorageToGrid[ts] for ts in p.time_steps
+        ) 
+        r["storage_to_grid_series_kw"] = round.(value.(StorageToGrid), digits=3)
+        r["storage_to_load_series_kw"] = round.(value.(StorageToLoad), digits=3)
 
         r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
             r["size_kw"] * p.s.storage.attr[b].installed_cost_per_kw
@@ -44,10 +54,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 ))
             end
             r["residual_value"] = value(m[:residual_value])
-         end
-
-         # report the exported electricity from the battery:
-         r["storage_to_grid_series_kw"] = round.(value.(m[Symbol("dvStorageToGrid"*_n)][b, ts] for ts in p.time_steps), digits = 3)
+        end
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []

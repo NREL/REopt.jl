@@ -103,7 +103,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			if b in p.s.storage.types.elec
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
-				@constraint(m, [ts in p.time_steps], m[:dvStorageToGrid][b, ts] == 0)
+				@constraint(m, [u in p.export_bins_by_storage[b], ts in p.time_steps], m[:dvStorageToGrid][b, u, ts] == 0)
 			end
 		else
 			add_general_storage_dispatch_constraints(m, p, b)
@@ -235,7 +235,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
-		dvStorageToGrid[p.s.storage.types.elec, p.time_steps] >= 0 # TODO, add: "p.StorageSalesTiers" as well? export of energy from storage to the grid
+		# dvStorageToGrid[p.s.storage.types.elec, p.time_steps] >= 0 # TODO, add: "p.StorageSalesTiers" as well? export of energy from storage to the grid
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
@@ -249,6 +249,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	if !isempty(p.s.electric_tariff.export_bins)
 		@variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
+		@variable(m, dvStorageToGrid[p.storage.types.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
 	end
 
     m[:dvSize] = p.existing_sizes
