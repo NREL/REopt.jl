@@ -99,10 +99,35 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
     end
 
     if !isempty(p.techs.pv)
+        m[:PVCapexNoIncentives] = JuMP.GenericAffExpr{Float64, JuMP.VariableRef}()
         for pv in p.s.pvs
-            add_to_expression!(m[:InitialCapexNoIncentives], 
-                pv.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)][pv.name]
-            )
+            cost_list = pv.installed_cost_per_kw
+            size_list = pv.tech_sizes_for_cost_curve
+            t="PV"
+            if t in p.techs.segmented
+                # Use "no incentives" version of p.cap_cost_slope and p.seg_yint
+                cost_slope_no_inc = [cost_list[1]]
+                seg_yint_no_inc = [0.0]
+                for s in range(2, stop=length(size_list))
+                    tmp_slope = round((cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                                    (size_list[s] - size_list[s-1]), digits=0)
+                    tmp_y_int = round(cost_list[s-1] * size_list[s-1] - tmp_slope * size_list[s-1], digits=0)
+                    append!(cost_slope_no_inc, tmp_slope)
+                    append!(seg_yint_no_inc, tmp_y_int)
+                end
+                append!(cost_slope_no_inc, cost_list[end])
+                append!(seg_yint_no_inc, 0.0)
+
+                add_to_expression!(m[:PVCapexNoIncentives],
+                    sum(cost_slope_no_inc[s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                        seg_yint_no_inc[s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
+                )
+            else            
+                add_to_expression!(m[:PVCapexNoIncentives], 
+                    pv.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)][pv.name]
+                )
+            end
+            add_to_expression!(m[:InitialCapexNoIncentives], m[:PVCapexNoIncentives])
         end
     end
 
