@@ -1414,12 +1414,12 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         y1[i] = miny + (i * stepsize)
     end
 
-    start_day = round(minimum_timestep/(24*Multinode_Inputs.time_steps_per_hour), digits=2)
-    end_day = round(maximum_timestep/(24*Multinode_Inputs.time_steps_per_hour), digits=2)
+    start_day = minimum_timestep/(24*Multinode_Inputs.time_steps_per_hour)
+    end_day = maximum_timestep/(24*Multinode_Inputs.time_steps_per_hour)
     Symbol_data_inputs = SymbolData(results, line_cords, REopt_timesteps_for_dashboard_InREoptTimes, minx, maxx, scaleratio_input)
 
-    start_datetime = Dates.format(DateTime(2021, 1, 1) + Day(floor(start_day)-1) + Minute(round(60*24*(start_day - floor(start_day)))), "U d at HH:MM") # This line of code is based off of code suggested by generative AI
-    end_datetime = Dates.format(DateTime(2021, 1, 1) + Day(floor(end_day)-1) + Minute(round(60*24*(end_day - floor(end_day)))), "U d at HH:MM") # This line of code is based off of code suggested by generative AI
+    start_datetime = Dates.format(DateTime(2021, 1, 1) + Day(floor(start_day)) + Second(round(60*60*24*(start_day - floor(start_day)))), "U d at HH:MM") # This line of code is based off of code suggested by generative AI
+    end_datetime = Dates.format(DateTime(2021, 1, 1) + Day(floor(end_day)) + Second(round(60*60*24*(end_day - floor(end_day)))), "U d at HH:MM") # This line of code is based off of code suggested by generative AI
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
             data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], mode="lines+markers",marker=PlotlyJS.attr(color="black"), line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))], 
@@ -1450,10 +1450,12 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
                                                [PlotlyJS.rect(x0=x0, y0= y0[i], x1=x1, y1=y1[i], fillcolor=Colors[i], line=PlotlyJS.attr(width=0), xref='x',yref='y') for i in collect(1:(increments-1))])
                                 )) for j in timesteps]
     
+    steps_days = [Dates.format(DateTime(2021, 1, 1) + Day(floor(day)) + Second(round(60*60*24*(day - floor(day)))), "U d at HH:MM") for day in (collect(1:model_total_timesteps)/(24*Multinode_Inputs.time_steps_per_hour))]# This line of code is based off of code suggested by generative AI
+    
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
-            label = "$(round(i/(24*Multinode_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
-    
+            #label = "$(round(i/(24*Multinode_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
+            label = steps_days[i]*" (ts=$(i))") for i in timesteps]
     layout = PlotlyJS.Layout(
         showlegend=false,
         xaxis = PlotlyJS.attr(showticklabels=false, scaleanchor='y', scaleratio = scaleratio_input),
@@ -1465,7 +1467,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
                         
         sliders=[PlotlyJS.attr(yanchor="top", 
                     xanchor="left",
-                    currentvalue=PlotlyJS.attr(prefix="Day Number: ", visible=true, font_size=12),
+                    currentvalue=PlotlyJS.attr(prefix="Day: ", visible=true, font_size=12),
                     steps=steps,
                     active=0,
                     minorticklen=0
