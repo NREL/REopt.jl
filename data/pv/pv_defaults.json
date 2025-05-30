@@ -5,14 +5,14 @@
       "name": "Residential",
       "tech_sizes_for_cost_curve": [3, 11],
       "roof": {
-        "installed_cost_per_kw": [5137, 2369],
-        "avg_installed_cost_per_kw": 2795,
+        "installed_cost_per_kw": [5115, 2359],
+        "avg_installed_cost_per_kw": 2783,
         "om_cost_per_kw": 32
       },
       "mount_premiums": {
         "ground": {
           "cost_premium": 1.30,
-          "om_premium": 0.95
+          "om_premium": 1.0
         }
       },
       "notes": "Based on ATB 2024 Residential 7.9 kW system and estimating 3 kW to 11 kW cost scaling"
@@ -22,8 +22,8 @@
       "name": "Small Commercial",
       "tech_sizes_for_cost_curve": [11, 100],
       "roof": {
-        "installed_cost_per_kw": [2369, 2114],
-        "avg_installed_cost_per_kw": 2242,
+        "installed_cost_per_kw": [2359, 2105],
+        "avg_installed_cost_per_kw": 2232,
         "om_cost_per_kw": 26
       },
       "mount_premiums": {
@@ -39,14 +39,14 @@
       "name": "Commercial",
       "tech_sizes_for_cost_curve": [100, 2000],
       "roof": {
-        "installed_cost_per_kw": [2114, 1756],
-        "avg_installed_cost_per_kw": 1929,
-        "om_cost_per_kw": 19
+        "installed_cost_per_kw": [2105, 1748],
+        "avg_installed_cost_per_kw": 1920,
+        "om_cost_per_kw": 20
       },
       "mount_premiums": {
         "ground": {
           "cost_premium": 1.15,
-          "om_premium": 0.95
+          "om_premium": 0.0
         }
       },
       "notes": "Based on ATB 2024 Commercial 200 kW data point and estimating 100 to 2,000 kW cost scaling"
@@ -56,8 +56,8 @@
       "name": "Industrial",
       "tech_sizes_for_cost_curve": [2000, 10000],
       "roof": {
-        "installed_cost_per_kw": [1756, 1439],
-        "avg_installed_cost_per_kw": 2062,
+        "installed_cost_per_kw": [1748, 1757],
+        "avg_installed_cost_per_kw": 1752,
         "om_cost_per_kw": 20
       },
       "mount_premiums": {
@@ -73,9 +73,9 @@
       "name": "Utility",
       "tech_sizes_for_cost_curve": [10000, 100000],
       "roof": {
-        "installed_cost_per_kw": [1439, 1160],
-        "avg_installed_cost_per_kw": 1160,
-        "om_cost_per_kw": 21
+        "installed_cost_per_kw": [1757, 1383],
+        "avg_installed_cost_per_kw": 1383,
+        "om_cost_per_kw": 19
       },
       "mount_premiums": {
         "ground": {
