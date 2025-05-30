@@ -25,9 +25,18 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## test-runners
+### Added
+- Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
+- Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
+
 ## hvac-costs
 ### Added
 - Add `installed_cost...` for `ExistingBoiler` and `ExistingChiller` which is incurred in the BAU scenario, and may be avoided with other heating and cooling technologies in the Optimal scenario.
+
+# non-hourly-fuel-cost
+### Fixed
+- Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
 
 ## v0.52.0
 ### Added
@@ -105,6 +114,7 @@ Classify the change according to the following categories:
 
 ## v0.48.2
 ### Added
+- Add new optional parameter **max_ton** to GHP module to allow user to size GHP smaller than peak load
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 ### Changed
