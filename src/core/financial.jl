@@ -19,7 +19,9 @@
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-    offgrid_other_annual_costs::Real = 0.0 # only applicable when `off_grid_flag` is true. Considered tax deductible for owner. Costs are per year. 
+    offgrid_other_annual_costs::Real = 0.0 # only applicable when `off_grid_flag` is true. Considered tax deductible for owner. Costs are per year.
+    min_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing # minimum up-front capital cost for all technologies, excluding replacement costs and incentives.
+    max_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing # maximum up-front capital cost for all technologies, excluding replacement costs and incentives.
     # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
     CO2_cost_escalation_rate_fraction::Real = 0.042173,
@@ -62,6 +64,8 @@ struct Financial
     macrs_seven_year::Array{Float64,1}
     offgrid_other_capital_costs::Float64
     offgrid_other_annual_costs::Float64
+    min_initial_capital_costs_before_incentives::Union{Nothing,Real}
+    max_initial_capital_costs_before_incentives::Union{Nothing,Real}
     CO2_cost_per_tonne::Float64
     CO2_cost_escalation_rate_fraction::Float64
     NOx_grid_cost_per_tonne::Float64
@@ -94,6 +98,8 @@ struct Financial
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Considered tax deductible for owner.
+        min_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing,
+        max_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing,
         # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
         CO2_cost_escalation_rate_fraction::Real = 0.042173,
@@ -191,6 +197,8 @@ struct Financial
             macrs_seven_year,
             offgrid_other_capital_costs,
             offgrid_other_annual_costs,
+            min_initial_capital_costs_before_incentives,
+            max_initial_capital_costs_before_incentives,
             CO2_cost_per_tonne,
             CO2_cost_escalation_rate_fraction,
             NOx_grid_cost_per_tonne,

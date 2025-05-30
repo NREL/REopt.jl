@@ -25,6 +25,26 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## test-runners
+### Added
+- Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
+- Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
+
+## hvac-costs
+### Added
+- Add `installed_cost...` for `ExistingBoiler` and `ExistingChiller` which is incurred in the BAU scenario, and may be avoided with other heating and cooling technologies in the Optimal scenario.
+
+# non-hourly-fuel-cost
+### Fixed
+- Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
+
+## v0.52.0
+### Added
+- Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
+- Add **SteamTurbine** inputs `production_incentive_per_kwh`, `production_incentive_max_benefit`, `production_incentive_years`, and `production_incentive_max_kw`
+- Add **CHP** output `initial_capital_costs`
+### Fixed
+- Fix implementation of production-based incentives
 
 ## v0.51.1
 ### Added
@@ -37,7 +57,7 @@ Classify the change according to the following categories:
 ### Fixed
 - Update the **REoptInputs** parameter **tech_renewable_energy_fraction** so that only electricity-producing and fuel-burning heating technologies are included (instead of all technologies).
 - Included the following in the `Financial.lifecycle_capital_costs` and `Financial.initial_capital_costs`: `m[Symbol("OffgridOtherCapexAfterDepr"*_n)] - m[Symbol("AvoidedCapexByGHP"*_n)] - m[Symbol("ResidualGHXCapCost"*_n)] - m[Symbol("AvoidedCapexByASHP"*_n)]`
- 
+
 ## v0.51.0
 ### Added 
 - Add the following inputs to account for the clean or renewable energy fraction of grid-purchased electricity: 
@@ -94,6 +114,7 @@ Classify the change according to the following categories:
 
 ## v0.48.2
 ### Added
+- Add new optional parameter **max_ton** to GHP module to allow user to size GHP smaller than peak load
 - Battery residual value if choosing replacement strategy for degradation
 - Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 ### Changed
