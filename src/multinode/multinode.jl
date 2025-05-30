@@ -29,7 +29,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         
         PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)
 
-        REopt_Results, PMD_Results, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, connections, connections_upstream, connections_downstream = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades = true)
+        REopt_Results, PMD_Results, DataFrame_PMD_LineFlow_Summary, PMD_Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, connections, connections_upstream, connections_downstream = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades = true)
         time_results["model_solve_time_minutes"] = round(JuMP.solve_time(model)/60, digits = 2)
 
         if Multinode_Inputs.run_outage_simulator
@@ -48,10 +48,10 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             
             Outage_Results_No_Techs = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             
-            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs, load_phase_dictionary_NoTechs, gen_ind_e_to_REopt_node_noTechs, REopt_gen_ind_e_noTechs, connections_noTechs, connections_upstream_noTechs, connections_downstream_noTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades=false, BAU_case=true)
+            REopt_Results_BAU, PMD_Results_No_Techs, DataFrame_PMD_LineFlow_Summary_No_Techs, PMD_Dictionary_LineFlow_Power_Series_No_Techs, DataDictionaryForEachNode_No_Techs, LineInfo_PMD_No_Techs, REoptInputs_Combined_No_Techs, data_eng_No_Techs, data_math_mn_No_Techs, model_No_Techs, pm_No_Techs, line_upgrade_options_each_line_NoTechs, line_upgrade_results_NoTechs, load_phase_dictionary_NoTechs, gen_ind_e_to_REopt_node_noTechs, REopt_gen_ind_e_noTechs, connections_noTechs, connections_upstream_noTechs, connections_downstream_noTechs = build_run_and_process_results(Multinode_Inputs_No_Techs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades=false, BAU_case=true)
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
-            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_LineFlow_Summary_No_Techs, Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
+            system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_PMD_LineFlow_Summary_No_Techs, PMD_Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
             time_results["BAU_model_solve_time_minutes"] = round(JuMP.solve_time(model_BAU)/60, digits = 2)
         else
             system_results_BAU = "none"
@@ -68,27 +68,30 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         ComputationTime_EntireModel_Milliseconds, ComputationTime_EntireModel_Minutes = CalculateComputationTime(StartTime_EntireModel)
         time_results["ComputationTime_EntireModel_Minutes"] = ComputationTime_EntireModel_Minutes
         
-        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel_Minutes; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_minutes)
-        
         if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
             simple_powerflow_model_results = process_simple_powerflow_results(Multinode_Inputs, pm.model, data_eng, connections, connections_upstream, connections_downstream)
+            all_line_powerflow_results = combine_PMD_and_simple_powerflow_results(Multinode_Inputs, pm.model, data_eng, PMD_Dictionary_LineFlow_Power_Series, simple_powerflow_model_results)
         else
-            simple_powerflow_model_results = "This model did not use the simple powerflow constraints and variables."
+            simple_powerflow_model_results = "The simple powerflow model was not used"
+            all_line_powerflow_results = combine_PMD_and_simple_powerflow_results(Multinode_Inputs, pm.model, data_eng, PMD_Dictionary_LineFlow_Power_Series, simple_powerflow_model_results)
         end
+
+        system_results = REopt.Results_Compilation(model, REopt_Results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_PMD_LineFlow_Summary, PMD_Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel_Minutes; bau_model = model_BAU, system_results_BAU = system_results_BAU, outage_simulator_time = outage_simulator_time_minutes, all_line_powerflow_results = all_line_powerflow_results, simple_powerflow_model_results=simple_powerflow_model_results)
 
         # Compile output data into a dictionary to return from the dictionary
         CompiledResults = Dict([("System_Results", system_results),
                                 ("System_Results_BAU", system_results_BAU),
                                 ("DataDictionaryForEachNode", DataDictionaryForEachNode),
                                 ("Multinode_Inputs", Multinode_Inputs), 
-                                ("Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
+                                ("Dictionary_LineFlow_Power_Series", all_line_powerflow_results), 
                                 ("PMD_results", PMD_Results),
-                                ("simple_powerflow_model_results", simple_powerflow_model_results),
+                                ("PMD_line_power_flow_results", PMD_Dictionary_LineFlow_Power_Series),
+                                ("simple_powerflow_model_line_power_flow_results", simple_powerflow_model_results),
                                 ("PMD_data_eng", data_eng),
                                 ("REopt_results", REopt_Results),
                                 ("REopt_results_BAU", REopt_Results_BAU),
                                 ("Outage_Results", Outage_Results),
-                                ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
+                                ("DataFrame_LineFlow_Summary", DataFrame_PMD_LineFlow_Summary),
                                 ("Computation_Time_Data", time_results),
                                 ("Line_Info_PMD", LineInfo_PMD),
                                 ("pm", pm), # This can be a very large variable and it can be slow to load
@@ -109,14 +112,14 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     Start_time_create_plots = now()
     if Multinode_Inputs.generate_results_plots == true
         if Multinode_Inputs.number_of_phases == 1
-            Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step)
+            Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step);
         else
             @info "The creation of the voltage plots is currently only applicable for single phase systems"
         end
-        PlotPowerFlows(CompiledResults, TimeStamp, Multinode_Inputs.time_steps_for_results_dashboard)
-        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model)
+        PlotPowerFlows(CompiledResults, TimeStamp, Multinode_Inputs.time_steps_for_results_dashboard);
+        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model);
         if Multinode_Inputs.bus_coordinates != ""
-            CreateResultsMap(CompiledResults, Multinode_Inputs, TimeStamp)
+            CreateResultsMap(CompiledResults, Multinode_Inputs, TimeStamp);
         end
     end
     milliseconds, CompiledResults["Computation_Time_Data"]["creating_plots_minutes_NotIncludedInTotalComputationTime"] = CalculateComputationTime(Start_time_create_plots)
@@ -838,9 +841,9 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
         print("\n Connectivity information used in the simple power flow model:")
         print("\n The connections are: ")
         print(connections)
-        print("\n The upstream connections are: ")
+        print("\n\n The upstream connections are: ")
         print(connections_upstream)  
-        print("\n The downstream connections are: ")
+        print("\n\n The downstream connections are: ")
         print(connections_downstream)
         print("\n")
         print("\n")
@@ -1140,7 +1143,8 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
 
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
-            Multinode_Inputs.display_information_during_modeling_run ? print("The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"])") : nothing
+
+            Multinode_Inputs.display_information_during_modeling_run ? print("\n The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"]) \n") : nothing
             
             i = LineInfo[Multinode_Inputs.substation_line]["index"]
                 # Based off of code in line 470 of PMD's src>core>constraint_template
@@ -1538,11 +1542,23 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
            @warn("In the Multinode_Inputs dictionary, the number_of_plots_from_outage_simulator is larger than the number_of_outages_to_simulate, so fewer plots than indicated by number_of_plots_from_outage_simulator will be generated.")
         end
 
-        for i in Multinode_Inputs.time_steps_for_results_dashboard
-            if i ∉ Multinode_Inputs.PMD_time_steps
-                throw(@error("Please adjust the following model inputs: Every time step for the results dashboard (time_steps_for_results_dashboard) must be in the PMD time steps (PMD_time_steps)."))
+        # If only using PMD (and not the simple powerflow model), then prevent trying to plot a REopt timestep that does not exist in the PMD model
+        if !(Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD)
+            print("\n applying simple power flow: ")
+            print(Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD)
+            for i in Multinode_Inputs.time_steps_for_results_dashboard
+                if i ∉ Multinode_Inputs.PMD_time_steps
+                    throw(@error("Because the simple powerflow model is not being used, please make this adjustment to the model inputs: every time step for the results dashboard (time_steps_for_results_dashboard) must be in the PMD time steps (PMD_time_steps)."))
+                end
             end
         end
+
+        if maximum(Multinode_Inputs.time_steps_for_results_dashboard) > Int(8760*Multinode_Inputs.time_steps_per_hour)
+            throw(@error("The entries in the time_steps_for_results_dashboard array should not exceed the maximum number of timesteps"))
+        elseif minimum(Multinode_Inputs.time_steps_for_results_dashboard) < 1
+            throw(@error("The entries in the time_steps_for_results_dashboard array should not by less than 1"))
+        end
+
     end
 
     if Multinode_Inputs.critical_load_method == "Fraction"
@@ -1563,8 +1579,8 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
     end
 
     if Multinode_Inputs.generate_results_plots
-        if Multinode_Inputs.voltage_plot_time_step > length(Multinode_Inputs.time_steps_for_results_dashboard)
-            throw(@error("In the Multinode_Inputs dictionary, the voltage_plot_time_step should be less than or equal to the number of timesteps in time_steps_for_results_dashboard"))
+        if Multinode_Inputs.voltage_plot_time_step > length(Multinode_Inputs.PMD_time_steps)
+            throw(@error("In the Multinode_Inputs dictionary, the voltage_plot_time_step should be less than or equal to the number of timesteps in PMD_time_steps"))
         end
     end
 

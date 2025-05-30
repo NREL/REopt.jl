@@ -67,7 +67,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     # Compute values for each line and store line power flows in a dataframe and dictionary 
     DataLineFlow = zeros(7)
     DataFrame_LineFlow = DataFrame(fill(Any[],7), [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR ])
-    Dictionary_LineFlow_Power_Series = Dict([])
+    PMD_Dictionary_LineFlow_Power_Series = Dict([])
 
     for line in keys(sol_eng["nw"]["1"]["line"]) # read all of the line names from the first time step
         
@@ -120,7 +120,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
         
         # Also create a dictionary of the line power flows
-        Dictionary_LineFlow_Power_Series_temp = Dict([(line, Dict([
+        PMD_Dictionary_LineFlow_Power_Series_temp = Dict([(line, Dict([
                                                             ("ActiveLineFlow", ActivePowerFlow_line_temp),
                                                             ("ReactiveLineFlow", ReactivePowerFlow_line_temp),
                                                             ("Phase1_ActiveLineFlow", ActivePowerFlow_line_Phase1_temp),
@@ -131,7 +131,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
                                                             ("Phase3_ReactiveLineFlow", ReactivePowerFlow_line_Phase3_temp)
                                                         ]))
                                                         ])
-        merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
+        merge!(PMD_Dictionary_LineFlow_Power_Series, PMD_Dictionary_LineFlow_Power_Series_temp)
 
     end
 
@@ -144,7 +144,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     milliseconds, time_results[BAU_indicator*"reading_REopt_results_minutes"] = CalculateComputationTime(Start_reading_REopt_results)
     milliseconds, time_results[BAU_indicator*"reading_PMD_results_minutes"] = CalculateComputationTime(Start_reading_PMD_results)
 
-    return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, Dictionary_LineFlow_Power_Series, DataFrame_LineFlow, line_upgrades
+    return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, PMD_Dictionary_LineFlow_Power_Series, DataFrame_LineFlow, line_upgrades
 end
 
 
@@ -178,7 +178,7 @@ function Process_Line_Upgrades(m, line_upgrade_options_each_line, Multinode_Inpu
 end
 
 
-function Results_Compilation(model, results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
+function Results_Compilation(model, results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, PMD_Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; all_line_powerflow_results="", simple_powerflow_model_results="", bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
     
     @info "Compiling the results"
 
@@ -254,16 +254,17 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             DataLabels = []
             Data = []
             
+            LineFromSubstationToFacilityMeter = "line"*Multinode_Inputs.substation_node * "_" * Multinode_Inputs.facilitymeter_node
+            
             if Multinode_Inputs.model_type == "PowerModelsDistribution"
-                LineFromSubstationToFacilityMeter = "line"*Multinode_Inputs.substation_node * "_" * Multinode_Inputs.facilitymeter_node
 
-                MaximumPowerOnsubstation_line_ActivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
-                MinimumPowerOnsubstation_line_ActivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
-                AveragePowerOnsubstation_line_ActivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
+                PMD_MaximumPowerOnsubstation_line_ActivePower = (round(maximum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
+                PMD_MinimumPowerOnsubstation_line_ActivePower = (round(minimum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
+                PMD_AveragePowerOnsubstation_line_ActivePower = (round(mean(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 0))
 
-                MaximumPowerOnsubstation_line_ReactivePower = (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
-                MinimumPowerOnsubstation_line_ReactivePower = (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
-                AveragePowerOnsubstation_line_ReactivePower = (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
+                PMD_MaximumPowerOnsubstation_line_ReactivePower = (round(maximum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
+                PMD_MinimumPowerOnsubstation_line_ReactivePower = (round(minimum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
+                PMD_AveragePowerOnsubstation_line_ReactivePower = (round(mean(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 0))
             end
 
             # Add system-level results
@@ -360,20 +361,29 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                 push!(Data, "")
             end
 
-            push!(DataLabels,"  Maximum power flow on substation line, Active Power kW")
-            push!(Data, MaximumPowerOnsubstation_line_ActivePower)
-            push!(DataLabels,"  Minimum power flow on substation line, Active Power kW")
-            push!(Data, MinimumPowerOnsubstation_line_ActivePower)
-            push!(DataLabels,"  Average power flow on substation line, Active Power kW")
-            push!(Data, AveragePowerOnsubstation_line_ActivePower)
+            push!(DataLabels,"  From PMD: Maximum power flow on substation line, Active Power kW")
+            push!(Data, PMD_MaximumPowerOnsubstation_line_ActivePower)
+            push!(DataLabels,"  From PMD: Minimum power flow on substation line, Active Power kW")
+            push!(Data, PMD_MinimumPowerOnsubstation_line_ActivePower)
+            push!(DataLabels,"  From PMD: Average power flow on substation line, Active Power kW")
+            push!(Data, PMD_AveragePowerOnsubstation_line_ActivePower)
 
-            push!(DataLabels,"  Maximum power flow on substation line, Reactive Power kVAR")
-            push!(Data, MaximumPowerOnsubstation_line_ReactivePower)
-            push!(DataLabels,"  Minimum power flow on substation line, Reactive Power kVAR")
-            push!(Data, MinimumPowerOnsubstation_line_ReactivePower)
-            push!(DataLabels,"  Average power flow on substation line, Reactive Power kVAR")
-            push!(Data, AveragePowerOnsubstation_line_ReactivePower)
+            push!(DataLabels,"  From PMD: Maximum power flow on substation line, Reactive Power kVAR")
+            push!(Data, PMD_MaximumPowerOnsubstation_line_ReactivePower)
+            push!(DataLabels,"  From PMD: Minimum power flow on substation line, Reactive Power kVAR")
+            push!(Data, PMD_MinimumPowerOnsubstation_line_ReactivePower)
+            push!(DataLabels,"  From PMD: Average power flow on substation line, Reactive Power kVAR")
+            push!(Data, PMD_AveragePowerOnsubstation_line_ReactivePower)
             
+            if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
+                push!(DataLabels,"  From Simple Powerflow Model: Maximum power flow on substation line, Active Power kW")
+                push!(Data, round(maximum(simple_powerflow_model_results["lines"][LineFromSubstationToFacilityMeter]["line_power_flow_series"]),digits=0) )
+                push!(DataLabels,"  From Simple Powerflow Model: Minimum power flow on substation line, Active Power kW")
+                push!(Data, round(minimum(simple_powerflow_model_results["lines"][LineFromSubstationToFacilityMeter]["line_power_flow_series"]),digits=0))
+                push!(DataLabels,"  From Simple Powerflow Model: Average power flow on substation line, Active Power kW")
+                push!(Data, round(mean(simple_powerflow_model_results["lines"][LineFromSubstationToFacilityMeter]["line_power_flow_series"]),digits=0))
+            end
+
             # Add the multinode outage results to the dataframe
             push!(DataLabels, "----Multinode Outage Simulator Results----")
             push!(Data, "")
@@ -482,10 +492,10 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
             
             # Save the Line Flow summary to a different csv
-            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Powerflow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PMD_Results_Line_Powerflow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
             
             # Save the bus voltage summary to a different csv
-            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PMD_Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
             
             # Save the transformer upgrade results to a csv
             if Multinode_Inputs.model_transformer_upgrades
@@ -498,8 +508,8 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             line_powerflow_data[!,"REopt_time_steps"] = Multinode_Inputs.PMD_time_steps  # Note: The PMD_time_steps input is expressed in REopt time steps
             line_powerflow_data[!,"PMD_time_steps"] = collect(1:length(Multinode_Inputs.PMD_time_steps))
                                                 
-            for line_data in keys(Dictionary_LineFlow_Power_Series)
-                for data_subtype in keys(Dictionary_LineFlow_Power_Series[line_data])
+            for line_data in keys(PMD_Dictionary_LineFlow_Power_Series)
+                for data_subtype in keys(PMD_Dictionary_LineFlow_Power_Series[line_data])
                     if (data_subtype == "ActiveLineFlow") || (data_subtype == "ReactiveLineFlow")
                         OptionalNameAddition = "CombinedPhases_"
                     else
@@ -507,8 +517,8 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                     end
                     line_phase_name = line_data*"_"*OptionalNameAddition*data_subtype
                     
-                    if length(Dictionary_LineFlow_Power_Series[line_data][data_subtype]) > 0
-                        line_powerflow_data[!,line_phase_name] = Dictionary_LineFlow_Power_Series[line_data][data_subtype]
+                    if length(PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]) > 0
+                        line_powerflow_data[!,line_phase_name] = PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]
                     else
                         line_powerflow_data[!,line_phase_name] = zeros(length(Multinode_Inputs.PMD_time_steps))
                     end
@@ -518,7 +528,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             
             line_powerflow_data = line_powerflow_data[:,sortperm(names(line_powerflow_data))] # Sort the dataframe by the header title
 
-            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Line_Powerflow_Data_"*TimeStamp*".csv", line_powerflow_data)
+            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PMD_Results_Line_Powerflow_Data_"*TimeStamp*".csv", line_powerflow_data)
             
         end 
 
@@ -532,13 +542,13 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             display(DataFrame_LineFlow_Summary)
         
             print("\nSubstation data: ")
-            print("\n   Maximum active power flow from substation, kW: "*string(MaximumPowerOnsubstation_line_ActivePower))
-            print("\n   Minimum active power flow from substation, kW: "*string(MinimumPowerOnsubstation_line_ActivePower))
-            print("\n   Average active power flow from substation, kW: "*string(AveragePowerOnsubstation_line_ActivePower))
+            print("\n   Maximum active power flow from substation, kW: "*string(PMD_MaximumPowerOnsubstation_line_ActivePower))
+            print("\n   Minimum active power flow from substation, kW: "*string(PMD_MinimumPowerOnsubstation_line_ActivePower))
+            print("\n   Average active power flow from substation, kW: "*string(PMD_AveragePowerOnsubstation_line_ActivePower))
         
-            print("\n   Maximum reactive power flow from substation, kVAR: "*string(MaximumPowerOnsubstation_line_ReactivePower))
-            print("\n   Minimum reactive power flow from substation, kVAR: "*string(MinimumPowerOnsubstation_line_ReactivePower))
-            print("\n   Average reactive power flow from substation, kVAR: "*string(AveragePowerOnsubstation_line_ReactivePower))
+            print("\n   Maximum reactive power flow from substation, kVAR: "*string(PMD_MaximumPowerOnsubstation_line_ReactivePower))
+            print("\n   Minimum reactive power flow from substation, kVAR: "*string(PMD_MinimumPowerOnsubstation_line_ReactivePower))
+            print("\n   Average reactive power flow from substation, kVAR: "*string(PMD_AveragePowerOnsubstation_line_ReactivePower))
 
             # Print results for each node:
             for n in InputsList 
@@ -590,12 +600,119 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
 end
 
 
+function combine_PMD_and_simple_powerflow_results(Multinode_Inputs, m, data_eng, PMD_Dictionary_LineFlow_Power_Series, simple_powerflow_model_results)
+    # This function combines the powerflow results from the PMD model and the simple powerflow model
+
+    simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD = determine_timestep_information(Multinode_Inputs, m, data_eng)
+    
+    lines = collect(keys(data_eng["line"]))
+    
+    all_line_powerflows = Dict([])
+    
+    for line in lines
+
+        ActivePowerFlow_line_temp = []
+        ReactivePowerFlow_line_temp = []
+
+        ActivePowerFlow_line_Phase1_temp = []
+        ActivePowerFlow_line_Phase2_temp = []
+        ActivePowerFlow_line_Phase3_temp = []
+        ReactivePowerFlow_line_Phase1_temp = []
+        ReactivePowerFlow_line_Phase2_temp = []
+        ReactivePowerFlow_line_Phase3_temp = []
+        power_flow_model_at_timesteps = []
+
+        for timestep in collect(1:Int(Multinode_Inputs.time_steps_per_hour * 8760))
+
+            if timestep in time_steps_with_PMD
+                
+                timestep_in_PMD_model = findall(x->x== timestep, time_steps_with_PMD)[1]
+
+                push!(ActivePowerFlow_line_temp, PMD_Dictionary_LineFlow_Power_Series[line]["ActiveLineFlow"][timestep_in_PMD_model])
+                push!(ReactivePowerFlow_line_temp, PMD_Dictionary_LineFlow_Power_Series[line]["ReactiveLineFlow"][timestep_in_PMD_model])
+                
+                (length(PMD_Dictionary_LineFlow_Power_Series[line]["Phase1_ActiveLineFlow"]) > 0)  ?  push!(ActivePowerFlow_line_Phase1_temp, PMD_Dictionary_LineFlow_Power_Series[line]["Phase1_ActiveLineFlow"][timestep_in_PMD_model]) : push!(ActivePowerFlow_line_Phase1_temp,"N/A")
+                (length(PMD_Dictionary_LineFlow_Power_Series[line]["Phase2_ActiveLineFlow"]) > 0)  ?  push!(ActivePowerFlow_line_Phase2_temp, PMD_Dictionary_LineFlow_Power_Series[line]["Phase2_ActiveLineFlow"][timestep_in_PMD_model]) : push!(ActivePowerFlow_line_Phase2_temp,"N/A")
+                (length(PMD_Dictionary_LineFlow_Power_Series[line]["Phase3_ActiveLineFlow"]) > 0)  ?  push!(ActivePowerFlow_line_Phase3_temp, PMD_Dictionary_LineFlow_Power_Series[line]["Phase3_ActiveLineFlow"][timestep_in_PMD_model]) : push!(ActivePowerFlow_line_Phase3_temp,"N/A")
+                (length(PMD_Dictionary_LineFlow_Power_Series[line]["Phase1_ReactiveLineFlow"]) > 0)  ?  push!(ReactivePowerFlow_line_Phase1_temp, PMD_Dictionary_LineFlow_Power_Series[line]["Phase1_ReactiveLineFlow"][timestep_in_PMD_model]) : push!(ReactivePowerFlow_line_Phase1_temp,"N/A")
+                (length(PMD_Dictionary_LineFlow_Power_Series[line]["Phase2_ReactiveLineFlow"]) > 0)  ?  push!(ReactivePowerFlow_line_Phase2_temp, PMD_Dictionary_LineFlow_Power_Series[line]["Phase2_ReactiveLineFlow"][timestep_in_PMD_model]) : push!(ReactivePowerFlow_line_Phase2_temp,"N/A")
+                (length(PMD_Dictionary_LineFlow_Power_Series[line]["Phase3_ReactiveLineFlow"]) > 0)  ?  push!(ReactivePowerFlow_line_Phase3_temp, PMD_Dictionary_LineFlow_Power_Series[line]["Phase3_ReactiveLineFlow"][timestep_in_PMD_model]) : push!(ReactivePowerFlow_line_Phase3_temp,"N/A")
+
+                push!(power_flow_model_at_timesteps, "PMD")
+
+            elseif (timestep in time_steps_without_PMD) && (Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD)   
+                timestep_in_simple_powerflow_model = findall(x->x== timestep, time_steps_without_PMD)[1]
+                push!(ActivePowerFlow_line_temp, simple_powerflow_model_results["lines"][line]["line_power_flow_series"][timestep_in_simple_powerflow_model])
+                push!(ReactivePowerFlow_line_temp, "No reactive power in the simple powerflow model")
+                
+                push!(ActivePowerFlow_line_Phase1_temp, "No phases in the simple powerflow model")
+                push!(ActivePowerFlow_line_Phase2_temp, "No phases in the simple powerflow model")
+                push!(ActivePowerFlow_line_Phase3_temp, "No phases in the simple powerflow model")
+                push!(ReactivePowerFlow_line_Phase1_temp, "No phases in the simple powerflow model")
+                push!(ReactivePowerFlow_line_Phase2_temp, "No phases in the simple powerflow model")
+                push!(ReactivePowerFlow_line_Phase3_temp, "No phases in the simple powerflow model")
+
+                push!(power_flow_model_at_timesteps, "simplified_powerflow_model")
+            else
+                push!(ActivePowerFlow_line_temp, "No powerflow model at this time step")
+                push!(ReactivePowerFlow_line_temp, "No powerflow model at this time step")
+                
+                push!(ActivePowerFlow_line_Phase1_temp, "No powerflow model at this time step")
+                push!(ActivePowerFlow_line_Phase2_temp, "No powerflow model at this time step")
+                push!(ActivePowerFlow_line_Phase3_temp, "No powerflow model at this time step")
+                push!(ReactivePowerFlow_line_Phase1_temp, "No powerflow model at this time step")
+                push!(ReactivePowerFlow_line_Phase2_temp, "No powerflow model at this time step")
+                push!(ReactivePowerFlow_line_Phase3_temp, "No powerflow model at this time step")
+
+                push!(power_flow_model_at_timesteps, "no powerflow model")
+            end
+        end
+
+        if Int(length(ActivePowerFlow_line_temp)) != Int(Multinode_Inputs.time_steps_per_hour * 8760)
+            throw(@error("Error in processing the powerflow results"))
+        end
+
+        all_line_powerflows_temp = Dict([(line, Dict([
+                                                        ("ActiveLineFlow", ActivePowerFlow_line_temp),
+                                                        ("ReactiveLineFlow", ReactivePowerFlow_line_temp),
+                                                        ("Phase1_ActiveLineFlow", ActivePowerFlow_line_Phase1_temp),
+                                                        ("Phase2_ActiveLineFlow", ActivePowerFlow_line_Phase2_temp),
+                                                        ("Phase3_ActiveLineFlow", ActivePowerFlow_line_Phase3_temp),
+                                                        ("Phase1_ReactiveLineFlow", ReactivePowerFlow_line_Phase1_temp),
+                                                        ("Phase2_ReactiveLineFlow", ReactivePowerFlow_line_Phase2_temp),
+                                                        ("Phase3_ReactiveLineFlow", ReactivePowerFlow_line_Phase3_temp),
+                                                        ("power_flow_model_at_timesteps", power_flow_model_at_timesteps)
+                                                    ]))
+                                                    ])
+
+    merge!(all_line_powerflows, all_line_powerflows_temp)
+
+    end
+
+    return all_line_powerflows
+end
+
+
+function determine_timestep_information(Multinode_Inputs, m, data_eng)
+    
+    if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
+        simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][collect(keys(data_eng["line"]))[1],:].data))) # pull the total number of timesteps from the first line in the simplified powerflow model
+    else
+        simplified_powerflow_model_timesteps = "the simplified powerflow model was not used"
+    end
+
+    REoptTimeSteps = collect(1:Int(8760* Multinode_Inputs.time_steps_per_hour))
+    time_steps_without_PMD = setdiff(REoptTimeSteps, Multinode_Inputs.PMD_time_steps)
+    time_steps_with_PMD = Multinode_Inputs.PMD_time_steps
+
+    return simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD
+end
+
+
 function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connections, connections_upstream, connections_downstream)
    # Process the results from the simple powerflow model, which is applied to the time steps that the PMD model isn't applied to
 
-    simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][collect(keys(data_eng["line"]))[1],:].data))) # pull the total number of timesteps from the first line in the simplified powerflow model
-    REoptTimeSteps = collect(1:Int(8760* Multinode_Inputs.time_steps_per_hour))
-    time_steps_without_PMD = setdiff(REoptTimeSteps, Multinode_Inputs.PMD_time_steps)
+    simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD = determine_timestep_information(Multinode_Inputs, m, data_eng)
 
     if length(time_steps_without_PMD) != length(simplified_powerflow_model_timesteps)
         throw(@error("The lengths of the time step arrays should be the same. This indicates that there is an issue with how the simple powerflow model and/or PMD model was formulated."))
@@ -1159,7 +1276,11 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     maximum_timestep = maximum(REopt_timesteps_for_dashboard_InREoptTimes)
     minimum_timestep = minimum(REopt_timesteps_for_dashboard_InREoptTimes)
     PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
+    timesteps = REopt_timesteps_for_dashboard_InREoptTimes # PMDTimeSteps_for_dashboard_InPMDTimes    
+    
+    model_total_timesteps = Int(8760*Multinode_Inputs.time_steps_per_hour) 
 
+    #=
     PMDTimeSteps_for_dashboard_InPMDTimes = []
     PMD_dashboard_InPMDTimes_toREoptTimes = Dict([])
     for timestep in REopt_timesteps_for_dashboard_InREoptTimes
@@ -1167,37 +1288,50 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
         push!(PMDTimeSteps_for_dashboard_InPMDTimes, PMD_time_step_IndecesForDashboard)
         PMD_dashboard_InPMDTimes_toREoptTimes[PMD_time_step_IndecesForDashboard] = timestep
     end
+    =#
 
     if Multinode_Inputs.model_outages_with_outages_vector 
-        PowerOutageIndicator = Array{String}(undef, 8760)
-        for i in PMDTimeSteps_for_dashboard_InPMDTimes
-            if PMD_dashboard_InPMDTimes_toREoptTimes[i] in  Multinode_Inputs.outages_vector
-                PowerOutageIndicator[i] = "  Grid Outage"
+        PowerOutageIndicator = Array{String}(undef, model_total_timesteps)
+        PowerOutageIndicator[:] .= "Not defined"
+        for timestep in collect(1:model_total_timesteps) # REopt_timesteps_for_dashboard_InREoptTimes #PMDTimeSteps_for_dashboard_InPMDTimes
+            if timestep in Multinode_Inputs.outages_vector
+                PowerOutageIndicator[timestep] = " Grid outage"
             else
-                PowerOutageIndicator[i] = ""
+                PowerOutageIndicator[timestep] = ""
             end
         end
     elseif (Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step) > 0
-        PowerOutageIndicator = Array{String}(undef, 8760)
-        for i in PMDTimeSteps_for_dashboard_InPMDTimes
-            if (PMD_dashboard_InPMDTimes_toREoptTimes[i] >= Multinode_Inputs.single_outage_start_time_step) || (PMD_dashboard_InPMDTimes_toREoptTimes[i] >= Multinode_Inputs.single_outage_end_time_step)
-                PowerOutageIndicator[i] = "  Grid Outage"
+        PowerOutageIndicator = Array{String}(undef, model_total_timesteps)
+        PowerOutageIndicator[:] .= "Not defined"
+        for timestep in collect(1:model_total_timesteps) # REopt_timesteps_for_dashboard_InREoptTimes # PMDTimeSteps_for_dashboard_InPMDTimes
+            if (timestep >= Multinode_Inputs.single_outage_start_time_step) && (timestep <= Multinode_Inputs.single_outage_end_time_step)
+                PowerOutageIndicator[timestep] = " Grid outage"
             else
-                PowerOutageIndicator[i] = ""
+                PowerOutageIndicator[timestep] = ""
             end
         end
     else
-        PowerOutageIndicator = repeat([""], 8760)
+        PowerOutageIndicator = repeat([""], model_total_timesteps)
+    end
+    
+    PowerFlowModelIndicator = Array{String}(undef, model_total_timesteps)
+    PowerFlowModelIndicator[:] .= "Not defined"
+    if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
+        for timestep in collect(1:model_total_timesteps) # timesteps
+            if timestep in PMDTimeSteps_InREoptTimes
+                PowerFlowModelIndicator[timestep] = "Model: PMD"
+            else
+                PowerFlowModelIndicator[timestep] = "Model: Simple Powerflow"
+            end
+        end
+    else
+        PowerFlowModelIndicator[:] .= "Model: PMD"
     end
 
     if Multinode_Inputs.display_information_during_modeling_run
-        print("\n Timesteps for dashboard in the PMD times are: ")
-        print(PMDTimeSteps_for_dashboard_InPMDTimes)
-        print("\n Timesteps for dashboard in the associated REopt times are: ")
-        print(REopt_timesteps_for_dashboard_InREoptTimes)
+        print("\n Timesteps for dashboard (in REopt times) are: ")
+        print(timesteps)
     end
-
-    timesteps = PMDTimeSteps_for_dashboard_InPMDTimes 
 
     # *******
     # The method in these asterisks came from ChatGPT
@@ -1218,10 +1352,13 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     max_power = 0
     power = 0
     for key in collect(keys(results["Dictionary_LineFlow_Power_Series"]))
-        for p in results["Dictionary_LineFlow_Power_Series"][key]["ActiveLineFlow"][PMDTimeSteps_for_dashboard_InPMDTimes]
-            power = abs(p)
-            if power > max_power
-                max_power = power
+        for i in timesteps
+            p = results["Dictionary_LineFlow_Power_Series"][key]["ActiveLineFlow"][i]
+            if typeof(p) != String
+                power = abs(p)
+                if power > max_power
+                    max_power = power
+                end
             end
         end
     end
@@ -1238,11 +1375,14 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     
     line_colors = Dict{Any, Any}()
     for line in line_key_values
-        line_colors[line] = Vector{String}(undef, maximum(timesteps))
-        for i in timesteps 
+        line_colors[line] = Vector{String}(undef, maximum(model_total_timesteps))
+        line_colors[line][:] .= "rgb(1,1,1)" # default rgb(1,1,1), which indicates that data is not shown properly for that timestep
+        for i in collect(1:model_total_timesteps) 
             for j in 1:(length(Color_bins)-1)
-                if (abs(powerflow[line]["ActiveLineFlow"][i]) >= Color_bins[j]) && (abs(powerflow[line]["ActiveLineFlow"][i]) <= Color_bins[j+1])
-                    line_colors[line][i] = Colors[j]
+                if typeof(powerflow[line]["ActiveLineFlow"][i]) != String
+                    if (abs(powerflow[line]["ActiveLineFlow"][i]) >= Color_bins[j]) && (abs(powerflow[line]["ActiveLineFlow"][i]) <= Color_bins[j+1])
+                        line_colors[line][i] = Colors[j]
+                    end
                 end
             end
         end
@@ -1276,17 +1416,21 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
 
     start_day = round(minimum_timestep/(24*Multinode_Inputs.time_steps_per_hour), digits=2)
     end_day = round(maximum_timestep/(24*Multinode_Inputs.time_steps_per_hour), digits=2)
-    Symbol_data_inputs = SymbolData(results, line_cords, PMDTimeSteps_for_dashboard_InPMDTimes, minx, maxx, scaleratio_input)
+    Symbol_data_inputs = SymbolData(results, line_cords, REopt_timesteps_for_dashboard_InREoptTimes, minx, maxx, scaleratio_input)
+
+    start_datetime = Dates.format(DateTime(2021, 1, 1) + Day(floor(start_day)-1) + Minute(round(60*24*(start_day - floor(start_day)))), "U d at HH:MM") # This line of code is based off of code suggested by generative AI
+    end_datetime = Dates.format(DateTime(2021, 1, 1) + Day(floor(end_day)-1) + Minute(round(60*24*(end_day - floor(end_day)))), "U d at HH:MM") # This line of code is based off of code suggested by generative AI
 
     frames = PlotlyJS.PlotlyFrame[ PlotlyJS.frame(             
             data = [PlotlyJS.scatter(x=[line_cords[line_key_values[i]][1][2], line_cords[line_key_values[i]][2][2]], y=[line_cords[line_key_values[i]][1][1], line_cords[line_key_values[i]][2][1]], mode="lines+markers",marker=PlotlyJS.attr(color="black"), line=PlotlyJS.attr(width=3, color = line_colors[line_key_values[i]][j])) for i in collect(1:length(line_cords))], 
             name = "time=$(j)",
-            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation, from day $(start_day) to day $(end_day)", 
+            layout=PlotlyJS.attr(title_text="Power Flow Time Series Animation, from  $(start_datetime)  to  $(end_datetime)", 
                                  xaxis_title_text = "",
                                  yaxis_title_text = "",
                                  annotations = vcat([PlotlyJS.attr(x=x1,y=y0[i],text=Color_bins[i], xanchor="left", yanchor="center", showarrow=false) for i in collect(1:increments)], 
-                                                    [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="left", yanchor="bottom", showarrow=false)],
+                                                    [PlotlyJS.attr(x=x1,y=y1[increments],text="Power (kW)", xanchor="center", yanchor="bottom", showarrow=false)],
                                                     [PlotlyJS.attr(x=substation_cords[2], y=substation_cords[1], text=PowerOutageIndicator[j], font = PlotlyJS.attr(color="red", size = 16), xanchor="left", yanchor="bottom", showarrow=false)],
+                                                    [PlotlyJS.attr(x=x1, y=y1[increments]+stepsize+stepsize, text=PowerFlowModelIndicator[j], font = PlotlyJS.attr(color="black", size = 16), xanchor="right", yanchor="bottom", showarrow=false)],
                                                     [PlotlyJS.attr(x=bus_cords[bus_key_values[j]][2], y=bus_cords[bus_key_values[j]][1], text=bus_key_values[j]*results_by_node[bus_key_values[j]], xanchor="left", yanchor="bottom", showarrow=false) for j in 1:length(bus_key_values) ]),
              
                                  shapes = vcat([PlotlyJS.line(xref='x', yref='y', 
@@ -1308,7 +1452,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     
     steps = [PlotlyJS.attr(method = "animate",
             args = [["time=$(i)"], PlotlyJS.attr(frame=PlotlyJS.attr(duration=500, redraw=true), mode="immediate", transition=PlotlyJS.attr(duration=0))],
-            label = "$(round(PMD_dashboard_InPMDTimes_toREoptTimes[i]/(24*Multinode_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
+            label = "$(round(i/(24*Multinode_Inputs.time_steps_per_hour), digits=2))") for i in timesteps]
     
     layout = PlotlyJS.Layout(
         showlegend=false,
@@ -1349,7 +1493,7 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
 end
 
 
-function SymbolData(results, line_cords, timesteps_PMD, minx, maxx, scaleratio_input)
+function SymbolData(results, line_cords, timesteps_to_model, minx, maxx, scaleratio_input)
     # Function to generate information for mapping a power flow direction symbol in the power flow chart
     SymbolDictionary = Dict()
     powerflow = results["Dictionary_LineFlow_Power_Series"]
@@ -1373,12 +1517,12 @@ function SymbolData(results, line_cords, timesteps_PMD, minx, maxx, scaleratio_i
         SymbolDictionary[i] = [midpoint, slope_degrees, [], [], [], []] # initiate the arrays for the end points of the arrows
         arrow_angle_radians = pi / 4 
         arrow_length = 0.01 * (maxx - minx) # define the arrow length as a fraction of the plot size
-        x2 = zeros(maximum(timesteps_PMD))
-        y2 = zeros(maximum(timesteps_PMD))
-        x3 = zeros(maximum(timesteps_PMD))
-        y3 = zeros(maximum(timesteps_PMD))
+        x2 = zeros(maximum(timesteps_to_model))
+        y2 = zeros(maximum(timesteps_to_model))
+        x3 = zeros(maximum(timesteps_to_model))
+        y3 = zeros(maximum(timesteps_to_model))
 
-        for j in timesteps_PMD
+        for j in timesteps_to_model
             active_power = powerflow[i]["ActiveLineFlow"][j]
 
             if active_power < -0.001
