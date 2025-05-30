@@ -26,7 +26,8 @@ export
     easiur_data,
     get_existing_chiller_default_cop,
     get_electric_heater_defaults,
-    get_ashp_defaults
+    get_ashp_defaults,
+    get_pv_cost_params
 
 import HTTP
 import JSON
