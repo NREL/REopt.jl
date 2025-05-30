@@ -1490,6 +1490,11 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
             throw(@error("The time steps per hour for each REopt node must match the time steps per hour defined in the multinode settings dictionary"))
         end
 
+        possible_critical_load_method_entries = ["Fraction", "TimeSeries", "N/A"]
+        if !(Multinode_Inputs.critical_load_method in possible_critical_load_method_entries)
+            throw(@error("The input for critical_load_method is not valid"))
+        end
+
         # Checking that critical loads are defined, if running a resilience model
         if  Multinode_Inputs.model_outages_with_outages_vector || ((Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step) > 0 )
 
@@ -1582,6 +1587,18 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         if Multinode_Inputs.voltage_plot_time_step > length(Multinode_Inputs.PMD_time_steps)
             throw(@error("In the Multinode_Inputs dictionary, the voltage_plot_time_step should be less than or equal to the number of timesteps in PMD_time_steps"))
         end
+    end
+    
+    if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD  &&  (Multinode_Inputs.number_of_phases > 1)
+        throw(@error("The simple powerflow model is currently not compatible with multiphase systems. Please set apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD to false to run the model only with PMD."))
+    end
+
+    if Multinode_Inputs.substation_export_limit < 0
+        throw(@error("The substation_export_limit input cannot be negative."))
+    end
+
+    if Multinode_Inputs.substation_import_limit < 0
+        throw(@error("The substation_import_limit input cannot be negative."))
     end
 
 end
