@@ -89,6 +89,10 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		for t in p.techs.elec, u in p.export_bins_by_tech[t]
 			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
+
+		for b in p.s.storage.types.elec, u in p.export_bins_by_tech[t]
+			fix(m[:dvStorageToGrid][b, u, ts], 0.0, force=true)
+		end
 	end
 
 	for b in p.s.storage.types.all
