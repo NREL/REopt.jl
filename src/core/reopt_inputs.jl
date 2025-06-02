@@ -379,10 +379,11 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     pbi_benefit_per_kwh = Dict{String, Any}()
 
     # export related inputs
+    @info "s.electric_tariff.export_bins: $(s.electric_tariff.export_bins)"
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
-    storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in p.s.electric_tariff.export_bins)
-    export_bin_by_storage = Dict{String, Array{Symbol, 1}}()
+    storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins) # TODO remove CUR?
+    export_bins_by_storage = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
@@ -493,13 +494,13 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
-    
+
     if !isempty(s.storage.types.elec)
         for b in s.storage.types.elec
-            fillin_storage_by_exportbin(storage_by_exportbin, b, "Temp") # TODO: figure out if a name should be used. 
+            fillin_storage_by_exportbin(s, storage_by_exportbin, b)
             export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
-            println(storage_by_exportbin)
-            println(export_bins_by_storage)
+            @info "export_bins_by_storage: $(export_bins_by_storage)"
+            @info "storage_by_exportbin: $(storage_by_exportbin)"
         end
     end
 
@@ -1229,17 +1230,16 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
     return nothing
 end
 
-function fillin_storage_by_exportbin(storage_by_exportbin::Dict, stor::AbstractStorage, storage_name::String)
-    #TODO: assess what stor and storage_name will/should be. 
-    if stor.can_net_meter && :NEM in keys(storage_by_exportbin)
-        push!(storage_by_exportbin[:NEM], storage_name)
-        if stor.can_export_beyond_nem_limit && :EXC in keys(storage_by_exportbin)
-            push!(storage_by_exportbin[:EXC], storage_name)
+function fillin_storage_by_exportbin(s::AbstractScenario, storage_by_exportbin::Dict, b::String)
+    if s.storage.attr[b].can_net_meter && :NEM in keys(storage_by_exportbin)
+        push!(storage_by_exportbin[:NEM], b)
+        if s.storage.attr[b].can_export_beyond_nem_limit && :EXC in keys(storage_by_exportbin)
+            push!(storage_by_exportbin[:EXC], b)
         end
     end
     
-    if stor.can_wholesale && :WHL in keys(storage_by_exportbin)
-        push!(storage_by_exportbin[:WHL], storage_name)
+    if s.storage.attr[b].can_wholesale && :WHL in keys(storage_by_exportbin)
+        push!(storage_by_exportbin[:WHL], b)
     end
     return nothing
 end
