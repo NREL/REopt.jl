@@ -86,34 +86,35 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     # Major assumptions: every ProposedEnergyProducerOption has the same SiteLocation
     # TODO add error checking in case above is not true
     techs_to_include = []
+    # Specific names that were given to certain categories/classes of data
+    site_name = ""  # Only one, assumed to be the site location of the first ProposedAssetOption
+    load_group_names = []  # May be one or more than one, e.g. ["ResidentialGroup", "IndustrialGroup"]
+    energy_consumer_names = []  # One set (1+) for each LoadGroup, e.g. ["670a_residential2", "670b_residential2"]
+    load_profile_data = Dict()  # One-to-one with energy_consumer_names
+    timestep_sec = 0    
+    n_timesteps = 0
+    subregion_name = ""
+    economic_props_name = ""
+    lmp_name = ""
+    capacity_prices_name = "" 
     for (i, name) in enumerate(tech_names)
+        @info "Processing $name"
         tech_data = mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]
-
-        # Specific names that were given to certain categories/classes of data
-        site_name = ""  # Only one, assumed to be the site location of the first ProposedAssetOption
-        load_group_names = []  # May be one or more than one, e.g. ["ResidentialGroup", "IndustrialGroup"]
-        energy_consumer_names = []  # One set (1+) for each LoadGroup, e.g. ["670a_residential2", "670b_residential2"]
-        load_profile_data = Dict()  # One-to-one with energy_consumer_names
-        n_timesteps = 0
-        region_name = ""
-        lmp_name = ""
-        capacity_prices_name = ""
-        timestep_sec = 0
         
         # Assign site, load, and energy prices attributes, using only the FIRST ProposedEnergyProducerOption because they **should** all be the same
         # TODO track all missing required inputs, and key optional inputs that rely on defaults
         if i == 1
             # Site data (lat, long, area) - lat/long is only needed if relying on PV or Wind APIs; default area is a Big Number
             site_name = replace(split(tech_data["ProposedAssetOption.ProposedLocations"][1], "::")[2], "'" => "")
-            land_sq_meter = get(mgravens["ProposedSiteLocations"][site_name], "ProposedSiteLocation.availableArea", nothing)
+            land_sq_meter = get(mgravens["ProposedSiteLocation"][site_name], "ProposedSiteLocation.availableArea", nothing)
             if !isnothing(land_sq_meter)
                 reopt_inputs["Site"]["land_acres"] = land_sq_meter / 4046.86
             end
-            position_points = mgravens["ProposedSiteLocations"][site_name]["Location.PositionPoints"][1]
-            reopt_inputs["Site"]["latitude"] = get(position_points, "PositionPoint.yPosition", nothing)
-            reopt_inputs["Site"]["longitude"] = get(position_points, "PositionPoint.xPosition", nothing)
+            position_points = mgravens["ProposedSiteLocation"][site_name]["Location.PositionPoints"][1]
+            reopt_inputs["Site"]["latitude"] = parse(Float64, position_points["PositionPoint.yPosition"])
+            reopt_inputs["Site"]["longitude"] = parse(Float64, position_points["PositionPoint.xPosition"])
             # Also from SiteLocation, get needed references for LoadGroup
-            load_groups_lumped = mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.LoadGroup"]
+            load_groups_lumped = mgravens["ProposedSiteLocation"][site_name]["ProposedSiteLocation.LoadGroups"]
             # Note, for lehigh_v8_corrected.json, Juan put Group.LoadGroup = {"None": {...}}, but I think we still need to look for the line above in ProposedSiteLocation.loadGroup
             if !isempty(load_groups_lumped)
                 # Have to extract just the name we want from lumped string value, e.g. "SubGeographicalRegion::'County1'" (want just 'County1')
@@ -207,23 +208,23 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             reopt_inputs["ElectricLoad"]["loads_kw"] = total_loads_kw
 
             # A bunch of financial/prices stuff depends on the Region name, but this is all assumed to apply for all/aggregate loads
-            subregion_name = replace(split(mgravens["ProposedSiteLocations"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
-            region_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.Region"], "::")[2], "'" => "")
-            region_dict = mgravens["Group"]["GeographicalRegion"][region_name]["GeographicalRegion.Regions"][1]
+            subregion_name = replace(split(mgravens["ProposedSiteLocation"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
+            # The *Sub*Region is the one that has the economic properties and index for EnergyPrices, e.g. "SubGeographicalRegion::'County1'"
+            economic_props_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.EconomicProperty"], "::")[2], "'" => "")
             
             # Financial inputs (optional)
             financial_map = [("discountRate", "offtaker_discount_rate_fraction"), 
                             ("inflationRate", "om_cost_escalation_rate_fraction"),
                             ("taxRate", "offtaker_tax_rate_fraction")]
-            economic_props = region_dict["Regions.EconomicProperty"]
+            economic_props = mgravens["EconomicProperty"][economic_props_name]
             for param in financial_map
                 if !isnothing(get(economic_props, "EconomicProperty."*param[1], nothing))
                     reopt_inputs["Financial"][param[2]] = round(economic_props["EconomicProperty."*param[1]] / 100.0, digits=4)  # Convert percent to decimal
                 end
-            end
+            end          
 
             # LMP - energy prices
-            lmp_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.LocationalMarginalPrices"], "::")[2], "'" => "")
+            lmp_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.LocationalMarginalPrices"], "::")[2], "'" => "")
             lmp_dict = get(mgravens["EnergyPrices"]["LocationalMarginalPrices"], lmp_name, nothing)
             if !isnothing(lmp_dict)
                 # LMP - energy prices
@@ -240,7 +241,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             end
 
             # Capacity prices (monthly)
-            capacity_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CapacityPrices"], "::")[2], "'" => "")
+            capacity_prices_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.CapacityPrices"], "::")[2], "'" => "")
             capacity_dict = get(mgravens["EnergyPrices"]["CapacityPrices"], capacity_prices_name, nothing)
             if !isnothing(capacity_dict)
                 capacity_list_of_dict = capacity_dict["CapacityPrices.CapacityPriceCurve"]["PriceCurve.CurveDatas"]
@@ -261,7 +262,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             #  Currently, we can only have one active time step for each month because we can't distinguish from the Ravens schema
             #   Also, we must past an array of length 12 of the same prices for REopt to calculate monthly CP charges; otherwise it's more like "yearly" or "per unique price"
             if !isnothing(get(mgravens["EnergyPrices"], "CoincidentPeakPrices", nothing))
-                coincident_peak_prices_name = replace(split(region_dict["Regions.EnergyPrices"]["EnergyPrices.CoincidentPeakPrices"], "::")[2], "'" => "")
+                coincident_peak_prices_name = replace(split(mgravens["Group"]["SubGeographicalRegion"]["subregion_name"]["SubGeographicalRegion.CoincidentPeakPrices"], "::")[2], "'" => "")
                 coincident_peak_dict = get(mgravens["EnergyPrices"]["CoincidentPeakPrices"], coincident_peak_prices_name, nothing)
                 if !isnothing(coincident_peak_dict)
                     coincident_peak_list_of_dict = coincident_peak_dict["CoincidentPeakPrices.CoincidentPeakPriceCurve"]["PriceCurve.CurveDatas"]
@@ -316,8 +317,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
         end
 
         # Technology specific input parameters
-        # TODO are we sure that the cost inputs can be handled as "per/kW" vs "per/W"? what about units for land area, or other non power/energy/money unit?
-        if tech_data["Ravens.cimObjectType"] == "ProposedPhotovoltaicUnitOption"
+        # TODO are we sure that the cost inputs can be handled as "per/kW" vs "per/W"? what about units for land area, or other non power/energy/money unit?   
+        if tech_data["Ravens.cimObjectType"] == "ProposedPhotoVoltaicUnitOption"
             # PV inputs
             append!(techs_to_include, ["PV"])
             # Optional inputs for PV; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
@@ -338,10 +339,14 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.operationsAndMaintenanceRateFixed", nothing))
                 reopt_inputs["PV"]["om_cost_per_kw"] = tech_data["ProposedEnergyProducerOption.operationsAndMaintenanceRateFixed"]["value"]
             end
-            if !isnothing(get(tech_data, "ProposedPhotovoltaicUnitOption.GenerationProfile", nothing))
-                reopt_inputs["PV"]["production_factor_series"] = zeros(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                for (i, data) in enumerate(tech_data["ProposedPhotovoltaicUnitOption.GenerationProfile"]["Curve.CurveDatas"])
-                    reopt_inputs["PV"]["production_factor_series"][i] = data["CurveData.y1value"]
+            if !isnothing(get(tech_data, "ProposedPhotoVoltaicUnitOption.GenerationProfile", nothing))
+                pv_profile_name = replace(split(tech_data["ProposedPhotoVoltaicUnitOption.GenerationProfile"], "::")[2], "'" => "")
+                # Note, the Curve profile must be normalized to DC-capacity; otherwise will throw a REopt error
+                pv_profile_list_of_dict = mgravens["Curve"][pv_profile_name]["Curve.CurveDatas"]
+                if !(length(pv_profile_list_of_dict) == 8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                    throw(@error("PV profile $pv_profile_name Curve.CurveDatas must be the same length as the load profile"))
+                else
+                    reopt_inputs["PV"]["production_factor_series"] = build_timeseries_array(pv_profile_list_of_dict, "CurveData.y1value", timestep_sec)
                 end
             end
         elseif tech_data["Ravens.cimObjectType"] == "ProposedBatteryUnitOption"
@@ -410,13 +415,14 @@ end
 
 
 """
-    update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict)
+    update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict, reopt_inputs::Dict)
 
 Update the MG-Ravens data structure with results from REopt.
 
 # Arguments
 - `reopt_results::Dict`: Dictionary containing the results from REopt optimization.
 - `mgravens::Dict`: Dictionary representing the MG-Ravens data structure to be updated.
+- `inputs::REoptInputs`: The REopt inputs used for the optimization, which may contain additional information needed for the update.
 
 # Description
 This function updates the MG-Ravens data structure with REopt results by:
@@ -432,7 +438,7 @@ This function updates the MG-Ravens data structure with REopt results by:
 # Returns
 - The `mgravens` dictionary is updated in-place.
 """
-function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict)
+function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict, reopt_inputs::Dict)
     # Convert from REopt --> MG-Ravens outputs and update or add fields to MG-Ravens data .json
     # We are NOT creating a separate mgravens.json - only adding or maybe updating values (but mostly adding)
     # Three main sections we are adding: 1) "Group.ProposedAssetSet.[BAU and Optimal]", 2) Group.EstimatedAssetCosts.[BAU and Optimal], and 
@@ -512,7 +518,6 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
 
 
     # Technology-specific outputs; need to append possible_techs once more are added to the mg-ravens conversions
-    # TODO ask why we don't just name the ProposedAsset the same as the ProposedAssetOption?
     possible_techs = [("PV", "REopt_PV"), ("ElectricStorage", "REopt_ESS")]
     tech_names = []
     for tech in possible_techs
@@ -526,7 +531,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
     tech_name_map = Dict(map[1] => "" for map in possible_techs)
     for tech in ravens_tech_names
         tech_data = mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][tech]
-        if tech_data["Ravens.cimObjectType"] == "ProposedPhotovoltaicUnitOption"
+        if tech_data["Ravens.cimObjectType"] == "ProposedPhotoVoltaicUnitOption"
             tech_name_map["PV"] = tech
         elseif tech_data["Ravens.cimObjectType"] == "ProposedBatteryUnitOption"
             tech_name_map["ElectricStorage"] = tech
@@ -559,19 +564,20 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
                 "multiplier" => "UnitMultiplier.k"
             )
             proposed_asset_template["Ravens.cimObjectType"] = "ProposedEnergyProducerAsset"
-            proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedPhotovoltaicUnitOption::'"*tech_name_map["PV"]*"'"
+            proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedPhotoVoltaicUnitOption::'"*tech_name_map["PV"]*"'"
 
-            # TODO update this to look under the "Curve" key specified by the name in e.g. proposedPV1.ProposedPhotoVoltaicUnitOption.GenerationProfile [== "Curve::'PVProfile'"]
-            proposed_asset_template["ProposedEnergyProducerAsset.PowerDispatchCurve"] = Dict{String, Any}(
-                "IdentifiedObject.name" => "PVProfile",
-                "IdentifiedObject.mRID" => string(uuid4()),
-                "Ravens.cimObjectType" => "DispatchCurve",
-                "Curve.xUnit" => "UnitSymbol.h",
-                "Curve.CurveDatas" => []
-                )
-            for ts in 1:8760
-                append!(proposed_asset_template["ProposedEnergyProducerAsset.PowerDispatchCurve"]["Curve.CurveDatas"], 
-                [Dict("CurveData.xvalue" => ts-1, "CurveData.y1value" => reopt_results["PV"]["production_factor_series"][ts])])
+            if isnothing(get(mgravens["Curve"], "PVProfile_REOPT", nothing))
+                mgravens["Curve"]["PVProfile_REOPT"] = Dict{String, Any}(
+                    "IdentifiedObject.name" => "PVProfile_REOPT",
+                    "IdentifiedObject.mRID" => string(uuid4()),
+                    "Ravens.cimObjectType" => "Curve",
+                    "Curve.xUnit" => "UnitSymbol.h",
+                    "Curve.CurveDatas" => []
+                    )
+                for ts in 1:(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                    append!(gravens["Curve"]["PVProfile_REOPT"]["Curve.CurveDatas"], 
+                        [Dict("CurveData.xvalue" => ts-1, "CurveData.y1value" => reopt_results["PV"]["production_factor_series"][ts])])
+                end
             end
         elseif occursin("ESS", name)
             # Add Battery stuff
@@ -588,8 +594,6 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
                 "unit" => "UnitSymbol.Wh",
                 "multiplier" => "UnitMultiplier.k"
             )
-
-            # TODO add dispatch for Battery, even if used as a target/reference set point
         end
 
         mgravens["ProposedAsset"][name] = proposed_asset_template
@@ -617,7 +621,7 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
         n_days = daysinmonth(Date(string(year) * "-" * string(m)))
         stop = n_days * 24 * time_steps_per_hour + i - 1
         if m == 12 && isleapyear(year)
-            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
+            stop -= 24 * time_steps_per_hour
         end
         steps = [step for step in range(i, stop=stop)]
         append!(a, [steps])
