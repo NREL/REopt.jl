@@ -21,6 +21,7 @@
 - `year_one_standby_cost_after_tax` CHP standby charges in year one, after tax
 - `lifecycle_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
 - `thermal_production_series_mmbtu_per_hour`  
+- `initial_capital_costs` Initial capital costs of the CHP system, before incentives [\$]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -137,7 +138,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
 	r["year_one_standby_cost_after_tax"] = r["year_one_standby_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["lifecycle_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=0)
-
+	r["initial_capital_costs"] = round(value(m[Symbol("CHPCapexNoIncentives")]), digits=2)
 
     d["CHP"] = r
     nothing
