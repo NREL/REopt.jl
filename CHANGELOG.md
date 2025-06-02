@@ -25,7 +25,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.53.0
+## battery_om
 ### Added
 - Added inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
 - Added outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
@@ -34,7 +34,7 @@ Classify the change according to the following categories:
 - Added input **soc_based_per_ts_thermal_decay_fraction** to `ColdThermalStorage` and `HotThermalStorage` for modeling SOC-based thermal decay
 - Renamed input **thermal_decay_rate_fraction** to **capacity_based_per_ts_thermal_decay_fraction** in `ColdThermalStorage` and `HotThermalStorage`
 
-##  v0.52.1
+##  test-runners
 ### Added
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
 - Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
