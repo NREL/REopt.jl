@@ -35,6 +35,14 @@ Classify the change according to the following categories:
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
 - Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
 
+## hvac-costs
+### Added
+- Add `installed_cost...` for `ExistingBoiler` and `ExistingChiller` which is incurred in the BAU scenario, and may be avoided with other heating and cooling technologies in the Optimal scenario.
+
+# non-hourly-fuel-cost
+### Fixed
+- Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
+
 ## v0.52.0
 ### Added
 - Add **Financial** inputs `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` which, when provided, provide upper and lower bounds on initial capital costs for all technologies.
@@ -42,10 +50,6 @@ Classify the change according to the following categories:
 - Add **CHP** output `initial_capital_costs`
 ### Fixed
 - Fix implementation of production-based incentives
-
-# non-hourly-fuel-cost
-### Fixed
-- Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
 
 ## v0.51.1
 ### Added
