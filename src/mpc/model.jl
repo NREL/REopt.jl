@@ -90,7 +90,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 
-		for b in p.s.storage.types.elec, u in p.export_bins_by_tech[t]
+		for b in p.s.storage.types.elec, u in p.export_bins_by_storage[b]
 			fix(m[:dvStorageToGrid][b, u, ts], 0.0, force=true)
 		end
 	end
@@ -249,7 +249,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	if !isempty(p.s.electric_tariff.export_bins)
 		@variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
-		@variable(m, dvStorageToGrid[p.storage.types.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
+		@variable(m, dvStorageToGrid[p.s.storage.types.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
 	end
 
     m[:dvSize] = p.existing_sizes

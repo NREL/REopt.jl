@@ -200,7 +200,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             for t in p.techs.elec, u in p.export_bins_by_tech[t]
                 fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
             end
-			for b in p.s.storage.types.elec, u in p.export_bins_by_tech[t]
+			for b in p.s.storage.types.elec, u in p.export_bins_by_storage[b]
                 fix(m[:dvStorageToGrid][b, u, ts], 0.0, force=true)
             end
         end
