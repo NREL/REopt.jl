@@ -454,13 +454,13 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
           "IdentifiedObject.mRID" => string(uuid4()),
           "Ravens.cimObjectType" => "Warning",
           "Message.message" => string(reopt_results["Messages"]["warnings"]),
-          "Message.Application" => Dict("Application.applicationName" => "REopt")
+          "Message.Application" => "Application::'REopt'"
         ),
         Dict(
             "IdentifiedObject.mRID" => string(uuid4()),
             "Ravens.cimObjectType" => "Error",
             "Message.message" => string(isempty(reopt_results["Messages"]["errors"]) ? "" : reopt_results["Messages"]["errors"]),
-            "Message.Application" => Dict("Application.applicationName" => "REopt")
+            "Message.Application" => "Application::'REopt'"
           ),
     ]
 
