@@ -104,7 +104,7 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
             cost_list = pv.installed_cost_per_kw
             size_list = pv.tech_sizes_for_cost_curve
             t="PV"
-            if t in p.techs.segmented
+            if t in p.techs.segmented && !isempty(size_list)
                 # Use "no incentives" version of p.cap_cost_slope and p.seg_yint
                 cost_slope_no_inc = [cost_list[1]]
                 seg_yint_no_inc = [0.0]
