@@ -271,6 +271,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ObjectivePenalties] = 0.0
 	m[:ExistingBoilerCost] = 0.0
 	m[:ExistingChillerCost] = 0.0
+	m[:ElectricStorageCapCost] = 0.0
+	m[:ElectricStorageOMCost] = 0.0
 
 	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
 		if !isempty(p.techs.all)
@@ -422,9 +424,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	))
 
 	for b in p.s.storage.types.elec
+		# ElectricStorageCapCost used for calculating O&M and is based on initial costs, not net present costs
+		m[:ElectricStorageCapCost] += (
+			sum( p.s.storage.attr[b].installed_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
+			sum( p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.elec )
+		)
 		if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
-			add_to_expression!(TotalStorageCapCosts, sum(p.s.storage.attr[b].net_present_cost_cost_constant * m[:binIncludeStorageCostConstant][b] ))
+			add_to_expression!(TotalStorageCapCosts, p.third_party_factor * sum(p.s.storage.attr[b].net_present_cost_cost_constant * m[:binIncludeStorageCostConstant][b] ))
+			m[:ElectricStorageCapCost] += sum(p.s.storage.attr[b].installed_cost_constant * m[:binIncludeStorageCostConstant][b])
 		end
+		m[:ElectricStorageOMCost] += p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * m[:ElectricStorageCapCost]
 	end
 
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
@@ -506,7 +515,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
 
 		# Fixed O&M, tax deductible for owner
-		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
+		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts] + m[:ElectricStorageOMCost]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Variable O&M, tax deductible for owner
 		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
