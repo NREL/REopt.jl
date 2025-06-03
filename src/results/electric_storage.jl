@@ -10,6 +10,7 @@
 - `state_of_health`
 - `maintenance_cost`
 - `replacement_month`
+- `residual_value` # only applies is maintenance_strategy = "replacement"
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -43,7 +44,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 ))
             end
             r["residual_value"] = value(m[:residual_value])
-         end
+        end
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []
