@@ -29,6 +29,10 @@ Classify the change according to the following categories:
 ### Added
 - Add new **ElectricStorage** input fields **installed_cost_constant**, **replace_cost_constant** (both default to 0), and **cost_constant_replacement_year** (defaults to year 10).
 - Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
+- Added `ElectricStorage.om_cost_fraction_of_installed_cost` input, default, and model expression as the main battery O&M
+### Changed
+- Updated default `ElectricStorage` cost values per ATB 2024
+- Zeroed-out `ElectricStorage` replacement costs because they are now included in the default O&M as fraction of installed cost
 
 ## test-runners
 ### Added
