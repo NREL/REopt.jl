@@ -427,7 +427,7 @@ Update the MG-Ravens data structure with results from REopt.
 # Description
 This function updates the MG-Ravens data structure with REopt results by:
 1. Adding warning and error messages to the "Message" section.
-2. Creating or updating the "Group.ProposedAssetSet" and "Group.EstimatedCosts" sections for both Business-As-Usual (BAU) and Optimal scenarios.
+2. Creating or updating the "Group.ProposedAssetSet" and "Group.EstimatedCost" sections for both Business-As-Usual (BAU) and Optimal scenarios.
 3. Populating technology-specific outputs for PV and ElectricStorage, including their capacities, costs, and dispatch curves.
 
 # Notes
@@ -473,7 +473,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
         mgravens["Group"]["ProposedAssetSet"] = Dict{String, Any}()
     end
 
-    # Create Group.ProposedAssetSet and Group.EstimatedCosts for BAU and Optimal
+    # Create Group.ProposedAssetSet and EstimatedCost for BAU and Optimal
     scenario_names = ["BusinessAsUsual", "Optimal"]
 
     # ProposedAssetSet will also get populated with the list of ProposedAssetSet.ProposedAssets depending on which technologies were included
@@ -485,7 +485,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             "Ravens.cimObjectType"=> "ProposedAssetSet",
             "ProposedAssetSet.ProposedAssets"=> [],
             "ProposedAssetSet.Application" => "Application::'REopt'",
-            "ProposedAssetSet.EstimatedCosts" => "EstimatedCost::'$scenario_name'"
+            "ProposedAssetSet.EstimatedCost" => "EstimatedCost::'$scenario_name'"
         )
 
         # Scenario total lifecycle costs
@@ -538,7 +538,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
         end
     end
 
-    # This loop is associating all technologies with the Optimal scenario only, as indicated by "ProposedAsset.EstimatedCosts": "EstimatedCost::"*scenario_name[2]
+    # This loop is associating all technologies with the Optimal scenario only, as indicated by "ProposedAsset.EstimatedCost": "EstimatedCost::"*scenario_name[2]
     for (i, name) in enumerate(tech_names)
 
         if !("ProposedAsset" in keys(mgravens))
@@ -552,7 +552,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             "IdentifiedObject.mRID" => proposed_asset_uuid,
             "Ravens.cimObjectType" => "",  # To be filled in depending on which technology type
             "ProposedAsset.ProposedAssetOption" => "",
-            "ProposedAsset.EstimatedCosts" => "EstimatedCost::'"*scenario_names[2]*"'",
+            "ProposedAsset.EstimatedCost" => "EstimatedCost::'"*scenario_names[2]*"'",
         )
 
         if occursin("PV", name)
