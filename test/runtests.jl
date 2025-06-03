@@ -26,15 +26,8 @@ elseif "CPLEX" in ARGS
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "Prevent simultaneous charge and discharge" begin
-            logger = SimpleLogger()
-            results = nothing
-            with_logger(logger) do
-                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
-                finalize(backend(model))
-                empty!(model)
-                GC.gc()
-            end
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
             @test any(.&(
                     results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
                     (
@@ -48,6 +41,9 @@ else  # run HiGHS tests
                     results["Outages"]["pv_to_storage_series_kw"] .!= 0.0
                 )
                 ) ≈ false
+            finalize(backend(model))
+            empty!(model)
+            GC.gc()                
         end
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
