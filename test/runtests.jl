@@ -183,7 +183,7 @@ else  # run HiGHS tests
             GC.gc()            
         end
     
-    @testset "Solar and ElectricStorage with non-zero ElectricStorage cost constants" begin
+    @testset "Solar and ElectricStorage with cost constants" begin
         m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("./scenarios/pv_storage.json");
@@ -210,7 +210,7 @@ else  # run HiGHS tests
     
     end 
 
-    @testset "Solar and ElectricStorage with non-zero ElectricStorage cost constants and with ElectricStorage set to 0 kW" begin
+    @testset "Solar and ElectricStorage with cost constants but zero-out ElectricStorage" begin
         m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("./scenarios/pv_storage.json");
