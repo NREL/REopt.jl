@@ -85,6 +85,9 @@ function proforma_results(p::REoptInputs, d::Dict)
                     storage.replace_cost_constant)
         m.om_series += [yr != battery_replacement_year ? 0 : battery_replacement_cost for yr in 1:years]
 
+        battery_om_cost = capital_cost * storage.om_cost_fraction_of_installed_cost
+        m.om_series += escalate_om(-1 * battery_om_cost)
+
         # storage only has cbi in the API
         cbi = total_kw * storage.total_rebate_per_kw + total_kwh * storage.total_rebate_per_kwh
         m.total_ibi_and_cbi += cbi
