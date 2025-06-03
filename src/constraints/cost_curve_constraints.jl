@@ -215,6 +215,19 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
         )
     end
 
+    # ExistingBoiler and ExistingChiller costs are never discounted by incentives or tax deductions
+    if "ExistingBoiler" in p.techs.all
+        add_to_expression!(m[:InitialCapexNoIncentives],
+            value(m[Symbol("ExistingBoilerCost"*_n)])
+        )
+    end
+
+    if "ExistingChiller" in p.techs.all
+        add_to_expression!(m[:InitialCapexNoIncentives],
+            value(m[Symbol("ExistingChillerCost"*_n)])
+        )
+    end
+
     if !isempty(p.s.electric_utility.outage_durations)
         add_to_expression!(m[:InitialCapexNoIncentives], 
             m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost]
