@@ -3840,5 +3840,25 @@ else  # run HiGHS tests
             @test round(results["Financial"]["lifecycle_capital_costs_bau"], digits=0) ≈ round(expected_capex_bau, digits=0)
             @test round(results["Financial"]["lifecycle_capital_costs"], digits=0) ≈ round(expected_capex_opt, digits=0)
         end
+
+        @testset "Battery O&M Cost Fraction" begin
+            """
+            Test that the battery O&M cost fraction is applied correctly to the initial capital costs
+            """
+            input_data = JSON.parsefile("./scenarios/battery_om_cost_fraction.json")
+            input_data["PV"]["max_kw"] = 0.0
+            input_data["ElectricStorage"]["min_kw"] = 200.0
+            input_data["ElectricStorage"]["min_kwh"] = 800.0
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], inputs)
+
+            init_capital_costs =  results["Financial"]["initial_capital_costs"]
+            year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
+            @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
+        end
     end
 end
