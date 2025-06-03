@@ -173,15 +173,16 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    installed_cost_per_kw::Real = 910.0 # Cost of power components (e.g., inverter and BOS) 
-    installed_cost_per_kwh::Real = 455.0 # Cost of energy components (e.g., battery pack)
-    installed_cost_constant::Real = 0.0 # "+c" constant cost that is added to total ElectricStorage installed costs if a battery is included. Accounts for costs not expected to scale with power or energy capacity.
-    replace_cost_per_kw::Real = 715.0
-    replace_cost_per_kwh::Real = 318.0
+    installed_cost_per_kw::Real = 905.0 # Cost of power components (e.g., inverter and BOS) 
+    installed_cost_per_kwh::Real = 237.0 # Cost of energy components (e.g., battery pack)
+    installed_cost_constant::Real = 222115.0 # "+c" constant cost that is added to total ElectricStorage installed costs if a battery is included. Accounts for costs not expected to scale with power or energy capacity.
+    replace_cost_per_kw::Real = 0.0
+    replace_cost_per_kwh::Real = 0.0
     replace_cost_constant::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
+    om_cost_fraction_of_installed_cost::Float64 = 0.025 # Annual O&M cost as a fraction of installed cost
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
@@ -212,15 +213,16 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    installed_cost_per_kw::Real = 910.0
-    installed_cost_per_kwh::Real = 455.0
-    installed_cost_constant::Real = 0.0
-    replace_cost_per_kw::Real = 715.0
-    replace_cost_per_kwh::Real = 318.0
+    installed_cost_per_kw::Real = 905.0
+    installed_cost_per_kwh::Real = 237.0
+    installed_cost_constant::Real = 222115.0
+    replace_cost_per_kw::Real = 0.0
+    replace_cost_per_kwh::Real = 0.0
     replace_cost_constant::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
+    om_cost_fraction_of_installed_cost::Float64 = 0.025
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
@@ -266,6 +268,7 @@ struct ElectricStorage <: AbstractElectricStorage
     inverter_replacement_year::Int
     battery_replacement_year::Int
     cost_constant_replacement_year::Int
+    om_cost_fraction_of_installed_cost::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
     macrs_itc_reduction::Float64
@@ -397,6 +400,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.inverter_replacement_year,
             s.battery_replacement_year,
             s.cost_constant_replacement_year,
+            s.om_cost_fraction_of_installed_cost,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
             s.macrs_itc_reduction,
