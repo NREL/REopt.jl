@@ -95,6 +95,27 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 			end
 		end
 
+        # Add ElectricStorageCapCost and ElectricStorageOMCost expressions (like in reopt.jl)
+        ex_name = "ElectricStorageCapCost"*_n
+        m[Symbol(ex_name)] = @expression(m, 
+            sum(p.s.storage.attr[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.elec) +
+            sum(p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.elec)
+        )
+        # Add installed_cost_constant if needed
+        if !isempty(p.s.storage.types.elec)
+            for b in p.s.storage.types.elec
+                if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
+                    m[Symbol(ex_name)] = m[Symbol(ex_name)] + sum(p.s.storage.attr[b].installed_cost_constant * m[Symbol("binIncludeStorageCostConstant"*_n)][b])
+                end
+            end
+        end
+
+        ex_name_om = "ElectricStorageOMCost"*_n
+        m[Symbol(ex_name_om)] = @expression(m,
+            p.third_party_factor * p.pwf_om *
+            sum(p.s.storage.attr[b].om_cost_fraction_of_installed_cost * m[Symbol("ElectricStorageCapCost"*_n)] for b in p.s.storage.types.elec)
+        )		
+
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * p.pwf_om * 
 			sum( p.om_cost_per_kw[t] * m[Symbol("dvSize"*_n)][t] for t in p.techs.all ) 
