@@ -237,6 +237,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
 				if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
+					@warn "Adding binary variable to model ElectricStorage cost constant"
 					add_elec_storage_cost_constant_constraints(m, p, b)
 				end
 			elseif b in p.s.storage.types.hot
