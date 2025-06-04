@@ -7,6 +7,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
 
     StartTime_EntireModel = now() # Record the start time for the computation
     TimeStamp = Dates.format(now(), "mm-dd-yyyy")*"_"*Dates.format(now(), "HH-MM")
+    time_results = Dict()
    
     Multinode_Inputs = REopt.MultinodeInputs(; REopt.dictkeys_tosymbols(Multinode_Settings)...)
     
@@ -14,27 +15,34 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         cd(Multinode_Inputs.folder_location)
         CreateOutputsFolder(Multinode_Inputs, TimeStamp)
     end
-    
+
+    print("\n Preparing the electric loads")
+    Start_time_prepare_electric_loads = now()
     PrepareElectricLoads(Multinode_Inputs)
-    REopt_inputs_combined = PrepareREoptInputs(Multinode_Inputs)    
+    milliseconds, prepare_electric_loads_time_minutes = CalculateComputationTime(Start_time_prepare_electric_loads)
+    time_results["Step $(length(keys(time_results))+1): prepare_electric_loads_time_minutes"] = prepare_electric_loads_time_minutes   
+
+    print("\n Preparing the REopt inputs")
+    REopt_inputs_combined = PrepareREoptInputs(Multinode_Inputs, time_results)
+    print("\n Completed preparing the REopt inputs")
+
     m_outagesimulator = "empty"
     model = "empty"
     model_BAU = "empty"
     model_diagnostics_bus_voltage_violations = "empty"
-    time_results = Dict()
     
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
-                
+        print("\n Running data checks")        
         RunDataChecks(Multinode_Inputs, REopt_inputs_combined)
         
         PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)
 
         REopt_Results, PMD_Results, DataFrame_PMD_LineFlow_Summary, PMD_Dictionary_LineFlow_Power_Series, DataDictionaryForEachNode, LineInfo_PMD, REoptInputs_Combined, data_eng, data_math_mn, model, pm, line_upgrade_options_each_line, line_upgrade_results, load_phase_dictionary, gen_ind_e_to_REopt_node, REopt_gen_ind_e, connections, connections_upstream, connections_downstream = build_run_and_process_results(Multinode_Inputs, REopt_inputs_combined, PMD_number_of_timesteps, TimeStamp, time_results; allow_upgrades = true)
-        time_results["model_solve_time_minutes"] = round(JuMP.solve_time(model)/60, digits = 2)
+        time_results["Step $(length(keys(time_results))+1): model_solve_time_minutes"] = round(JuMP.solve_time(model)/60, digits = 2)
 
         if Multinode_Inputs.run_outage_simulator
             Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes = run_outage_simulator(DataDictionaryForEachNode, REopt_inputs_combined, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REoptInputs_Combined)
-            time_results["outage_simulator_time_minutes"] = outage_simulator_time_minutes
+            time_results["Step $(length(keys(time_results))+1): outage_simulator_time_minutes"] = outage_simulator_time_minutes
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
@@ -52,7 +60,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             ComputationTime_EntireModel = "N/A"
             model_BAU = pm_No_Techs.model
             system_results_BAU = REopt.Results_Compilation(model_BAU, REopt_Results_BAU, PMD_Results, Outage_Results_No_Techs, Multinode_Inputs_No_Techs, DataFrame_PMD_LineFlow_Summary_No_Techs, PMD_Dictionary_LineFlow_Power_Series_No_Techs, TimeStamp, ComputationTime_EntireModel; system_results_BAU = "")
-            time_results["BAU_model_solve_time_minutes"] = round(JuMP.solve_time(model_BAU)/60, digits = 2)
+            time_results["Step $(length(keys(time_results))+1): BAU_model_solve_time_minutes"] = round(JuMP.solve_time(model_BAU)/60, digits = 2)
         else
             system_results_BAU = "none"
             REopt_Results_BAU = "none"
@@ -343,25 +351,38 @@ function model_transformer_upgrades(pm, Multinode_Inputs)
 end
 
 
-function PrepareREoptInputs(Multinode_Inputs)  
+function PrepareREoptInputs(Multinode_Inputs, time_results)  
     # Generate the scenarios, REoptInputs, and list of REoptInputs
+       
+    print("\n    Creating the REopt scenarios")
     scenarios = Dict([])
+    Start_time_prepare_REopt_scenarios = now()
     for i in 1:length(Multinode_Inputs.REopt_inputs_list)
         scenarios[i] = Scenario(Multinode_Inputs.REopt_inputs_list[i])
     end
+    milliseconds, time_results["Step $(length(keys(time_results))+1): prepare_REopt_scenarios_time_minutes"] = CalculateComputationTime(Start_time_prepare_REopt_scenarios)
+        
 
+    print("\n    Converting the REopt scenarios into the REoptInputs format")
     REoptInputs_dictionary = Dict([])
+    Start_time_prepare_REoptInputs = now()
     for i in 1:length(Multinode_Inputs.REopt_inputs_list)
         REoptInputs_dictionary[i] = REoptInputs(scenarios[i])
     end
+    milliseconds, time_results["Step $(length(keys(time_results))+1): prepare_REoptInputs_time_minutes"] = CalculateComputationTime(Start_time_prepare_REoptInputs)
+      
 
+    print("\n    Compiling the REoptInputs into the same dictionary")
+    Start_time_compile_REoptInputs_Into_Same_Dictionary = now()
     REopt_dictionary = [REoptInputs_dictionary[1]]
     for i in 2:length(Multinode_Inputs.REopt_inputs_list)
         push!(REopt_dictionary, REoptInputs_dictionary[i])
     end
-
+    milliseconds, time_results["Step $(length(keys(time_results))+1): compile_REoptInputs_Into_Same_Dictionary"] = CalculateComputationTime(Start_time_compile_REoptInputs_Into_Same_Dictionary)
+    
     return REopt_dictionary
 end
+
 
 function SetTechSizesToZero(Multinode_Settings)
     
@@ -519,7 +540,7 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     # Initialize voltage variable values:
     @info "running add_start_vrvi (this may take a few minutes for large models)\n"
     Start_vrvi = now()
-    #add_start_vrvi!(data_math_mn)
+    add_start_vrvi!(data_math_mn)
    
     milliseconds, PMD_vrvi_time_minutes = CalculateComputationTime(Start_vrvi)
     print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes \n")
@@ -554,24 +575,24 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
             BAU_indicator = ""
         end
 
-        time_results[BAU_indicator*"PMD_instantiate_time_minutes"] = PMD_instantiate_time_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"PMD_instantiate_time_minutes"] = PMD_instantiate_time_minutes
 
-        time_results[BAU_indicator*"PMD_vrvi_time_minutes"] = PMD_vrvi_time_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"PMD_vrvi_time_minutes"] = PMD_vrvi_time_minutes
 
         milliseconds, PMD_transform_to_math_model_time_minutes = CalculateComputationTime(Start_transform_to_math_model)
-        time_results[BAU_indicator*"PMD_transform_to_math_model_minutes"] = PMD_transform_to_math_model_time_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"PMD_transform_to_math_model_minutes"] = PMD_transform_to_math_model_time_minutes
 
         milliseconds, generate_REopt_nodes_list_minutes = CalculateComputationTime(Start_generate_REopt_nodes_list)
-        time_results[BAU_indicator*"generate_REopt_nodes_list_minutes"] = generate_REopt_nodes_list_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"generate_REopt_nodes_list_minutes"] = generate_REopt_nodes_list_minutes
 
         milliseconds, apply_data_eng_settings_minutes = CalculateComputationTime(Start_apply_data_eng_settings)
-        time_results[BAU_indicator*"apply_data_eng_settings_minutes"] = apply_data_eng_settings_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"apply_data_eng_settings_minutes"] = apply_data_eng_settings_minutes
 
         milliseconds, apply_load_profile_to_PMD_model_minutes = CalculateComputationTime(Start_apply_load_profile_to_PMD_model)
-        time_results[BAU_indicator*"apply_load_profile_to_PMD_model_minutes"] = apply_load_profile_to_PMD_model_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"apply_load_profile_to_PMD_model_minutes"] = apply_load_profile_to_PMD_model_minutes
 
         milliseconds, create_PMD_generators_minutes = CalculateComputationTime(Start_create_PMD_generators)
-        time_results[BAU_indicator*"create_PMD_generators_minutes"] = create_PMD_generators_minutes
+        time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"create_PMD_generators_minutes"] = create_PMD_generators_minutes
     end
 
     return pm, data_math_mn, data_eng
@@ -1055,12 +1076,12 @@ function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
             
             if Multinode_Inputs.display_information_during_modeling_run 
                 # print out information to understand the approach in the code:
-                print("\n For bus $(bus_name) the terminals are: ")
-                print(BusInfo[bus_name]["terminals"])
-                print("\n For bus $(bus_name) the voltage_squared variable is: ")
-                print(voltage_squared)
-                index_temp = findall(x -> x== BusInfo[bus_name]["terminals"][1], BusInfo[bus_name]["terminals"])[1]
-                print("The index in voltage_squared for terminal $(BusInfo[bus_name]["terminals"][1]) is $(index_temp) ")
+                #print("\n For bus $(bus_name) the terminals are: ")
+                #print(BusInfo[bus_name]["terminals"])
+                #print("\n For bus $(bus_name) the voltage_squared variable is: ")
+                #print(voltage_squared)
+                #index_temp = findall(x -> x== BusInfo[bus_name]["terminals"][1], BusInfo[bus_name]["terminals"])[1]
+                #print("The index in voltage_squared for terminal $(BusInfo[bus_name]["terminals"][1]) is $(index_temp) ")
             end
 
             for terminal in BusInfo[bus_name]["terminals"]
@@ -1333,7 +1354,10 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
         @info "The solver's default tolerance and log settings are being used for the optimization"
     end
     
-    print("\n The optimization is starting\n")
+    print("\n The optimization is starting")
+    print("\n     The number of varibles in the model is: ")
+    print(length(all_variables(pm.model)))
+    print("\n")
     # Note: the "optimize_model!" function is a wrapper from PMD and it includes some organization of the results
     results = PMD.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=HiGHS.Optimizer) # The default in PMD for relax_integrality is false
     print("\n The optimization is complete\n")

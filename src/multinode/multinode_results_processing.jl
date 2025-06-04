@@ -37,6 +37,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     sol_math = results["solution"]
     # The PMD results are saved to the sol_eng variable
     sol_eng = transform_solution(sol_math, data_math_mn)
+    milliseconds, time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"reading_PMD_results_minutes"] = CalculateComputationTime(Start_reading_PMD_results)
 
     # Extract the REopt results
     print("\n Reading the REopt results")
@@ -141,8 +142,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     else
         BAU_indicator = ""
     end
-    milliseconds, time_results[BAU_indicator*"reading_REopt_results_minutes"] = CalculateComputationTime(Start_reading_REopt_results)
-    milliseconds, time_results[BAU_indicator*"reading_PMD_results_minutes"] = CalculateComputationTime(Start_reading_PMD_results)
+    milliseconds, time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"reading_REopt_results_minutes"] = CalculateComputationTime(Start_reading_REopt_results)
 
     return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, PMD_Dictionary_LineFlow_Power_Series, DataFrame_LineFlow, line_upgrades
 end
@@ -1336,12 +1336,18 @@ function PlotPowerFlows(results, TimeStamp, REopt_timesteps_for_dashboard_InREop
     # *******
     # The method in these asterisks came from ChatGPT
     color1 = [30,62,250] # blue
-    color2 = [238,155,0] # orange
-    color3 = [215,20,20] # red
+    color2 = [0,255,255] # cyan
+    color3 = [255,255,0] # yellow
+    color4 = [238,155,0] # orange
+    color5 = [215,20,20] # red
     increments = 20 # steps must be a even number
-    color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
-    color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/2)-1) for i in 0:(Int(increments/2)-1) ]
-    color_numbers = vcat(color1_to_color2, color2_to_color3)
+    color1_to_color2 = [color1 .+ (color2 .- color1) * i / ((increments/4)-1) for i in 0:(Int(increments/4)-1) ]
+    color2_to_color3 = [color2 .+ (color3 .- color2) * i / ((increments/4)-1) for i in 0:(Int(increments/4)-1) ]
+    color3_to_color4 = [color3 .+ (color4 .- color3) * i / ((increments/4)-1) for i in 0:(Int(increments/4)-1) ]
+    color4_to_color5 = [color4 .+ (color5 .- color4) * i / ((increments/4)-1) for i in 0:(Int(increments/4)-1) ]
+    
+    color_numbers = vcat(color1_to_color2, color2_to_color3, color3_to_color4, color4_to_color5)
+    
     Colors = [string("rgb(",Int(round(c[1])),",",Int(round(c[2])),",",Int(round(c[3])),")") for c in color_numbers]
     #*******
     
