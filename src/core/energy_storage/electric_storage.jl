@@ -183,6 +183,8 @@ end
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025 # Annual O&M cost as a fraction of installed cost
+    om_cost_per_kw::Real = 0.0 # Capacity-based O&M costs in \$/kW-rated/year. When including battery replacement costs, the user should ensure that O&M costs do not account for augmentation/replacement.
+    om_cost_per_kwh::Real = 0.0 # Capacity-based O&M costs in \$/kWh-rated/year. When including battery replacement costs, the user should ensure that O&M costs do not account for augmentation/replacement.    
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
@@ -195,6 +197,8 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on the rated kWh capacity of the sized storage system. 
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
@@ -223,6 +227,8 @@ Base.@kwdef struct ElectricStorageDefaults
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025
+    om_cost_per_kw::Real = 0.0
+    om_cost_per_kwh::Real = 0.0    
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
@@ -235,6 +241,8 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0
     optimize_soc_init_fraction::Bool = false
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
@@ -269,6 +277,8 @@ struct ElectricStorage <: AbstractElectricStorage
     battery_replacement_year::Int
     cost_constant_replacement_year::Int
     om_cost_fraction_of_installed_cost::Float64
+    om_cost_per_kw::Real
+    om_cost_per_kwh::Real    
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
     macrs_itc_reduction::Float64
@@ -284,6 +294,8 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
+    capacity_based_per_ts_self_discharge_fraction::Float64
+    soc_based_per_ts_self_discharge_fraction::Float64
     optimize_soc_init_fraction::Bool
     min_duration_hours::Real
     max_duration_hours::Real
@@ -401,6 +413,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.battery_replacement_year,
             s.cost_constant_replacement_year,
             s.om_cost_fraction_of_installed_cost,
+            s.om_cost_per_kw,
+            s.om_cost_per_kwh,            
             s.macrs_option_years,
             s.macrs_bonus_fraction,
             s.macrs_itc_reduction,
@@ -416,6 +430,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
+            s.capacity_based_per_ts_self_discharge_fraction,
+            s.soc_based_per_ts_self_discharge_fraction,
             s.optimize_soc_init_fraction,
             s.min_duration_hours,
             s.max_duration_hours
