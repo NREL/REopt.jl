@@ -32,7 +32,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     model_diagnostics_bus_voltage_violations = "empty"
     
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
-        print("\n Running data checks")        
+        print("\n Running data checks \n")        
         RunDataChecks(Multinode_Inputs, REopt_inputs_combined)
         
         PMD_number_of_timesteps = length(Multinode_Inputs.PMD_time_steps)

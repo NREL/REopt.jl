@@ -31,6 +31,13 @@ end
 
 
 function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInputs_Combined, Multinode_Inputs, timestamp, time_results; allow_upgrades=false, line_upgrade_options_each_line ="", BAU_case=false)
+    
+    if BAU_case == true
+        BAU_indicator = "BAU_model_"
+    else
+        BAU_indicator = ""
+    end
+    
     # Extract the PMD results
     print("\n Reading the PMD results")
     Start_reading_PMD_results = now()
@@ -40,17 +47,18 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     milliseconds, time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"reading_PMD_results_minutes"] = CalculateComputationTime(Start_reading_PMD_results)
 
     # Extract the REopt results
-    print("\n Reading the REopt results")
+    print("\n Reading the REopt results \n")
     Start_reading_REopt_results = now()
     REopt_results = reopt_results(m, REoptInputs_Combined)
 
-    
+    # Process the line upgrade results
     if allow_upgrades == true && Multinode_Inputs.model_line_upgrades == true
         line_upgrades = Process_Line_Upgrades(m, line_upgrade_options_each_line, Multinode_Inputs, timestamp)
     else
         line_upgrades = "N/A"
     end
 
+    # Generate inputs that will be used for the multinode outage simulator
     if Multinode_Inputs.run_outage_simulator
         DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
     else
@@ -71,8 +79,6 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     PMD_Dictionary_LineFlow_Power_Series = Dict([])
 
     for line in keys(sol_eng["nw"]["1"]["line"]) # read all of the line names from the first time step
-        
-        #Phase = 1
         ActivePowerFlow_line_temp = []
         ReactivePowerFlow_line_temp = []
 
@@ -137,11 +143,6 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     end
 
     # Record the time for post-processing
-    if BAU_case == true
-        BAU_indicator = "BAU_model_"
-    else
-        BAU_indicator = ""
-    end
     milliseconds, time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"reading_REopt_results_minutes"] = CalculateComputationTime(Start_reading_REopt_results)
 
     return REopt_results, sol_eng, DataDictionaryForEachNodeForOutageSimulator, PMD_Dictionary_LineFlow_Power_Series, DataFrame_LineFlow, line_upgrades

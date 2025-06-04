@@ -2,7 +2,7 @@
 
 
 function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
-	print("Adding variables")
+	print(" Adding variables\n")
 	dvs_idx_on_techs = String[
 		"dvSize",
 		"dvPurchaseSize",
