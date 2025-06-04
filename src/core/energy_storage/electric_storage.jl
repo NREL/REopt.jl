@@ -173,8 +173,8 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    installed_cost_per_kw::Real = 905.0 # Cost of power components (e.g., inverter and BOS) 
-    installed_cost_per_kwh::Real = 237.0 # Cost of energy components (e.g., battery pack)
+    installed_cost_per_kw::Real = 968.0 # Cost of power components (e.g., inverter and BOS) 
+    installed_cost_per_kwh::Real = 253.0 # Cost of energy components (e.g., battery pack)
     installed_cost_constant::Real = 222115.0 # "+c" constant cost that is added to total ElectricStorage installed costs if a battery is included. Accounts for costs not expected to scale with power or energy capacity.
     replace_cost_per_kw::Real = 0.0
     replace_cost_per_kwh::Real = 0.0
@@ -213,8 +213,8 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    installed_cost_per_kw::Real = 905.0
-    installed_cost_per_kwh::Real = 237.0
+    installed_cost_per_kw::Real = 968.0
+    installed_cost_per_kwh::Real = 253.0
     installed_cost_constant::Real = 222115.0
     replace_cost_per_kw::Real = 0.0
     replace_cost_per_kwh::Real = 0.0
