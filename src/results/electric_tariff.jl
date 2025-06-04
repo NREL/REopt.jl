@@ -47,6 +47,38 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     
     r["year_one_bill_after_tax"] = r["year_one_bill_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
+    r["energy_cost_series"] = p.s.electric_tariff.energy_rates[:,1] .* collect(value.(m[:dvGridPurchase][:,:]))[:,1]
+
+    r["monthly_energy_cost_totals"] = []
+
+    dr = DateTime(2025):Dates.Hour(1):DateTime(2025,12,31,23,59)
+
+    for mth in 1:12
+        idx = findall(x -> Dates.month(x) == mth, dr)
+        push!(r["monthly_energy_cost_totals"], sum(r["energy_cost_series"][idx]))
+    end
+
+    r["monthly_facility_demand"] = p.s.electric_tariff.monthly_demand_rates[:,1].*collect(value.(m[:dvPeakDemandMonth]))[:,1]
+
+    r["tou_demand_costs"] = []
+    tou_demand_charges = Dict()
+
+    for (a,b,c) in zip(
+            p.s.electric_tariff.tou_demand_ratchet_time_steps,
+            p.s.electric_tariff.tou_demand_rates,
+            value.(m[:dvPeakDemandTOU]))
+        if !haskey(tou_demand_charges, month(dr[a[1]]))
+            tou_demand_charges[month(dr[a[1]])] = 0.0
+        end
+        push!(r["tou_demand_costs"], string(monthabbr(dr[a[1]]),"|",b,"|",c,"|",b*c))
+        tou_demand_charges[month(dr[a[1]])] += b*c
+    end
+
+    r["monthly_tou_demand_cost_totals"] = []
+    for mth in 1:12
+        push!(r["monthly_tou_demand_cost_totals"], tou_demand_charges[mth])
+    end
+
     d["ElectricTariff"] = r
     nothing
 end
