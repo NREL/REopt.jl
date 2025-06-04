@@ -488,7 +488,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         cooling_cf["GHP"] = ones(length(time_steps))
     end
 
-    ## HERE . add setup_electric_storage_inputs? For techs_by_exportbin. 
+    ## TODO: HERE . add setup_electric_storage_inputs? For techs_by_exportbin. 
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
