@@ -97,9 +97,12 @@ function BAUScenario(s::Scenario)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
 
     # No min or max capital cost constraints 
-    financial = deepcopy(s.financial)
-    financial.min_initial_capital_costs_before_incentives = nothing
-    financial.max_initial_capital_costs_before_incentives = nothing
+    financial = BAUFinancial(s.financial,
+        s.settings.off_grid_flag,
+        s.site.latitude,
+        s.site.longitude,
+        s.settings.include_health_in_objective
+    )
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
