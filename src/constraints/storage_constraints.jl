@@ -39,11 +39,22 @@ end
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
-    if (p.s.storage.attr[b] isa ElectricStorage) || (p.s.storage.attr[b] isa MPCElectricStorage) || (p.s.storage.attr[b] isa HydrogenStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal) || (p.s.storage.attr[b] isa MPCHydrogenStorage)
+    # if (p.s.storage.attr[b] isa ElectricStorage) || (p.s.storage.attr[b] isa MPCElectricStorage) || (p.s.storage.attr[b] isa HydrogenStorage && !p.s.storage.attr[b].require_start_and_end_charge_to_be_equal) || (p.s.storage.attr[b] isa MPCHydrogenStorage)
+    #     @constraint(m,
+    #         m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+    #     )
+    # end
+
+    if (p.s.storage.attr[b] isa HydrogenStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal) || (p.s.storage.attr[b] isa ElectricStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal)
+        @constraint(m,
+            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy][b, maximum(p.time_steps)]
+        )
+    else
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     end
+
     #Constraint (4n): State of charge upper bound is storage system size
     @constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
@@ -138,12 +149,12 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
     # TODO : Check if solid storage thermal decay is based on size kWh or stored kWh
+    # IMPORTANT: Updated this temporarily to require thermal_decay_rate_fraction to be per timestep and not per hour; also changed to be based on stored energy
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
     m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
         p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
-        sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
-        p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
-        )
+        sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency) -
+        p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStoredEnergy"*_n)][b,ts-1]
     )
     
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
@@ -283,9 +294,9 @@ function add_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
         )
     end
     
-    if p.s.storage.attr[b] isa HydrogenStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal
-        @constraint(m,
-            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy]["HydrogenStorage", maximum(p.time_steps)]
-        )
-    end
+    # if p.s.storage.attr[b] isa HydrogenStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal
+    #     @constraint(m,
+    #         m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy]["HydrogenStorage", maximum(p.time_steps)]
+    #     )
+    # end
 end

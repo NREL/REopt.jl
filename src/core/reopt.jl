@@ -428,7 +428,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
     if !isempty(setdiff(p.techs.all, p.techs.segmented))
         m[:TotalTechCapCosts] += p.third_party_factor *
-            sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))
+            sum(p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))
     end
 
     if !isempty(p.techs.segmented)
@@ -443,14 +443,17 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
-		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
-		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.nonhydrogen) + 
-		sum( p.s.storage.attr[b].net_present_cost_per_kg * m[:dvStorageEnergy][b] for b in p.s.storage.types.hydrogen)
+		sum(p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
+		sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.nonhydrogen) + 
+		sum(p.s.storage.attr[b].net_present_cost_per_kg * m[:dvStorageEnergy][b] for b in p.s.storage.types.hydrogen) + 
+		sum(p.s.storage.attr[b].net_present_cost_per_kw_charge * m[:dvStorageChargePower][b] for b in p.s.storage.types.hightemp) + 
+		sum(p.s.storage.attr[b].net_present_cost_per_kw_discharge * m[:dvStorageDischargePower][b] for b in p.s.storage.types.hightemp)
 	))
 	
-	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
-		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all )
-	)
+	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om * (
+		sum(p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all) +
+		sum(p.s.storage.attr[b].om_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.hightemp)
+	))
 
 	add_elec_utility_expressions(m, p)
 

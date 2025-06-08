@@ -18,6 +18,7 @@ mutable struct StorageTypes
     cold::Vector{String}
     hydrogen::Vector{String}
     nonhydrogen::Vector{String}
+    hightemp::Vector{String}
 end
 ```
 """
@@ -29,9 +30,11 @@ mutable struct StorageTypes
     cold::Vector{String}
     hydrogen::Vector{String}
     nonhydrogen::Vector{String}
+    hightemp::Vector{String}
 
     function StorageTypes()
         new(
+            String[],
             String[],
             String[],
             String[],
@@ -49,7 +52,8 @@ mutable struct StorageTypes
         cold_storage = String[]
         hydrogen_storage = String[]
         non_hydrogen_storage = String[]
-        
+        high_temp_thermal_storage = String[]
+
         for (k,v) in d
 
             if typeof(v) <: AbstractHydrogenStorage
@@ -70,8 +74,9 @@ mutable struct StorageTypes
                         push!(elec_storage, k)
                     elseif typeof(v) <: HotThermalStorage
                         push!(hot_storage, k)
-                    elseif typeof(v) <: MPCHighTempThermalStorage
+                    elseif typeof(v) <: HighTempThermalStorage || typeof(v) <: MPCHighTempThermalStorage 
                         push!(hot_storage, k)
+                        push!(high_temp_thermal_storage, k)
                     elseif typeof(v) <: ColdThermalStorage
                         push!(cold_storage, k)
                     else
@@ -90,7 +95,8 @@ mutable struct StorageTypes
             hot_storage,
             cold_storage,
             hydrogen_storage,
-            non_hydrogen_storage
+            non_hydrogen_storage,
+            high_temp_thermal_storage
         )
     end
 end
