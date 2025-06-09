@@ -553,8 +553,6 @@ Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
     discharge_efficiency::Float64 = 0.9
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
-    can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     size_kw::Float64 = charge_limit_kw + discharge_limit_kw
     max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
     max_kwh::Float64 = size_kwh
@@ -574,8 +572,6 @@ Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
     discharge_efficiency::Float64 = 0.9
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
-    can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     size_kw::Float64 = charge_limit_kw + discharge_limit_kw
     max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
     max_kwh::Float64 = size_kwh

@@ -78,7 +78,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     if !isempty(p.s.storage.types.hot)
 		@expression(m, CHPToHotTES[ts in p.time_steps],
 			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp, q in p.heating_loads))
-			@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp))
+			@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in p.techs.chp))
 	else 
 		@expression(m, CHPToHotTES[ts in p.time_steps], 0.0)
 		@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
