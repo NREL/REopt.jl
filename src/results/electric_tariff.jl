@@ -65,28 +65,36 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         push!(r["monthly_electric_to_storage_purchase_cost_series"], sum(r["annual_electric_to_storage_purchase_cost_series"][idx]))
     end
 
-    r["monthly_facility_demand_cost_series"] = p.s.electric_tariff.monthly_demand_rates[:,1].*collect(value.(m[:dvPeakDemandMonth]))[:,1]
+    if isempty(p.s.electric_tariff.monthly_demand_rates)
+        r["monthly_facility_demand_cost_series"] = repeat([0], 12)
+    else
+        r["monthly_facility_demand_cost_series"] = p.s.electric_tariff.monthly_demand_rates[:,1].*collect(value.(m[:dvPeakDemandMonth]))[:,1]
+    end
 
     # Create list, each row contains month | TOU rate | peak demand for that TOU period | rate * peak demand for a TOU period.
     r["tou_demand_cost_series"] = []
     tou_demand_charges = Dict()
-    for (a,b,c) in zip(
-            p.s.electric_tariff.tou_demand_ratchet_time_steps,
-            p.s.electric_tariff.tou_demand_rates,
-            value.(m[:dvPeakDemandTOU]))
+    for tier in 1:p.s.electric_tariff.n_tou_demand_tiers
+        for (a,b,c) in zip(
+                p.s.electric_tariff.tou_demand_ratchet_time_steps,
+                p.s.electric_tariff.tou_demand_rates[:,tier],
+                value.(m[:dvPeakDemandTOU][:,tier]))
+            
+            push!(r["tou_demand_cost_series"], string("Tier",tier,"|",monthabbr(dr[a[1]]),"|",b,"|",c,"|",b*c))
         
-        push!(r["tou_demand_cost_series"], string(monthabbr(dr[a[1]]),"|",b,"|",c,"|",b*c))
-
-        # initialize a dict to track each month's cumulative TOU demand charges.
-        if !haskey(tou_demand_charges, month(dr[a[1]]))
-            tou_demand_charges[month(dr[a[1]])] = 0.0
+            # initialize a dict to track each month's cumulative TOU demand charges.
+            if !haskey(tou_demand_charges, month(dr[a[1]]))
+                tou_demand_charges[month(dr[a[1]])] = 0.0
+            end
+            tou_demand_charges[month(dr[a[1]])] += b*c
         end
-        tou_demand_charges[month(dr[a[1]])] += b*c
     end
 
     r["monthly_tou_demand_cost_series"] = []
-    for mth in 1:12
-        push!(r["monthly_tou_demand_cost_series"], tou_demand_charges[mth])
+    if !isempty(tou_demand_charges)
+        for mth in 1:12
+            push!(r["monthly_tou_demand_cost_series"], tou_demand_charges[mth])
+        end
     end
 
     d["ElectricTariff"] = r
