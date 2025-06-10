@@ -7,7 +7,7 @@
 - `lifecycle_om_costs_after_tax` LCC component. Present value of all O&M costs, after tax. (does not include fuel costs)
 - `lifecycle_fuel_costs_after_tax` LCC component. Present value of all fuel costs over the analysis period, after tax.
 - `lifecycle_chp_standby_cost_after_tax` LCC component. Present value of all CHP standby charges, after tax.
-- `lifecycle_elecbill_after_tax` LCC component. Present value of all electric utility charges, after tax. 
+- `lifecycle_elecbill_after_tax` LCC component. Present value of all electric utility charges, including compensation for exports, after tax. 
 - `lifecycle_production_incentive_after_tax` LCC component. Present value of all production-based incentives, after tax.
 - `lifecycle_offgrid_other_annual_costs_after_tax` LCC component. Present value of offgrid_other_annual_costs over the analysis period, after tax. 
 - `lifecycle_offgrid_other_capital_costs` LCC component. Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
