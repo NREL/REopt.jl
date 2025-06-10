@@ -49,7 +49,11 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
     # timeseries of electricity cost ($/kWh * (kW * hours per timestep))
     r["annual_electric_gross_purchase_cost_series"] = p.s.electric_tariff.energy_rates[:,1] .* collect(value.(m[:dvGridPurchase][:,:]))[:,1] .* p.hours_per_time_step
-    r["annual_electric_to_storage_purchase_cost_series"] = p.s.electric_tariff.energy_rates[:,1] .* collect(value.(m[:dvGridToStorage]["ElectricStorage",:])) .* p.hours_per_time_step #TODO loop over all BESS types (such as EVs)
+    r["annual_electric_to_storage_purchase_cost_series"] = zeros(p.time_steps[end])
+
+    for b in p.s.storage.types.elec #TODO test that this loop works for all BESS types (such as EVs)
+        r["annual_electric_to_storage_purchase_cost_series"] .+= p.s.electric_tariff.energy_rates[:,1] .* collect(value.(model[:dvGridToStorage][b,:])) .* p.hours_per_time_step
+    end
 
     r["monthly_electric_gross_purchase_cost_series"] = []
     r["monthly_electric_to_storage_purchase_cost_series"] = []
