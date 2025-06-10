@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## bess-export
+### Added 
+- Add decision variable **dvStorageToGrid** and **ElectricStorage** input options for grid export: `can_net_meter`, `can_wholesale`, `can_export_beyond_nem_limit`
+
 ## test-runners
 ### Added
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
