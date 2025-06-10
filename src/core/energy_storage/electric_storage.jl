@@ -169,7 +169,6 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    # can_export_to_grid::Bool = false
     can_net_meter::Bool = false
     can_wholesale::Bool = false
     can_export_beyond_nem_limit = false
@@ -209,7 +208,6 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    # can_export_to_grid::Bool = false
     can_net_meter::Bool = false
     can_wholesale::Bool = false
     can_export_beyond_nem_limit = false
@@ -255,7 +253,6 @@ struct ElectricStorage <: AbstractElectricStorage
     soc_min_applies_during_outages::Bool
     soc_init_fraction::Float64
     can_grid_charge::Bool
-    # can_export_to_grid::Bool
     can_net_meter::Bool
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
