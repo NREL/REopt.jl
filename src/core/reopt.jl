@@ -216,8 +216,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
-				# TODO: is the below needed?
-				@constraint(m, [u in p.export_bins_by_storage[b], ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b, u, ts] == 0)
 			elseif b in p.s.storage.types.hot
 				@constraint(m, [q in q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
 				if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
