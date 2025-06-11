@@ -45,7 +45,7 @@
         end
     ```
 """
-struct Financial
+mutable struct Financial
     om_cost_escalation_rate_fraction::Float64
     elec_cost_escalation_rate_fraction::Float64
     existing_boiler_fuel_cost_escalation_rate_fraction::Float64
@@ -213,53 +213,6 @@ struct Financial
         )
     end
 end
-
-function BAUFinancial(f::Financial, 
-    off_grid_flag::Bool, 
-    latitude::Real, # Passed from Site
-    longitude::Real, # Passed from Site
-    include_health_in_objective::Bool # Passed from Settings
-    )
-    bau_f = Financial(;    
-        off_grid_flag = off_grid_flag,
-        om_cost_escalation_rate_fraction = f.om_cost_escalation_rate_fraction,
-        elec_cost_escalation_rate_fraction = f.elec_cost_escalation_rate_fraction,
-        existing_boiler_fuel_cost_escalation_rate_fraction = f.existing_boiler_fuel_cost_escalation_rate_fraction,
-        boiler_fuel_cost_escalation_rate_fraction = f.boiler_fuel_cost_escalation_rate_fraction,
-        chp_fuel_cost_escalation_rate_fraction = f.chp_fuel_cost_escalation_rate_fraction,
-        generator_fuel_cost_escalation_rate_fraction = f.generator_fuel_cost_escalation_rate_fraction,
-        offtaker_tax_rate_fraction = f.offtaker_tax_rate_fraction,
-        offtaker_discount_rate_fraction = f.offtaker_discount_rate_fraction,
-        third_party_ownership = f.third_party_ownership,
-        owner_tax_rate_fraction = f.owner_tax_rate_fraction,
-        owner_discount_rate_fraction = f.owner_discount_rate_fraction,
-        analysis_years = f.analysis_years,
-        value_of_lost_load_per_kwh = f.value_of_lost_load_per_kwh,
-        microgrid_upgrade_cost_fraction = f.microgrid_upgrade_cost_fraction,
-        macrs_five_year = f.macrs_five_year,
-        macrs_seven_year = f.macrs_seven_year,
-        offgrid_other_capital_costs = f.offgrid_other_capital_costs,
-        offgrid_other_annual_costs = f.offgrid_other_annual_costs,
-        min_initial_capital_costs_before_incentives = nothing,
-        max_initial_capital_costs_before_incentives = nothing,
-        CO2_cost_per_tonne = f.CO2_cost_per_tonne,
-        CO2_cost_escalation_rate_fraction = f.CO2_cost_escalation_rate_fraction,
-        NOx_grid_cost_per_tonne = f.NOx_grid_cost_per_tonne,
-        SO2_grid_cost_per_tonne = f.SO2_grid_cost_per_tonne,
-        PM25_grid_cost_per_tonne = f.PM25_grid_cost_per_tonne,
-        NOx_onsite_fuelburn_cost_per_tonne = f.NOx_onsite_fuelburn_cost_per_tonne,
-        SO2_onsite_fuelburn_cost_per_tonne = f.SO2_onsite_fuelburn_cost_per_tonne,
-        PM25_onsite_fuelburn_cost_per_tonne = f.PM25_onsite_fuelburn_cost_per_tonne,
-        NOx_cost_escalation_rate_fraction = f.NOx_cost_escalation_rate_fraction,
-        SO2_cost_escalation_rate_fraction = f.SO2_cost_escalation_rate_fraction,
-        PM25_cost_escalation_rate_fraction = f.PM25_cost_escalation_rate_fraction,
-        latitude = latitude,
-        longitude = longitude,
-        include_health_in_objective = include_health_in_objective
-    )
-    return bau_f
-end
-
 
 function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     # Assumption: grid emissions occur at site at 150m above ground
