@@ -33,9 +33,9 @@ struct REoptInputs <: AbstractInputs
     maxsize_pv_locations::DenseAxisArray{<:Real, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
     ratchets::UnitRange
-    techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
+    techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :EXC]
     export_bins_by_tech::Dict
-    storage_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL]
+    storage_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :EXC]
     export_bins_by_storage::Dict
     n_segs_by_tech::Dict{String, Int}
     seg_min_size::Dict{String, Dict{Int, <:Real}}
@@ -100,9 +100,9 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     maxsize_pv_locations::DenseAxisArray{<:Real, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
     ratchets::UnitRange
-    techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
+    techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :EXC]
     export_bins_by_tech::Dict
-    storage_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL]
+    storage_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :EXC]
     export_bins_by_storage::Dict
     n_segs_by_tech::Dict{String, Int}
     seg_min_size::Dict{String, Dict{Int, Real}}
