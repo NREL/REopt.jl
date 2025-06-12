@@ -555,8 +555,12 @@ function get_pv_cost_params(;
     end
 
     # Update variables with calculated values
-    installed_cost_per_kw = final_installed_cost
-    om_cost_per_kw = final_om_cost
+    if final_installed_cost isa Vector
+        installed_cost_per_kw = [round(cost, digits=0) for cost in final_installed_cost]
+    else
+        installed_cost_per_kw = round(final_installed_cost, digits=0)
+    end
+    om_cost_per_kw = round(final_om_cost, digits=0)
     size_class = determined_size_class
     tech_sizes_for_cost_curve = final_tech_sizes
 

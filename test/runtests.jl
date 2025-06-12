@@ -3840,7 +3840,7 @@ else  # run HiGHS tests
             inputs = REoptInputs(s)
             roof_cost_expected = pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["avg_installed_cost_per_kw"] 
             cost_factor = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["cost_premium"] 
-            @test s.pvs[1].installed_cost_per_kw == roof_cost_expected * cost_factor
+            @test s.pvs[1].installed_cost_per_kw == round(roof_cost_expected * cost_factor, digits=0)
 
             # Test 4: User-provided costs fully override all default logic.
             input_data = JSON.parsefile(pv_scenario_file_path)
@@ -3906,7 +3906,7 @@ else  # run HiGHS tests
             @test s.pvs[1].size_class == 2
             @test s.pvs[1].installed_cost_per_kw == input_data["PV"]["installed_cost_per_kw"]
             ground_premium = pv_defaults_all["size_classes"][s.pvs[1].size_class]["mount_premiums"]["ground"]["om_premium"]
-            @test s.pvs[1].om_cost_per_kw == pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["om_cost_per_kw"] * ground_premium
+            @test s.pvs[1].om_cost_per_kw == round(pv_defaults_all["size_classes"][s.pvs[1].size_class]["roof"]["om_cost_per_kw"] * ground_premium, digits=0)
         
             # Test 8: Mismatched cost curve inputs throw an error.
             input_data = JSON.parsefile(pv_scenario_file_path)
