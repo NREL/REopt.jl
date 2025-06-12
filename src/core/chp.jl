@@ -44,7 +44,7 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.4
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.3
+    federal_itc_fraction::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -263,7 +263,7 @@ function CHP(d::Dict;
     #if chp_defaults not used to update federal_itc_fraction, use default of 0.3
     if isnan(chp.federal_itc_fraction)
         @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.3"
-        setproperty!(chp, :federal_itc_fraction, 0.3)
+        setproperty!(chp, :federal_itc_fraction, 0.0)
     end
 
     if chp.is_electric_only && (chp.thermal_efficiency_full_load > 0.0)
@@ -497,7 +497,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw * conflict_res_min_allowable_fraction_of_max
     end
 
-    federal_itc_fraction = 0.3
+    federal_itc_fraction = 0.0
     # Add ITC fraction 
     if is_electric_only && prime_mover in ["recip_engine", "combustion_turbine"]
         federal_itc_fraction = 0.0

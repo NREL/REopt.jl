@@ -92,7 +92,8 @@
             4.65,
             5.07,
             6.04
-        ]
+        ],
+        "federal_itc_fraction": 0.3
     },
     "DomesticHotWaterLoad": {
         "monthly_mmbtu": [
