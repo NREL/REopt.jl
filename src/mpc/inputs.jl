@@ -52,6 +52,31 @@ function MPCInputs(s::MPCScenario)
     techs_by_exportbin = DenseAxisArray([ techs.all, techs.all, techs.all], s.electric_tariff.export_bins)
     # TODO account for which techs have access to export bins (when we add more techs than PV)
 
+    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+    for t in techs.elec
+        export_bins_by_tech[t] = s.electric_tariff.export_bins
+    end
+    # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
+    
+    storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
+    export_bins_by_storage = Dict{String, Array{Symbol, 1}}()
+    for b in s.storage.types.elec
+        if s.storage.attr[b].can_net_meter && :NEM in keys(storage_by_exportbin)
+            push!(storage_by_exportbin[:NEM], b)
+            if s.storage.attr[b].can_export_beyond_nem_limit && :EXC in keys(storage_by_exportbin)
+                push!(storage_by_exportbin[:EXC], b)
+            end
+        end
+        if s.storage.attr[b].can_wholesale && :WHL in keys(storage_by_exportbin)
+            push!(storage_by_exportbin[:WHL], b)
+        end
+
+        export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
+        #TODO: remove infos
+        @info "export_bins_by_storage: $(export_bins_by_storage)"
+        @info "storage_by_exportbin: $(storage_by_exportbin)"
+    end
+ 
     levelization_factor = Dict(t => 1.0 for t in techs.all)
     pwf_e = 1.0
     pwf_om = 1.0
@@ -61,13 +86,6 @@ function MPCInputs(s::MPCScenario)
 
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
 
-    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
-    for t in techs.elec
-        export_bins_by_tech[t] = s.electric_tariff.export_bins
-    end
-    # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
-    # TODO: account for storage export but only if Storage can_net_meter etc are true 
- 
     #Placeholder COP because the REopt model expects it
     cooling_cop = Dict("ExistingChiller" => ones(length(s.electric_load.loads_kw)) .* s.cooling_load.cop)
     thermal_cop = Dict{String, Float64}()
