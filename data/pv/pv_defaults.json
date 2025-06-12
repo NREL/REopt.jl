@@ -46,7 +46,7 @@
       "mount_premiums": {
         "ground": {
           "cost_premium": 1.15,
-          "om_premium": 0.0
+          "om_premium": 1.0
         }
       },
       "notes": "Based on ATB 2024 Commercial 200 kW data point and estimating 100 to 2,000 kW cost scaling"
