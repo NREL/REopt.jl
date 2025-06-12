@@ -13,29 +13,25 @@ function add_export_constraints(m, p; _n="")
     NEM_benefit = 0
     EXC_benefit = 0
     WHL_benefit = 0
-    NEM_techs = String[t for t in p.techs.elec if :NEM in p.export_bins_by_tech[t]]
-    WHL_techs = String[t for t in p.techs.elec if :WHL in p.export_bins_by_tech[t]]
-    NEM_storage = String[b for b in p.s.storage.types.elec if :NEM in p.export_bins_by_storage[b]]
-    WHL_storage = String[b for b in p.s.storage.types.elec if :WHL in p.export_bins_by_storage[b]]
-
-    if !isempty(vcat(NEM_techs, NEM_storage))
+    
+    if !isempty(vcat(techs_by_exportbin[:NEM], storage_by_exportbin[:NEM]))
         # Constraint (9c): Net metering only -- can't sell more than you purchase
         # hours_per_time_step is cancelled on both sides, but used for unit consistency (convert power to energy)
         @constraint(m,
             p.hours_per_time_step * (
-                sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] for t in NEM_techs, ts in p.time_steps) + 
-                sum( m[Symbol("dvStorageToGrid"*_n)][b, :NEM, ts] for b in NEM_storage, ts in p.time_steps)
+                sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] for t in techs_by_exportbin[:NEM], ts in p.time_steps) + 
+                sum( m[Symbol("dvStorageToGrid"*_n)][b, :NEM, ts] for b in storage_by_exportbin[:NEM], ts in p.time_steps)
             )
             <= p.hours_per_time_step * sum( m[Symbol("dvGridPurchase"*_n)][ts, tier]
                 for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
         )
 
-        if p.s.electric_utility.net_metering_limit_kw == p.s.electric_utility.interconnection_limit_kw && isempty(vcat(WHL_techs, WHL_storage))
+        if p.s.electric_utility.net_metering_limit_kw == p.s.electric_utility.interconnection_limit_kw && isempty(vcat(techs_by_exportbin[:WHL], storage_by_exportbin[:WHL]))
             # no need for binNEM nor binWHL
             binNEM = 1
             # TODO: Decide whether to ignore BESS size in this constraint? 
             @constraint(m,
-                sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw
+                sum(m[Symbol("dvSize"*_n)][t] for t in techs_by_exportbin[:NEM]) <= p.s.electric_utility.interconnection_limit_kw
             )
             NEM_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
                 sum(p.s.electric_tariff.export_rates[:NEM][ts] * (
@@ -68,17 +64,17 @@ function add_export_constraints(m, p; _n="")
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
                 # TODO: Decide whether to ignore BESS size in these constraints? 
                 @constraint(m,
-                    binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
+                    binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in techs_by_exportbin[:NEM]) <= p.s.electric_utility.net_metering_limit_kw}
                 )
                 @constraint(m,
-                    !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
+                    !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in techs_by_exportbin[:NEM]) <= p.s.electric_utility.interconnection_limit_kw}
                 )
             else
                 #leverage max system sizes for interconnect limit size, alternate is max monthly fully-electrified load in kWh
                 #assume electric heater with COP of 1 for conversion of heat to electricity
                 max_interconnection_size = minimum([
                     p.s.electric_utility.interconnection_limit_kw, 
-                    sum(p.max_sizes[t] for t in NEM_techs),
+                    sum(p.max_sizes[t] for t in techs_by_exportbin[:NEM]),
                     p.hours_per_time_step * maximum([sum((
                         p.s.electric_load.loads_kw[ts] + 
                         p.s.cooling_load.loads_kw_thermal[ts]/p.cooling_cop["ExistingChiller"][ts] + 
@@ -88,7 +84,7 @@ function add_export_constraints(m, p; _n="")
                 ])
                 
                 @constraint(m,
-                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= max_interconnection_size - (max_interconnection_size - p.s.electric_utility.net_metering_limit_kw)*binNEM 
+                    sum(m[Symbol("dvSize"*_n)][t] for t in techs_by_exportbin[:NEM]) <= max_interconnection_size - (max_interconnection_size - p.s.electric_utility.net_metering_limit_kw)*binNEM 
                 )
             end
 
@@ -161,7 +157,7 @@ function add_export_constraints(m, p; _n="")
         end
     end
 
-    if !isempty(vcat(WHL_techs, WHL_storage))
+    if !isempty(vcat(techs_by_exportbin[:WHL], storage_by_exportbin[:WHL]))
 
         if typeof(binNEM) <: Real  # no need for wholesale binary
             binWHL = 1
