@@ -33,6 +33,12 @@ Classify the change according to the following categories:
 ### Changed
 - Updated default `ElectricStorage` cost values per ATB 2024
 - Zeroed-out `ElectricStorage` replacement costs because they are now included in the default O&M as fraction of installed cost
+### Fixed
+- Correctly apply zero/no MACRS for `ElectricStorage`, `HotThermalStorage`, and `ColdThermalStorage` which were always using 5 years MACRS schedules if not the default 7
+
+## fix-bau-capex
+### Fixed
+- Fixed bug by setting `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` to nothing for BAU Scenario
 
 ## test-runners
 ### Added
