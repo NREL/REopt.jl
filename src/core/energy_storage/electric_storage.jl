@@ -314,6 +314,13 @@ struct ElectricStorage <: AbstractElectricStorage
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
 
+        macrs_schedule = [0.0]
+        if s.macrs_option_years == 5 || s.macrs_option_years == 7
+            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
+        elseif !(s.macrs_option_years == 0)
+            throw(@error("ElectricStorage macrs_option_years must be 0, 5, or 7."))
+        end
+
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
             replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kw,
@@ -321,7 +328,7 @@ struct ElectricStorage <: AbstractElectricStorage
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
             itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_schedule = macrs_schedule,
             macrs_bonus_fraction = s.macrs_bonus_fraction,
             macrs_itc_reduction = s.macrs_itc_reduction,
             rebate_per_kw = s.total_rebate_per_kw
@@ -333,7 +340,7 @@ struct ElectricStorage <: AbstractElectricStorage
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
             itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_schedule = macrs_schedule,
             macrs_bonus_fraction = s.macrs_bonus_fraction,
             macrs_itc_reduction = s.macrs_itc_reduction
         )
@@ -349,7 +356,7 @@ struct ElectricStorage <: AbstractElectricStorage
                 discount_rate = f.owner_discount_rate_fraction,
                 tax_rate = f.owner_tax_rate_fraction,
                 itc = s.total_itc_fraction,
-                macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+                macrs_schedule = macrs_schedule,
                 macrs_bonus_fraction = s.macrs_bonus_fraction,
                 macrs_itc_reduction = s.macrs_itc_reduction
 
