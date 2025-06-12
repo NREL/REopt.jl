@@ -495,13 +495,13 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    if !isempty(s.storage.types.elec)
-        for b in s.storage.types.elec
-            fillin_storage_by_exportbin(s, storage_by_exportbin, b)
-            export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
-            @info "export_bins_by_storage: $(export_bins_by_storage)"
-            @info "storage_by_exportbin: $(storage_by_exportbin)"
-        end
+    for b in s.storage.types.elec
+        #TODO: wrap setting storage_by_exportbin and export_bins_by_storage into one function (don't need to separate like techs)
+        fillin_storage_by_exportbin(s, storage_by_exportbin, b)
+        export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
+        @info "export_bins_by_storage: $(export_bins_by_storage)"
+        @info "storage_by_exportbin: $(storage_by_exportbin)"
+        #TODO: remove infos
     end
 
     if s.settings.off_grid_flag
