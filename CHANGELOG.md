@@ -25,40 +25,24 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## storage-cost-constraints-version2
+## v0.53.0
 ### Added
 - Add new **ElectricStorage** input fields **installed_cost_constant**, **replace_cost_constant** (both default to 0), and **cost_constant_replacement_year** (defaults to year 10).
 - Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
 - Added `ElectricStorage.om_cost_fraction_of_installed_cost` input, default, and model expression as the main battery O&M
+- New inputs for `PV` to determine default cost parameters and optional piece-wise linear (PWL) cost curves: `size_class`, `tech_sizes_for_cost_curve`, and `use_detailed_cost_curve`. The `installed_cost_per_kw` can also now be an array to go along with the `tech_sizes_for_cost_curve` input.
+- New function for calculating `PV` size class and cost parameters from other inputs
+- Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
+- Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
+- Add `installed_cost...` for `ExistingBoiler` and `ExistingChiller` which is incurred in the BAU scenario, and may be avoided with other heating and cooling technologies in the Optimal scenario.
 ### Changed
 - Updated default `ElectricStorage` cost values per ATB 2024
 - Zeroed-out `ElectricStorage` replacement costs because they are now included in the default O&M as fraction of installed cost
-### Fixed
-- Correctly apply zero/no MACRS for `ElectricStorage`, `HotThermalStorage`, and `ColdThermalStorage` which were always using 5 years MACRS schedules if not the default 7
-
-## fix-bau-capex
-### Fixed
-- Fixed bug by setting `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` to nothing for BAU Scenario
-
-## pv-size-classes
-### Added 
-- New inputs for `PV` to determine default cost parameters and optional piece-wise linear (PWL) cost curves: `size_class`, `tech_sizes_for_cost_curve`, and `use_detailed_cost_curve`. The `installed_cost_per_kw` can also now be an array to go along with the `tech_sizes_for_cost_curve` input.
-- New function for calculating `PV` size class and cost parameters from other inputs
-### Changed
 - `PV.installed_cost_per_kw` and `PV.om_cost_per_kw` does not have a fixed default value, and instead it is dependent on other inputs such as the `ElectricLoad.annual_kwh` and `Site.roof_squarefeet` to determine the `size_class` based on an estimated `PV` size which is calculated from those inputs.
 - The default `installed_cost_per_kw` is a fixed/single value for the calculated `size_class`, but if `use_detailed_cost_curve` is set to `true`, then it will use a 2-point PWL cost curve with `tech_sizes_for_cost_curve`.
-
-## test-runners
-### Added
-- Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
-- Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
-
-## hvac-costs
-### Added
-- Add `installed_cost...` for `ExistingBoiler` and `ExistingChiller` which is incurred in the BAU scenario, and may be avoided with other heating and cooling technologies in the Optimal scenario.
-
-# non-hourly-fuel-cost
 ### Fixed
+- Correctly apply zero/no MACRS for `ElectricStorage`, `HotThermalStorage`, and `ColdThermalStorage` which were always using 5 years MACRS schedules if not the default 7
+- Fixed bug by setting `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` to nothing for BAU Scenario
 - Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
 
 ## v0.52.0
