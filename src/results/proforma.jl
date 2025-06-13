@@ -368,6 +368,8 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     new_kw = total_kw - existing_kw
     if tech_name == "CHP"
         capital_cost = results["CHP"]["initial_capital_costs"]
+    elseif tech_name in [pv.name for pv in p.s.pvs]  # Check if it's a PV technology
+        capital_cost = get_pv_initial_capex(p, tech, new_kw)
     else
         capital_cost = new_kw * tech.installed_cost_per_kw
     end

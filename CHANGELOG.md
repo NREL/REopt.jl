@@ -40,6 +40,14 @@ Classify the change according to the following categories:
 ### Fixed
 - Fixed bug by setting `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` to nothing for BAU Scenario
 
+## pv-size-classes
+### Added 
+- New inputs for `PV` to determine default cost parameters and optional piece-wise linear (PWL) cost curves: `size_class`, `tech_sizes_for_cost_curve`, and `use_detailed_cost_curve`. The `installed_cost_per_kw` can also now be an array to go along with the `tech_sizes_for_cost_curve` input.
+- New function for calculating `PV` size class and cost parameters from other inputs
+### Changed
+- `PV.installed_cost_per_kw` and `PV.om_cost_per_kw` does not have a fixed default value, and instead it is dependent on other inputs such as the `ElectricLoad.annual_kwh` and `Site.roof_squarefeet` to determine the `size_class` based on an estimated `PV` size which is calculated from those inputs.
+- The default `installed_cost_per_kw` is a fixed/single value for the calculated `size_class`, but if `use_detailed_cost_curve` is set to `true`, then it will use a 2-point PWL cost curve with `tech_sizes_for_cost_curve`.
+
 ## test-runners
 ### Added
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
