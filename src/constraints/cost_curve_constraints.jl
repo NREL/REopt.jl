@@ -137,6 +137,11 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
                 p.s.storage.attr[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b]
                 + p.s.storage.attr[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b]
             )
+            if !(p.s.storage.attr[b].installed_cost_constant == 0) || !(p.s.storage.attr[b].replace_cost_constant == 0)
+                add_to_expression!(m[:InitialCapexNoIncentives], 
+                    p.s.storage.attr[b].installed_cost_constant * m[Symbol("binIncludeStorageCostConstant"*_n)][b]
+                )
+            end            
         end
     end
 
@@ -232,6 +237,19 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
     if "ASHPWaterHeater" in p.techs.all
         add_to_expression!(m[:InitialCapexNoIncentives], 
             p.s.ashp_wh.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["ASHPWaterHeater"]
+        )
+    end
+
+    # ExistingBoiler and ExistingChiller costs are never discounted by incentives or tax deductions
+    if "ExistingBoiler" in p.techs.all
+        add_to_expression!(m[:InitialCapexNoIncentives],
+            m[Symbol("ExistingBoilerCost"*_n)]
+        )
+    end
+
+    if "ExistingChiller" in p.techs.all
+        add_to_expression!(m[:InitialCapexNoIncentives],
+            m[Symbol("ExistingChillerCost"*_n)]
         )
     end
 
