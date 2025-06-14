@@ -352,6 +352,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
+		dvDischargePumpPower[p.s.storage.types.hightemp, p.time_steps] >= 0
 	end
 	# TODO: tiers in MPC tariffs and variables?
 
@@ -383,8 +384,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		elseif b in p.s.storage.types.hydrogen
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorage"].size_kg, force=true)
 		elseif b in p.s.storage.types.hot
-			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_limit_kw, force=true)
-			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_limit_kw, force=true)
+			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_kw, force=true)
+			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_kw, force=true)
 			# fix(m[:dvStoragePower][b], p.s.storage.attr["HighTempThermalStorage"].size_kw, force=true)
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HighTempThermalStorage"].size_kwh, force=true)
 		end

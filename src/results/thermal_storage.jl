@@ -118,6 +118,11 @@ function add_high_temp_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d:
             @expression(m, HotTESToProcessHeatKW[ts in p.time_steps], 0.0)
         end
         r["storage_to_process_heat_load_series_mmbtu_per_hour"] = collect(round.(value.(HotTESToProcessHeatKW) ./ KWH_PER_MMBTU, digits=5))
+
+    	if p.s.storage.attr[b].include_discharge_pump_losses
+            discharge_pumping_power_series_kw = (m[Symbol("dvDischargePumpPower"*_n)][b, ts] for ts in p.time_steps)
+            r["discharge_pumping_power_series_kw"] = round.(value.(discharge_pumping_power_series_kw), digits=3)
+        end
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_mmbtu_per_hour"] = []
@@ -144,6 +149,11 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b
 
     discharge = (sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for b in p.s.storage.types.hot, q in p.heating_loads) for ts in p.time_steps)
     r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) / KWH_PER_MMBTU, digits=7)
+    
+    if p.s.storage.attr[b].include_discharge_pump_losses
+        discharge_pumping_power_series_kw = (m[Symbol("dvDischargePumpPower"*_n)][b, ts] for ts in p.time_steps)
+        r["discharge_pumping_power_series_kw"] = round.(value.(discharge_pumping_power_series_kw), digits=3)
+    end
     
     d[b] = r
     nothing

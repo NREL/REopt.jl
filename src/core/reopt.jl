@@ -727,6 +727,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
+		dvDischargePumpPower[p.s.storage.types.hightemp, p.time_steps] >= 0
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP

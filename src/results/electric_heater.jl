@@ -121,7 +121,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dic
     r = Dict{String, Any}()
    
     @expression(m, ElectricHeaterElectricConsumptionSeries[ts in p.time_steps],
-        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t] 
+        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t][ts] 
         for q in p.heating_loads, t in p.techs.electric_heater))
     r["electric_consumption_series_kw"] = round.(value.(ElectricHeaterElectricConsumptionSeries), digits=3)
 

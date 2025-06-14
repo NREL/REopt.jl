@@ -24,7 +24,7 @@ struct MPCInputs <: AbstractInputs
     thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
     ghp_options::UnitRange{Int64}  # Range of the number of GHP options
     fuel_cost_per_kwh::Dict{String, AbstractArray}  # Fuel cost array for all time_steps
-    heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_cop::Dict{String, Array{Float64,1}} # (techs.electric_heater)
     heating_loads::Vector{String} # list of heating loads
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
@@ -148,8 +148,8 @@ function setup_tech_inputs(s::MPCScenario)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
     fuel_cost_per_kwh = Dict{String, AbstractArray}()
-    heating_cop = Dict(t => 0.0 for t in techs.electric_heater)
-    
+    heating_cop = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
+
     if !isempty(techs.pv)
         setup_pv_inputs(s, existing_sizes, production_factor)
     end
@@ -163,9 +163,9 @@ function setup_tech_inputs(s::MPCScenario)
     end
 
     if "ElectricHeater" in techs.all
-        setup_electric_heater_inputs(s, existing_sizes, production_factor, heating_cop)
+        setup_electric_heater_inputs(s, existing_sizes, production_factor, heating_cop, time_steps)
     else
-        heating_cop["ElectricHeater"] = 1.0
+        heating_cop["ElectricHeater"] = ones(length(time_steps))
     end
 
     if "Electrolyzer" in techs.all
@@ -198,10 +198,10 @@ function setup_wind_inputs(s::MPCScenario, existing_sizes, production_factor)
     return nothing
 end
 
-function setup_electric_heater_inputs(s::MPCScenario, existing_sizes, production_factor, heating_cop)
+function setup_electric_heater_inputs(s::MPCScenario, existing_sizes, production_factor, heating_cop, time_steps)
     existing_sizes["ElectricHeater"] = s.electric_heater.size_kw
     production_factor["ElectricHeater", :] = ones(length(s.electric_load.loads_kw))
-    heating_cop["ElectricHeater"] = s.electric_heater.cop
+    heating_cop["ElectricHeater"] = s.electric_heater.cop * ones(length(time_steps))
     return nothing
 end
 

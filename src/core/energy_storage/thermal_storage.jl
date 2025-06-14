@@ -100,6 +100,11 @@ Base.@kwdef struct HighTempThermalStorage <: AbstractThermalStorageDefaults
     max_kw_discharge::Float64 = 0.0
     min_kwh::Float64 = 0.0
     max_kwh::Float64 = 0.0
+    constrain_dispatch_to_stored_kwh::Bool = false
+    charge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    discharge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    include_discharge_pump_losses::Bool = false
+    pump_loss_as_fraction_of_discharge_kw::Float64 = 0.01
     charge_efficiency::Float64 = 0.98
     discharge_efficiency::Float64 = 0.903
     soc_min_fraction::Float64 = 0.1
@@ -108,9 +113,10 @@ Base.@kwdef struct HighTempThermalStorage <: AbstractThermalStorageDefaults
     installed_cost_per_kw_charge::Float64 = 7.3
     installed_cost_per_kw_discharge::Float64 = 7.3
     om_cost_per_kwh::Float64 = 0.0
-    max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
+    min_kw::Float64 = min(min_kw_charge, min_kw_discharge)
+    max_kw::Float64 = max(max_kw_charge, max_kw_discharge)
     minimum_avg_soc_fraction::Float64 = 0.0
-    thermal_decay_rate_fraction::Float64 = 0.0004
+    thermal_decay_rate_fraction::Float64 = 0.0004 # THIS IS PER TIMESTEP!! User should recalculate if changing the value of time_steps_per_hour
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
@@ -130,6 +136,11 @@ Base.@kwdef struct HighTempThermalStorageDefaults <: AbstractThermalStorageDefau
     max_kw_discharge::Float64 = 0.0
     min_kwh::Float64 = 0.0
     max_kwh::Float64 = 0.0
+    constrain_dispatch_to_stored_kwh::Bool = false
+    charge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    discharge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    include_discharge_pump_losses::Bool = false
+    pump_loss_as_fraction_of_discharge_kw::Float64 = 0.01
     charge_efficiency::Float64 = 0.98
     discharge_efficiency::Float64 = 0.903
     soc_min_fraction::Float64 = 0.1
@@ -341,6 +352,11 @@ struct HighTempThermalStorage <: AbstractThermalStorage
     max_kw_discharge::Float64
     min_kwh::Float64
     max_kwh::Float64
+    constrain_dispatch_to_stored_kwh::Bool
+    charge_limit_as_fraction_of_stored_kwh::Float64
+    discharge_limit_as_fraction_of_stored_kwh::Float64
+    include_discharge_pump_losses::Bool
+    pump_loss_as_fraction_of_discharge_kw::Float64
     charge_efficiency::Float64
     discharge_efficiency::Float64
     soc_min_fraction::Float64
@@ -381,7 +397,7 @@ struct HighTempThermalStorage <: AbstractThermalStorage
             macrs_bonus_fraction = s.macrs_bonus_fraction,
             macrs_itc_reduction = s.macrs_itc_reduction
         ) - s.total_rebate_per_kwh
- 
+
         net_present_cost_per_kw_charge = effective_cost(;
             itc_basis = s.installed_cost_per_kw_charge,
             replacement_cost = 0.0,
@@ -395,7 +411,6 @@ struct HighTempThermalStorage <: AbstractThermalStorage
             rebate_per_kw = s.total_rebate_per_kw_charge
         )
 
-         
         net_present_cost_per_kw_discharge = effective_cost(;
             itc_basis = s.installed_cost_per_kw_discharge,
             replacement_cost = 0.0,
@@ -416,6 +431,11 @@ struct HighTempThermalStorage <: AbstractThermalStorage
             s.max_kw_discharge,
             s.min_kwh,
             s.max_kwh,
+            s.constrain_dispatch_to_stored_kwh,
+            s.charge_limit_as_fraction_of_stored_kwh,
+            s.discharge_limit_as_fraction_of_stored_kwh,
+            s.include_discharge_pump_losses,
+            s.pump_loss_as_fraction_of_discharge_kw,
             s.charge_efficiency,
             s.discharge_efficiency,
             s.soc_min_fraction,

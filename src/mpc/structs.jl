@@ -546,15 +546,20 @@ end
 
 ```julia
 Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
-    charge_limit_kw::Float64
-    discharge_limit_kw::Float64
+    charge_kw::Float64
+    discharge_kw::Float64
     size_kwh::Float64
     charge_efficiency::Float64 = 1.0
     discharge_efficiency::Float64 = 0.9
+    constrain_dispatch_to_stored_kwh::Bool = false
+    charge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    discharge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    include_discharge_pump_losses::Bool = false
+    pump_loss_as_fraction_of_discharge_kw::Float64 = 0.01
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
-    size_kw::Float64 = charge_limit_kw + discharge_limit_kw
-    max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
+    size_kw::Float64 = charge_kw + discharge_kw
+    max_kw::Float64 = max(charge_kw, discharge_kw)
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
     thermal_decay_rate_fraction::Float64 = 0.0004
@@ -565,15 +570,20 @@ end
 ```
 """
 Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
-    charge_limit_kw::Float64
-    discharge_limit_kw::Float64
+    charge_kw::Float64
+    discharge_kw::Float64
     size_kwh::Float64
     charge_efficiency::Float64 = 1.0
     discharge_efficiency::Float64 = 0.9
+    constrain_dispatch_to_stored_kwh::Bool = false
+    charge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    discharge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    include_discharge_pump_losses::Bool = false
+    pump_loss_as_fraction_of_discharge_kw::Float64 = 0.01
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
-    size_kw::Float64 = charge_limit_kw + discharge_limit_kw
-    max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
+    size_kw::Float64 = charge_kw + discharge_kw
+    max_kw::Float64 = max(charge_kw, discharge_kw)
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
     thermal_decay_rate_fraction::Float64 = 0.0004
