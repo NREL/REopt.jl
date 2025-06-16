@@ -58,7 +58,7 @@ function MPCInputs(s::MPCScenario)
     end
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
     
-    storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
+    storage_by_exportbin = Dict{Symbol, Array{String, 1}}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_storage = Dict{String, Array{Symbol, 1}}()
     for b in s.storage.types.elec
         if s.storage.attr[b].can_net_meter && :NEM in keys(storage_by_exportbin)
@@ -73,6 +73,7 @@ function MPCInputs(s::MPCScenario)
 
         export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
     end
+    storage_by_exportbin = DenseAxisArray(collect(values(storage_by_exportbin)), collect(keys(storage_by_exportbin)))
  
     levelization_factor = Dict(t => 1.0 for t in techs.all)
     pwf_e = 1.0
