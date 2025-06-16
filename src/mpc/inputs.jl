@@ -72,9 +72,6 @@ function MPCInputs(s::MPCScenario)
         end
 
         export_bins_by_storage[b] = [bin for (bin, ts) in storage_by_exportbin if b in ts]
-        #TODO: remove infos
-        @info "export_bins_by_storage: $(export_bins_by_storage)"
-        @info "storage_by_exportbin: $(storage_by_exportbin)"
     end
  
     levelization_factor = Dict(t => 1.0 for t in techs.all)
