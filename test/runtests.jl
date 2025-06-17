@@ -129,7 +129,7 @@ else  # run HiGHS tests
             @test wh_min_allowable_size ≈ 5.0 atol=1e-8
         end
 
-        @testset "Export Rate greater than retail rate" begin
+        @testset "Export rate greater than retail rate" begin
             data = JSON.parsefile("./scenarios/monthly_rate.json")
 
             # 1) create wholesale_rate with compensation in January > retail rate
@@ -725,33 +725,37 @@ else  # run HiGHS tests
             end
         end
 
-        @testset verbose=true "Net Metering" begin
-            @testset "Net Metering Limit and Wholesale" begin
-                #case 1: net metering limit is met by PV
-                d = JSON.parsefile("./scenarios/net_metering.json")
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
-                @test results["PV"]["size_kw"] ≈ 30.0 atol=1e-3
-        
-                #case 2: wholesale rate is high, big-M is met
-                d["ElectricTariff"]["wholesale_rate"] = 5.0
-                d["PV"]["can_wholesale"] = true
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
-                @test results["PV"]["size_kw"] ≈ 7440.0 atol=1e-3  #max benefit provides the upper bound
+        @testset verbose=true "Net Metering Limit and Wholesale" begin
+            #case 1: net metering limit is met by PV
+            d = JSON.parsefile("./scenarios/net_metering.json")
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, d)
+            @test results["PV"]["size_kw"] ≈ 30.0 atol=1e-3
+            finalize(backend(m))
+            empty!(m)
+            GC.gc() 
+    
+            #case 2: wholesale rate is high, big-M is met
+            d["ElectricTariff"]["wholesale_rate"] = 5.0
+            d["PV"]["can_wholesale"] = true
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, d)
+            @test results["PV"]["size_kw"] ≈ 7440.0 atol=1e-3  #max benefit provides the upper bound
+            finalize(backend(m))
+            empty!(m)
+            GC.gc()  
 
-                #case 3: net metering limit is exceeded, no WHL, and min RE % 
-                d["ElectricTariff"]["wholesale_rate"] = 0
-                d["PV"]["min_kw"] = 50
-                d["Site"]["renewable_electricity_min_fraction"] = 0.35
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
-                @test sum(results["PV"]["electric_to_grid_series_kw"]) ≈ 0.0 atol=1e-3
-                @test results["ElectricTariff"]["lifecycle_export_benefit_after_tax"] ≈ 0.0 atol=1e-3        
-                finalize(backend(m))
-                empty!(m)
-                GC.gc()    
-            end
+            #case 3: net metering limit is exceeded, no WHL, and min RE % 
+            d["ElectricTariff"]["wholesale_rate"] = 0
+            d["PV"]["min_kw"] = 50
+            d["Site"]["renewable_electricity_min_fraction"] = 0.35
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, d)
+            @test sum(results["PV"]["electric_to_grid_series_kw"]) ≈ 0.0 atol=1e-3
+            @test results["ElectricTariff"]["lifecycle_export_benefit_after_tax"] ≈ 0.0 atol=1e-3        
+            finalize(backend(m))
+            empty!(m)
+            GC.gc()    
         end
 
         @testset "Heating loads and addressable load fraction" begin
