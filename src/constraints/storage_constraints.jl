@@ -241,27 +241,29 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
             fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
         end
     end
+    
+    if b in p.s.storage.types.hightemp
+        # Constraint (4p): HighTempThermalStorage - constrain charge and discharge to fraction of kWh stored
+        if (hasproperty(p.s.storage.attr[b], :constrain_dispatch_to_stored_kwh) && p.s.storage.attr[b].constrain_dispatch_to_stored_kwh)
+            @constraint(m, [ts in p.time_steps],
+                sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) <= 
+                p.hours_per_time_step * p.s.storage.attr[b].charge_limit_as_fraction_of_stored_kwh * m[Symbol("dvStoredEnergy"*_n)][b, ts-1]    
+            )
+            @constraint(m, [ts in p.time_steps],
+                sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) <=
+                p.hours_per_time_step * p.s.storage.attr[b].discharge_limit_as_fraction_of_stored_kwh * m[Symbol("dvStoredEnergy"*_n)][b, ts-1]
+            )
+        end
 
-    # Constraint (4p): HighTempThermalStorage - constrain charge and discharge to fraction of kWh stored
-    if (hasproperty(p.s.storage.attr[b], :constrain_dispatch_to_stored_kwh) && p.s.storage.attr[b].constrain_dispatch_to_stored_kwh)
-        @constraint(m, [ts in p.time_steps],
-            sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) <= 
-            p.hours_per_time_step * p.s.storage.attr[b].charge_limit_as_fraction_of_stored_kwh * m[Symbol("dvStoredEnergy"*_n)][b, ts-1]    
-        )
-        @constraint(m, [ts in p.time_steps],
-            sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) <=
-            p.hours_per_time_step * p.s.storage.attr[b].discharge_limit_as_fraction_of_stored_kwh * m[Symbol("dvStoredEnergy"*_n)][b, ts-1]
-        )
-    end
-
-    # Constraint (4q): HighTempThermalStorage - include pumping power losses as a fraction of discharge power
-    if (hasproperty(p.s.storage.attr[b], :pump_loss_as_fraction_of_discharge_kw) && p.s.storage.attr[b].include_discharge_pump_losses)
-        @constraint(m, [ts in p.time_steps],
-            m[Symbol("dvDischargePumpPower"*_n)][b,ts] ==  
-            p.s.storage.attr[b].pump_loss_as_fraction_of_discharge_kw * sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads)
-        )
-    else
-        @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargePumpPower"*_n)][b,ts] == 0)
+        # Constraint (4q): HighTempThermalStorage - include pumping power losses as a fraction of discharge power
+        if (hasproperty(p.s.storage.attr[b], :pump_loss_as_fraction_of_discharge_kw) && p.s.storage.attr[b].include_discharge_pump_losses)
+            @constraint(m, [ts in p.time_steps],
+                m[Symbol("dvDischargePumpPower"*_n)][b,ts] ==  
+                p.s.storage.attr[b].pump_loss_as_fraction_of_discharge_kw * sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads)
+            )
+        else
+            @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargePumpPower"*_n)][b,ts] == 0)
+        end
     end
     
 end
