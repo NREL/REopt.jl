@@ -385,64 +385,32 @@ Helpful links:
 """
 function avert_region_abbreviation(latitude, longitude)
     
-    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.shp")
+    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.zip")
+    avert_regions = gmtread(file_path, no_islands=true)
+    avert_idx = inwhichpolygon(avert_regions, longitude, latitude; on_is_in=false)
 
-    abbr = nothing
-    meters_to_region = nothing
-
-    shpfile = ArchGDAL.read(file_path)
-	avert_layer = ArchGDAL.getlayer(shpfile, 0)
-
-	point = ArchGDAL.fromWKT(string("POINT (",longitude," ",latitude,")"))
-    
-	for i in 1:ArchGDAL.nfeature(avert_layer)
-		ArchGDAL.getfeature(avert_layer,i-1) do feature # 0 indexed
-			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
-				abbr = ArchGDAL.getfield(feature,"AVERT")
-                meters_to_region = 0.0;
-			end
-		end
-	end
-    if isnothing(abbr)
+    if iszero(avert_idx)
         @warn "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
     else
-        return abbr, meters_to_region
+        # return region_abbreviation, 0.0 since site is inside a polygon.
+        return avert_regions[avert_idx].attrib["AVERT"], 0.0
     end
 
-    shpfile = ArchGDAL.read(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_102008.shp"))
-    avert_102008 = ArchGDAL.getlayer(shpfile, 0)
-
-    pt = ArchGDAL.createpoint(latitude, longitude)
-
-    try
-        fromProj = ArchGDAL.importEPSG(4326)
-        toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
-        ArchGDAL.createcoordtrans(fromProj, toProj) do transform
-            ArchGDAL.transform!(pt, transform)
-        end
-    catch
-        @warn "Could not look up AVERT emissions region closest to point ($(latitude), $(longitude)). Location is
-        likely invalid or well outside continental US, AK and HI. Grid emissions assumed to be zero."
-        return abbr, meters_to_region #nothing, nothing
-    end
+    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_102008.zip")
+    avert_102008 = gmtread(file_path, no_islands=true)
+    pt = tuple(lonlat2xy([longitude latitude]; t_srs="ESRI:102008")...)
 
     distances = []
-    for i in 1:ArchGDAL.nfeature(avert_102008)
-        ArchGDAL.getfeature(avert_102008,i-1) do f # 0 indexed
-            push!(distances, ArchGDAL.distance(ArchGDAL.getgeom(f), pt))
-        end
+    for shapeidx in eachindex(avert_102008)
+        push!(distances, distance(avert_102008[shapeidx], [pt[1] pt[2]]))
     end
     
-    ArchGDAL.getfeature(avert_102008,argmin(distances)-1) do feature	# 0 indexed
-        meters_to_region = distances[argmin(distances)]
-
-        if meters_to_region > 8046
-            @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
-            return abbr, meters_to_region #nothing, #
-        else
-            return ArchGDAL.getfield(feature,"AVERT"), meters_to_region
-        end
+    if minimum(distances) > 8046 # 5 miles in meters
+        @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
     end
+
+    # return region abberviation and distance from site for closest region.
+    return avert_102008[argmin(distances)].attrib["AVERT"], minimum(distances)
 end
 
 function region_abbr_to_name(region_abbr)

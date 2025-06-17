@@ -42,7 +42,7 @@ import MathOptInterface
 import Dates: daysinmonth, Date, isleapyear
 import DelimitedFiles: readdlm
 const MOI = MathOptInterface
-using ArchGDAL
+using GMT
 using Statistics
 using Roots: fzero  # for IRR
 global hdl = nothing
