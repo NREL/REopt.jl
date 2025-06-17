@@ -23,6 +23,10 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
+elseif "Dev" in ARGS
+    @testset "test development" begin
+        include("development_tests.jl")
+    end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "Prevent simultaneous charge and discharge" begin
