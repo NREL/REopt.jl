@@ -6,7 +6,7 @@
     # Case 1: energy rate is lower during PV production
     # so expect battery to do energy arbitrage and NEM export during higher rate
     d = JSON.parsefile("./scenarios/bess_export.json")
-    d["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat([0.2, 0.1, 0.2], inner=8, outer=365)
+    d["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat([0.5, 0.1, 0.5], inner=8, outer=365)
     # d["ElectricStorage"]["can_net_meter"] = true
     # d["ElectricStorage"]["can_wholesale"] = true
     # d["PV"]["can_net_meter"] = false
@@ -22,10 +22,11 @@
         JSON.print(f, results, 4)
     end
     # @test results["PV"]["electric_to_grid_series_kw"]
-    println(sum(results["ElectricStorage"]["electric_to_grid_series_kw"]))
-    @test sum(results["ElectricStorage"]["electric_to_grid_series_kw"]) > 0
-    @test m[:WHL_benefit] == 0
-    @test m[:EXC_benefit] == 0
+    @test sum(results["ElectricStorage"]["storage_to_grid_series_kw"]) > 0
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricStorage"]["storage_to_grid_series_kw"]) if 8 < i % 24 < 17)
+    @test value(m[:NEM_benefit]) <= 0
+    @test value(m[:WHL_benefit]) == 0
+    @test value(m[:EXC_benefit]) == 0
     @test results["ElectricTariff"]["year_one_export_benefit_before_tax"] >= 0
     finalize(backend(m))
     empty!(m)
@@ -36,14 +37,17 @@
     #TODO: have to limit PV size to get expected result?
     d["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat([0.1], outer=8760)
     d["ElectricTariff"]["wholesale_rate"] = 0.2
-    d["ElectricTariff"]["allow_simultaneous_export_import"] = false
+    d["ElectricUtility"]["allow_simultaneous_export_import"] = false
     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
     results = run_reopt(m, d)
+    open("debug_results2.json","w") do f
+        JSON.print(f, results, 4)
+    end
     @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"]) 
-                    if results["ElectricStorage"]["electric_to_grid_series_kw"][i] > 0)
-    @test sum(results["ElectricStorage"]["electric_to_grid_series_kw"]) > 0
-    @test m[:NEM_benefit] == 0
-    @test m[:EXC_benefit] == 0
+                    if results["ElectricStorage"]["storage_to_grid_series_kw"][i] > 0)
+    @test sum(results["ElectricStorage"]["storage_to_grid_series_kw"]) > 0
+    @test value(m[:NEM_benefit]) == 0
+    @test value(m[:EXC_benefit]) == 0
     @test results["ElectricTariff"]["year_one_export_benefit_before_tax"] >= 0
     finalize(backend(m))
     empty!(m)
