@@ -75,7 +75,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 				
     # Constraint (4d): Storage export must be less than total storage dispatch
     if !isempty(p.export_bins_by_storage[b])
-        @constraint(m, [b in p.s.storage.attr[b], ts in p.time_steps_with_grid],
+        @constraint(m, [ts in p.time_steps_with_grid],
             sum(m[Symbol("dvStorageToGrid"*_n)][b, u, ts] for u in p.export_bins_by_storage[b])
             <= 
             m[Symbol("dvDischargeFromStorage"*_n)][b, ts]
