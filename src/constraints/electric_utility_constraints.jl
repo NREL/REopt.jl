@@ -132,7 +132,7 @@ function add_export_constraints(m, p; _n="")
 
             EXC_benefit = 0
             if :EXC in p.s.electric_tariff.export_bins
-                EXC_benefit = @variable(m, lower_bound = max_bene)
+                EXC_benefit = @variable(m, lower_bound = max_bene) #lower bound because the benefit is treated as a negative cost
                 if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
                     @constraint(m,
                         binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
