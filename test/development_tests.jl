@@ -35,8 +35,10 @@
     # Case 2: whl rate > retail rate and allow_simultaneous_export_import = false
     # so expect battery to wholesale once load is met
     #TODO: have to limit PV size to get expected result?
-    d["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat([0.1], outer=8760)
-    d["ElectricTariff"]["wholesale_rate"] = 0.2
+    d["ElectricStorage"]["can_net_meter"] = false
+    d["PV"]["can_net_meter"] = false
+    d["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat([0.1], 8760)
+    d["ElectricTariff"]["wholesale_rate"] = append!(repeat([5], 31*24), repeat([0], 8760 - 31*24))
     d["ElectricUtility"]["allow_simultaneous_export_import"] = false
     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
     results = run_reopt(m, d)
