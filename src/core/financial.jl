@@ -424,25 +424,17 @@ Convert LCP (x, y) in CAMx 148x112 grid to Geodetic (lon, lat)
 function l2g(x::Real, y::Real; inverse::Bool=false, datum::String="NAD83")
     x = Float64(x)
     y = Float64(y)
-    LCP_US = ArchGDAL.importPROJ4("+proj=lcc +no_defs +a=6370000.0 +b=6370000.0 +lon_0=97w +lat_0=40n +lat_1=33n +lat_2=45n +x_0=2736000.0 +y_0=2088000.0 +to_wgs=0,0,0 +units=m")
-    if datum == "NAD83"
-        datum = ArchGDAL.importEPSG(4269)
-    elseif datum == "WGS84"
-        datum = ArchGDAL.importEPSG(4326)
-    end
+    pt = nothing
     if inverse
-        point = ArchGDAL.createpoint(y, x)
-        ArchGDAL.createcoordtrans(datum, LCP_US) do transform
-            ArchGDAL.transform!(point, transform)
-        end
-        point = ArchGDAL.createpoint(ArchGDAL.gety(point, 0) / 36000.0 + 1, ArchGDAL.getx(point, 0) / 36000.0 + 1)
+        pt = lonlat2xy(
+            [x y],
+            "+proj=lcc +no_defs +a=6370000.0 +b=6370000.0 +lon_0=97w +lat_0=40n +lat_1=33n +lat_2=45n +x_0=2736000.0 +y_0=2088000.0 +to_wgs=0,0,0 +units=m +datum=$datum"
+        )./36000.0 .+ 1
     else
-        point = ArchGDAL.createpoint((y-1)*36e3, (x-1)*36e3)
-        ArchGDAL.createcoordtrans(LCP_US, datum) do transform
-            ArchGDAL.transform!(point, transform)
-        end
+        @warn "The xy to EAISUR grid implementation is currently not used in REopt, returning 0."
+        pt = [0 0]
     end
-    return [ArchGDAL.getx(point, 0) ArchGDAL.gety(point, 0)]
+    return [Int(round(pt[1])), Int(round(pt[2]))]
 end
 
 """

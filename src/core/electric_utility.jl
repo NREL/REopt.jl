@@ -379,7 +379,7 @@ Determine the AVERT region abberviation for a given lat/lon pair.
         3. If distance from a region < 5 miles, return that region along with distance.
 
 Helpful links:
-# https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
+# https://www.generic-mapping-tools.org/GMTjl_doc/documentation/gdalfuns/#distance
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 # https://epsg.io/102008
 """

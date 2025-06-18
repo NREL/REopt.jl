@@ -37,27 +37,23 @@ const DEFAULT_PROCESS_TYPES = [
 
 function find_ashrae_zone_city(lat, lon; get_zone=false)
     file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
-    shpfile = ArchGDAL.read(file_path)
-	cities_layer = ArchGDAL.getlayer(shpfile, 0)
+    cities_layer = gmtread(file_path, no_islands=true);
 
-	# From https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
-    # From https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
-	point = ArchGDAL.fromWKT(string("POINT (",lon," ",lat,")"))
-	
 	# No transformation needed
-	archgdal_city = nothing
-	for i in 1:ArchGDAL.nfeature(cities_layer)
-		ArchGDAL.getfeature(cities_layer,i-1) do feature # 0 indexed
-			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
-				archgdal_city = ArchGDAL.getfield(feature,"city")
-			end
-		end
-	end
-    if isnothing(archgdal_city)
-        @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
-    elseif !get_zone && !(archgdal_city == "LosAngeles")
-        return archgdal_city
+	ashrae_city = nothing
+    idx = inwhichpolygon(cities_layer, lon, lat; on_is_in=false)
+    try
+        ashrae_city = shpfile[idx].attrib["city"]
+    catch
+        ashrae_city = nothing
     end
+    
+    if isnothing(ashrae_city)
+        @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+    elseif !get_zone && !(ashrae_city == "LosAngeles")
+        return ashrae_city
+    end
+    
     cities = [
         (city="Miami", lat=25.761680, lon=-80.191790, zone="1A"),
         (city="Houston", lat=29.760427, lon=-95.369803, zone="2A"),
@@ -94,15 +90,14 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
     
     # Optionally return both city and zone
     if get_zone
-        if !isnothing(archgdal_city)
-            nearest_city = archgdal_city
+        if !isnothing(ashrae_city)
+            nearest_city = ashrae_city
         end
         return nearest_city, ashrae_zone
     else
         return nearest_city
     end
 end
-
 
 """
     built_in_load(
