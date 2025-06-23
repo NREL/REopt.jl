@@ -32,6 +32,7 @@ Classify the change according to the following categories:
 ### Changed
 - Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
 - Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
+- Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
 
 ## test-runners
 ### Added
