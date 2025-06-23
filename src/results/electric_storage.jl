@@ -42,6 +42,15 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 r["replacement_month"] = round(Int, value(
                     sum(mth * m[:binSOHIndicatorChange][mth] for mth in 1:p.s.financial.analysis_years*12)
                 ))
+                # Calculate fraction of time remaining after analysis period ends where Batt will be healthy ("useful")
+                # Multiply by 0.2 to scale residual to BESS SOH (considered healthy if SOH is between 80% and 100%)
+                # Total BESS capacity residual is (0.8 + residual useful fraction) * BESS capacity
+                r["healthy_residual_kwh"] = (
+                    0.8 + 0.2*(1 - (
+                            p.s.financial.analysis_years*12/r["replacement_month"] - floor(p.s.financial.analysis_years*12/r["replacement_month"])
+                        )
+                    )
+                )*r["size_kwh"]
             end
             r["residual_value"] = value(m[:residual_value])
         end

@@ -193,7 +193,10 @@ function add_degradation(m, p; b="ElectricStorage")
             maint_cost = sum(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[day*i] for i in 1:batt_replace_count)
             replacement_costs[mth] = maint_cost
 
-            residual_factor = 1 - (p.s.financial.analysis_years*12/mth - floor(p.s.financial.analysis_years*12/mth))
+            # Calculate fraction of time remaining after analysis period ends where Batt will be healthy ("useful")
+            # Multiply by 0.2 to scale residual to BESS SOH (considered healthy if SOH is between 80% and 100%)
+            # Total BESS capacity residual is (0.8 + residual useful fraction) * BESS capacity
+            residual_factor = 0.2*(1 - (p.s.financial.analysis_years*12/mth - floor(p.s.financial.analysis_years*12/mth))) + 0.8
             residual_value = p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[end]*residual_factor
             residual_values[mth] = residual_value
         end
