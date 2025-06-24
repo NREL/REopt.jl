@@ -26,6 +26,10 @@ Classify the change according to the following categories:
     ### Removed
 
 ## v0.53.0
+### Fixed
+- Issue with `CHP` and `PV` cost curves when with-incentives segments is greater than no-incentives segments
+
+## v0.53.0
 ### Added
 - Add new **ElectricStorage** input fields **installed_cost_constant**, **replace_cost_constant** (both default to 0), and **cost_constant_replacement_year** (defaults to year 10).
 - Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
