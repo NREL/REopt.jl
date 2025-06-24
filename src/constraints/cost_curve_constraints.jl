@@ -120,7 +120,7 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
 
                 add_to_expression!(m[:PVCapexNoIncentives],
                     sum(cost_slope_no_inc[s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
-                        seg_yint_no_inc[s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
+                        seg_yint_no_inc[s] * m[Symbol("binSegment"*t)][s] for s in eachindex(cost_slope_no_inc))
                 )
             else            
                 add_to_expression!(m[:PVCapexNoIncentives], 
@@ -181,7 +181,7 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
 
             add_to_expression!(m[:CHPCapexNoIncentives],
                 sum(cost_slope_no_inc[s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
-                    seg_yint_no_inc[s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
+                    seg_yint_no_inc[s] * m[Symbol("binSegment"*t)][s] for s in eachindex(cost_slope_no_inc))
             )
         else
             add_to_expression!(m[:CHPCapexNoIncentives], cost_list * m[Symbol("dvPurchaseSize"*_n)]["CHP"])
