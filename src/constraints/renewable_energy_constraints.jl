@@ -58,8 +58,6 @@ function add_re_elec_calcs(m,p)
 		@warn("The presence of a steam turbine may cause the renewable energy fraction to be inaccurate.")
 	end
 
-	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
-	# 		onsite is counted so battery doesn't become a back door for RE to grid.
 	m[:AnnualOnsiteREEleckWh] = @expression(m, p.hours_per_time_step * (
 			#total RE elec generation, excl steam turbine
 			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
@@ -78,13 +76,14 @@ function add_re_elec_calcs(m,p)
 			- (1 - p.s.site.include_exported_renewable_electricity_in_total) *
 			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_fraction[t] 
 				for t in setdiff(p.techs.elec, p.techs.steam_turbine), u in p.export_bins_by_tech[t], ts in p.time_steps
-			) 
+			)
+			# TODO: battery can now discharge to the grid, but this export is not yet accounted for in the RE calculation. 
+			# 	This is only relevant if include_exported_renewable_electricity_in_total = false. If false, the 
+			# 	battery could become a "back door" for export of RE to the grid since it's not subtracted here. Will require tracking of RE in BESS. 
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
 	)		
 
-	# Note: when we add capability for battery to discharge to grid, need to subtract out *grid RE* discharged from battery 
-	# 		back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
 	m[:AnnualGridREEleckWh] = @expression(m, p.hours_per_time_step * (
 			# renewable energy from grid 
 			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
@@ -94,6 +93,8 @@ function add_re_elec_calcs(m,p)
 				(1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency)
 				for ts in p.time_steps, b in p.s.storage.types.elec
 			)
+			# TODO: battery can now discharge to the grid, but this export is not yet accounted for in the RE calculation.
+			# 	Need to subtract out *grid RE* discharged from battery back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
 		) 
 	)
 
