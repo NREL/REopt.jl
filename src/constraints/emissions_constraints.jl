@@ -122,6 +122,8 @@ function calc_yr1_emissions_offset_from_elec_exports(m, p)
 	yr1_emissions_offset_from_elec_exports_lbs_CO2 = @expression(m, p.hours_per_time_step *
 		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])
 		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+			# + BESS export (similar to net metering calcs)
+			# sum( m[Symbol("dvStorageToGrid"*_n)][b, :NEM, ts] for b in NEM_storage, ts in p.time_steps) 
 	)
 		# if battery ends up being able to discharge to grid, need to incorporate here- might require complex tracking of what's charging battery
 
