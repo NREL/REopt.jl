@@ -1198,16 +1198,16 @@ else  # run HiGHS tests
         #     end
         #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false))
         #     build_reopt!(m,p)
-        #     fix(m[:binSOHIndicatorChange][8], 1.0) # Fix to simplify solving with HiGHS
+        #     fix(m[:binSOHIndicatorChange][29], 1.0) # Fix to simplify solving with HiGHS
         #     optimize!(m)
         #     results = reopt_results(m, p)
 
         #     @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
         #     @test results["ElectricStorage"]["size_kwh"] ≈ 13.35 atol=0.05
-        #     # @test results["ElectricStorage"]["replacement_month"] == 8
-        #     @test results["ElectricStorage"]["maintenance_cost"] ≈ 31141.0 atol=1
-        #     @test results["ElectricStorage"]["state_of_health"][8760] ≈ -6.808 atol=0.1
-        #     @test results["ElectricStorage"]["residual_value"] ≈ 2.45 atol=0.1
+        #     @test results["ElectricStorage"]["replacement_month"] == 29
+        #     @test results["ElectricStorage"]["maintenance_cost"] ≈ 6260.7 atol=1
+        #     @test results["ElectricStorage"]["state_of_health"][8760] ≈ -0.972 atol=0.1
+        #     @test results["ElectricStorage"]["residual_value"] ≈ 4.55 atol=0.1
         #     @test sum(results["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 43800 atol=1.0 #battery should serve all load, every other period
 
 
