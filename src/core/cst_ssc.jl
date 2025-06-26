@@ -253,11 +253,12 @@ function run_ssc(case_data::Dict)
         #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         # print(c_response)
         ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
-        if model == "ptc"
-            thermal_production_norm = normalize_response(thermal_production, case_data)
-        else
-            thermal_production_norm = thermal_production .* tcf ./ rated_power
-        end
+        #if model == "ptc"
+        #    thermal_production_norm = normalize_response(thermal_production, case_data)
+        #else
+        #    thermal_production_norm = thermal_production .* tcf ./ rated_power
+        #end
+        thermal_production_norm = thermal_production .* tcf ./ rated_power
         if model in ["mst","ptc","lf"]
             println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
         elseif model in ["swh_evactube","swh_flatplate"]
