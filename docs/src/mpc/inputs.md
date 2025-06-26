@@ -177,9 +177,17 @@ REopt.MPCPV
 REopt.MPCGenerator
 ```
 
-## MPCSettings
-The MPCSettings is the same as the [Settings](@ref).
+## ElectricUtility
+MPC uses the standard [ElectricUtility](@ref) struct.
+```@docs
+REopt.ElectricUtility
+```
 
+## Settings
+MPC uses the standard [Settings](@ref) struct.
+```@docs
+REopt.Settings
+```
 
 ## MPCLimits
 ```@docs
