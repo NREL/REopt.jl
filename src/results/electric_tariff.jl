@@ -80,7 +80,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     if isempty(p.s.electric_tariff.monthly_demand_rates)
         r["monthly_facility_demand_cost_series"] = repeat([0], 12)
     else
-        r["monthly_facility_demand_cost_series"] = Matrix(p.s.electric_tariff.monthly_demand_rates.*value.(m[Symbol("dvPeakDemandMonth")]))
+        r["monthly_facility_demand_cost_series"] = Matrix(p.s.electric_tariff.monthly_demand_rates.*value.(m[Symbol("dvPeakDemandMonth"*_n)]))
     end
 
     # Create list, each row contains month | TOU rate | peak demand for that TOU period | rate * peak demand for a TOU period.
