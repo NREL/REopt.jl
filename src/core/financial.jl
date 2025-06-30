@@ -45,7 +45,7 @@
         end
     ```
 """
-struct Financial
+mutable struct Financial
     om_cost_escalation_rate_fraction::Float64
     elec_cost_escalation_rate_fraction::Float64
     existing_boiler_fuel_cost_escalation_rate_fraction::Float64
@@ -213,7 +213,6 @@ struct Financial
         )
     end
 end
-
 
 function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     # Assumption: grid emissions occur at site at 150m above ground
