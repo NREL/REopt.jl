@@ -381,7 +381,7 @@ struct ElectricStorage <: AbstractElectricStorage
             degr = Degradation()
         end
 
-        # copy the replace_costs in case we need to change them
+        # Handle replacement costs for degradation model.
         replace_cost_per_kw = s.replace_cost_per_kw 
         replace_cost_per_kwh = s.replace_cost_per_kwh
         replace_cost_constant = s.replace_cost_constant
