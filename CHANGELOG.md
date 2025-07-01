@@ -25,7 +25,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.53.0
+## v0.53.2
+### Fixed
+- `PV` `size_class` and cost defaults not updating correctly when both `max_kw` and the site's land or roof space are input
+
+## v0.53.1
 ### Fixed
 - Issue with `CHP` and `PV` cost curves when with-incentives segments is greater than no-incentives segments
 
