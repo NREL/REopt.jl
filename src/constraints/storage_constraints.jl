@@ -125,7 +125,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         )
     end
 					
-    # Remove grid-to-storage as an option if option to grid charge is turned off
+    # Constraint (4l): Remove grid-to-storage as an option if option to grid charge is turned off
     if !(p.s.storage.attr[b].can_grid_charge)
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
@@ -140,16 +140,17 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         )
     end
 
-    # Future development could make this an option by adding bool inputs an updating load balance/battery dispatch constraints to include these flows
+    # Constraint (4m): Future development could make this an option by adding bool inputs an updating 
+    # load balance, battery dispatch, operating reserve, and possibly other constraints to include these flows
     if b in p.s.storage.types.dc_coupled
-        # Constraint (4d)-2: Don't let AC coupled elec techs charge DC coupled battery. 
+        # Constraint (4m)-1: Don't let AC coupled elec techs charge DC coupled battery. 
         for ts in p.time_steps
             for t in p.techs.ac_coupled_with_storage
                 fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)
             end
         end
     else
-        # Constraint (4d)-3: Don't let DC coupled elec techs charge AC coupled battery. 
+        # Constraint (4m)-2: Don't let DC coupled elec techs charge AC coupled battery. 
         for ts in p.time_steps
             for t in p.techs.dc_coupled_with_storage
                 fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)
