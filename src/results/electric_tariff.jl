@@ -66,7 +66,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["energy_charge_cost_matrix"] = p.s.electric_tariff.energy_rates
     r["facility_demand_charge_cost_matrix"] = p.s.electric_tariff.monthly_demand_rates
     r["utility_to_gross_loads_cost_series"] = sum(
-        Array(p.s.electric_tariff.energy_rates.*value.(m[Symbol("dvGridPurchase"*_n)].* p.hours_per_time_step)), dims=2
+        Array(p.s.electric_tariff.energy_rates.*collect(value.(m[Symbol("dvGridPurchase"*_n)])).* p.hours_per_time_step), dims=2
     ) # TODO validate this works for EVs.
 
     if isempty(p.s.electric_tariff.monthly_demand_rates)
@@ -131,19 +131,21 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         end
     end
 
-    for bin in p.s.electric_tariff.export_bins
-        cost_series = string(bin, "_export_rate_series")
-        export_series = string(bin, "_electric_to_grid_series_kw")
+    if !isempty(p.techs.elec)
+        for bin in p.s.electric_tariff.export_bins
+            cost_series = string(bin, "_export_rate_series")
+            export_series = string(bin, "_electric_to_grid_series_kw")
 
-        r[cost_series] = collect(p.s.electric_tariff.export_rates[bin])
-        r[export_series] = collect(value.(sum(m[Symbol("dvProductionToGrid"*_n)][t, bin, :] for t in p.techs.elec)))
+            r[cost_series] = collect(p.s.electric_tariff.export_rates[bin])
+            r[export_series] = collect(value.(sum(m[Symbol("dvProductionToGrid"*_n)][t, bin, :] for t in p.techs.elec)))
 
-        r[string(bin, "_monthly_export_series_kwh")] = []
-        r[string(bin, "_monthly_export_cost_benefit")] = []
-        for mth in 1:12
-            idx = findall(x -> Dates.month(x) == mth, dr)
-            push!(r[string(bin, "_monthly_export_series_kwh")], sum(r[export_series][idx]))
-            push!(r[string(bin, "_monthly_export_cost_benefit")], sum((r[cost_series].*r[export_series])[idx]))
+            r[string(bin, "_monthly_export_series_kwh")] = []
+            r[string(bin, "_monthly_export_cost_benefit")] = []
+            for mth in 1:12
+                idx = findall(x -> Dates.month(x) == mth, dr)
+                push!(r[string(bin, "_monthly_export_series_kwh")], sum(r[export_series][idx]))
+                push!(r[string(bin, "_monthly_export_cost_benefit")], sum((r[cost_series].*r[export_series])[idx]))
+            end
         end
     end
 
