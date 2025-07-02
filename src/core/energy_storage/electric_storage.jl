@@ -35,7 +35,6 @@ worth factor is used in the same manner irrespective of the `maintenance_strateg
     When modeling degradation the following ElectricStorage inputs are not used:
     - `replace_cost_per_kwh`
     - `battery_replacement_year`
-    - `installed_cost_constant`
     - `replace_cost_constant`
     - `cost_constant_replacement_year`
     They are replaced by the `maintenance_cost_per_kwh` vector.
@@ -316,7 +315,7 @@ struct ElectricStorage <: AbstractElectricStorage
 
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
-            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kw,
+            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
@@ -328,7 +327,7 @@ struct ElectricStorage <: AbstractElectricStorage
         )
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,
-            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kwh,
+            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
