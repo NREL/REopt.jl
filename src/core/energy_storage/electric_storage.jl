@@ -303,17 +303,6 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
-        # copy the replace_costs in case we need to change them
-        replace_cost_per_kw = s.replace_cost_per_kw 
-        replace_cost_per_kwh = s.replace_cost_per_kwh
-        if s.model_degradation
-            if haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
-            end
-            replace_cost_per_kwh = 0.0 # Always modeled using maintenance_cost_vector in degradation model.
-            # replace_cost_per_kw is unchanged here.
-        end
-
         if s.min_duration_hours > s.max_duration_hours
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end

@@ -427,21 +427,25 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	))
 
 	for b in p.s.storage.types.elec
-		degr_bool = p.s.storage.attr[b].model_degradation
-		if degr_bool
-			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost includes costs to be incurred for power electronics and the cost constant."
-		end
 		# ElectricStorageCapCost used for calculating O&M and is based on initial costs, not net present costs
 		# If costing battery degradation, omit installed_cost_per_kwh here, its accounted for in degr_cost expression
 		m[:ElectricStorageCapCost] += (
-			sum( p.s.storage.attr[b].installed_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
-			sum( p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.elec )*(1 - degr_bool)
+			p.s.storage.attr[b].installed_cost_per_kw * m[:dvStoragePower][b] + 
+			p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b]
 		)
 		if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
 			add_to_expression!(TotalStorageCapCosts, p.third_party_factor * sum(p.s.storage.attr[b].net_present_cost_cost_constant * m[:binIncludeStorageCostConstant][b] ))
 			m[:ElectricStorageCapCost] += sum(p.s.storage.attr[b].installed_cost_constant * m[:binIncludeStorageCostConstant][b])
 		end
 		m[:ElectricStorageOMCost] += p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * m[:ElectricStorageCapCost]
+
+		degr_bool = p.s.storage.attr[b].model_degradation
+		if degr_bool
+			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost will include costs to be incurred for power electronics and the cost constant."
+            add_to_expression!(
+				m[:ElectricStorageOMCost], -1.0 * p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b]
+			)
+        end
 	end
 
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
