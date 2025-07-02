@@ -14,6 +14,22 @@
 - `year_one_export_benefit_before_tax` export credits over the first year, before considering tax benefits. A positive value indicates a benefit. 
 - `lifecycle_coincident_peak_cost_after_tax` lifecycle coincident peak charge in present value, after tax
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
+
+- `energy_charge_cost_matrix` matrix for cost of electricity (rows = cost for each timestep, columns = # of tiers)
+- `facility_demand_charge_cost_matrix` matrix for facility demand charges (rows = months, columns = # of tiers)
+- `utility_to_gross_loads_cost_series` timeseries of cost of gross electricity purchases (grid to load, grid to battery)
+- `monthly_facility_demand_cost_series` monthly facility demand charges
+- `utility_to_storage_cost_series` the cost of energy purchased from the grid to charge batteries in each timestep
+- `monthly_utility_to_storage_cost_series` monthly totals of `utility_to_storage_cost_series`
+- `monthly_utility_to_gross_loads_cost_series` monthly totals of `utility_to_gross_loads_cost_series`
+- `tou_demand_cost_series` create list with month, TOU rate, peak demand for that TOU period, TOU demand charge for each TOU time period. Tiered TOU demand charges are also factored in.
+- `monthly_tou_demand_cost_series` sum of TOU demand charges paid in each month
+- Prefix NEM, WHL, or EXC (export categories) for following outputs, all can be in results if relevant inputs are provided.
+- `_export_rate_series` export rate timeseries for type of export category
+- `_electric_to_grid_series_kw` exported electricity timeseries for type of export category
+- `_monthly_export_series_kwh` monthly exported energy totals by export category
+- `_monthly_export_cost_benefit` monthly export benefit by export category
+
 """
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricTariff` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -47,8 +63,17 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     
     r["year_one_bill_after_tax"] = r["year_one_bill_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
-    # timeseries of electricity cost ($/kWh * (kW * hours per timestep))
-    r["annual_electric_gross_purchase_cost_series"] = sum(Array(p.s.electric_tariff.energy_rates.*value.(m[Symbol("dvGridPurchase"*_n)].* p.hours_per_time_step)), dims=2)
+    r["energy_charge_cost_matrix"] = p.s.electric_tariff.energy_rates
+    r["facility_demand_charge_cost_matrix"] = p.s.electric_tariff.monthly_demand_rates
+    r["utility_to_gross_loads_cost_series"] = sum(
+        Array(p.s.electric_tariff.energy_rates.*value.(m[Symbol("dvGridPurchase"*_n)].* p.hours_per_time_step)), dims=2
+    ) # TODO validate this works for EVs.
+
+    if isempty(p.s.electric_tariff.monthly_demand_rates)
+        r["monthly_facility_demand_cost_series"] = repeat([0], 12)
+    else
+        r["monthly_facility_demand_cost_series"] = Matrix(p.s.electric_tariff.monthly_demand_rates.*value.(m[Symbol("dvPeakDemandMonth"*_n)]))
+    end
 
     if isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm. TODO handle extra day for leap year, remove ts_shift.
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,30,23,59)
@@ -58,32 +83,27 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     # Shift required to capture months identification in leap year.
     ts_shift = Int(24/p.hours_per_time_step)
 
+    # TODO right now we cannot track the tier under which energy is purchased in a given ts for charging battery. 
+    # Hence cannot calculate cost of energy supplied to BESS when energy tiers > 1
     if size(p.s.electric_tariff.energy_tier_limits)[2] <= 1
-        r["annual_electric_to_storage_purchase_cost_series"] = zeros(p.time_steps[end])
-        r["monthly_electric_to_storage_purchase_cost_series"] = []
-        # TODO add boolean dvs to track which tier is supplying power to storage (or depend dvGridToStorage on energy tiers)
+        r["utility_to_storage_cost_series"] = zeros(p.time_steps[end])
+        r["monthly_utility_to_storage_cost_series"] = []
         for b in p.s.storage.types.elec
-            r["annual_electric_to_storage_purchase_cost_series"] .+= p.s.electric_tariff.energy_rates[:,1] .* collect(value.(m[Symbol("dvGridToStorage"*_n)][b,:])) .* p.hours_per_time_step
+            r["utility_to_storage_cost_series"] .+= p.s.electric_tariff.energy_rates[:,1] .* collect(value.(m[Symbol("dvGridToStorage"*_n)][b,:])) .* p.hours_per_time_step
         end
         for mth in 1:12
             idx = findall(x -> Dates.month(x) == mth, dr)
-            push!(r["monthly_electric_to_storage_purchase_cost_series"], sum(r["annual_electric_to_storage_purchase_cost_series"][idx]))
+            push!(r["monthly_utility_to_storage_cost_series"], sum(r["utility_to_storage_cost_series"][idx]))
         end
     end
 
-    r["monthly_electric_gross_purchase_cost_series"] = []
+    r["monthly_utility_to_gross_loads_cost_series"] = []
     for mth in 1:12
         idx = findall(x -> Dates.month(x) == mth, dr)
-        push!(r["monthly_electric_gross_purchase_cost_series"], sum(r["annual_electric_gross_purchase_cost_series"][idx]))
+        push!(r["monthly_utility_to_gross_loads_cost_series"], sum(r["utility_to_gross_loads_cost_series"][idx]))
     end
 
-    if isempty(p.s.electric_tariff.monthly_demand_rates)
-        r["monthly_facility_demand_cost_series"] = repeat([0], 12)
-    else
-        r["monthly_facility_demand_cost_series"] = Matrix(p.s.electric_tariff.monthly_demand_rates.*value.(m[Symbol("dvPeakDemandMonth"*_n)]))
-    end
-
-    # Create list, each row contains month | TOU rate | peak demand for that TOU period | rate * peak demand for a TOU period.
+    # Create list, each row contains 
     r["tou_demand_cost_series"] = []
     tou_demand_charges = Dict()
     for tier in 1:p.s.electric_tariff.n_tou_demand_tiers
@@ -111,11 +131,6 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         end
     end
 
-    # Cost of energy by timestep (rows) and tiers (columns)
-    r["energy_charge_cost_matrix"] = p.s.electric_tariff.energy_rates
-    r["monthly_demand_charge_cost_matrix"] = p.s.electric_tariff.monthly_demand_rates
-
-    # Add NEM, WHL and EXC export rates and kW sent to each here.
     for bin in p.s.electric_tariff.export_bins
         cost_series = string(bin, "_export_rate_series")
         export_series = string(bin, "_electric_to_grid_series_kw")
