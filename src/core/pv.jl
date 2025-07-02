@@ -420,19 +420,22 @@ function get_pv_cost_params(;
         # Default case: Calculate based on land/roof space available or load
         max_kw_for_size_class = max_kw
         max_kw_roof, max_kw_ground = 0.0, 0.0
+        check_for_space_constrained = false
         space_constrained = false
         if !isnothing(site_roof_squarefeet) && location in ["both", "roof"]
             # Calculate size class based on roof space
             max_kw_roof = kw_per_square_foot * site_roof_squarefeet
-            space_constrained = true
+            check_for_space_constrained = true
         end
         if !isnothing(site_land_acres) && location in ["both", "ground"]
             # Calculate size class based on land space
             max_kw_ground = site_land_acres / acres_per_kw
-            space_constrained = true
+            check_for_space_constrained = true
         end
-        if space_constrained
-            max_kw_for_size_class = max_kw_roof + max_kw_ground
+        max_kw_roof_and_ground = max_kw_roof + max_kw_ground
+        if check_for_space_constrained && max_kw_roof_and_ground < max_kw_for_size_class
+            space_constrained = true
+            max_kw_for_size_class = max_kw_roof_and_ground
         end
         tech_sizes = [c["tech_sizes_for_cost_curve"] for c in defaults]
         # Include both roof and land for size class -> cost determination
