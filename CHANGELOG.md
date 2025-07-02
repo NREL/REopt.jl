@@ -29,6 +29,7 @@ Classify the change according to the following categories:
 ### Added
 - Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
 - Added **cycle_fade_fraction** as an input for portion of BESS that is tied to each cycle fade coefficient.
+- Added **total_residual_kwh** output which captures healthy residual battery capacity due to degradation and the replacement strategy
 ### Changed
 - Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
 - Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.

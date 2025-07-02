@@ -9,8 +9,9 @@
 # The following results are reported if storage degradation is modeled:
 - `state_of_health`
 - `maintenance_cost`
-- `replacement_month`
-- `residual_value` # only applies is maintenance_strategy = "replacement"
+- `replacement_month` # only applies is maintenance_strategy = "replacement"
+- `residual_value`
+- `total_residual_kwh` # only applies is maintenance_strategy = "replacement"
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -45,7 +46,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 ))
                 # Calculate total healthy BESS capacity at end of analysis period.
                 # Determine fraction of useful life left assuming same replacement frequency.
-                # Multiply by 0.2 to scale residual useful life since BESS is replaced when SOH drops below 80%.
+                # Multiply by 0.2 to scale residual useful life since entire BESS is replaced when SOH drops below 80%.
                 # Total BESS capacity residual is (0.8 + residual useful fraction) * BESS capacity
                 # If not replacements happen then useful capacity is SOH[end]*BESS capacity.
                 if iszero(r["replacement_month"])
