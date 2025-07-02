@@ -25,7 +25,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## segmented_cycle_degr
+## Develop
 ### Added
 - Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
 - Added **cycle_fade_fraction** as an input for portion of BESS that is tied to each cycle fade coefficient.
@@ -35,9 +35,15 @@ Classify the change according to the following categories:
 - Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
 - Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
 
-## v0.53.0
+## v0.53.2
+### Fixed
+- `PV` `size_class` and cost defaults not updating correctly when both `max_kw` and the site's land or roof space are input
+
+## v0.53.1
 ### Fixed
 - Issue with `CHP` and `PV` cost curves when with-incentives segments is greater than no-incentives segments
+
+## v0.53.0
 ### Added
 - Add new **ElectricStorage** input fields **installed_cost_constant**, **replace_cost_constant** (both default to 0), and **cost_constant_replacement_year** (defaults to year 10).
 - Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
