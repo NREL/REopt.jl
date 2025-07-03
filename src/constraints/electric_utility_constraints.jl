@@ -33,7 +33,7 @@ function add_export_constraints(m, p; _n="")
         if p.s.electric_utility.net_metering_limit_kw == p.s.electric_utility.interconnection_limit_kw && isempty(vcat(WHL_techs, WHL_storage))
             # no need for binNEM nor binWHL
             binNEM = 1
-            # TODO: Decide whether to ignore BESS size in this constraint? 
+            # Note: BESS can export but is not included in interconnection limit. 
             @constraint(m,
                 sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw
             )
@@ -65,8 +65,8 @@ function add_export_constraints(m, p; _n="")
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
+            # Note: BESS can export but is not included in net_metering_limit_kw or interconnection_limit_kw.
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
-                # TODO: Decide whether to ignore BESS size in these constraints? 
                 @constraint(m,
                     binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
                 )
@@ -319,16 +319,15 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
             }
         )
     else
-        #TODO: consider adding max battery power here like in https://github.com/NREL/REopt.jl/pull/447/files
-        bigM_hourly_load = maximum(p.s.electric_load.loads_kw)+maximum(p.s.space_heating_load.loads_kw)+maximum(p.s.process_heat_load.loads_kw)+maximum(p.s.dhw_load.loads_kw)+maximum(p.s.cooling_load.loads_kw_thermal)
+        bigM_hourly_load_plus_battery = maximum(p.s.electric_load.loads_kw)+maximum(p.s.space_heating_load.loads_kw)+maximum(p.s.process_heat_load.loads_kw)+maximum(p.s.dhw_load.loads_kw)+maximum(p.s.cooling_load.loads_kw_thermal)+sum(Real[p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec])
         @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
             sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
-            sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= bigM_hourly_load*(1-m[Symbol("binNoGridPurchases"*_n)][ts])
+            sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= bigM_hourly_load_plus_battery*(1-m[Symbol("binNoGridPurchases"*_n)][ts])
         )
         @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
             sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) +
             sum(m[Symbol("dvStorageToGrid"*_n)][b, u, ts] for b in p.s.storage.types.elec, u in p.export_bins_by_storage[b])
-            <= bigM_hourly_load * m[Symbol("binNoGridPurchases"*_n)][ts]
+            <= bigM_hourly_load_plus_battery * m[Symbol("binNoGridPurchases"*_n)][ts]
         )
     end
 end
