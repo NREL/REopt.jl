@@ -3,8 +3,9 @@
 `ElectricStorage` results keys:
 - `size_kw` Optimal inverter capacity
 - `size_kwh` Optimal storage capacity
-- `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
-- `storage_to_load_series_kw` Vector of power used to meet load over the first year
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values over an average year
+- `storage_to_load_series_kw` Vector of power used to meet load over an average year
+- `storage_to_grid_series_kw` Vector of power exported to the grid over an average year
 - `initial_capital_cost` Upfront capital cost for storage and inverter
 # The following results are reported if storage degradation is modeled:
 - `state_of_health`
@@ -30,8 +31,18 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
+        if !isempty(p.s.electric_tariff.export_bins)
+            StorageToGrid = @expression(m, [ts in p.time_steps],
+                sum(m[Symbol("dvStorageToGrid"*_n)][b, u, ts] for u in p.export_bins_by_storage[b]))
+        else
+            StorageToGrid = repeat([0], length(p.time_steps))
+        end
+
+        StorageToLoad = ( m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+                         - StorageToGrid[ts] for ts in p.time_steps
+        ) 
+        r["storage_to_grid_series_kw"] = round.(value.(StorageToGrid), digits=3)
+        r["storage_to_load_series_kw"] = round.(value.(StorageToLoad), digits=3)
 
         r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
             r["size_kw"] * p.s.storage.attr[b].installed_cost_per_kw +
@@ -64,6 +75,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []
+        r["storage_to_grid_series_kw"] = []
     end
 
     d[b] = r

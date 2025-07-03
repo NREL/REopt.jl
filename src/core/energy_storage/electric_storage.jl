@@ -162,7 +162,7 @@ end
 
 
 """
-`ElectricStorage` is an optional optional REopt input with the following keys and default values:
+`ElectricStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
     min_kw::Real = 0.0
@@ -176,6 +176,9 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
+    can_net_meter::Bool = false
+    can_wholesale::Bool = false
+    can_export_beyond_nem_limit = false
     installed_cost_per_kw::Real = 968.0 # Cost of power components (e.g., inverter and BOS) 
     installed_cost_per_kwh::Real = 253.0 # Cost of energy components (e.g., battery pack)
     installed_cost_constant::Real = 222115.0 # "+c" constant cost that is added to total ElectricStorage installed costs if a battery is included. Accounts for costs not expected to scale with power or energy capacity.
@@ -216,6 +219,9 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
+    can_net_meter::Bool = false
+    can_wholesale::Bool = false
+    can_export_beyond_nem_limit = false
     installed_cost_per_kw::Real = 968.0
     installed_cost_per_kwh::Real = 253.0
     installed_cost_constant::Real = 222115.0
@@ -262,6 +268,9 @@ struct ElectricStorage <: AbstractElectricStorage
     soc_min_applies_during_outages::Bool
     soc_init_fraction::Float64
     can_grid_charge::Bool
+    can_net_meter::Bool
+    can_wholesale::Bool
+    can_export_beyond_nem_limit::Bool
     installed_cost_per_kw::Real
     installed_cost_per_kwh::Real
     installed_cost_constant::Real
@@ -302,6 +311,16 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
+        can_net_meter = s.can_net_meter
+        can_wholesale = s.can_wholesale
+        can_export_beyond_nem_limit = s.can_export_beyond_nem_limit  
+        if s.off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
+            @warn "Setting ElectricStorage can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
+            can_net_meter = false
+            can_wholesale = false
+            can_export_beyond_nem_limit = false
+        end
+        
         if s.min_duration_hours > s.max_duration_hours
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
@@ -396,6 +415,9 @@ struct ElectricStorage <: AbstractElectricStorage
             s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
+            can_net_meter,
+            can_wholesale,
+            can_export_beyond_nem_limit,
             s.installed_cost_per_kw,
             s.installed_cost_per_kwh,
             s.installed_cost_constant,
