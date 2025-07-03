@@ -379,7 +379,6 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     pbi_benefit_per_kwh = Dict{String, Any}()
 
     # export related inputs
-    @info "s.electric_tariff.export_bins: $(s.electric_tariff.export_bins)"
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
     storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
