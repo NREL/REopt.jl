@@ -5,9 +5,10 @@
 Inputs used when `ElectricStorage.model_degradation` is `true`:
 ```julia
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Real = 2.55E-03
-    cycle_fade_coefficient::Real = 9.83E-05
-    time_exponent::Real = 0.42
+    calendar_fade_coefficient::Real = 1.16E-03
+    cycle_fade_coefficient::Vector{<:Real} = [2.46E-05]
+    cycle_fade_fraction::Vector{<:Real} = [1.0]
+    time_exponent::Real = 0.428
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
@@ -34,7 +35,6 @@ worth factor is used in the same manner irrespective of the `maintenance_strateg
     When modeling degradation the following ElectricStorage inputs are not used:
     - `replace_cost_per_kwh`
     - `battery_replacement_year`
-    - `installed_cost_constant`
     - `replace_cost_constant`
     - `cost_constant_replacement_year`
     They are replaced by the `maintenance_cost_per_kwh` vector.
@@ -135,9 +135,11 @@ The following shows how one would use the degradation model in REopt via the [Sc
         ...
         "model_degradation": true,
         "degradation": {
-            "calendar_fade_coefficient": 2.86E-03,
-            "cycle_fade_coefficient": 6.22E-05,
-            "installed_cost_per_kwh_declination_rate": 0.06,
+            "calendar_fade_coefficient": 1.16E-03,
+            "cycle_fade_coefficient": [2.46E-05],
+            "cycle_fade_fraction": [1.0],
+            "time_exponent": 0.428
+            "installed_cost_per_kwh_declination_rate": 0.05,
             "maintenance_strategy": "replacement",
             ...
         }
@@ -149,9 +151,10 @@ Note that not all of the above inputs are necessary. When not providing `calenda
 
 """
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Real = 2.55E-03
-    cycle_fade_coefficient::Real = 9.83E-05
-    time_exponent::Real = 0.42
+    calendar_fade_coefficient::Real = 1.16E-03
+    cycle_fade_coefficient::Vector{<:Real} = [2.46E-05]
+    cycle_fade_fraction::Vector{<:Real} = [1.0]
+    time_exponent::Real = 0.428
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
@@ -299,17 +302,6 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
-        # copy the replace_costs in case we need to change them
-        replace_cost_per_kw = s.replace_cost_per_kw 
-        replace_cost_per_kwh = s.replace_cost_per_kwh
-        if s.model_degradation
-            if haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
-            end
-            replace_cost_per_kwh = 0.0 # Always modeled using maintenance_cost_vector in degradation model.
-            # replace_cost_per_kw is unchanged here.
-        end
-
         if s.min_duration_hours > s.max_duration_hours
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
@@ -323,7 +315,7 @@ struct ElectricStorage <: AbstractElectricStorage
 
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
-            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kw,
+            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
@@ -335,7 +327,7 @@ struct ElectricStorage <: AbstractElectricStorage
         )
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,
-            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kwh,
+            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
@@ -367,11 +359,17 @@ struct ElectricStorage <: AbstractElectricStorage
 
         if haskey(d, :degradation)
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
+            if length(degr.cycle_fade_coefficient) != length(degr.cycle_fade_fraction)
+                throw(@error("The fields cycle_fade_coefficient and cycle_fade_fraction in ElectricStorage Degradation inputs must have equal length."))
+            end
+            if length(degr.cycle_fade_coefficient) > 1
+                @info "Modeling segmented cycle fade battery degradation costing"
+            end
         else
             degr = Degradation()
         end
 
-        # copy the replace_costs in case we need to change them
+        # Handle replacement costs for degradation model.
         replace_cost_per_kw = s.replace_cost_per_kw 
         replace_cost_per_kwh = s.replace_cost_per_kwh
         replace_cost_constant = s.replace_cost_constant

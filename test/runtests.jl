@@ -1219,50 +1219,51 @@ else  # run HiGHS tests
         Commented out of this testset due to solve time constraints using open-source solvers.
         This test has been validated via local testing.
         =#
-        @testset "Battery degradation replacement strategy" begin
-            # Replacement
-            nothing
-            # d = JSON.parsefile("scenarios/batt_degradation.json");
+        # @testset "Battery degradation replacement strategy" begin
+        #     # Replacement
+        #     d = JSON.parsefile("scenarios/batt_degradation.json");
 
-            # d["ElectricStorage"]["macrs_option_years"] = 0
-            # d["ElectricStorage"]["macrs_bonus_fraction"] = 0.0
-            # d["ElectricStorage"]["macrs_itc_reduction"] = 0.0
-            # d["ElectricStorage"]["total_itc_fraction"] = 0.0
-            # d["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
-            # d["ElectricStorage"]["replace_cost_per_kw"] = 0.0
-            # d["Financial"] = Dict(
-            #     "offtaker_tax_rate_fraction" => 0.0,
-            #     "owner_tax_rate_fraction" => 0.0
-            # )
-            # d["ElectricStorage"]["degradation"]["installed_cost_per_kwh_declination_rate"] = 0.2
+        #     d["ElectricStorage"]["macrs_option_years"] = 0
+        #     d["ElectricStorage"]["macrs_bonus_fraction"] = 0.0
+        #     d["ElectricStorage"]["macrs_itc_reduction"] = 0.0
+        #     d["ElectricStorage"]["total_itc_fraction"] = 0.0
+        #     d["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
+        #     d["ElectricStorage"]["replace_cost_per_kw"] = 0.0
+        #     d["Financial"] = Dict(
+        #         "offtaker_tax_rate_fraction" => 0.0,
+        #         "owner_tax_rate_fraction" => 0.0
+        #     )
+        #     d["ElectricStorage"]["degradation"]["installed_cost_per_kwh_declination_rate"] = 0.2
+        #     d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
 
-            # d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+        #     s = Scenario(d)
+        #     p = REoptInputs(s)
+        #     for t in 1:4380
+        #         p.s.electric_tariff.energy_rates[2*t-1] = 0
+        #         p.s.electric_tariff.energy_rates[2*t] = 10.0
+        #     end
+        #     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false))
+        #     build_reopt!(m,p)
+        #     fix(m[:binSOHIndicatorChange][29], 1.0) # Fix to simplify solving with HiGHS
+        #     optimize!(m)
+        #     results = reopt_results(m, p)
 
-            # s = Scenario(d)
-            # p = REoptInputs(s)
-            # for t in 1:4380
-            #     p.s.electric_tariff.energy_rates[2*t-1] = 0
-            #     p.s.electric_tariff.energy_rates[2*t] = 10.0
-            # end
-            # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            # results = run_reopt(m, p)
-
-            # @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
-            # @test results["ElectricStorage"]["size_kwh"] ≈ 14.07 atol=0.05
-            # @test results["ElectricStorage"]["replacement_month"] == 8
-            # @test results["ElectricStorage"]["maintenance_cost"] ≈ 32820.9 atol=1
-            # @test results["ElectricStorage"]["state_of_health"][8760] ≈ -6.8239 atol=0.001
-            # @test results["ElectricStorage"]["residual_value"] ≈ 2.61 atol=0.1
-            # @test sum(results["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 43800 atol=1.0 #battery should serve all load, every other period
+        #     @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
+        #     @test results["ElectricStorage"]["size_kwh"] ≈ 13.35 atol=0.05
+        #     @test results["ElectricStorage"]["replacement_month"] == 29
+        #     @test results["ElectricStorage"]["maintenance_cost"] ≈ 3481.2 atol=1
+        #     @test results["ElectricStorage"]["state_of_health"][8760] ≈ -0.972 atol=0.1
+        #     @test results["ElectricStorage"]["residual_value"] ≈ 2.53 atol=0.1
+        #     @test sum(results["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 43800 atol=1.0 #battery should serve all load, every other period
 
 
-            # # Validate model decision variables make sense.
-            # replace_month = Int(value.(m[:months_to_first_replacement]))+1
-            # @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
-            # @test sum(value.(m[:binSOHIndicator])[replace_month:end]) ≈ 0.0
-            # @test sum(value.(m[:binSOHIndicatorChange])) ≈ value.(m[:binSOHIndicatorChange])[replace_month] ≈ 1.0
-            # @test value.(m[:binSOHIndicator])[end] ≈ 0.0
-        end
+        #     # Validate model decision variables make sense.
+        #     replace_month = Int(value.(m[:months_to_first_replacement]))+1
+        #     @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
+        #     @test sum(value.(m[:binSOHIndicator])[replace_month:end]) ≈ 0.0
+        #     @test sum(value.(m[:binSOHIndicatorChange])) ≈ value.(m[:binSOHIndicatorChange])[replace_month] ≈ 1.0
+        #     @test value.(m[:binSOHIndicator])[end] ≈ 0.0
+        # end
 
         @testset "Solar and ElectricStorage w/BAU and degradation" begin
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
