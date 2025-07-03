@@ -291,12 +291,15 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
-        # if s.off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-        #     @warn "Setting ElectricStorage can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
-        #     can_net_meter = false
-        #     can_wholesale = false
-        #     can_export_beyond_nem_limit = false
-        # end
+        can_net_meter = s.can_net_meter
+        can_wholesale = s.can_wholesale
+        can_export_beyond_nem_limit = s.can_export_beyond_nem_limit  
+        if s.off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
+            @warn "Setting ElectricStorage can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
+            can_net_meter = false
+            can_wholesale = false
+            can_export_beyond_nem_limit = false
+        end
 
         # copy the replace_costs in case we need to change them
         replace_cost_per_kw = s.replace_cost_per_kw 
@@ -357,9 +360,9 @@ struct ElectricStorage <: AbstractElectricStorage
             s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
-            s.can_net_meter,
-            s.can_wholesale,
-            s.can_export_beyond_nem_limit,
+            can_net_meter,
+            can_wholesale,
+            can_export_beyond_nem_limit,
             s.installed_cost_per_kw,
             s.installed_cost_per_kwh,
             replace_cost_per_kw,
