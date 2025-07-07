@@ -25,6 +25,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fixed-bess-soc
+### Added
+- Add **ElectricStorage** input field `fixed_soc_series_fraction` to allow users to fix the SOC timeseries
+ 
+## test-runners
 ## Develop
 ### Added
 - Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
