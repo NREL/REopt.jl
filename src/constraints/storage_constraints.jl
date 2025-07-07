@@ -43,7 +43,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy][b, maximum(p.time_steps)]
         )
-    else
+    elseif !hasproperty(p.s.storage.attr[b], :fixed_soc_series_fraction) || isnothing(p.s.storage.attr[b].fixed_soc_series_fraction)
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
@@ -127,11 +127,23 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         end
 	end
 
+    # Constrain average state of charge
     if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
         avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
                    (8760. / p.hours_per_time_step)
         @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
+        )
+    end
+
+    # Constrain to fixed_soc_series_fraction
+    if hasproperty(p.s.storage.attr[b], :fixed_soc_series_fraction) && !isnothing(p.s.storage.attr[b].fixed_soc_series_fraction)      
+        @constraint(m, [ts in p.time_steps],
+        # Allow for a 1 pct point buffer on user-provided fixed_soc_series_fraction
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] <= (0.02 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
+        )
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] >= (-0.02 + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     end
 end

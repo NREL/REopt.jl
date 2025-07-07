@@ -29,6 +29,10 @@ Classify the change according to the following categories:
 ### Added 
 - Add decision variable **dvStorageToGrid** and **ElectricStorage** input options for grid export: `can_net_meter`, `can_wholesale`, `can_export_beyond_nem_limit`
 
+## fixed-bess-soc
+### Added
+- Add **ElectricStorage** input field `fixed_soc_series_fraction` to allow users to fix the SOC timeseries
+ 
 ## test-runners
 ## Develop
 ### Added

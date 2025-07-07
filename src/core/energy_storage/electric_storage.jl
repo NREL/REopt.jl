@@ -202,8 +202,10 @@ end
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} = nothing # If provided, SOC (as fraction of total energy capacity) will not be optimized and will instead be fixed to the values provided here +- 0.02 (this buffer is to avoid infeasible solutions) 
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -247,6 +249,7 @@ Base.@kwdef struct ElectricStorageDefaults
     optimize_soc_init_fraction::Bool = false
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} = nothing
 end
 
 
@@ -299,8 +302,10 @@ struct ElectricStorage <: AbstractElectricStorage
     optimize_soc_init_fraction::Bool
     min_duration_hours::Real
     max_duration_hours::Real
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} 
+    
+    function ElectricStorage(d::Dict, f::Financial)
 
-    function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
@@ -325,6 +330,16 @@ struct ElectricStorage <: AbstractElectricStorage
             throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
         end
 
+        # Copy SOC input in case we need to change them
+        soc_min_fraction = s.soc_min_fraction
+        optimize_soc_init_fraction = s.optimize_soc_init_fraction
+        if !isnothing(s.fixed_soc_series_fraction) 
+            @warn "Fixing ElectricStorage soc_series_fraction to the provided fixed_soc_series_fraction. Other SOC inputs will be ignored."
+            soc_min_fraction = 0.0
+            optimize_soc_init_fraction = false
+            error_if_series_vals_not_0_to_1(s.fixed_soc_series_fraction, "ElectricStorage", "fixed_soc_series_fraction")
+        end
+        
         macrs_schedule = [0.0]
         if s.macrs_option_years == 5 || s.macrs_option_years == 7
             macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
@@ -411,7 +426,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.internal_efficiency_fraction,
             s.inverter_efficiency_fraction,
             s.rectifier_efficiency_fraction,
-            s.soc_min_fraction,
+            soc_min_fraction,
             s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
@@ -443,9 +458,10 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
-            s.optimize_soc_init_fraction,
+            optimize_soc_init_fraction,
             s.min_duration_hours,
-            s.max_duration_hours
+            s.max_duration_hours,
+            s.fixed_soc_series_fraction
         )
     end
 end

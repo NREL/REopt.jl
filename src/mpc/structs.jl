@@ -230,6 +230,10 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     can_wholesale::Bool = false
     can_export_beyond_nem_limit = false
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
+    max_kw::Float64 = size_kw
+    max_kwh::Float64 = size_kwh
+    minimum_avg_soc_fraction::Float64 = 0.0
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} = nothing
 end
 ```
 """
@@ -248,6 +252,7 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
+    fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}} = nothing
 end
 
 
