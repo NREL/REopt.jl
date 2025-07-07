@@ -85,20 +85,39 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
+
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
+    latitude=site.latitude, longitude=site.longitude, 
+    time_steps_per_hour=settings.time_steps_per_hour,
+    off_grid_flag = settings.off_grid_flag
+    )
     
     pvs = PV[]
+    electric_load_annual_kwh = sum(electric_load.loads_kw) / settings.time_steps_per_hour
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
             for (i, pv) in enumerate(d["PV"])
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag, 
-                            latitude=site.latitude))
+                push!(pvs, PV(
+                    ; dictkeys_tosymbols(pv)...,
+                    off_grid_flag = settings.off_grid_flag, 
+                    latitude = site.latitude,
+                    electric_load_annual_kwh = electric_load_annual_kwh,
+                    site_land_acres = site.land_acres,
+                    site_roof_squarefeet = site.roof_squarefeet
+                ))
             end
         elseif typeof(d["PV"]) <: AbstractDict
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
-                        latitude=site.latitude))
+            push!(pvs, PV(
+                ; dictkeys_tosymbols(d["PV"])..., 
+                off_grid_flag = settings.off_grid_flag, 
+                latitude = site.latitude,
+                electric_load_annual_kwh = electric_load_annual_kwh,
+                site_land_acres = site.land_acres,
+                site_roof_squarefeet = site.roof_squarefeet
+            ))
         else
             throw(@error("PV input must be Dict or Dict[]."))
         end
@@ -117,11 +136,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             )
     end
 
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                    latitude=site.latitude, longitude=site.longitude, 
-                                    time_steps_per_hour=settings.time_steps_per_hour,
-                                    off_grid_flag = settings.off_grid_flag
-                                )
+
 
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
@@ -857,7 +872,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         wind,
         storage,
         electric_tariff, 
-        electric_load, 
+        electric_load,
         electric_utility, 
         financial,
         generator,

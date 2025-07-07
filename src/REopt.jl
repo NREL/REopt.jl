@@ -27,6 +27,7 @@ export
     get_existing_chiller_default_cop,
     get_electric_heater_defaults,
     get_ashp_defaults,
+    get_pv_cost_params,
     convert_mgravens_inputs_to_reopt_inputs,
     update_mgravens_with_reopt_results!
 
