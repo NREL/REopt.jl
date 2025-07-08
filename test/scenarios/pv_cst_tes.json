@@ -8811,6 +8811,7 @@
     "urdb_label": "539f6a63ec4f024411ec8ed7"
   },
   "ElectricLoad": {
+    "year": 2017,
     "loads_kw": [
       1000.0,
       1000.0,
@@ -17577,9 +17578,9 @@
   "CST": {
     "tech_type": "ptc",
     "min_kw": 0,
-    "inlet_temp_degF": 400,
-    "outlet_temp_degF": 500,
-    "installed_cost_per_kw": 950
+    "inlet_temp_degF": 700,
+    "outlet_temp_degF": 600,
+    "installed_cost_per_kw": 1200
   },
   "HotSensibleTes": {
     "installed_cost_per_kwh": 100,
