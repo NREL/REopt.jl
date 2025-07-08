@@ -188,6 +188,13 @@ struct ColdThermalStorage <: AbstractThermalStorage
         charge_efficiency = s.internal_efficiency_fraction^0.5
         discharge_efficiency = s.internal_efficiency_fraction^0.5
         installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
+
+        macrs_schedule = [0.0]
+        if s.macrs_option_years == 5 || s.macrs_option_years == 7
+            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
+        elseif !(s.macrs_option_years == 0)
+            throw(@error("ColdThermalStorage macrs_option_years must be 0, 5, or 7."))
+        end
       
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = installed_cost_per_kwh,
@@ -196,7 +203,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
             itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_schedule = macrs_schedule,
             macrs_bonus_fraction = s.macrs_bonus_fraction,
             macrs_itc_reduction = s.macrs_itc_reduction
         ) - s.total_rebate_per_kwh
@@ -276,6 +283,13 @@ struct HotThermalStorage <: AbstractThermalStorage
         charge_efficiency = s.internal_efficiency_fraction^0.5
         discharge_efficiency = s.internal_efficiency_fraction^0.5
         installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
+
+        macrs_schedule = [0.0]
+        if s.macrs_option_years == 5 || s.macrs_option_years == 7
+            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
+        elseif !(s.macrs_option_years == 0)
+            throw(@error("HotThermalStorage macrs_option_years must be 0, 5, or 7."))
+        end        
       
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = installed_cost_per_kwh,
@@ -284,7 +298,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
             itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_schedule = macrs_schedule,
             macrs_bonus_fraction = s.macrs_bonus_fraction,
             macrs_itc_reduction = s.macrs_itc_reduction
         ) - s.total_rebate_per_kwh
