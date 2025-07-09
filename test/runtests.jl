@@ -3810,6 +3810,7 @@ else  # run HiGHS tests
             # Fix soc_series to optimal from previous run
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)) 
             post["ElectricStorage"]["fixed_soc_series_fraction"] =  soc_series 
+            post["ElectricStorage"]["fixed_soc_series_fraction_tolerance"] = 0.02
             results = run_reopt(m1 , post)
             lcc2 = results["Financial"]["lcc"]
             

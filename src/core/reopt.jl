@@ -444,7 +444,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		degr_bool = p.s.storage.attr[b].model_degradation
 		if degr_bool
-			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost will include costs to be incurred for power electronics and the cost constant."
+			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost will include costs incurred for power electronics [per kW] and the cost constant, but not for the per kWh components."
             add_to_expression!(
 				m[:ElectricStorageOMCost], -1.0 * p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b]
 			)
