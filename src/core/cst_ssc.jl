@@ -192,8 +192,8 @@ function run_ssc(case_data::Dict)
             if !haskey(user_defined_inputs, "lat")
                 user_defined_inputs["lat"] = lat
             end
-            if !haskey(user_defined_inputs, "Fluid")
-                user_defined_inputs["Fluid"] = 21
+            if !haskey(user_defined_inputs, "fluid_id")
+                user_defined_inputs["fluid_id"] = 21
             end
             if !haskey(user_defined_inputs, "q_pb_design")
                 if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
@@ -203,13 +203,8 @@ function run_ssc(case_data::Dict)
                 end
             end
             if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
-                if haskey(case_data["Site"], "land_acres")
-                    user_defined_inputs["use_solar_mult_or_aperture_area"] = 1
-                    user_defined_inputs["specified_total_aperture"] = case_data["Site"]["land_acres"] * 4046.85642
-                else
-                    user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
-                    user_defined_inputs["specified_solar_multiple"] = 2.5
-                end
+                user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
+                user_defined_inputs["specified_solar_multiple"] = 3.0
             end
         end
     end
@@ -233,7 +228,7 @@ function run_ssc(case_data::Dict)
         chmod(hdl, filemode(hdl) | 0o755) ### added just because I saw this in the wind module
         ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
-        @ccall hdl.ssc_module_exec_set_print(1::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
+        @ccall hdl.ssc_module_exec_set_print(0::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
 
         ### Set defaults
         set_ssc_data_from_dict(defaults,model,data)
@@ -309,16 +304,17 @@ function run_ssc(case_data::Dict)
         #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         # print(c_response)
         ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
-        if model == "ptc"
-            thermal_production_norm = normalize_response(thermal_production, case_data, user_defined_inputs)
-        else
-            thermal_production_norm = thermal_production .* tcf ./ rated_power
-        end
-        if model in ["mst","ptc","lf"]
-            println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
-        elseif model in ["swh_evactube","swh_flatplate"]
-            println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
-        end
+        # if model == "ptc"
+        #     thermal_production_norm = normalize_response(thermal_production, case_data, user_defined_inputs)
+        # else
+        #     thermal_production_norm = thermal_production .* tcf ./ rated_power
+        # end
+        thermal_production_norm = thermal_production .* tcf ./ rated_power
+        # if model in ["mst","ptc","lf"]
+        #     println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
+        # elseif model in ["swh_evactube","swh_flatplate"]
+        #     println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
+        # end
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         ### Free SSC
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
