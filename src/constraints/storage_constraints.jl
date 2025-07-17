@@ -139,7 +139,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     # Constrain to fixed_soc_series_fraction
     if hasproperty(p.s.storage.attr[b], :fixed_soc_series_fraction) && !isnothing(p.s.storage.attr[b].fixed_soc_series_fraction)      
         # Allow for a percentage point (fractional) buffer on user-provided fixed_soc_series_fraction
-        buffer = 0.09
         @constraint(m, [ts in p.time_steps],
             m[Symbol("dvStoredEnergy"*_n)][b, ts] <= (p.s.storage.attr[b].fixed_soc_series_fraction_tolerance + p.s.storage.attr[b].fixed_soc_series_fraction[ts]) * m[Symbol("dvStorageEnergy"*_n)][b]
         )
