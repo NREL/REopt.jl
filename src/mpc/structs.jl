@@ -149,10 +149,10 @@ Keys for `d` include:
   - `tou_demand_rates`
 
     - an array of time-of-use demand rates
-    - must have length equal to `tou_demand_time_steps`
+    - must have length equal to `tou_demand_ratchet_time_steps`
     - default = []
 
-  - `tou_demand_time_steps`
+  - `tou_demand_ratchet_time_steps`
 
     - an array of arrays for the integer time steps that apply to the `tou_demand_rates`
     - default = []
@@ -160,7 +160,7 @@ Keys for `d` include:
   - `tou_previous_peak_demands`
 
     - an array of the previous peak demands set in each time-of-use demand period
-    - must have length equal to `tou_demand_time_steps`
+    - must have length equal to `tou_demand_ratchet_time_steps`
     - default = []
 
   - `net_metering`
@@ -183,9 +183,9 @@ function MPCElectricTariff(d::Dict)
     monthly_previous_peak_demands = get(d, "monthly_previous_peak_demands", [0.0])
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
-    tou_demand_time_steps = get(d, "tou_demand_time_steps", [])
+    tou_demand_ratchet_time_steps = get(d, "tou_demand_ratchet_time_steps", [])
     tou_previous_peak_demands = get(d, "tou_previous_peak_demands", Float64[])
-    @assert length(tou_demand_rates) == length(tou_demand_time_steps) == length(tou_previous_peak_demands)
+    @assert length(tou_demand_rates) == length(tou_demand_ratchet_time_steps) == length(tou_previous_peak_demands)
 
     # TODO can remove these inputs?
     fixed_monthly_charge = 0.0
@@ -228,7 +228,7 @@ function MPCElectricTariff(d::Dict)
         monthly_previous_peak_demands,
         1,
         tou_demand_rates,
-        tou_demand_time_steps,
+        tou_demand_ratchet_time_steps,
         tou_previous_peak_demands,
         1,
         fixed_monthly_charge,
