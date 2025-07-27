@@ -45,6 +45,11 @@ REopt.add_electric_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, 
 REopt.add_hot_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::String)
 ```
 
+## HighTempThermalStorage outputs
+```@docs
+REopt.add_high_temp_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::String)
+```
+
 ## ColdThermalStorage outputs
 ```@docs
 REopt.add_cold_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::String)
@@ -98,4 +103,29 @@ REopt.add_flexible_hvac_results
 ## SteamTurbine outputs
 ```@docs
 REopt.add_steam_turbine_results
+```
+
+## HydrogenLoad outputs
+```@docs
+REopt.add_hydrogen_load_results
+```
+
+## Electrolyzer outputs
+```@docs
+REopt.add_electrolyzer_results
+```
+
+## Compressor outputs
+```@docs
+REopt.add_compressor_results
+```
+
+## HydrogenStorage outputs
+```@docs
+REopt.add_hydrogen_storage_results
+```
+
+## FuelCell outputs
+```@docs
+REopt.add_fuel_cell_results
 ```

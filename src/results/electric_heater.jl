@@ -2,17 +2,17 @@
 
 """
 `ElectricHeater` results keys:
-- `size_mmbtu_per_hour`  # Thermal production capacity size of the ElectricHeater [MMBtu/hr]
-- `electric_consumption_series_kw`  # Fuel consumption series [kW]
-- `annual_electric_consumption_kwh`  # Fuel consumed in a year [kWh]
-- `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
-- `annual_thermal_production_mmbtu`  # Thermal energy produced in a year [MMBtu]
-- `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
-- `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
-- `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
-- `thermal_to_dhw_load_series_mmbtu_per_hour`  # Thermal power production to serve the docmestic hot water heating load series [MMBtu/hr]
-- `thermal_to_space_heating_load_series_mmbtu_per_hour`  # Thermal power production to serve the space heating load series [MMBtu/hr]
-- `thermal_to_process_heat_load_series_mmbtu_per_hour`  # Thermal power production to serve the process heating load series [MMBtu/hr]
+- `size_mmbtu_per_hour` Thermal production capacity size of the ElectricHeater [MMBtu/hr]
+- `electric_consumption_series_kw` Fuel consumption series [kW]
+- `annual_electric_consumption_kwh` Fuel consumed in a year [kWh]
+- `thermal_production_series_mmbtu_per_hour` Thermal energy production series [MMBtu/hr]
+- `annual_thermal_production_mmbtu` Thermal energy produced in a year [MMBtu]
+- `thermal_to_storage_series_mmbtu_per_hour` Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
+- `thermal_to_steamturbine_series_mmbtu_per_hour` Thermal power production to SteamTurbine series [MMBtu/hr]
+- `thermal_to_load_series_mmbtu_per_hour` Thermal power production to serve the heating load series [MMBtu/hr]
+- `thermal_to_dhw_load_series_mmbtu_per_hour` Thermal power production to serve the docmestic hot water heating load series [MMBtu/hr]
+- `thermal_to_space_heating_load_series_mmbtu_per_hour` Thermal power production to serve the space heating load series [MMBtu/hr]
+- `thermal_to_process_heat_load_series_mmbtu_per_hour` Thermal power production to serve the process heating load series [MMBtu/hr]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -103,18 +103,13 @@ end
 
 """
 MPC `ElectricHeater` results keys:
-- `electric_consumption_series_kw`  # Fuel consumption series [kW]
-- `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
-- `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
-- `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
-- `thermal_to_dhw_load_series_mmbtu_per_hour`  # Thermal power production to serve the docmestic hot water heating load series [MMBtu/hr]
-- `thermal_to_space_heating_load_series_mmbtu_per_hour`  # Thermal power production to serve the space heating load series [MMBtu/hr]
-- `thermal_to_process_heat_load_series_mmbtu_per_hour`  # Thermal power production to serve the process heating load series [MMBtu/hr]
-
-!!! note "'Series' and 'Annual' energy outputs are average annual"
-	REopt performs load balances using average annual production values for technologies that include degradation. 
-	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
-
+- `electric_consumption_series_kw` Power consumption series [kW]
+- `thermal_production_series_mmbtu_per_hour` Total thermal energy production series [MMBtu/hr]
+- `thermal_to_storage_series_mmbtu_per_hour` Thermal power production to storage series [MMBtu/hr]
+- `thermal_to_load_series_mmbtu_per_hour` Thermal power production to serve the heating load series [MMBtu/hr]
+- `thermal_to_dhw_load_series_mmbtu_per_hour` Thermal power production to serve the docmestic hot water heating load series [MMBtu/hr]
+- `thermal_to_space_heating_load_series_mmbtu_per_hour` Thermal power production to serve the space heating load series [MMBtu/hr]
+- `thermal_to_process_heat_load_series_mmbtu_per_hour` Thermal power production to serve the process heating load series [MMBtu/hr]
 """
 
 function add_electric_heater_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")

@@ -31,22 +31,21 @@
 `HydrogenStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
-    min_kg::Real = 0.0
-    max_kg::Real = 1.0e6
-    soc_min_fraction::Float64 = 0.05
-    soc_init_fraction::Float64 = 0.5
-    installed_cost_per_kg::Real = 500.0
-    replace_cost_per_kg::Real = 300.0
-    replacement_year::Int = 25
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
-    macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.3
-    total_rebate_per_kg::Real = 0.0
-    minimum_avg_soc_fraction::Float64 = 0.0
-    soc_min_applies_during_outages::Bool = false
-    daily_leakage_fraction::Float64 = 0.0
-    require_start_and_end_charge_to_be_equal::Bool = true
+    min_kg::Real = 0.0, # Minimum hydrogen storage capacity in kg
+    max_kg::Real = 1.0e6, # Maximum hydrogen storage capacity in kg
+    soc_min_fraction::Float64 = 0.05, # Minimum state of charge fraction
+    soc_init_fraction::Float64 = 0.5, # Initial state of charge fraction
+    installed_cost_per_kg::Real = 500.0, # Total installed cost per kg of hydrogen storage
+    replace_cost_per_kg::Real = 300.0, # Replacement cost per kg of hydrogen storage
+    replacement_year::Int = 25, # Year of the analysis in which the storage tank is replaced
+    macrs_option_years::Int = 7, # MACRS schedule for financial analysis (5 or 7 years). Set to zero to disable
+    macrs_bonus_fraction::Float64 = 0.8, # Fraction of upfront project costs to depreciate in Year 1 in addition to scheduled depreciation
+    macrs_itc_reduction::Float64 = 0.5, # Fraction of the ITC value by which the depreciable basis is reduced
+    total_itc_fraction::Float64 = 0.3, # Total Investment Tax Credit (ITC) fraction
+    minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
+    soc_min_applies_during_outages::Bool = false, # If true, the minimum state of charge fraction applies during outages. Otherwise min SOC is set to 0 during outages.
+    daily_leakage_fraction::Float64 = 0.0, # Fraction of stored hydrogen that is lost from the system each day 
+    require_start_and_end_charge_to_be_equal::Bool = true, # If true, the model will constrain final SOC = initial SOC
 ```
 """
 Base.@kwdef struct HydrogenStorageDefaults

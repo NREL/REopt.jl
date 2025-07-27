@@ -70,13 +70,13 @@ end
 
 """
 MPC `Wind` results keys:
-- `electric_to_storage_series_kw`
-- `electric_to_grid_series_kw`
-- `electric_curtailed_series_kw`
-- `electric_to_load_series_kw`
-- `electric_to_electrolyzer_series_kw`
-- `electric_to_compressor_series_kw`
-- `energy_produced_kwh`
+- `electric_to_storage_series_kw` Vector of power used to charge the battery over the MPC horizon
+- `electric_to_grid_series_kw` Vector of power exported to the grid over the MPC horizon
+- `electric_curtailed_series_kw` Vector of power curtailed over the MPC horizon
+- `electric_to_load_series_kw` Vector of power used to meet load over the MPC horizon
+- `electric_to_electrolyzer_series_kw` Vector of power to electrolyzer over the MPC horizon
+- `electric_to_compressor_series_kw` Vector of power to compressor over the MPC horizon
+- `energy_produced_kwh` Total energy produced over the MPC horizon
 """
 function add_wind_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 

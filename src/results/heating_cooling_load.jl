@@ -103,7 +103,7 @@ end
 
 """
 MPC `HeatingLoad` results keys:
-- `process_heat_thermal_load_series_mmbtu_per_hour` vector of site space heating boiler load in every time step
+- `process_heat_thermal_load_series_mmbtu_per_hour` Vector of site thermal process heat load in every time step
 """
 function add_heating_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 

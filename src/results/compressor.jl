@@ -29,16 +29,17 @@
 # *********************************************************************************
 """
 `Compressor` results keys:
-- `size_kw` Optimal compressor capacity
-    - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
-- `year_one_hydrogen_compressed_kg` Total hydrogen compressed over the first year
-- `year_one_electricity_consumed_kwh` Total energy consumed by the compressor over the first year
-- `electricity_consumed_series_kw` Vector of power consumed by the compressor over the first year
-- `hydrogen_compressed_series_kg` Vector of hydrogen compressed going into the high pressure tank 
+- `size_kw` Optimal compressor capacity (kW)
+- `year_one_hydrogen_compressed_kg` Total hydrogen compressed over the first year (kg)
+- `year_one_electricity_consumed_kwh` Total energy consumed by the compressor over the first year (kg)
+- `electricity_consumed_series_kw` Vector of power consumed by the compressor
+- `electricity_from_grid_series_kw` Vector of power from the grid consumed by the compressor
+- `electricity_from_fuel_cell_series_kw` Vector of power from the fuel cell consumed by the compressor
+- `hydrogen_compressed_series_kg` Vector of hydrogen compressed going into the hydrogen storage tank
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
     REopt performs load balances using average annual production values for technologies that include degradation. 
-    Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+    Therefore, all timeseries (`_series`) and `annual_` results should be interpreted as energy outputs averaged over the analysis period. 
     
 """
 function add_compressor_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -81,8 +82,8 @@ end
 
 """
 MPC `Compressor` results keys:
-- `hydrogen_compressed_series_kg`
-- `electricity_consumed_series_kw`
+- `hydrogen_compressed_series_kg` Vector of hydrogen compressed going into the hydrogen storage tank (kg)
+- `electricity_consumed_series_kw` Vector of power consumed by the compressor (kW)
 """
 function add_compressor_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     # Adds the `Compressor` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.

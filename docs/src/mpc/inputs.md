@@ -172,14 +172,58 @@ REopt.MPCFinancial
 REopt.MPCPV
 ```
 
+## MPCWind
+```@docs
+REopt.MPCWind
+```
+
 ## MPCGenerator
 ```@docs
 REopt.MPCGenerator
 ```
 
+## MPCElectrolyzer
+```@docs
+REopt.MPCElectrolyzer
+```
+
+## MPCCompressor
+```@docs
+REopt.MPCCompressor
+```
+
+## MPCHydrogenStorage
+```@docs
+REopt.MPCHydrogenStorage
+```
+
+## MPCFuelCell
+```@docs
+REopt.MPCFuelCell
+```
+
+## MPCHydrogenLoad
+```@docs
+REopt.MPCHydrogenLoad
+```
+
+## MPCProcessHeatLoad
+```@docs
+REopt.MPCProcessHeatLoad
+```
+
+## MPCElectricHeater
+```@docs
+REopt.MPCElectricHeater
+```
+
+## MPCHighTempThermalStorage
+```@docs
+REopt.MPCHighTempThermalStorage
+```
+
 ## MPCSettings
 The MPCSettings is the same as the [Settings](@ref).
-
 
 ## MPCLimits
 ```@docs

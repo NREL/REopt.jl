@@ -132,6 +132,11 @@ REopt.Boiler
 REopt.HotThermalStorageDefaults
 ```
 
+## HighTempThermalStorage
+```@docs
+REopt.HighTempThermalStorageDefaults
+```
+
 ## ColdThermalStorage
 ```@docs
 REopt.ColdThermalStorageDefaults
@@ -175,4 +180,29 @@ REopt.ElectricHeater
 ## ASHP
 ```@docs
 REopt.ASHP
+```
+
+## HydrogenLoad
+```@docs
+REopt.## HydrogenLoad
+```
+
+## Electrolyzer
+```@docs
+REopt.Electrolyzer
+```
+
+## Compressor
+```@docs
+REopt.Compressor
+```
+
+## HydrogenStorage
+```@docs
+REopt.HydrogenStorage
+```
+
+## FuelCell
+```@docs
+REopt.FuelCell
 ```

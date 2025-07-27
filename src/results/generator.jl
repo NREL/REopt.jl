@@ -77,13 +77,13 @@ end
 
 """
 MPC `Generator` results keys:
-- `variable_om_cost`
-- `fuel_cost`
-- `electric_to_storage_series_kw`
-- `electric_to_grid_series_kw`
-- `electric_to_load_series_kw`
-- `fuel_consumption_gal`
-- `energy_produced_kwh`
+- `variable_om_cost` Total variable operations and maintenance cost over the MPC horizon
+- `fuel_cost` Total fuel costs over the MPC horizon
+- `electric_to_storage_series_kw` Vector of power used to charge the battery over the MPC horizon
+- `electric_to_grid_series_kw` Vector of power exported to the grid over the MPC horizon
+- `electric_to_load_series_kw` Vector of power used to meet load over the MPC horizon
+- `fuel_consumption_gal` Total fuel consumption over the MPC horizon (gallons)
+- `energy_produced_kwh` Total energy produced over the MPC horizon (kWh)
 """
 function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()

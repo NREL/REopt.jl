@@ -30,10 +30,10 @@
 """
 `HydrogenLoad` is an optional REopt input with the following keys and default values:
 ```julia
-    loads_kg::Array{<:Real,1} = Real[],
-    path_to_csv::String = "", # for csv containing loads_kg
-    critical_loads_kg::Union{Nothing, Array{Real,1}} = nothing,
-    critical_load_fraction::Real = 0.0
+    loads_kg::Array{<:Real,1} = Real[], # Hydrogen load profile in kg for one year. Must be hourly (8,760 samples), 30 minute (17,520 samples), or 15 minute (35,040 samples). All load values must be greater than or equal to zero.
+    path_to_csv::String = "", # Path to csv containing the input for loads_kg 
+    critical_loads_kg::Union{Nothing, Array{Real,1}} = nothing, # Critical hydrogen load during outages (kg/timestep). If not provided, it will be set to critical_load_fraction * loads_kg
+    critical_load_fraction::Real = 0.0, # loads_kg is multiplied by the critical_load_fraction to determine the critical load that must be met during an outage if critical_loads_kg is not provided
 ```
 """
 mutable struct HydrogenLoad
