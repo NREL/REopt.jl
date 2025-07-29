@@ -608,6 +608,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 lumped_const_ref_kwh = 7200.0                
                 installed_cost_per_kw = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kw"])
                 installed_cost_per_kwh = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"])
+                # TODO this might already be negative from existing battery calc above, so we are actually reducing the per_kw and per_kwh costs here
                 installed_cost_constant = copy(reopt_inputs["ElectricStorage"]["installed_cost_constant"])
                 reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] = (installed_cost_per_kw * lumped_const_ref_kw + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kw
                 reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = (installed_cost_per_kwh * lumped_const_ref_kwh + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kwh                
