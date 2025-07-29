@@ -136,7 +136,7 @@ function effective_cost(;
     cap_cost_slope = itc_basis - tax_savings + replacement - rebate_per_kw
 
     # Sanity check
-    if cap_cost_slope < 0
+    if cap_cost_slope < 0 && !(itc_basis < 0.0)
         cap_cost_slope = 0
     end
 
