@@ -56,7 +56,7 @@ end
 
 function get_value_in_kw(object)
     value = NaN
-    power_conversion = 1000.0  # Assume Watts ("W") to divide W by 1000 to get kW
+    power_conversion = 1000.0  # Assume Watts ("W") or Watt-Hours ("Wh") to divide W or Wh by 1000 to get kW or kWh
     if typeof(object) <: Dict
         if object["multiplier"] == "k"
             power_conversion = 1.0  # Preserve kW
@@ -85,7 +85,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
 
     # Major assumptions: every ProposedEnergyProducerOption has the same SiteLocation
     # TODO add error checking in case above is not true
-    techs_to_include = []
+    # Make techs_to_include a set and push! append to avoid duplicates below
+    techs_to_include = Set()
     # Specific names that were given to certain categories/classes of data
     site_name = ""  # Only one, assumed to be the site location of the first ProposedAssetOption
     load_group_names = []  # May be one or more than one, e.g. ["ResidentialGroup", "IndustrialGroup"]
@@ -132,9 +133,20 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 energy_consumer_names = collect(keys(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"]))
             end
             
+            # Check for defined microgrid list of energy consumers to aggregate for critical load, built up along side the total load profile below
+            microgrid_name_list = mgravens["Group"]["ConnectivityNodeContainer"]["Microgrid.1"]["EquipmentContainer.Equipments"]
+            mg_energy_consumers = []
+            use_mg_energy_consumers_for_critical_load = false
+            for key in microgrid_name_list
+                if occursin("EnergyConsumer", key)
+                    push!(mg_energy_consumers, replace(split(key, "::")[2], "'" => ""))
+                    use_mg_energy_consumers_for_critical_load = true
+                end
+            end
+
             # Load profile data
             for energy_consumer_name in energy_consumer_names
-                # Assume the first EnergyConsumer indicates whether the LoadProfile is normalized or not
+                # We find out if the p (power) value is to be multiplied by a normalized load profile or ignored later
                 load_profile_data[energy_consumer_name] = Dict()
                 energy_consumer_data = mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["EnergyConsumer"][energy_consumer_name]
                 load_profile_data[energy_consumer_name]["name"] = replace(split(energy_consumer_data["EnergyConsumer.LoadProfile"], "::")[2], "'" => "")
@@ -153,6 +165,9 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 else
                     throw(@error("No EnergyConsumer.p or EnergyConsumer.EnergyConsumerPhase found for EnergyConsumer $energy_consumer_name"))
                 end
+                # Only using these two params below if the load profile does not have units
+                load_profile_data[energy_consumer_name]["has_units"] = !isnothing(get(energy_consumer_data, "BasicIntervalSchedule.value1Unit", nothing)) ? true : false
+                load_profile_data[energy_consumer_name]["units_multiplier"] = !isnothing(get(energy_consumer_data, "BasicIntervalSchedule.value1Multiplier", nothing)) ? 1.0 : 1000.0
             end
             
             # ElectricLoad.loads_kw electric load profile - aggregate any relevant EnergyConsumers, from LoadGroup or all
@@ -171,12 +186,11 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # This is intended to handle both/combo absolute power load profiles or normalized profiles with their respective "p" load allocations
             all_interval_data = mgravens["BasicIntervalSchedule"]
             total_loads_kw = zeros(convert(Int64, 8760 * 3600 / timestep_sec))
+            microgrid_loads_kw = zeros(convert(Int64, 8760 * 3600 / timestep_sec))
             for energy_consumer_name in energy_consumer_names
                 load_name = load_profile_data[energy_consumer_name]["name"]
                 interval_data = get(all_interval_data, load_name, nothing)
                 if !isnothing(interval_data)
-                    # We are assuming if there exists a .value1Unit, it's in Watts
-                    has_units_watts = isnothing(get(interval_data, "BasicIntervalSchedule.value1Unit", nothing)) ? false : true
                     # Currently allowing 15-min and hourly intervals with length of N timesteps and scaling to 1-year if not the full year
                     # Note, we also do this with LMPs but we still require 12 months for capacity prices, and optional-input PV profiles
                     timestep_sec_i = interval_data["EnergyConsumerSchedule.timeStep"]
@@ -193,19 +207,27 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                     if !(length(load_list_of_dict) == n_timesteps)
                         throw(@error("All EnergyConsumerSchedule.RegularTimePoints for BasicIntervalSchedule load profiles must be the same length"))
                     end
+                    # Assume Watts if it has units, and multiplier of 1000 for kW if it has a value1Multiplier
+                    has_units = !isnothing(get(interval_data, "BasicIntervalSchedule.value1Unit", nothing)) ? true : false
+                    units_multiplier = !isnothing(get(interval_data, "BasicIntervalSchedule.value1Multiplier", nothing)) ? 1.0 : 1000.0
                     # Convert from data from W to kW for REopt, and multiply by EnergyConsumer.p load allocation if normalized (no units)
-                    if has_units_watts
-                        load_multiplier = 1.0 / 1000.0
+                    if has_units
+                        load_multiplier = 1.0 / units_multiplier
                     else
-                        load_multiplier = load_profile_data[energy_consumer_name]["p"] / 1000.0
+                        # Not units, but has a p value
+                        load_multiplier = load_profile_data[energy_consumer_name]["p"] / load_profile_data[energy_consumer_name]["units_multiplier"]
                     end
                     # Allow for 15-minute (900 timestep_sec) or hourly (3600 timestep_sec) time intervals, and time windows of 1, 2, 7, and 365 days, and scale to year-long time window arrays (365 days)
                     total_loads_kw += load_multiplier * build_timeseries_array(load_list_of_dict, "RegularTimePoint.value1", timestep_sec_i)
+                    if (energy_consumer_name in mg_energy_consumers) && use_mg_energy_consumers_for_critical_load
+                        microgrid_loads_kw += load_multiplier * build_timeseries_array(load_list_of_dict, "RegularTimePoint.value1", timestep_sec_i)
+                    end
                 else
                     throw(@error("No $load_name load name found in BasicIntervalSchedule"))
                 end
             end
             reopt_inputs["ElectricLoad"]["loads_kw"] = total_loads_kw
+            reopt_inputs["ElectricLoad"]["critical_loads_kw"] = microgrid_loads_kw
 
             # A bunch of financial/prices stuff depends on the Region name, but this is all assumed to apply for all/aggregate loads
             subregion_name = replace(split(mgravens["ProposedSiteLocation"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
@@ -262,7 +284,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             #  Currently, we can only have one active time step for each month because we can't distinguish from the Ravens schema
             #   Also, we must past an array of length 12 of the same prices for REopt to calculate monthly CP charges; otherwise it's more like "yearly" or "per unique price"
             if !isnothing(get(mgravens["EnergyPrices"], "CoincidentPeakPrices", nothing))
-                coincident_peak_prices_name = replace(split(mgravens["Group"]["SubGeographicalRegion"]["subregion_name"]["SubGeographicalRegion.CoincidentPeakPrices"], "::")[2], "'" => "")
+                coincident_peak_prices_name = replace(split(mgravens["Group"]["SubGeographicalRegion"][subregion_name]["SubGeographicalRegion.CoincidentPeakPrices"], "::")[2], "'" => "")
                 coincident_peak_dict = get(mgravens["EnergyPrices"]["CoincidentPeakPrices"], coincident_peak_prices_name, nothing)
                 if !isnothing(coincident_peak_dict)
                     coincident_peak_list_of_dict = coincident_peak_dict["CoincidentPeakPrices.CoincidentPeakPriceCurve"]["PriceCurve.CurveDatas"]
@@ -295,6 +317,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             for outage in keys(get(mgravens, "OutageScenario", []))
                 duration_str = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedDuration"]
                 append!(duration, [parse(Int64, split(split(duration_str, "P")[2], "H")[1])])
+                # This will be ignored if there is a critical_loads_kw input, as defined by the list of mg_energy_consumers
                 append!(critical_load_fraction, [mgravens["OutageScenario"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
                 start_date_str = get(mgravens["OutageScenario"][outage], "OutageScenario.anticipatedStartDay", nothing)
                 # Optional to input start date and hour, and otherwise REopt will use default 4 seasonal peak outages
@@ -314,13 +337,188 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 reopt_inputs["ElectricUtility"]["outage_start_time_steps"] = outage_start_time_steps
             end
             reopt_inputs["ElectricLoad"]["critical_load_fraction"] = critical_load_fraction_avg
+
+            # Technology specific input parameters
+            # Current approach: only include *microgrid* PV + Battery in "existing", 
+            #   where existing battery will only be accounted for by zeroing out the first X amount of capacity, and
+            #   the generation from existing PVs that are NOT in the microgrid are subtracted off of the total grid-tied load (above)
+            # Check for existing assets such as PhotoVoltaicUnit and BatteryUnit, and "consider" them in REopt if those technologies are options
+            # TODO we cannot currently model a different size PV or battery for the whole system vs the microgrid for the outage, but
+            #   we can net out the non-MG PV from the loads_kw and then ONLY include the PV capacity which is on the microgrid
+            # Defaults from electric_load.jl
+            # loads_kw_is_net::Bool = true, --> we want to say this is FALSE because we are NOT modeling non-MG existing PV, and we are NOT subtracting MG PV from load
+            # critical_loads_kw_is_net::Bool = false, --> keep as false because we are NOT netting out MG existing PV, but maybe we would sometimes if that's the load data we have?
+            # TODO we cannot model an existing battery other than trick the cost to only estimate cost for new battery, but this won't have BAU value/dispatch for battery
+            existing_assets = mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]["PowerElectronicsConnection"]
+            existing_asset_types = Set{String}()
+            existing_pv_data = Dict()
+            existing_bess_data = Dict()
+            for (key, asset) in existing_assets
+                if haskey(asset, "PowerElectronicsConnection.PowerElectronicsUnit")
+                    unit = asset["PowerElectronicsConnection.PowerElectronicsUnit"]
+                    if haskey(unit, "Ravens.cimObjectType")
+                        asset_type = unit["Ravens.cimObjectType"]
+                        if asset_type == "PhotoVoltaicUnit"
+                            existing_pv_data[key] = Dict()
+                            existing_pv_data[key]["ac_rating_kw"] = get_value_in_kw(unit["PowerElectronicsUnit.maxP"])
+                        elseif asset_type == "BatteryUnit"
+                            existing_bess_data[key] = Dict()
+                            existing_bess_data[key]["ac_rating_kw"] = get_value_in_kw(unit["PowerElectronicsUnit.maxP"])
+                            existing_bess_data[key]["energy_rating_kwh"] = get_value_in_kw(unit["BatteryUnit.ratedE"])
+                        end
+                        # The "Set" data type only keeps unique values with push!, so we can use it to collect unique asset types
+                        push!(existing_asset_types, asset_type)
+                    else
+                        @info "Warning: PowerElectronicsConnection.PowerElectronicsUnit does not have Ravens.cimObjectType for key: $key"
+                    end
+                else
+                    @info "Warning: PowerElectronicsConnection.PowerElectronicsUnit key not found for key: $key"
+                end
+            end 
+
+            # Check for existing assets in the microgrid which may be a SUBset of the list above, or possibly the same set if the whole network is the microgrid
+            # TODO handle any unique name that has "Microgrid" in it instead of hard-coding this specific name
+            existing_mg_assets = mgravens["Group"]["ConnectivityNodeContainer"]["Microgrid.1"]["EquipmentContainer.Equipments"]
+            existing_mg_asset_types = Set{String}()
+            existing_mg_pvs = []  # List of unique keys for existing PVs within the existing_assets object
+            existing_mg_bess = []  # List of unique keys for existing BESS within the existing_assets object
+            for key in existing_mg_assets
+                update_asset_type = false
+                if occursin("PhotoVoltaicUnit", key)
+                    push!(existing_mg_pvs, replace(split(key, "::")[2], "'" => ""))
+                    asset_type = "PhotoVoltaicUnit"
+                    update_asset_type = true
+                elseif occursin("BatteryUnit", key)
+                    push!(existing_mg_bess, replace(split(key, "::")[2], "'" => ""))
+                    asset_type = "BatteryUnit"
+                    update_asset_type = true
+                end
+                # The "Set" data type only keeps unique values with push!, so we can use it to collect unique asset types
+                if update_asset_type
+                    push!(existing_mg_asset_types, asset_type)
+                end
+            end
+
+            # Subtract non-MG (outside of MG) PV from the whole network load profile because we are not modeling that PV capacity in REopt
+            if "PhotoVoltaicUnit" in existing_asset_types
+                push!(techs_to_include, "PV")
+                @info "Found existing PhotoVoltaicUnit assets in whole network"
+                if !(length(existing_mg_pvs) == length(keys(existing_pv_data)))
+                    @info "Found more existing PhotoVoltaicUnit assets in whole network than microgrid, so netting out non-microgrid PV production from grid-tied load profile"
+                    # Find unique existing PVs in existing_pvs that are NOT in existing_mg_pvs
+                    non_mg_pvs = setdiff(keys(existing_pv_data), existing_mg_pvs)
+                    # Subtract the generation from the grid-tied load profile
+                    for pv in non_mg_pvs
+                        pv_data = existing_assets[pv]["PowerElectronicsConnection.PowerElectronicsUnit"]
+                        if !isnothing(pv_data["PhotoVoltaicUnit.GenerationProfile"])
+                            pv_profile_name = replace(split(pv_data["PhotoVoltaicUnit.GenerationProfile"], "::")[2], "'" => "")
+                            pv_curve_data = mgravens["Curve"][pv_profile_name]
+                            # Assume Watts if it has units, and multiplier of 1000 for kW if it has a value1Multiplier
+                            has_units = !isnothing(get(pv_curve_data, "Curve.y1Unit", nothing)) ? true : false
+                            units_multiplier = !isnothing(get(pv_curve_data, "Curve.y1Multiplier", nothing)) ? 1.0 : 1000.0
+                            # Convert from data from W to kW for REopt, and multiply by EnergyConsumer.p load allocation if normalized (no units)
+                            if has_units
+                                pv_multiplier = 1.0 / units_multiplier
+                            else
+                                # Not units, but has a p value
+                                pv_multiplier = existing_pv_data[pv]["ac_rating_kw"]  # kW, possibly already converted from W above
+                            end
+                            # Note, the Curve profile must be normalized to DC-capacity; otherwise will throw a REopt error
+                            pv_profile_list_of_dict = pv_curve_data["Curve.CurveDatas"]
+                            if !(length(pv_profile_list_of_dict) == 8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                                throw(@error("PV profile $pv_profile_name Curve.CurveDatas must be the same length as the load profile"))
+                            else
+                                # Subtract the generation from the grid-tied load profile
+                                reopt_inputs["ElectricLoad"]["loads_kw"] .-= pv_multiplier * build_timeseries_array(pv_profile_list_of_dict, "CurveData.y1value", timestep_sec)
+                            end
+                        end
+                    end
+                    # We are subtracting out the non_mg_pvs generation from the load profile, but we are not including the non_mg_pvs in the existing_kw
+                    reopt_inputs["ElectricLoad"]["loads_kw_is_net"] = false
+                end
+
+                # Aggregate the existing PV capacity, but just track the largest existing PV for the production factor below to avoid modeling multiple PVs
+                reopt_inputs["PV"]["existing_kw"] = 0.0  # Initialize existing_kw for REopt inputs
+                largest_pv = 0.0
+                largest_pv_name = ""
+                for pv in existing_mg_pvs
+                    pv_data = existing_assets[pv]["PowerElectronicsConnection.PowerElectronicsUnit"]
+                    if !isnothing(pv_data["PowerElectronicsUnit.maxP"])
+                        reopt_inputs["PV"]["existing_kw"] += get_value_in_kw(pv_data["PowerElectronicsUnit.maxP"])
+                        if get_value_in_kw(pv_data["PowerElectronicsUnit.maxP"]) > largest_pv
+                            largest_pv = get_value_in_kw(pv_data["PowerElectronicsUnit.maxP"])
+                            largest_pv_name = pv
+                        end
+                    end
+                end
+
+                # Assign the largest existing PV for production factor
+                pv_data = existing_assets[largest_pv_name]["PowerElectronicsConnection.PowerElectronicsUnit"]
+                if !isnothing(pv_data["PhotoVoltaicUnit.GenerationProfile"])
+                    pv_profile_name = replace(split(pv_data["PhotoVoltaicUnit.GenerationProfile"], "::")[2], "'" => "")
+                    pv_curve_data = mgravens["Curve"][pv_profile_name]
+                    # Assume Watts if it has units, and multiplier of 1000 for kW if it has a value1Multiplier
+                    has_units = !isnothing(get(pv_curve_data, "Curve.y1Unit", nothing)) ? true : false
+                    units_multiplier = !isnothing(get(pv_curve_data, "Curve.y1Multiplier", nothing)) ? 1.0 : 1000.0
+                    # Convert from data from W to kW for REopt, and multiply by EnergyConsumer.p load allocation if normalized (no units)
+                    println("PV largest unit size kW = ", existing_pv_data[largest_pv_name]["ac_rating_kw"])
+                    println("PV profile has_units = $has_units, units_multiplier = $units_multiplier")
+                    if has_units
+                        pv_multiplier = 1.0 / (existing_pv_data[largest_pv_name]["ac_rating_kw"] * units_multiplier)
+                    else
+                        # TODO confirm good: No units, so use this profile assuming it's AC_prod / DC_rated
+                        pv_multiplier = 1.0
+                    end
+                    # Note, the Curve profile must be normalized to DC-capacity; otherwise will throw a REopt error
+                    pv_profile_list_of_dict = pv_curve_data["Curve.CurveDatas"]
+                    if !(length(pv_profile_list_of_dict) == 8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                        throw(@error("PV profile $pv_profile_name Curve.CurveDatas must be the same length as the load profile"))
+                    else
+                        # Subtract the generation from the grid-tied load profile
+                        reopt_inputs["PV"]["production_factor_series"] = pv_multiplier * build_timeseries_array(pv_profile_list_of_dict, "CurveData.y1value", timestep_sec)
+                    end
+                else
+                    @info "No PhotoVoltaicUnit.GenerationProfile found for existing PV $largest_pv_name, so REopt will call PVWatts for production_factor_series"
+                end
+            end
+
+            if "BatteryUnit" in existing_asset_types && !("BatteryUnit" in existing_mg_asset_types)
+                @info "Found existing BatteryUnit in whole system but not in microgrid, so ignoring existing BatteryUnit assets. Existing MG BatteryUnit will be modeled as a zero-cost first X capacity using a negative constant cost term"
+            end
+
+            existing_battery_kw = 0.0
+            existing_battery_kwh = 0.0
+            cost(kw, kwh) = kw * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] + kwh * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
+            if "BatteryUnit" in existing_mg_asset_types
+                @info "Found existing BatteryUnit in microgrid, so including by zeroing out the cost for the first X amount of capacity"
+                push!(techs_to_include, "ElectricStorage")
+                # Update ElectricStorage.installed_cost_constant to make the existing BatteryUnit power and energy capacity zero-cost
+                # TODO we currently cannot model economy of scale with the cost constant when we have an existing battery
+                # Aggregate existing battery capacity
+                for bess in keys(existing_bess_data)
+                    existing_battery_kw += existing_bess_data[bess]["ac_rating_kw"]
+                    existing_battery_kwh += existing_bess_data[bess]["energy_rating_kwh"]
+                end
+                reopt_inputs["ElectricStorage"]["min_kw"] = existing_battery_kw
+                reopt_inputs["ElectricStorage"]["min_kwh"] = existing_battery_kwh
+                # With existing battery, we lump the const constant into the per_kw and per_kwh costs because we can't model the cost constant for real
+                lumped_const_power_fraction = 0.5
+                lumped_const_ref_kw = 1800.0
+                lumped_const_ref_kwh = 7200.0
+                installed_cost_per_kw = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kw"])
+                installed_cost_per_kwh = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"])
+                installed_cost_constant = copy(reopt_inputs["ElectricStorage"]["installed_cost_constant"])
+                reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] = (installed_cost_per_kw * lumped_const_ref_kw + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kw
+                reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = (installed_cost_per_kwh * lumped_const_ref_kwh + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kwh
+                reopt_inputs["ElectricStorage"]["installed_cost_constant"] = -cost(existing_battery_kw, existing_battery_kwh)
+            end
         end
 
-        # Technology specific input parameters
+        ####   Check these for each asset type, not just i == 1   ###
         # TODO are we sure that the cost inputs can be handled as "per/kW" vs "per/W"? what about units for land area, or other non power/energy/money unit?   
         if tech_data["Ravens.cimObjectType"] == "ProposedPhotoVoltaicUnitOption"
             # PV inputs
-            append!(techs_to_include, ["PV"])
+            push!(techs_to_include, "PV")
             # Optional inputs for PV; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.powerCapacityFixed", nothing))
                 reopt_inputs["PV"]["min_kw"] = get_value_in_kw(tech_data["ProposedEnergyProducerOption.powerCapacityFixed"])
@@ -346,11 +544,14 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 if !(length(pv_profile_list_of_dict) == 8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
                     throw(@error("PV profile $pv_profile_name Curve.CurveDatas must be the same length as the load profile"))
                 else
+                    # TODO this may be absolute values instead of normalized, as it is for HCE example
+                    # If existing PV, especially large PV, could instead just use that production profile that's already written to reopt_inputs["PV"]["production_factor_series"] above
+                    @info "Using ProposedPhotoVoltaicUnitOption.GenerationProfile for PV production_factor_series, instead of possibly large existing PV generation profile"
                     reopt_inputs["PV"]["production_factor_series"] = build_timeseries_array(pv_profile_list_of_dict, "CurveData.y1value", timestep_sec)
                 end
             end
         elseif tech_data["Ravens.cimObjectType"] == "ProposedBatteryUnitOption"
-            append!(techs_to_include, ["ElectricStorage"])
+            push!(techs_to_include, "ElectricStorage")
             # Optional inputs for ElectricStorage; only update if included in MG-Ravens inputs, otherwise rely on MG-Ravens default or REopt default
             if !isnothing(get(tech_data, "ProposedBatteryUnitOption.energyCapacityFixed", nothing))
                 reopt_inputs["ElectricStorage"]["min_kwh"] = get_value_in_kw(tech_data["ProposedBatteryUnitOption.energyCapacityFixed"])
@@ -377,13 +578,13 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             if !isnothing(get(tech_data, "ProposedAssetOption.variablePrice", nothing))
                 reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] = tech_data["ProposedAssetOption.variablePrice"]["value"]
                 # Assume replacement cost is 50% of first cost, and replacement happens at half way through the analysis period years
-                reopt_inputs["ElectricStorage"]["replace_cost_per_kw"] = 0.5 * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"]
-                reopt_inputs["ElectricStorage"]["inverter_replacement_year"] = convert(Int64, floor(0.5 * reopt_inputs["Financial"]["analysis_years"], digits=0))
+                # reopt_inputs["ElectricStorage"]["replace_cost_per_kw"] = 0.5 * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"]
+                # reopt_inputs["ElectricStorage"]["inverter_replacement_year"] = convert(Int64, floor(0.5 * reopt_inputs["Financial"]["analysis_years"], digits=0))
             end
             if !isnothing(get(tech_data, "ProposedBatteryUnitOption.variableEnergyPrice", nothing))
                 reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = tech_data["ProposedBatteryUnitOption.variableEnergyPrice"]["value"]
-                reopt_inputs["ElectricStorage"]["replace_cost_per_kwh"] = 0.5 * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
-                reopt_inputs["ElectricStorage"]["battery_replacement_year"] = convert(Int64, floor(0.5 * reopt_inputs["Financial"]["analysis_years"], digits=0))
+                # reopt_inputs["ElectricStorage"]["replace_cost_per_kwh"] = 0.5 * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
+                # reopt_inputs["ElectricStorage"]["battery_replacement_year"] = convert(Int64, floor(0.5 * reopt_inputs["Financial"]["analysis_years"], digits=0))
             end
             if !isnothing(get(tech_data, "ProposedBatteryUnitOption.stateOfChargeMin", nothing))
                 reopt_inputs["ElectricStorage"]["soc_min_fraction"] = tech_data["ProposedBatteryUnitOption.stateOfChargeMin"] / 100.0
@@ -398,12 +599,28 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             if !isnothing(get(tech_data, "ProposedBatteryUnitOption.chargeEfficiency", nothing)) && !isnothing(get(tech_data, "ProposedBatteryUnitOption.dischargeEfficiency", nothing))
                 reopt_inputs["ElectricStorage"]["internal_efficiency_fraction"] = 1.0     
             end
+            # Update min capacities and costs in case the proposed minimum battery size is larger than the existing and cost inputs differ from default
+            if "BatteryUnit" in existing_mg_asset_types
+                reopt_inputs["ElectricStorage"]["min_kw"] = max(existing_battery_kw, get(reopt_inputs["ElectricStorage"], "min_kw", 0.0))
+                reopt_inputs["ElectricStorage"]["min_kwh"] = max(existing_battery_kwh, get(reopt_inputs["ElectricStorage"], "min_kwh", 0.0))
+                lumped_const_power_fraction = 0.5
+                lumped_const_ref_kw = 1800.0
+                lumped_const_ref_kwh = 7200.0                
+                installed_cost_per_kw = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kw"])
+                installed_cost_per_kwh = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"])
+                installed_cost_constant = copy(reopt_inputs["ElectricStorage"]["installed_cost_constant"])
+                reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] = (installed_cost_per_kw * lumped_const_ref_kw + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kw
+                reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = (installed_cost_per_kwh * lumped_const_ref_kwh + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kwh                
+                cost_update(kw, kwh) = kw * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] + kwh * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
+                reopt_inputs["ElectricStorage"]["installed_cost_constant"] = -cost_update(existing_battery_kw, existing_battery_kwh)
+            end
         end
     end
 
     non_tech_keys = ["Site", "ElectricLoad", "ElectricTariff", "ElectricUtility", "Financial", "Settings"]
 
     # Remove technologies that are in the base mgravens_fields_defaults.json file that are not included in this analysis scenario
+    println("Techs to include: $techs_to_include")
     for key in keys(reopt_inputs)
         if !(key in non_tech_keys) && !(key in techs_to_include)
             pop!(reopt_inputs, key)
