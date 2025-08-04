@@ -919,6 +919,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             + get(pv, "electric_curtailed_series_kw", zero_array)
             + get(pv, "electric_to_load_series_kw", zero_array)
             + get(pv, "electric_to_grid_series_kw", zero_array)
+            + get(pv, "electric_to_electrolyzer_series_kw", zero_array)
         )
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series .* (
                 get(
@@ -939,6 +940,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             + get(d["Wind"], "electric_curtailed_series_kw", zero_array)
             + get(d["Wind"], "electric_to_load_series_kw", zero_array)
             + get(d["Wind"], "electric_to_grid_series_kw", zero_array)
+            + get(d["Wind"], "electric_to_electrolyzer_series_kw", zero_array)
         )
         r2[:wind_kw_ac_time_series] = wind_kw_ac_time_series .* (
             get(
