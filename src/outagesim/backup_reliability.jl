@@ -39,7 +39,7 @@ end
     markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
 
 Markov Matrix for multiple generator types. 
-Return an prod(``num_generators``.+1) by prod(``num_generators``.+1) matrix of transition probabilities of going from n (column) to n' (row) given probability ``fail_prob_vec``
+Return an prod(``num_generators``.+1) by prod(``num_generators``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob_vec``
 
 Columns denote starting generators and rows denote ending generators. 
 Generator availability scenarios are ordered such that the number of the leftmost generator type increments fastest.
@@ -60,12 +60,12 @@ row    working generators
 ```repl-julia
 julia> markov_matrix([2, 1], [0.1, 0.25])
 6×6 Matrix{Float64}:
- 1.0   0.1     0.1     0.0   0.9     0.18
- 0.0   0.0     0.81    0.25  0.025   0.0025
- 0.0   0.225   0.045   0.0   0.0     0.2025
- 0.0   0.0     0.0     0.0   0.0     0.0
- 0.0   0.0     0.0     0.75  0.075   0.0075
- 0.0   0.675   0.135   0.0   0.0     0.6075
+ 1.0     0.0    0.0     0.0     0.0    0.0
+ 0.1     0.9    0.0     0.0     0.0    0.0
+ 0.01    0.18   0.81    0.0     0.0    0.0
+ 0.25    0.0    0.0     0.75    0.0    0.0
+ 0.025   0.225  0.0     0.075   0.675  0.0
+ 0.0025  0.045  0.2025  0.0075  0.135  0.6075
 ```
 """
 function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
@@ -73,9 +73,9 @@ function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real
     num_generators_working = vec(collect(Iterators.product((0:g for g in num_generators)...)))
     starting_gens = repeat(num_generators_working, inner = prod(num_generators .+ 1))
     ending_gens = repeat(num_generators_working, outer = prod(num_generators .+ 1))
-
     #Creates Markov matrix for generator transition probabilities
     M = reshape(transition_prob(starting_gens, ending_gens, fail_prob_vec), prod(num_generators.+1), prod(num_generators .+1))
+    M = transpose(M)
     replace!(M, NaN => 0)
     return M
 end
@@ -1291,6 +1291,8 @@ function backup_reliability_single_run(;
     num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
+
+    println("kwargs: ",kwargs)
      
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
