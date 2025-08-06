@@ -12,10 +12,11 @@ function add_dv_UnservedLoad_constraints(m,p)
               - m[:dvMGProductionToElectrolyzer][t, s, tz, ts]
               - m[:dvMGProductionToCompressor][t, s, tz, ts]
             for t in p.techs.elec
-        )
+        ) # minus production to load
         - sum(m[:dvMGDischargeFromStorage][b, s, tz, ts] 
             - m[:dvMGStorageToElectrolyzer][b, s, tz, ts] 
-            - m[:dvMGStorageToCompressor][b, s, tz, ts] for b in p.s.storage.types.elec)
+            - m[:dvMGStorageToCompressor][b, s, tz, ts] for b in p.s.storage.types.elec
+        ) # minus storage discharge to load
     )
 end
 
@@ -334,7 +335,7 @@ function add_MG_storage_dispatch_constraints(m,p)
             + sum(m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts] for t in p.techs.elec)
     )
 
-    # Discharge from electric storage
+    # Storage to Electrolyzer and Compressor no greater than total discharge from electric storage
     @constraint(m, [b in p.s.storage.types.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvMGDischargeFromStorage][b, s, tz, ts] >= m[:dvMGStorageToElectrolyzer][b, s, tz, ts]
             + m[:dvMGStorageToCompressor][b, s, tz, ts]

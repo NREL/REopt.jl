@@ -132,7 +132,7 @@ Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
         "monthly_demand_rates": [10.0],
         "monthly_previous_peak_demands": [98.0],
         "tou_demand_rates": [0.0, 15.0],
-        "tou_demand_time_steps": [
+        "tou_demand_ratchet_time_steps": [
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
             [16, 17, 18, 19, 20, 21, 22, 23, 24]
         ],
@@ -224,6 +224,18 @@ REopt.MPCHighTempThermalStorage
 
 ## MPCSettings
 The MPCSettings is the same as the [Settings](@ref).
+
+## ElectricUtility
+MPC uses the standard [ElectricUtility](@ref) struct.
+```@docs
+REopt.ElectricUtility
+```
+
+## Settings
+MPC uses the standard [Settings](@ref) struct.
+```@docs
+REopt.Settings
+```
 
 ## MPCLimits
 ```@docs
