@@ -54,6 +54,9 @@
     ### Grid Clean Energy Fraction Inputs ###
     cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
     renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
+
+    # Timeseries grid cost input
+    utility_grid_cost_per_kw_series::Array{<:Real,1} = Float64[] # Timeseries of per kW grid costs (incurred by utility, not the site).
 ```
 
 !!! note "Outage modeling"
@@ -113,6 +116,10 @@
             - By default, REopt uses *clean energy fraction* for the region in which the site is located.
     - For sites outside of CONUS: REopt does not have default grid clean energy fraction data. Users must supply a custom `renewable_energy_fraction_series`
 
+    **Utility Grid Costs**
+    - utility_grid_cost_per_kw_series timeseries will be multiplied by the net load in each time step, and the analysis period total grid cost will be calculated using a pwf, assuming costs escalate at the elec_cost_escalation_rate_fraction. 
+    - If provided, total grid cost will be included in the objective function (and impact dispatch)
+
 """
 struct ElectricUtility
     avert_emissions_region::String # AVERT emissions region
@@ -139,6 +146,7 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
+    utility_grid_cost_per_kw_series::Array{<:Real,1}
 
     function ElectricUtility(;
 
@@ -196,6 +204,9 @@ struct ElectricUtility
         ### Grid Clean Energy Fraction Inputs ###
         cambium_cef_metric::String = "cef_load", # Options = ["cef_load", "cef_gen"] # cef_load is the fraction of generation that is clean, for the generation that is allocated to a region’s end-use load; cef_gen is the fraction of generation that is clean within a region
         renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
+
+        # Timeseries grid cost input
+        utility_grid_cost_per_kw_series::Array{<:Real,1} = Float64[] # Timeseries of per kW grid costs (incurred by utility, not the site).
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -343,6 +354,10 @@ struct ElectricUtility
             throw(@error("Sum of ElectricUtility inputs outage_probabilities must be equal to 1"))
         end
 
+        if !isempty(utility_grid_cost_per_kw_series) && length(utility_grid_cost_per_kw_series) != 8760*time_steps_per_hour
+            throw(@error("Length of utility_grid_cost_per_kw_series must be $(8760*time_steps_per_hour)."))
+        end
+
         new(
             is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
@@ -365,7 +380,8 @@ struct ElectricUtility
             outage_time_steps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw
+            interconnection_limit_kw,
+            utility_grid_cost_per_kw_series
         )
     end
 end

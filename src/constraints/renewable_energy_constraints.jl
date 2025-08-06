@@ -95,6 +95,8 @@ function add_re_elec_calcs(m,p)
 			)
 			# TODO: battery can now discharge to the grid, but this export is not yet accounted for in the RE calculation.
 			# 	Need to subtract out *grid RE* discharged from battery back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
+
+			# TODO: Should this subtract out exported energy * renewable_energy_fraction_series? 
 		) 
 	)
 

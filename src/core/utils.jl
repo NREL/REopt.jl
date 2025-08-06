@@ -165,6 +165,7 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
             "renewable_energy_fraction_series",
+            "utility_grid_cost_per_kw_series",
             "heating_cop_reference",
             "heating_cf_reference",
             "heating_reference_temps_degF",

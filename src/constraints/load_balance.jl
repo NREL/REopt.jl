@@ -97,7 +97,6 @@ function add_production_constraints(m, p; _n="")
         <= 
         p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
 	)
-
 end
 
 
@@ -155,4 +154,13 @@ function add_thermal_load_constraints(m, p; _n="")
             )
         end
     end
+end
+
+function calculate_net_load(m, p; _n="")
+    # Calculate net load (grid purchase - production to grid - BESS to grid)
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvNetLoad"*_n)][ts] == sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
+        - sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for t in setdiff(p.techs.elec, p.techs.steam_turbine), u in p.export_bins_by_tech[t])
+        - sum(m[Symbol("dvStorageToGrid"*_n)][b, u, ts] for b in p.s.storage.types.elec, u in p.export_bins_by_storage[b])
+    )
 end
