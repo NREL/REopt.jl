@@ -625,7 +625,7 @@ function gen_only_survival_single_start_time(
 
     survival_chances = zeros(max_outage_duration)
     gen_prob_array = [copy(starting_gens), copy(starting_gens)]
-    survival = ones(length(generator_production), 1)
+    survival = ones(length(1, generator_production))
 
     for d in 1:max_outage_duration
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -635,7 +635,7 @@ function gen_only_survival_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        mul!(gen_prob_array[gen_matrix_counter_end], generator_markov_matrix, gen_prob_array[gen_matrix_counter_start])
+        mul!(gen_prob_array[gen_matrix_counter_end], gen_prob_array[gen_matrix_counter_start], generator_markov_matrix)
         
         if marginal_survival == false
             prob_matrix_update!(gen_prob_array[gen_matrix_counter_end], survival) 
@@ -823,9 +823,7 @@ function survival_with_storage_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        for i_H2 in 1:M_H2
-            mul!(view(gen_battery_prob_matrix_array[gen_matrix_counter_end],:,:,i_H2), generator_markov_matrix, view(gen_battery_prob_matrix_array[gen_matrix_counter_start],:,:,i_H2))
-        end
+        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
 
         if marginal_survival == false
             # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
