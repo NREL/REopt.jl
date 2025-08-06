@@ -777,6 +777,33 @@ survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, m
     t_max::Int, starting_battery_bins::Vector{Int}, battery_bin_size_kwh::Real, starting_H2_bins::Vector{Int}, 
     H2_bin_size_kg::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
 
+# Arguments
+    t::Int: staring time period of simulated outage
+    net_critical_loads_kw::Vector: Vector of system critical loads minus solar generation.
+    max_outage_duration::Int: number of time periods of maximum duration outage.
+    battery_size_kw::Real:  battery system inverter size.
+    battery_charge_efficiency_kwh_per_kwh::Real: equal to increase in SOC / charge input to battery
+    battery_discharge_efficiency_kwh_per_kwh::Real: equal to discharge from battery / reduction in SOC
+    battery_leakage_fraction_per_ts::Real: 
+    H2_electrolyzer_size_kw::Real:  
+    H2_fuelcell_size_kw::Real:  
+    H2_charge_efficiency_kg_per_kwh::Real: 
+    H2_discharge_efficiency_kwh_per_kg::Real: 
+    H2_leakage_fraction_per_ts::Real: 
+    M_b::Int: number of battery energy discretized bins
+    M_H2::Int: number of H2 storage discretized bins
+    N::Int: number of generator states (depending on number of generators of each type)
+    starting_gens::Vector{Float64}: number of generators of each type
+    generator_production::Vector{Float64}: rated capacity of each generator
+    generator_markov_matrix::Matrix{Float64}: probability transition matrix for generator states only
+    maximum_generation::Array{Float64: 3}: maximum generation capacity by state
+    t_max::Int: length of net_critical_loads_kw # TODO: remove?
+    starting_battery_bins::Vector{Int}: 
+    battery_bin_size_kwh::Real: 
+    starting_H2_bins::Vector{Int}: 
+    H2_bin_size_kg::Real: 
+    marginal_survival::Bool:  
+    time_steps_per_hour::Real)::Vector{Float64}: 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_with_storage
 """
