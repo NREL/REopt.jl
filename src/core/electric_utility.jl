@@ -56,7 +56,7 @@
     renewable_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Fraction of energy supplied by the grid that is renewable. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
     # Timeseries grid cost input
-    utility_grid_cost_per_kw_series::Array{<:Real,1} = Float64[] # Timeseries of per kW grid costs (incurred by utility, not the site).
+    utility_grid_cost_per_kw_series::Array{<:Real,1} = Float64[] # Timeseries of per kW grid costs (incurred by utility, not the site). # TODO: this should be \$ per kWh like wholesale_rate etc; will require multiplying by hours per timestep somewhere 
 ```
 
 !!! note "Outage modeling"
