@@ -211,7 +211,7 @@ function MPCScenario(d::Dict)
             if haskey(d, "Compressor")
                 compressor = MPCCompressor(; dictkeys_tosymbols(d["Compressor"])...)
             else
-                throw(@error("Must include Conmpressor size or set require_compression in Electrolyzer as true"))
+                throw(@error("Must include Compressor size or set require_compression in Electrolyzer as true"))
             end
         end
     else
