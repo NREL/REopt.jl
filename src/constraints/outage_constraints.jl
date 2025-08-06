@@ -284,7 +284,7 @@ function add_binMGCHPIsOnInTS_constraints(m, p; _n="")
     # TODO? make binMGCHPIsOnInTS indexed on p.techs.chp    
 end
 
-function add_MG_storage_dispatch_constraints(m,p)
+function add_MG_elec_storage_dispatch_constraints(m,p)
     # initial SOC at start of each outage equals the grid-optimal SOC
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
         m[:dvMGStoredEnergy]["ElectricStorage", s, tz, 0] <= m[:dvStoredEnergy]["ElectricStorage", tz]

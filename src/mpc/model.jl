@@ -276,7 +276,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)	
-			add_MG_storage_dispatch_constraints(m,p)
+			add_MG_elec_storage_dispatch_constraints(m,p)
 		else
 			fix_MG_elec_storage_variables(m,p)
 		end
