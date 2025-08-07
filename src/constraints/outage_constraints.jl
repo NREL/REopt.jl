@@ -9,7 +9,7 @@ function add_dv_UnservedLoad_constraints(m,p)
             for t in p.techs.ac_coupled_with_storage
         )
         - sum( p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * ( # convert DC to AC
-                m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+                m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] * p.levelization_factor[t]
                 - m[:dvMGProductionToStorage][t, s, tz, ts]
                 - m[:dvMGCurtail][t, s, tz, ts])
             for t in p.techs.dc_coupled_with_storage
@@ -432,7 +432,7 @@ function add_MG_dc_coupled_tech_elec_storage_constraints(m, p)
         # (inverter direction)
         m[:dvMGDischargeFromStorage][s, tz, ts]
         + p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction * sum(
-            m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+            m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] * p.levelization_factor[t]
             - m[:dvMGProductionToStorage][t, s, tz, ts] 
             - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.dc_coupled_with_storage
