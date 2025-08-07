@@ -124,7 +124,7 @@ function run_ssc(case_data::Dict)
     if haskey(case_data["CST"], "tech_type")
         model = case_data["CST"]["tech_type"]
     else
-        model = 'ptc'
+        model = "ptc"
     end
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
@@ -132,7 +132,7 @@ function run_ssc(case_data::Dict)
         "swh_flatplate" => "swh",
         "swh_evactube" => "swh",
         "lf" => "fresnel_physical_iph",
-        "ptc" => "trough_physical_iph" #
+        "ptc" => "trough_physical_iph"
     ) # relates internal names to specific models in SAM (for example, there are multiple molten salt tower models to pick from in the SSC)
     lat = case_data["Site"]["latitude"]
     lon = case_data["Site"]["longitude"]
@@ -174,7 +174,7 @@ function run_ssc(case_data::Dict)
         if haskey(case_data["CST"], "inlet_temp_degF") && haskey(case_data["CST"], "outlet_temp_degF")
             inlet_temp = (case_data["CST"]["inlet_temp_degF"] - 32) / (9/5)
             outlet_temp = (case_data["CST"]["outlet_temp_degF"] - 32) / (9/5)
-        else:
+        else
             inlet_temp = 204.44
             outlet_temp = 21.11
         end
@@ -270,7 +270,6 @@ function run_ssc(case_data::Dict)
             "swh_evactube" => 1           
         ) 
         outputs = outputs_dict[model]
-        println("retrieved outputs")
         
         len = 8760
         len_ref = Ref(len)
