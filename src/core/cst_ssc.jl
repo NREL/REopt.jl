@@ -140,7 +140,11 @@ function run_ssc(case_data::Dict)
         "lf" => [],
         "mst" => ["T_htf_cold_des","T_htf_hot_des","q_pb_design","dni_des","csp.pt.sf.fixed_land_area","land_max","land_min","h_tower","rec_height","rec_htf","cold_tank_Thtr","hot_tank_Thtr"]
     )
-    model = case_data["CST"]["tech_type"]
+    if haskey(case_data["CST"], "tech_type")
+        model = case_data["CST"]["tech_type"]
+    else
+        model = "ptc" # default to PTC if no tech type is provided
+    end
     # First set user defined inputs to default just in case
     defaults_file = joinpath(@__DIR__,"..","sam","defaults","defaults_" * model_ssc[model] * "_step1.json") ## TODO update this to step 1 default jsons once they're ready
     defaults = JSON.parsefile(defaults_file)
