@@ -121,9 +121,9 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    if haskey(case_data["CST"], "tech_type"):
+    if haskey(case_data["CST"], "tech_type")
         model = case_data["CST"]["tech_type"]
-    else:
+    else
         model = 'ptc'
     end
     ### Maps STEP 1 model names to specific SSC modules
