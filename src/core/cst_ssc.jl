@@ -121,7 +121,11 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    model = case_data["CST"]["tech_type"]
+    if haskey(case_data["CST"], "tech_type"):
+        model = case_data["CST"]["tech_type"]
+    else:
+        model = 'ptc'
+    end
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
         "mst" => "mspt_iph",
@@ -150,7 +154,6 @@ function run_ssc(case_data::Dict)
         scaled_draw_values = scaled_draw_df[:, 1]
         defaults["scaled_draw"] = scaled_draw_values
     end
-    println("Defaults loaded.")
     defaults["file_name"] = joinpath(@__DIR__,"..","sam","defaults","tucson_az_32.116521_-110.933042_psmv3_60_tmy.csv") #update default weather file path to local directory
     if haskey(case_data["CST"], "SSC_Inputs")
         for i in user_defined_inputs_list[model]
@@ -171,41 +174,44 @@ function run_ssc(case_data::Dict)
         if haskey(case_data["CST"], "inlet_temp_degF") && haskey(case_data["CST"], "outlet_temp_degF")
             inlet_temp = (case_data["CST"]["inlet_temp_degF"] - 32) / (9/5)
             outlet_temp = (case_data["CST"]["outlet_temp_degF"] - 32) / (9/5)
-            user_defined_inputs["h_tank_in"] = defaults["h_tank"]
-            user_defined_inputs["f_htfmin"] = 0.0
-            user_defined_inputs["f_htfmax"] = 1.0
-            if !haskey(user_defined_inputs, "T_loop_in_des")
-                user_defined_inputs["T_loop_in_des"] = outlet_temp
+        else:
+            inlet_temp = 204.44
+            outlet_temp = 21.11
+        end
+        user_defined_inputs["h_tank_in"] = defaults["h_tank"]
+        user_defined_inputs["f_htfmin"] = 0.0
+        user_defined_inputs["f_htfmax"] = 1.0
+        if !haskey(user_defined_inputs, "T_loop_in_des")
+            user_defined_inputs["T_loop_in_des"] = outlet_temp
+        end
+        if !haskey(user_defined_inputs, "T_loop_out")
+            user_defined_inputs["T_loop_out"] = inlet_temp + 50
+        end
+        if !haskey(user_defined_inputs, "T_tank_hot_inlet_min")
+            user_defined_inputs["T_tank_hot_inlet_min"] = inlet_temp + 40
+        end
+        if !haskey(user_defined_inputs, "hot_tank_Thtr")
+            user_defined_inputs["hot_tank_Thtr"] = inlet_temp + 40
+        end
+        if !haskey(user_defined_inputs, "cold_tank_Thtr")
+            user_defined_inputs["cold_tank_Thtr"] = outlet_temp - 10
+        end
+        if !haskey(user_defined_inputs, "lat")
+            user_defined_inputs["lat"] = lat
+        end
+        if !haskey(user_defined_inputs, "fluid_id")
+            user_defined_inputs["fluid_id"] = 21
+        end
+        if !haskey(user_defined_inputs, "q_pb_design")
+            if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
+                user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
+            else
+                user_defined_inputs["q_pb_design"] = 5.2
             end
-            if !haskey(user_defined_inputs, "T_loop_out")
-                user_defined_inputs["T_loop_out"] = inlet_temp + 50
-            end
-            if !haskey(user_defined_inputs, "T_tank_hot_inlet_min")
-                user_defined_inputs["T_tank_hot_inlet_min"] = inlet_temp + 40
-            end
-            if !haskey(user_defined_inputs, "hot_tank_Thtr")
-                user_defined_inputs["hot_tank_Thtr"] = inlet_temp + 40
-            end
-            if !haskey(user_defined_inputs, "cold_tank_Thtr")
-                user_defined_inputs["cold_tank_Thtr"] = outlet_temp - 10
-            end
-            if !haskey(user_defined_inputs, "lat")
-                user_defined_inputs["lat"] = lat
-            end
-            if !haskey(user_defined_inputs, "fluid_id")
-                user_defined_inputs["fluid_id"] = 21
-            end
-            if !haskey(user_defined_inputs, "q_pb_design")
-                if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
-                    user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
-                else
-                    user_defined_inputs["q_pb_design"] = 5.2
-                end
-            end
-            if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
-                user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
-                user_defined_inputs["specified_solar_multiple"] = 3.0
-            end
+        end
+        if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
+            user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
+            user_defined_inputs["specified_solar_multiple"] = 3.0
         end
     end
     R = Dict()
