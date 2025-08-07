@@ -89,7 +89,7 @@ function CST(;
         throw(@error("CST.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
 
-    if isempty(tech_type)
+    if isnothing(tech_type)
         tech_type = "ptc"
     end
     defaults = get_cst_defaults(tech_type)
