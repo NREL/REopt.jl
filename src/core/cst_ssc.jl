@@ -211,7 +211,7 @@ function run_ssc(case_data::Dict)
         end
         if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
             user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
-            user_defined_inputs["specified_solar_multiple"] = 3.0j
+            user_defined_inputs["specified_solar_multiple"] = 3.0
         end
     end
     R = Dict()
