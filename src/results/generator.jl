@@ -7,7 +7,8 @@
 - `lifecycle_variable_om_cost_after_tax` Lifecycle variable operations and maintenance cost in present value, after tax
 - `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
-- `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits
+- `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits. Does not include fuel use during outages if using multiple outage modeling.
+- `year_one_fuel_cost_after_tax` Fuel cost over the first year, after considering tax benefits. Does not include fuel use during outages if using multiple outage modeling.
 - `annual_fuel_consumption_gal` Gallons of fuel used in each year
 - `electric_to_storage_series_kw` Vector of power sent to battery in an average year
 - `electric_to_grid_series_kw` Vector of power sent to grid in an average year
@@ -36,6 +37,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["lifecycle_variable_om_cost_after_tax"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalGenFuelCosts]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=2)
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_fuel["Generator"], digits=2)
+	r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["year_one_variable_om_cost_before_tax"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 	r["year_one_fixed_om_cost_before_tax"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
@@ -75,13 +77,13 @@ end
 
 """
 MPC `Generator` results keys:
-- `variable_om_cost`
-- `fuel_cost`
-- `electric_to_storage_series_kw`
-- `electric_to_grid_series_kw`
-- `electric_to_load_series_kw`
-- `fuel_consumption_gal`
-- `energy_produced_kwh`
+- `variable_om_cost` Total variable operations and maintenance cost over the MPC horizon
+- `fuel_cost` Total fuel costs over the MPC horizon
+- `electric_to_storage_series_kw` Vector of power used to charge the battery over the MPC horizon
+- `electric_to_grid_series_kw` Vector of power exported to the grid over the MPC horizon
+- `electric_to_load_series_kw` Vector of power used to meet load over the MPC horizon
+- `fuel_consumption_gal` Total fuel consumption over the MPC horizon (gallons)
+- `energy_produced_kwh` Total energy produced over the MPC horizon (kWh)
 """
 function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()

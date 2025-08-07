@@ -39,7 +39,7 @@ end
     markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
 
 Markov Matrix for multiple generator types. 
-Return an prod(``num_generators``.+1) by prod(``num_generators``.+1) matrix of transition probabilities of going from n (column) to n' (row) given probability ``fail_prob_vec``
+Return an prod(``num_generators``.+1) by prod(``num_generators``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob_vec``
 
 Columns denote starting generators and rows denote ending generators. 
 Generator availability scenarios are ordered such that the number of the leftmost generator type increments fastest.
@@ -60,12 +60,12 @@ row    working generators
 ```repl-julia
 julia> markov_matrix([2, 1], [0.1, 0.25])
 6×6 Matrix{Float64}:
- 1.0   0.1     0.1     0.0   0.9     0.18
- 0.0   0.0     0.81    0.25  0.025   0.0025
- 0.0   0.225   0.045   0.0   0.0     0.2025
- 0.0   0.0     0.0     0.0   0.0     0.0
- 0.0   0.0     0.0     0.75  0.075   0.0075
- 0.0   0.675   0.135   0.0   0.0     0.6075
+ 1.0     0.0    0.0     0.0     0.0    0.0
+ 0.1     0.9    0.0     0.0     0.0    0.0
+ 0.01    0.18   0.81    0.0     0.0    0.0
+ 0.25    0.0    0.0     0.75    0.0    0.0
+ 0.025   0.225  0.0     0.075   0.675  0.0
+ 0.0025  0.045  0.2025  0.0075  0.135  0.6075
 ```
 """
 function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
@@ -73,9 +73,9 @@ function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real
     num_generators_working = vec(collect(Iterators.product((0:g for g in num_generators)...)))
     starting_gens = repeat(num_generators_working, inner = prod(num_generators .+ 1))
     ending_gens = repeat(num_generators_working, outer = prod(num_generators .+ 1))
-
     #Creates Markov matrix for generator transition probabilities
     M = reshape(transition_prob(starting_gens, ending_gens, fail_prob_vec), prod(num_generators.+1), prod(num_generators .+1))
+    M = transpose(M)
     replace!(M, NaN => 0)
     return M
 end
@@ -625,7 +625,7 @@ function gen_only_survival_single_start_time(
 
     survival_chances = zeros(max_outage_duration)
     gen_prob_array = [copy(starting_gens), copy(starting_gens)]
-    survival = ones(length(generator_production), 1)
+    survival = ones(length(1, generator_production))
 
     for d in 1:max_outage_duration
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -635,7 +635,7 @@ function gen_only_survival_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        mul!(gen_prob_array[gen_matrix_counter_end], generator_markov_matrix, gen_prob_array[gen_matrix_counter_start])
+        mul!(gen_prob_array[gen_matrix_counter_end], gen_prob_array[gen_matrix_counter_start], generator_markov_matrix)
         
         if marginal_survival == false
             prob_matrix_update!(gen_prob_array[gen_matrix_counter_end], survival) 
@@ -777,6 +777,33 @@ survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, m
     t_max::Int, starting_battery_bins::Vector{Int}, battery_bin_size_kwh::Real, starting_H2_bins::Vector{Int}, 
     H2_bin_size_kg::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
 
+# Arguments
+    t::Int: staring time period of simulated outage
+    net_critical_loads_kw::Vector: Vector of system critical loads minus solar generation.
+    max_outage_duration::Int: number of time periods of maximum duration outage.
+    battery_size_kw::Real:  battery system inverter size.
+    battery_charge_efficiency_kwh_per_kwh::Real: equal to increase in SOC / charge input to battery
+    battery_discharge_efficiency_kwh_per_kwh::Real: equal to discharge from battery / reduction in SOC
+    battery_leakage_fraction_per_ts::Real: 
+    H2_electrolyzer_size_kw::Real:  
+    H2_fuelcell_size_kw::Real:  
+    H2_charge_efficiency_kg_per_kwh::Real: 
+    H2_discharge_efficiency_kwh_per_kg::Real: 
+    H2_leakage_fraction_per_ts::Real: 
+    M_b::Int: number of battery energy discretized bins
+    M_H2::Int: number of H2 storage discretized bins
+    N::Int: number of generator states (depending on number of generators of each type)
+    starting_gens::Vector{Float64}: number of generators of each type
+    generator_production::Vector{Float64}: rated capacity of each generator
+    generator_markov_matrix::Matrix{Float64}: probability transition matrix for generator states only
+    maximum_generation::Array{Float64: 3}: maximum generation capacity by state
+    t_max::Int: length of net_critical_loads_kw # TODO: remove?
+    starting_battery_bins::Vector{Int}: 
+    battery_bin_size_kwh::Real: 
+    starting_H2_bins::Vector{Int}: 
+    H2_bin_size_kg::Real: 
+    marginal_survival::Bool:  
+    time_steps_per_hour::Real)::Vector{Float64}: 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_with_storage
 """
@@ -823,9 +850,7 @@ function survival_with_storage_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        for i_H2 in 1:M_H2
-            mul!(view(gen_battery_prob_matrix_array[gen_matrix_counter_end],:,:,i_H2), generator_markov_matrix, view(gen_battery_prob_matrix_array[gen_matrix_counter_start],:,:,i_H2))
-        end
+        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
 
         if marginal_survival == false
             # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
@@ -919,6 +944,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             + get(pv, "electric_curtailed_series_kw", zero_array)
             + get(pv, "electric_to_load_series_kw", zero_array)
             + get(pv, "electric_to_grid_series_kw", zero_array)
+            + get(pv, "electric_to_electrolyzer_series_kw", zero_array)
         )
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series .* (
                 get(
@@ -939,6 +965,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             + get(d["Wind"], "electric_curtailed_series_kw", zero_array)
             + get(d["Wind"], "electric_to_load_series_kw", zero_array)
             + get(d["Wind"], "electric_to_grid_series_kw", zero_array)
+            + get(d["Wind"], "electric_to_electrolyzer_series_kw", zero_array)
         )
         r2[:wind_kw_ac_time_series] = wind_kw_ac_time_series .* (
             get(
@@ -1289,6 +1316,8 @@ function backup_reliability_single_run(;
     num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
+
+    println("kwargs: ",kwargs)
      
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
@@ -1578,11 +1607,11 @@ function return_backup_reliability(;
         # battery_operational_availability::Real, H2_operational_availability::Real
     )
         pv_term = PV ? 
-                    (pv_included && (battery || pv_can_dispatch_without_storage)) * pv_operational_availability :
-                    ((pv_included && (battery || pv_can_dispatch_without_storage)) ? 1 - pv_operational_availability : 1)
+                    (pv_included && (H2 || battery || pv_can_dispatch_without_storage)) * pv_operational_availability :
+                    ((pv_included && (H2 || battery || pv_can_dispatch_without_storage)) ? 1 - pv_operational_availability : 1)
         wind_term = wind ?
-                    (wind_included && (battery || wind_can_dispatch_without_storage)) * wind_operational_availability :
-                    ((wind_included && (battery || wind_can_dispatch_without_storage)) ? 1 - wind_operational_availability : 1)
+                    (wind_included && (H2 || battery || wind_can_dispatch_without_storage)) * wind_operational_availability :
+                    ((wind_included && (H2 || battery || wind_can_dispatch_without_storage)) ? 1 - wind_operational_availability : 1)
         battery_term = battery ?
                     (battery_size_kwh > 0) * battery_operational_availability :
                     (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1)

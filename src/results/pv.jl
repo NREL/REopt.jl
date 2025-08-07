@@ -1,10 +1,10 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `PV` results keys:
-- `size_kw` Optimal PV capacity
+- `size_kw` Optimal PV DC capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_energy_produced_kwh` Energy produced over the first year
-- `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
+- `annual_energy_produced_kwh` Average annual energy produced, accounting for degradation. Includes curtailed energy.
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `electric_to_load_series_kw` Vector of power used to meet load over the first year
 - `electric_to_storage_series_kw` Vector of power used to charge the battery over the first year
@@ -93,13 +93,13 @@ end
 
 """
 MPC `PV` results keys:
-- `electric_to_storage_series_kw`
-- `electric_to_grid_series_kw`
-- `electric_curtailed_series_kw`
-- `electric_to_load_series_kw`
-- `electric_to_electrolyzer_series_kw`
-- `electric_to_compressor_series_kw`
-- `energy_produced_kwh`
+- `electric_to_storage_series_kw` Vector of power used to charge the battery over the MPC horizon
+- `electric_to_grid_series_kw` Vector of power exported to the grid over the MPC horizon
+- `electric_curtailed_series_kw` Vector of power curtailed over the MPC horizon
+- `electric_to_load_series_kw` Vector of power used to meet load over the MPC horizon
+- `electric_to_electrolyzer_series_kw` Vector of power to electrolyzer over the MPC horizon
+- `electric_to_compressor_series_kw` Vector of power to compressor over the MPC horizon
+- `energy_produced_kwh` Total energy produced over the MPC horizon
 """
 function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     for t in p.techs.pv

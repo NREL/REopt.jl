@@ -37,10 +37,7 @@
 	The output keys for "Outages" are subject to change.
 
 !!! note 
-	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
-
-!!! note
-	When modeling PV the name of the PV system is used for the output keys to allow for modeling multiple PV systems. The default PV name is `PV`.
+	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_start_time_steps` and `ElectricUtility.outage_durations` inputs.
 	
 !!! warn
 	The Outage results can be very large when many outages are modeled and can take a long time to generate.
@@ -95,7 +92,7 @@ function add_outage_results(m, p, d::Dict)
     for ts in p.s.electric_utility.outage_time_steps
         for (t, tz) in enumerate(p.s.electric_utility.outage_start_time_steps)
             for s in p.s.electric_utility.scenarios
-                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[tz+ts-1]
+                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
             end
         end
     end
@@ -216,7 +213,42 @@ function add_outage_results(m, p, d::Dict)
 							value.(
 								m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
 								- m[:dvMGCurtail][t, s, tz, ts]
-								- m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts]
+								- m[:dvMGProductionToElectrolyzer][t, s, tz, ts]
+								- m[:dvMGProductionToCompressor][t, s, tz, ts]
+								- sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec)
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+			end
+			if isempty(p.s.storage.types.hydrogen)
+				r[tech_type_name * "_to_electrolyzer_series_kw"] = []
+				r[tech_type_name * "_to_compressor_series_kw"] = []				
+			else
+				r[tech_type_name * "_to_electrolyzer_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGProductionToElectrolyzer][t, s, tz, ts] 
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+				r[tech_type_name * "_to_compressor_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGProductionToCompressor][t, s, tz, ts] 
 								for s in p.s.electric_utility.scenarios,
 									tz in p.s.electric_utility.outage_start_time_steps,
 									ts in p.s.electric_utility.outage_time_steps
@@ -241,6 +273,40 @@ function add_outage_results(m, p, d::Dict)
 				), 
 				digits=3
 			)
+			if isempty(p.s.storage.types.elec)
+				r[tech_type_name * "_to_load_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
+								- m[:dvMGCurtail][t, s, tz, ts]
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+			else
+				r[tech_type_name * "_to_load_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
+								- m[:dvMGCurtail][t, s, tz, ts]
+								- sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec)
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+			end
 			r["microgrid_upgrade_capital_cost"] += r[tech_type_name * "_microgrid_upgrade_cost"]
 		end
 	end

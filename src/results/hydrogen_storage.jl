@@ -29,9 +29,9 @@
 # *********************************************************************************
 """
 `HydrogenStorage` results keys:
-- `size_kg` Optimal inverter capacity
-- `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
-- `discharge_from_storage_series_kg` Vector of hydrogen discharge over the first year
+- `size_kg` Optimal hydrogen storage capacity (kg)
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values 
+- `storage_to_hydrogen_load_series_kg` Vector of hydrogen discharged from storage to meet the hydrogen load
 - `initial_capital_cost` Upfront capital cost for the hydrogen storage tank
 """
 function add_hydrogen_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
@@ -53,6 +53,12 @@ function add_hydrogen_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     nothing
 end
 
+
+"""
+MPC `HydrogenStorage` results keys:
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values 
+- `discharge_from_storage_series_kg` Vector of hydrogen discharged from storage to meet the hydrogen load and serve the fuel cell
+"""
 function add_hydrogen_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
 

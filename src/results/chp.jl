@@ -17,11 +17,14 @@
 - `thermal_to_space_heating_load_series_mmbtu_per_hour` Thermal power to serve the space heating load time-series array [MMBtu/hr]
 - `thermal_to_process_heat_load_series_mmbtu_per_hour` Thermal power to serve the process heating load time-series array [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour` Thermal (steam) power to steam turbine time-series array [MMBtu/hr]
-- `year_one_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one [\$]
+- `year_one_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one, before tax [\$]
+- `year_one_fuel_cost_after_tax` Cost of fuel consumed by the CHP system in year one, after tax
 - `lifecycle_fuel_cost_after_tax` Present value of cost of fuel consumed by the CHP system, after tax [\$]
-- `year_one_standby_cost_before_tax` CHP standby charges in year one [\$] 
+- `year_one_standby_cost_before_tax` CHP standby charges in year one, before tax [\$]
+- `year_one_standby_cost_after_tax` CHP standby charges in year one, after tax
 - `lifecycle_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
 - `thermal_production_series_mmbtu_per_hour`  
+- `initial_capital_costs` Initial capital costs of the CHP system, before incentives [\$]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -131,12 +134,14 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(CHPToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
-	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
+	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)
+	r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * (1- p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	#Standby charges and hourly O&M
 	r["year_one_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
+	r["year_one_standby_cost_after_tax"] = r["year_one_standby_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["lifecycle_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=0)
-
+	r["initial_capital_costs"] = round(value(m[Symbol("CHPCapexNoIncentives")]), digits=2)
 
     d["CHP"] = r
     nothing

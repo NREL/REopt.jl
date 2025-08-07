@@ -19,11 +19,14 @@ struct with outer constructor:
     installed_cost_ghx_per_ft::Float64 = 14.0
     installed_cost_building_hydronic_loop_per_sqft = 1.70
     om_cost_per_sqft_year::Float64 = -0.51
-    building_sqft::Float64 # Required input
+    building_sqft::Float64                                  # Required input
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
-    cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
+    cooling_efficiency_thermal_factor::Float64 = NaN        # Default depends on building and location
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
+    max_ton::Real                                           # Maximum heat pump capacity size. Default at a big number
+    max_number_of_boreholes::Real                           # Maximum GHX size
+    load_served_by_ghp::String                              # "scaled" or "nonpeak"
 
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.6
@@ -58,9 +61,6 @@ struct with outer constructor:
     om_cost_year_one::Float64 = NaN
 ```
 """
-
-
-
 Base.@kwdef mutable struct GHP <: AbstractGHP
     require_ghp_purchase::Union{Bool, Int64} = false  # 0 = false, 1 = true
     installed_cost_heatpump_per_ton::Float64 = 1075.0
@@ -80,6 +80,9 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
     can_supply_steam_turbine::Bool = false
+    max_ton::Real = BIG_NUMBER
+    max_number_of_boreholes::Real = BIG_NUMBER
+    load_served_by_ghp::String = "nonpeak"
 
     aux_heater_type::String = "electric"
     is_ghx_hybrid::Bool = false
@@ -157,25 +160,24 @@ function GHP(response::Dict, d::Dict)
     end
     # incentives = IncentivesNoProdBased(**d_mod)
     
-    setup_installed_cost_curve!(ghp, response)
+    setup_installed_cost_curve!(d, ghp, response)
 
     setup_om_cost!(ghp)
 
     # Convert boolean input into an integer for the model
     if typeof(ghp.require_ghp_purchase) == Bool && ghp.require_ghp_purchase
         ghp.require_ghp_purchase = 1
-    else
+    elseif typeof(ghp.require_ghp_purchase) == Bool && ghp.require_ghp_purchase == false
         ghp.require_ghp_purchase = 0
     end
-
     return ghp
 end
 
 """
-    setup_installed_cost_curve!(response::Dict, ghp::GHP)
+    setup_installed_cost_curve!(d::Dict, response::Dict, ghp::GHP)
 
 """
-function setup_installed_cost_curve!(ghp::GHP, response::Dict)
+function setup_installed_cost_curve!(d::Dict, ghp::GHP, response::Dict)
     big_number = 1.0e10
     # GHX and GHP sizing metrics for cost calculations
     total_ghx_ft = response["outputs"]["number_of_boreholes"] * response["outputs"]["length_boreholes_ft"]
@@ -227,8 +229,15 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     #    and then use the value above for heat pump capacity to calculate the final absolute cost for GHP
 
     if ghp.heat_pump_configuration == "WSHP"
-        ghp.installed_cost_per_kw = [0, (ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost) / 
-                                        ghp.heatpump_capacity_ton + ghp.installed_cost_heatpump_per_ton]
+        if !(ghp.heatpump_capacity_ton == 0)
+            ghp.installed_cost_per_kw = [0, (ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost) / 
+                                            ghp.heatpump_capacity_ton + ghp.installed_cost_heatpump_per_ton]
+        else  # For just costing ground heat exchanger for URBANopt
+            # Approximate investment-based incentive (ibi) stacking, ignores max incentive for state and utility
+            base_cost = ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost
+            ibi_net_fraction = (1 - ghp.federal_itc_fraction) * (1 - ghp.state_ibi_fraction) * (1 - ghp.utility_ibi_fraction)
+            ghp.installed_cost_per_kw = [base_cost * ibi_net_fraction, 0.0]
+        end
     elseif ghp.heat_pump_configuration == "WWHP"
         # Divide by two to avoid double counting non-heatpump costs
         ghp.wwhp_heating_pump_installed_cost_curve = [0, (ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost) / 2 /

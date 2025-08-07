@@ -25,7 +25,11 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 
     for b in p.s.storage.types.hot
         if p.s.storage.attr[b].size_kwh > 0
-            add_hot_storage_results(m, p, d, b; _n)
+            if b == "HighTempThermalStorage"
+                add_high_temp_storage_results(m, p, d, b; _n)
+            else
+                add_hot_storage_results(m, p, d, b; _n)
+            end
         end
     end
 

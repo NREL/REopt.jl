@@ -29,18 +29,20 @@
 # *********************************************************************************
 """
 `Electrolyzer` results keys:
-- `size_kw` Optimal electrolyzer capacity
-    - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
-- `year_one_hydrogen_produced_kg` Total hydrogen produced over the first year
-- `year_one_electricity_consumed_kwh` Total energy consumed by the electrolyzer over the first year
-- `electricity_consumed_series_kw` Vector of power consumed by the electrolyzer to produce hydrogen over the first year
-- `hydrogen_produced_series_kg` Vector of hydrogen produced by the electrolyzer going into the low pressure tank 
+- `size_kw` Optimal electrolyzer capacity (kW)
+- `year_one_hydrogen_produced_kg` Total hydrogen produced over the first year (kg)
+- `year_one_electricity_consumed_kwh` Total energy consumed by the electrolyzer over the first year (kWh)
+- `year_one_water_consumed_gal` Total water consumed by the electrolyzer to produce hydrogen over the first year (gal)
+- `electricity_consumed_series_kw` Vector of total power consumed by the electrolyzer to produce hydrogen
+- `electricity_from_grid_series_kw` Vector of power from the grid consumed by the electrolyzer to produce hydrogen 
+- `electricity_from_fuel_cell_series_kw` Vector of power from the fuel cell consumed by the electrolyzer to produce hydrogen
+- `electricity_from_pv_series_kw` Vector of power from PV consumed by the electrolyzer to produce hydrogen
+- `hydrogen_produced_series_kg` Vector of hydrogen produced by the electrolyzer
 - `water_consumed_series_gal` Vector of water consumed by the electrolyzer to produce hydrogen 
-- `year_one_water_consumed_gal` Total water consumed by the electrolyzer to produce hydrogen 
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
     REopt performs load balances using average annual production values for technologies that include degradation. 
-    Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+    Therefore, all timeseries (`_series`) and `annual_` results should be interpreted as energy outputs averaged over the analysis period. 
     
 """
 function add_electrolyzer_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -84,8 +86,8 @@ end
 
 """
 MPC `Electrolyzer` results keys:
-- `electricity_consumed_series_kw`
-- `hydrogen_produced_series_kg`
+- `electricity_consumed_series_kw` Vector of total power consumed by the electrolyzer to produce hydrogen (kW)
+- `hydrogen_produced_series_kg` Vector of hydrogen produced by the electrolyzer (kg)
 """
 function add_electrolyzer_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()

@@ -8,7 +8,7 @@
 - `electric_to_grid_series_kw` Vector of power exported to the grid over an average year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
 - `electric_to_load_series_kw` Vector of power used to meet load over an average year
-- `annual_energy_produced_kwh` Average annual energy produced
+- `annual_energy_produced_kwh` Average annual energy produced, accounting for degradation. Includes curtailed energy.
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `electric_curtailed_series_kw` Vector of power curtailed over an average year
 - `production_factor_series` Wind production factor in each time step, either provided by user or obtained from SAM
@@ -32,8 +32,6 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
 	if !isempty(p.s.storage.types.elec)
 		WindToStorage = (sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-		PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
-
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
@@ -72,13 +70,13 @@ end
 
 """
 MPC `Wind` results keys:
-- `electric_to_storage_series_kw`
-- `electric_to_grid_series_kw`
-- `electric_curtailed_series_kw`
-- `electric_to_load_series_kw`
-- `electric_to_electrolyzer_series_kw`
-- `electric_to_compressor_series_kw`
-- `energy_produced_kwh`
+- `electric_to_storage_series_kw` Vector of power used to charge the battery over the MPC horizon
+- `electric_to_grid_series_kw` Vector of power exported to the grid over the MPC horizon
+- `electric_curtailed_series_kw` Vector of power curtailed over the MPC horizon
+- `electric_to_load_series_kw` Vector of power used to meet load over the MPC horizon
+- `electric_to_electrolyzer_series_kw` Vector of power to electrolyzer over the MPC horizon
+- `electric_to_compressor_series_kw` Vector of power to compressor over the MPC horizon
+- `energy_produced_kwh` Total energy produced over the MPC horizon
 """
 function add_wind_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 

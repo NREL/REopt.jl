@@ -18,11 +18,12 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
             + m[Symbol("dvGridToCompressor"*_n)][ts]
-            + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cop[t] for t in setdiff(p.techs.cooling,p.techs.ghp))
-            + sum(m[Symbol("dvHeatingProduction"*_n)][t, q, ts] / p.heating_cop[t] for q in p.heating_loads, t in p.techs.electric_heater)
+            + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp))
+            + sum(m[Symbol("dvHeatingProduction"*_n)][t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]
-            - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
+            - p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cop["ExistingChiller"][ts]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+            + sum(m[Symbol("dvDischargePumpPower"*_n)][b,ts] for b in p.s.storage.types.hightemp)
         )
     else
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
@@ -40,11 +41,12 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec)
             + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
             + m[Symbol("dvGridToCompressor"*_n)][ts]
-            + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cop[t] for t in setdiff(p.techs.cooling,p.techs.ghp))
-            + sum(m[Symbol("dvHeatingProduction"*_n)][t, q, ts] / p.heating_cop[t] for q in p.heating_loads, t in p.techs.electric_heater)
+            + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp))
+            + sum(m[Symbol("dvHeatingProduction"*_n)][t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]
-            - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
+            - p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cop["ExistingChiller"][ts]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+            + sum(m[Symbol("dvDischargePumpPower"*_n)][b,ts] for b in p.s.storage.types.hightemp)
         )
     end
 
@@ -65,6 +67,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
                 + m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec)
             + p.s.electric_load.critical_loads_kw[ts]
+            + sum(m[Symbol("dvDischargePumpPower"*_n)][b,ts] for b in p.s.storage.types.hightemp)
         )
     else # load balancing constraint for off-grid runs - not altering off-grid to include hydrogen
         @constraint(m, [ts in p.time_steps_without_grid],
@@ -78,6 +81,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
                 + m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec)
             + p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts]
+            + sum(m[Symbol("dvDischargePumpPower"*_n)][b,ts] for b in p.s.storage.types.hightemp)
         )
         ##Constraint : For off-grid scenarios, annual load served must be >= minimum percent specified
         @constraint(m, 

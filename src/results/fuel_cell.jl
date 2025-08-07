@@ -29,24 +29,22 @@
 # *********************************************************************************
 """
 `FuelCell` results keys:
-- `size_kw` Optimal fuel cell capacity
+- `size_kw` Optimal fuel cell capacity (kW)
 - `lifecycle_fixed_om_cost_after_tax` Lifecycle fixed operations and maintenance cost in present value, after tax
-- `year_one_fixed_om_cost_before_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
-- `lifecycle_variable_om_cost_after_tax` Lifecycle variable operations and maintenance cost in present value, after tax
-- `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
-- `hydrogen_consumed_series_kg` Vector of hydrogen consumed to produce power over the first year
+- `year_one_fixed_om_cost_before_tax` Fixed operations and maintenance cost over the first year, before considering tax benefits
 - `year_one_hydrogen_consumed_kg` Hydrogen consumed to produce power over the first year
-- `year_one_energy_produced_kwh` Hydrogen consumed to produce power over the first year
-- `electric_to_storage_series_kw` Vector of power sent to battery over the first year
-- `electric_to_grid_series_kw` Vector of power sent to grid over the first year
-- `electric_to_load_series_kw` Vector of power sent to load over the first year
-- `electric_curtailed_series_kw` Vector of power curtailed over the first year
-- `annual_energy_produced_kwh` Average annual energy produced in an average year
-- `annual_energy_exported_kwh` Average annual energy exported to grid in an average year
+- `year_one_energy_produced_kwh` Electricity produced over the first year
+- `electric_to_storage_series_kw` Vector of power used to charge the battery
+- `electric_to_grid_series_kw` Vector of power exported to the grid
+- `electric_to_load_series_kw` Vector of power used to meet load
+- `electric_curtailed_series_kw` Vector of power curtailed
+- `hydrogen_consumed_series_kg` Vector of hydrogen consumed to produce power
+- `annual_energy_produced_kwh` Average annual energy produced
+- `annual_energy_exported_kwh` Average annual energy exported to grid 
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
     REopt performs load balances using average annual production values for technologies that include degradation. 
-    Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+    Therefore, all timeseries (`_series`) and `annual_` results should be interpreted as energy outputs averaged over the analysis period. 
     
 """
 function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -109,9 +107,9 @@ end
 
 """
 MPC `FuelCell` results keys:
-- `hydrogen_consumed_series_kg`
-- `electric_to_storage_series_kw`
-- `electric_to_load_series_kw`
+- `hydrogen_consumed_series_kg` Vector of hydrogen consumed to produce power (kg)
+- `electric_to_storage_series_kw` Vector of power used to charge the battery (kW)
+- `electric_to_load_series_kw` Vector of power used to meet load (kW) 
 """
 function add_fuel_cell_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()

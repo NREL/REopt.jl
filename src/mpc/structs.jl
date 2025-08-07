@@ -1,23 +1,24 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
-    MPCSite
+`MPCSite` is an optional REopt MPC input with the following keys and default values:
 
-    Base.@kwdef struct MPCSite
-        include_exported_elec_emissions_in_total::Bool = true,
-    end
+```julia
+    include_exported_elec_emissions_in_total::Bool = true, # Accounts for the emissions offsets from electricity exported to the grid
+```
 """
 Base.@kwdef struct MPCSite
     include_exported_elec_emissions_in_total::Bool = true
 end
 
 """
-    MPCElectricLoad
+`MPCElectricLoad` is a required REopt MPC input with the following keys and default values:
 
-    Base.@kwdef struct MPCElectricLoad
-        loads_kw::Array{Real,1}
-        critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing
-    end
+```julia
+    loads_kw::Array{Real,1}, # Electric loads in kW 
+    critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing, # Critical electric load that must be served during outages
+    min_load_met_annual_fraction::Real = 1.0, # Minimum fraction of the annual electric load that must be met by the system #TODO - check functionality
+```
 """
 Base.@kwdef struct MPCElectricLoad
     loads_kw::Array{Real,1}
@@ -27,11 +28,12 @@ end
 
 
 """
-    MPCFinancial
+`MPCFinancial` is an optional REopt MPC input with the following keys and default values:
 
-    Base.@kwdef struct MPCFinancial
-        value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
-    end
+```julia
+    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, # Value of lost load in \$/kWh
+    CO2_cost_per_tonne::Real = 51.0, # Cost of CO2 emissions in \$/tonne
+```
 """
 Base.@kwdef struct MPCFinancial
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
@@ -40,13 +42,12 @@ end
 
 
 """
-    MPCPV
+`MPCPV` is an optional REopt MPC input with the following keys and default values:
+
 ```julia
-Base.@kwdef struct MPCPV
-    name::String="PV"
-    size_kw::Real = 0
-    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
-end
+    name::String="PV", # Name of the PV system
+    size_kw::Real = 0, # Size of the PV system in kW-DC
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing, # Production factor series. Must be normalized to units of kW-AC/kW-DC nameplate and equal to the length of loads_kw
 ```
 """
 Base.@kwdef struct MPCPV
@@ -57,19 +58,18 @@ end
 
 
 """
-    MPCWind
+`MPCWind` is an optional REopt MPC input with the following keys and default values:
+
 ```julia
-Base.@kwdef struct MPCWind
-    size_kw::Real = 0
-    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
-end
+    size_kw::Real = 0, # Size of the wind power system in kW
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing, # Production factor series. Must be normalized to units of kW-AC/kW-DC nameplate and equal to the length of loads_kw
+    om_cost_per_kw::Real = 0.0, # Fixed O&M cost based on power capacity (\$/kW-installed)
 ```
 """
 Base.@kwdef struct MPCWind
     size_kw::Real = 0
     production_factor_series::Union{Nothing, Array{Real,1}} = nothing
     om_cost_per_kw::Real = 0.0
-    operating_reserve_required_fraction::Real = 0.0
 end
 
 
@@ -104,7 +104,7 @@ end
 """
     MPCElectricTariff(d::Dict)
 
-function for parsing user inputs into 
+Function for parsing user inputs into:
 ```julia
     struct MPCElectricTariff
         monthly_previous_peak_demands::Array{Float64,1}
@@ -246,20 +246,18 @@ end
 
 
 """
-    MPCElectricStorage
+`MPCElectricStorage` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
-    size_kw::Float64
-    size_kwh::Float64
-    charge_efficiency::Float64 =  0.96 * 0.975^0.5
-    discharge_efficiency::Float64 =  0.96 * 0.975^0.5
-    soc_min_fraction::Float64 = 0.2
-    soc_init_fraction::Float64 = 0.5
-    can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
-    daily_leakage_fraction::Float64 = 0.03
-end
+    size_kw::Float64, # Size of the storage inverter in kW
+    size_kwh::Float64, # Size of the storage system in kWh
+    charge_efficiency::Float64 =  0.96 * 0.975^0.5, # Charge efficiency the storage system
+    discharge_efficiency::Float64 =  0.96 * 0.975^0.5, # Discharge efficiency the storage system
+    soc_min_fraction::Float64 = 0.2, # Minimum state of charge fraction
+    soc_init_fraction::Float64 = 0.5, # Initial state of charge fraction
+    can_grid_charge::Bool = true, # True/False for if storage can charge from the grid
+    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0, # Efficiency of charging the storage from the grid
+    daily_leakage_fraction::Float64 = 0.0, # Fraction of stored energy that is lost from the storage system each day
 ```
 """
 Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
@@ -274,28 +272,25 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.03
+    daily_leakage_fraction::Float64 = 0.0
     fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
 """
-    MPCGenerator
+`MPCGenerator` is an optional REopt MPC input with the following keys and default values:
 
-struct with inner constructor:
 ```julia
-function MPCGenerator(;
-    size_kw::Real,
-    fuel_cost_per_gallon::Real = 3.0,
-    electric_efficiency_full_load::Real = 0.3233,
-    electric_efficiency_half_load::Real = electric_efficiency_full_load,
-    fuel_avail_gal::Real = 1.0e9,
-    fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
-    min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
-    only_runs_during_grid_outage::Bool = true,
-    sells_energy_back_to_grid::Bool = false,
-    om_cost_per_kwh::Real=0.0,
-    )
+    size_kw::Real, # Size of the generator in kW
+    fuel_cost_per_gallon::Real = 3.0, # Fuel cost (\$/gal)
+    electric_efficiency_full_load::Real = 0.3233, # Electric efficiency of the generator at full load 
+    electric_efficiency_half_load::Real = electric_efficiency_full_load, # Electric efficiency of the generator at half load
+    fuel_avail_gal::Real = 1.0e9, # Fuel available (gallons)
+    fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL, # Higher heating value of the fuel in kWh per gallon (defaults to the HHV of diesel)
+    min_turn_down_fraction::Real = 0.0, # Minimum generator loading in fraction of capacity (size_kw)
+    only_runs_during_grid_outage::Bool = true, # True/False for if generator only runs during grid outages
+    sells_energy_back_to_grid::Bool = false, # True/False for if generator can sell energy back to the grid
+    om_cost_per_kwh::Real=0.0, # Variable O&M cost based on energy produced (\$/kWh of production)
 ```
 """
 struct MPCGenerator <: AbstractGenerator
@@ -344,16 +339,14 @@ end
 
 #HYDROGEN TECHS
 """
-    MPCElectrolyzer
+`MPCElectrolyzer` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCElectrolyzer < AbstractElectrolyzer
-    size_kw::Float64
-    require_compression::Bool = true
-    efficiency_kwh_per_kg::Float64 =  55.8
-    om_cost_per_kw::Float64 = 66.16
-    om_cost_per_kwh::Float64 = 0.0005
-end
+    size_kw::Float64, # Size of the electrolyzer in kW
+    require_compression::Bool = true, # If true, a compressor is used to bring the hydrogen produced by the electrolyzer to higher pressures before storage
+    efficiency_kwh_per_kg::Float64 =  55.8, # Efficiency of the electrolyzer in kWh of energy required per kg of hydrogen produced
+    om_cost_per_kw::Float64 = 66.16, # Fixed O&M cost based on power capacity (\$/kW-installed)
+    om_cost_per_kwh::Float64 = 0.0005, # Variable O&M cost based on production (\$/kWh of production)
 ```
 """
 Base.@kwdef struct MPCElectrolyzer <: AbstractElectrolyzer
@@ -365,17 +358,14 @@ Base.@kwdef struct MPCElectrolyzer <: AbstractElectrolyzer
 end
 
 """
-    MPCHydrogenStorage
+`MPCHydrogenStorage` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCHydrogenStorage < AbstractHydrogenStorage
-    size_kg::Float64
-    soc_min_fraction::Float64 = 0.05
-    soc_init_fraction::Float64 = 0.5
-    daily_leakage_fraction::Float64 = 0.0
-    max_kg::Float64 = size_kg
-    minimum_avg_soc_fraction::Float64 = 0.0
-end
+    size_kg::Float64, # Size of the hydrogen storage in kg
+    soc_min_fraction::Float64 = 0.05, # Minimum state of charge fraction
+    soc_init_fraction::Float64 = 0.5, # Initial state of charge fraction
+    daily_leakage_fraction::Float64 = 0.0006667, # Fraction of stored hydrogen that is lost from the system each day
+    minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
 ```
 """
 Base.@kwdef struct MPCHydrogenStorage <: AbstractHydrogenStorage
@@ -388,31 +378,27 @@ Base.@kwdef struct MPCHydrogenStorage <: AbstractHydrogenStorage
 end
 
 """
-    MPCFuelCell
+`MPCFuelCell` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCFuelCell < AbstractFuelCell
-    size_kw::Float64
-    efficiency_kwh_per_kg::Float64 =  15.98
-    om_cost_per_kwh::Float64 = 0.0016
-    om_cost_per_kw::Float64 = 16
-end
+    size_kw::Float64, # Size of the fuel cell in kW
+    efficiency_kwh_per_kg::Float64 =  15.98, # Efficiency of the fuel cell in kWh of electricity generated per kg of hydrogen consumed
+    om_cost_per_kw::Float64 = 16, # Fixed O&M cost based on power capacity (\$/kW-installed)
+    om_cost_per_kwh::Float64 = 0.0016, # Variable O&M cost based on production (\$/kWh of production)
 ```
 """
 Base.@kwdef struct MPCFuelCell <: AbstractFuelCell
     size_kw::Float64
     efficiency_kwh_per_kg::Float64 =  15.98
-    om_cost_per_kwh::Float64 = 0.0016
     om_cost_per_kw::Float64 = 16
+    om_cost_per_kwh::Float64 = 0.0016
 end
 
 """
-    MPCHydrogenLoad
+`MPCHydrogenLoad` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCHydrogenLoad
-    loads_kg::Array{Real,1}
-end
+    loads_kg::Array{Real,1} = Real[], # Hydrogen loads in kg
 ```
 """
 Base.@kwdef struct MPCHydrogenLoad
@@ -420,15 +406,13 @@ Base.@kwdef struct MPCHydrogenLoad
 end
 
 """
-    MPCCompressor
+`MPCCompressor` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCCompressor < AbstractCompressor
-    size_kw::Float64
-    efficiency_kwh_per_kg::Float64 = 3.3
-    om_cost_per_kwh::Float64 = 0
-    om_cost_per_kw::Float64 = 0
-end
+    size_kw::Float64, # Size of the compressor in kW
+    efficiency_kwh_per_kg::Float64 = 3.3, # Efficiency of the compressor in kWh of energy required per kg of hydrogen compressed
+    om_cost_per_kw::Float64 = 0, # Fixed O&M cost based on power capacity (\$/kW-installed)
+    om_cost_per_kwh::Float64 = 0, # Variable O&M cost based on production (\$/kWh of production)
 ```
 """
 Base.@kwdef struct MPCCompressor <: AbstractCompressor
@@ -441,12 +425,10 @@ end
 
 # THERMAL TECHS
 """
-MPCCoolingLoad
+`MPCProcessHeatLoad` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCProcessHeatLoad
-    loads_kw::Union{Nothing, Array{Real,1}} = nothing
-end
+    heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Process heat loads in MMBTU per hour
 ```
 """
 struct MPCProcessHeatLoad
@@ -461,16 +443,14 @@ struct MPCProcessHeatLoad
 end
 
 """
-    MPCCoolingLoad
+`MPCElectricHeater` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCElectricHeater <: AbstractThermalTech
-    size_kw::Real
-    cop::Real
-    can_serve_dhw::Bool
-    can_serve_space_heating::Bool
-    can_serve_process_heat::Bool
-end
+    size_mmbtu_per_hour::Real, # Thermal power size in MMBTU per hour
+    cop::Real = 1.0, # Coefficient of performance of the heating (i.e., thermal power produced / electricity consumed)
+    can_serve_dhw::Bool = true, # True/False for if technology can supply heat to the domestic hot water loads
+    can_serve_space_heating::Bool = true, # True/False for if technology can supply heat to the space heating loads
+    can_serve_process_heat::Bool = true, # True/False for if technology can supply heat to the process heat loads
 ```
 """
 struct MPCElectricHeater <: AbstractThermalTech
@@ -501,7 +481,7 @@ struct MPCElectricHeater <: AbstractThermalTech
 end
 
 """
-    MPCCoolingLoad
+    MPCCoolingLoad - Placeholder, not yet implemented in REopt MPC
 
 ```julia
 Base.@kwdef struct MPCCoolingLoad
@@ -515,7 +495,7 @@ Base.@kwdef struct MPCCoolingLoad
 end
 
 """
-    MPCDomesticHotWaterLoad
+    MPCDomesticHotWaterLoad - Placeholder, not yet implemented in REopt MPC
 
 ```julia
 Base.@kwdef struct MPCDomesticHotWaterLoad
@@ -528,7 +508,7 @@ Base.@kwdef struct MPCDomesticHotWaterLoad
 end
 
 """
-    MPCSpaceHeatingLoad
+    MPCSpaceHeatingLoad - Placeholder, not yet implemented in REopt MPC
 
 ```julia
 Base.@kwdef struct MPCSpaceHeatingLoad
@@ -542,60 +522,58 @@ end
 
 
 """
-    MPCHighTempThermalStorage
+`MPCHighTempThermalStorage` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
-    charge_limit_kw::Float64
-    discharge_limit_kw::Float64
-    size_kwh::Float64
-    charge_efficiency::Float64 = 1.0
-    discharge_efficiency::Float64 = 0.9
-    soc_min_fraction::Float64 = 0.2
-    soc_init_fraction::Float64 = 0.5
-    size_kw::Float64 = charge_limit_kw + discharge_limit_kw
-    max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
-    max_kwh::Float64 = size_kwh
-    minimum_avg_soc_fraction::Float64 = 0.0
-    thermal_decay_rate_fraction::Float64 = 0.0004
-    can_serve_dhw::Bool = true
-    can_serve_space_heating::Bool = true
-    can_serve_process_heat::Bool = true
-end
+    charge_kw::Float64, # Size of the charge mechanism in kW
+    discharge_kw::Float64, # Size of the discharge mechanism in kW
+    size_kwh::Float64, # Size of the thermal storage size in kWh
+    charge_efficiency::Float64 = 1.0, # Efficiency of the charge mechanism
+    discharge_efficiency::Float64 = 0.9, # Efficiency of the discharge mechanism
+    constrain_dispatch_to_stored_kwh::Bool = false, # True/False for if maximum charge and discharge power in timestep t is constrained to be less than a fraction of the energy stored in the system in timestep t-1
+    charge_limit_as_fraction_of_stored_kwh::Float64 = 1.0, # If constrain_dispatch_to_stored_kwh is true, limit charging power to this fraction of the energy stored in the system in the previous timestep 
+    discharge_limit_as_fraction_of_stored_kwh::Float64 = 1.0, # If constrain_dispatch_to_stored_kwh is true, limit discharging power to this fraction of the energy stored in the system in the previous timestep 
+    include_discharge_pump_losses::Bool = false, # True/False for if auxiliary pump losses based on discharge power are modeled
+    pump_loss_as_fraction_of_discharge_kw::Float64 = 0.01, # Fraction of discharge power that is consumed as electricity by the auxiliary pump. This electric power must be supplied by another source.
+    soc_min_fraction::Float64 = 0.2, # Minimum state of charge fraction
+    soc_init_fraction::Float64 = 0.5, # Initial state of charge fraction
+    minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
+    thermal_decay_rate_fraction::Float64 = 0.0004, # Fraction of stored energy lost per timestep due to thermal decay
+    can_serve_dhw::Bool = false, # True/False for if technology can supply heat to the domestic hot water loads
+    can_serve_space_heating::Bool = false, # True/False for if technology can supply heat to the space heating loads
+    can_serve_process_heat::Bool = true, # True/False for if technology can supply heat to the process heat loads
 ```
 """
 Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
-    charge_limit_kw::Float64
-    discharge_limit_kw::Float64
+    charge_kw::Float64
+    discharge_kw::Float64
     size_kwh::Float64
     charge_efficiency::Float64 = 1.0
     discharge_efficiency::Float64 = 0.9
+    constrain_dispatch_to_stored_kwh::Bool = false
+    charge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    discharge_limit_as_fraction_of_stored_kwh::Float64 = 1.0
+    include_discharge_pump_losses::Bool = false
+    pump_loss_as_fraction_of_discharge_kw::Float64 = 0.01
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
-    size_kw::Float64 = charge_limit_kw + discharge_limit_kw
-    max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
+    size_kw::Float64 = charge_kw + discharge_kw
+    max_kw::Float64 = max(charge_kw, discharge_kw)
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
     thermal_decay_rate_fraction::Float64 = 0.0004
-    can_serve_dhw::Bool = true
-    can_serve_space_heating::Bool = true
+    can_serve_dhw::Bool = false
+    can_serve_space_heating::Bool = false
     can_serve_process_heat::Bool = true
 end
 
 """
-    MPCLimits
+`MPCLimits` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct MPCLimits
-    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
-    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
-end
+    grid_draw_limit_kw_by_time_step::Vector{<:Real}, # Limits grid power consumption in each time step (length of input series must be same as loads_kw)
+    export_limit_kw_by_time_step::Vector{<:Real}, # Limits grid power export in each time step (length of input series must be same as loads_kw)
 ```
-
-struct for MPC specific input parameters:
-- `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
-- `export_limit_kw_by_time_step::Vector{<:Real}` limits for grid power export in each time step; length must be same as `length(loads_kw)`.
-
 !!! warn 
     `grid_draw_limit_kw_by_time_step` and `export_limit_kw_by_time_step` values can lead to 
     infeasible problems. For example, there is a constraint that the electric load must be met in 

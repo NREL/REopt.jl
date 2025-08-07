@@ -14,7 +14,7 @@ function add_emissions_constraints(m,p)
 				(1-p.s.site.CO2_emissions_reduction_max_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
 			)
 		end
-	else
+	elseif !isnothing(p.s.site.CO2_emissions_reduction_min_fraction) || !isnothing(p.s.site.CO2_emissions_reduction_max_fraction)
 		@warn "No emissions reduction constraints added, as BAU emissions have not been calculated."
 	end
 end
@@ -128,7 +128,7 @@ end
 
 function calc_yr1_emissions_offset_from_elec_exports(m, p)
 	if !(p.s.site.include_exported_elec_emissions_in_total)
-		return 0.0, 0.0, 0.0, 0.0
+		return zeros(8760), zeros(8760), zeros(8760), zeros(8760)
 	end
 	yr1_emissions_offset_from_elec_exports_series_lbs_CO2 = @expression(m, [ts in p.time_steps], p.hours_per_time_step *
 		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])

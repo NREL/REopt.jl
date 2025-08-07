@@ -135,8 +135,10 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
+	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec)) 
+		add_storage_sum_grid_constraints(m, p)
+	elseif any(size_kg->size_kg > 0, (p.s.storage.attr[b].size_kg for b in p.s.storage.types.hydrogen))
+		add_storage_sum_grid_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
@@ -350,6 +352,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
+		dvDischargePumpPower[p.s.storage.types.hightemp, p.time_steps] >= 0
 	end
 	# TODO: tiers in MPC tariffs and variables?
 
@@ -381,8 +384,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		elseif b in p.s.storage.types.hydrogen
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorage"].size_kg, force=true)
 		elseif b in p.s.storage.types.hot
-			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_limit_kw, force=true)
-			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_limit_kw, force=true)
+			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_kw, force=true)
+			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_kw, force=true)
 			# fix(m[:dvStoragePower][b], p.s.storage.attr["HighTempThermalStorage"].size_kw, force=true)
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HighTempThermalStorage"].size_kwh, force=true)
 		end
@@ -416,7 +419,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs.all, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
+			dvMGProductionToStorage[union(p.s.storage.types.elec, p.s.storage.types.hydrogen), union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor), S, tZeros, outage_time_steps]  >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
 			dvMGRatedProduction[p.techs.all, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system

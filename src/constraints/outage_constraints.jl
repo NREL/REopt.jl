@@ -2,12 +2,15 @@
 function add_dv_UnservedLoad_constraints(m,p)
     # Effective load balance
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvUnservedLoad][s, tz, ts] == p.s.electric_load.critical_loads_kw[tz+ts-1] # critical load
-        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
-            - sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec)
-            - m[:dvMGCurtail][t, s, tz, ts] 
-            - m[:dvMGProductionToElectrolyzer][t, s, tz, ts]
-            - m[:dvMGProductionToCompressor][t, s, tz, ts]
+        m[:dvUnservedLoad][s, tz, ts] == p.s.electric_load.critical_loads_kw[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
+        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * (
+                p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + 
+                p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
+                ) * p.levelization_factor[t]
+              - sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec)
+              - m[:dvMGCurtail][t, s, tz, ts]
+              - m[:dvMGProductionToElectrolyzer][t, s, tz, ts]
+              - m[:dvMGProductionToCompressor][t, s, tz, ts]
             for t in p.techs.elec
         ) # minus production to load
         - sum(m[:dvMGDischargeFromStorage][b, s, tz, ts] 
@@ -28,7 +31,7 @@ end
 
 function add_outage_cost_constraints(m,p)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-        m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts-1] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
+        m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
 
     @expression(m, ExpectedOutageCost,
@@ -55,22 +58,22 @@ function add_outage_cost_constraints(m,p)
         end
     end
 
-    if !isempty(p.techs.segmented)
+    if !isempty(intersect(p.techs.segmented, p.techs.elec))
         @warn "Adding binary variable(s) to model cost curves in stochastic outages"
         if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
-            @constraint(m, [t in p.techs.segmented],  # cannot have this for statement in sum( ... for t in ...) ???
+            @constraint(m, [t in intersect(p.techs.segmented, p.techs.elec)],  # cannot have this for statement in sum( ... for t in ...) ???
                 m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
                     sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                         p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])}
                 )
         else
-            @constraint(m, [t in p.techs.segmented],  
+            @constraint(m, [t in intersect(p.techs.segmented, p.techs.elec)],  
                 m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
                     sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                         p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) -
                         (maximum(p.cap_cost_slope[t][s] for s in 1:p.n_segs_by_tech[t]) * p.max_sizes[t] + maximum(p.seg_yint[t][s] for s in 1:p.n_segs_by_tech[t]))*(1-m[:binMGTechUsed][t])
                 )
-            @constraint(m, [t in p.techs.segmented], m[:dvMGTechUpgradeCost][t] >= 0.0)
+            @constraint(m, [t in intersect(p.techs.segmented, p.techs.elec)], m[:dvMGTechUpgradeCost][t] >= 0.0)
         end
     end
 
@@ -127,7 +130,7 @@ function add_MG_production_constraints(m,p)
         + m[:dvMGProductionToElectrolyzer][t, s, tz, ts] 
         + m[:dvMGProductionToCompressor][t, s, tz, ts] 
         <=
-		(p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
+		(p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
     )
 
     @constraint(m, [t in union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor), s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
@@ -149,7 +152,7 @@ function add_MG_Gen_fuel_burn_constraints(m,p)
     # Define dvMGFuelUsed by summing over outage time_steps.
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
         m[:dvMGFuelUsed][t, s, tz] == fuel_slope_gal_per_kwhe * p.hours_per_time_step * p.levelization_factor[t] *
-        sum( (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * m[:dvMGRatedProduction][t, s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
+        sum( (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * m[:dvMGRatedProduction][t, s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
         + fuel_intercept_gal_per_hr * p.hours_per_time_step * 
         sum( m[:binMGGenIsOnInTS][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
@@ -299,6 +302,14 @@ function add_MG_elec_storage_dispatch_constraints(m,p)
         - ((p.s.storage.attr["ElectricStorage"].daily_leakage_fraction/24/p.hours_per_time_step) * m[:dvMGStoredEnergy]["ElectricStorage", s, tz, ts-1])
     )
 
+	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
+    @constraint(m, [ts in p.time_steps_without_grid],
+        m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_time_step * (  
+            p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage]["ElectricStorage",t, s, tz, ts] for t in p.techs.elec) 
+        )
+    )
+
+    # Min SOC
     if p.s.storage.attr["ElectricStorage"].soc_min_applies_during_outages
         # Minimum state of charge
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],

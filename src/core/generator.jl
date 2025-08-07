@@ -33,17 +33,17 @@
     utility_ibi_max::Real = 1.0e10,
     utility_rebate_per_kw::Real = 0.0,
     utility_rebate_max::Real = 1.0e10,
-    production_incentive_per_kwh::Real = 0.0,
-    production_incentive_max_benefit::Real = 1.0e9,
-    production_incentive_years::Int = 0,
-    production_incentive_max_kw::Real = 1.0e9,
+    production_incentive_per_kwh::Float64 = 0.0 # revenue from production incentive per kWh electricity produced, including curtailment
+    production_incentive_max_benefit::Float64 = 1.0e9 # maximum allowable annual revenue from production incentives
+    production_incentive_years::Int = 0 # number of year in which production incentives are paid
+    production_incentive_max_kw::Float64 = 1.0e9 # maximum allowable system size to receive production incentives
     fuel_renewable_energy_fraction::Real = 0.0,
     emissions_factor_lb_CO2_per_gal::Real = 22.58, # CO2e
     emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
     emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
     emissions_factor_lb_PM25_per_gal::Real = 0.0,
-    replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-    replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+    replacement_year::Int = off_grid_flag ? 10 : analysis_years, # Project year in which generator capacity will be replaced at a cost of replace_cost_per_kw.
+    replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0 # Per kW replacement cost for generator capacity. Replacement costs are considered tax deductible.
 ```
 
 !!! note "Replacement costs" 
@@ -137,8 +137,8 @@ struct Generator <: AbstractGenerator
         emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
         emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
         emissions_factor_lb_PM25_per_gal::Real = 0.0,
-        replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-        replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+        replacement_year::Int = off_grid_flag ? 10 : analysis_years, # Project year in which generator capacity will be replaced at a cost of replace_cost_per_kw.
+        replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0 # Per kW replacement cost for generator capacity. Replacement costs are considered tax deductible.
     )
 
         if (replacement_year >= analysis_years) && !(replace_cost_per_kw == 0.0)
