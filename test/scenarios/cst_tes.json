@@ -7,15 +7,8 @@
         "CO2_emissions_reduction_min_fraction": 0.1
     },
     "HotSensibleTes": {
-        "installed_cost_per_kwh": 100,
-        "max_kwh": 250000000
     },
     "CST": {
-        "tech_type": "ptc",
-        "min_kw": 0,
-        "installed_cost_per_kw": 1200,
-        "inlet_temp_degF": 500.0,
-        "outlet_temp_degF": 400.0
     },
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 10
