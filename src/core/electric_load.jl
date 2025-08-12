@@ -230,10 +230,13 @@ function BuiltInElectricLoad(
     built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile)
 end
 
+"""
+    get_electric_load_metrics(loads_vector; time_steps_per_hour=1, year=2025, print_to_console=false)
 
-# Create a function to analyze monthly and annual data as a pre-processing step
-# Inputs are the loads vector, time steps per hour, and year of the interval data
-function analyze_monthly_data(loads_vector, time_steps_per_hour, year)
+Create a function to analyze monthly and annual data as a pre-processing step
+Inputs are the loads vector, time steps per hour, and year of the interval data
+"""
+function get_electric_load_metrics(loads_vector; time_steps_per_hour=1, year=2025, print_to_console=false)
 
     # Initialize empty arrays
     monthly_usage_kwh = []
@@ -263,26 +266,18 @@ function analyze_monthly_data(loads_vector, time_steps_per_hour, year)
         # Calculate monthly peak load kW
         monthly_peak_kw1 = maximum(loads_vector[month_timesteps])
         push!(monthly_peak_kw, monthly_peak_kw1)
-        
-        
-        # # Calculate monthly usage kWh
-        # monthly_usage_kwh1 = sum(loads_vector[first(month_timesteps):last(month_timesteps)])/time_steps_per_hour
-        # push!(monthly_usage_kwh, monthly_usage_kwh1)
-
-        # # Calculate monthly peak load kW
-        # monthly_peak_kw1 = maximum(loads_vector[first(month_timesteps):last(month_timesteps)])
-        # push!(monthly_peak_kw, monthly_peak_kw1)
-
     end
 
     # Calculate annual sums and peak loads
     annual_usage_kwh = sum(monthly_usage_kwh)
     annual_peak_kw = maximum(monthly_peak_kw)
 
-    println("Monthly Usage (kWh): ", monthly_usage_kwh)
-    println("Monthly Peak Load (kW): ", monthly_peak_kw)
-    println("Annual Usage (kWh): ", annual_usage_kwh)
-    println("Annual Peak Load (kW): ",annual_peak_kw)
+    if print_to_console
+        println("Monthly Usage (kWh): ", monthly_usage_kwh)
+        println("Monthly Peak Load (kW): ", monthly_peak_kw)
+        println("Annual Usage (kWh): ", annual_usage_kwh)
+        println("Annual Peak Load (kW): ",annual_peak_kw)
+    end
 
     # Return specified results and their associated names
     return monthly_usage_kwh, monthly_peak_kw, annual_usage_kwh, annual_peak_kw
