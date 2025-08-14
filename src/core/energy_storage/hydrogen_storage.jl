@@ -44,7 +44,8 @@
     total_itc_fraction::Float64 = 0.3, # Total Investment Tax Credit (ITC) fraction
     minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
     soc_min_applies_during_outages::Bool = false, # If true, the minimum state of charge fraction applies during outages. Otherwise min SOC is set to 0 during outages.
-    daily_leakage_fraction::Float64 = 0.0, # Fraction of stored hydrogen that is lost from the system each day 
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg capacity of the storage tank
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg of H2 stored in each timestep
     require_start_and_end_charge_to_be_equal::Bool = true, # If true, the model will constrain final SOC = initial SOC
 ```
 """
@@ -63,7 +64,8 @@ Base.@kwdef struct HydrogenStorageDefaults
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
     soc_min_applies_during_outages::Bool = false
-    daily_leakage_fraction::Float64 = 0.0
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 
     require_start_and_end_charge_to_be_equal::Bool = true
 end
 
@@ -90,7 +92,8 @@ struct HydrogenStorage <: AbstractHydrogenStorage
     net_present_cost_per_kg::Real
     minimum_avg_soc_fraction::Float64
     soc_min_applies_during_outages::Bool
-    daily_leakage_fraction::Float64
+    capacity_based_per_ts_self_discharge_fraction::Float64
+    soc_based_per_ts_self_discharge_fraction::Float64
     require_start_and_end_charge_to_be_equal::Bool
 
     function HydrogenStorage(d::Dict, f::Financial)  
@@ -130,7 +133,8 @@ struct HydrogenStorage <: AbstractHydrogenStorage
             net_present_cost_per_kg,
             s.minimum_avg_soc_fraction,
             s.soc_min_applies_during_outages,
-            s.daily_leakage_fraction,
+            s.capacity_based_per_ts_self_discharge_fraction,
+            s.soc_based_per_ts_self_discharge_fraction,
             s.require_start_and_end_charge_to_be_equal
         )
     end
