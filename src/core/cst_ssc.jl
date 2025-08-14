@@ -6,6 +6,123 @@ using DataFrames
 using CSV
 using Base.Iterators
 
+"""
+    calculate_max_process_heat_load(case_data::Dict)
+
+Dynamically calculate the maximum process heat load based on different ProcessHeatLoad input combinations.
+Returns the maximum load in MMBtu/hr (fuel basis).
+
+# ProcessHeatLoad can be defined via:
+1. fuel_loads_mmbtu_per_hour - Direct time series in fuel MMBtu/hr
+2. annual_mmbtu + monthly_mmbtu - Annual or monthly fuel consumption totals
+3. loads_kw (thermal loads) - Direct thermal load time series 
+4. DOE reference profiles via doe_reference_name/industrial_reference_name
+5. Blended profiles via blended_*_reference_names and blended_*_reference_percents
+6. If ProcessHeatLoad object exists, use its loads_kw directly
+"""
+function calculate_max_process_heat_load(case_data::Dict)
+    if !haskey(case_data, "ProcessHeatLoad")
+        return 5.2  # Default fallback value
+    end
+    
+    process_heat_data = case_data["ProcessHeatLoad"]
+    
+    # Method 1: If ProcessHeatLoad struct is already constructed (e.g., from Scenario object)
+    if haskey(process_heat_data, "loads_kw") && isa(process_heat_data["loads_kw"], AbstractArray) && !isempty(process_heat_data["loads_kw"])
+        # These are thermal loads in kW, convert to fuel MMBtu/hr
+        boiler_efficiency = 0.8  # Default efficiency
+        if haskey(case_data, "ExistingBoiler") && haskey(case_data["ExistingBoiler"], "efficiency")
+            boiler_efficiency = case_data["ExistingBoiler"]["efficiency"]
+        end
+        thermal_loads_kw = process_heat_data["loads_kw"]
+        # Convert kW_thermal to MMBtu/hr_fuel: kW_thermal / (KWH_PER_MMBTU * boiler_efficiency)
+        # KWH_PER_MMBTU = 293.071 (constant from REopt)
+        fuel_loads_mmbtu_per_hour = thermal_loads_kw ./ (293.071 * boiler_efficiency)
+        return maximum(fuel_loads_mmbtu_per_hour)
+    end
+    
+    # Method 2: Direct fuel time series (highest priority for input data)
+    if haskey(process_heat_data, "fuel_loads_mmbtu_per_hour") && !isempty(process_heat_data["fuel_loads_mmbtu_per_hour"])
+        return maximum(process_heat_data["fuel_loads_mmbtu_per_hour"])
+    end
+    
+    # Method 3: Monthly totals - estimate peak from monthly data
+    if haskey(process_heat_data, "monthly_mmbtu") && !isempty(process_heat_data["monthly_mmbtu"])
+        monthly_mmbtu = process_heat_data["monthly_mmbtu"]
+        # Estimate peak as max monthly divided by hours in that month, with a typical peaking factor
+        max_monthly = maximum(monthly_mmbtu)
+        hours_per_month = 8760 / 12  # Average hours per month
+        peak_factor = 2.0  # Typical peaking factor for industrial processes
+        estimated_peak = (max_monthly / hours_per_month) * peak_factor
+        return estimated_peak
+    end
+    
+    # Method 4: Annual total - estimate peak using typical load profiles
+    if haskey(process_heat_data, "annual_mmbtu") && process_heat_data["annual_mmbtu"] > 0
+        annual_mmbtu = process_heat_data["annual_mmbtu"]
+        
+        # Different peaking factors based on industrial reference name if available
+        peak_factor = 2.0  # Default for continuous industrial processes
+        if haskey(process_heat_data, "industrial_reference_name")
+            ref_name = process_heat_data["industrial_reference_name"]
+            if ref_name == "Chemical"
+                peak_factor = 2.5  # Chemical processes often have higher peaks
+            elseif ref_name == "FlatLoad"
+                peak_factor = 1.2  # Flat loads have minimal peaking
+            elseif ref_name == "Warehouse"
+                peak_factor = 3.0  # Warehouses can have significant seasonal variation
+            end
+        end
+        
+        average_load = annual_mmbtu / 8760
+        estimated_peak = average_load * peak_factor
+        return estimated_peak
+    end
+    
+    # Method 5: DOE/Industrial reference profiles (would require building load profiles)
+    if haskey(process_heat_data, "industrial_reference_name") && !isempty(process_heat_data["industrial_reference_name"])
+        ref_name = process_heat_data["industrial_reference_name"]
+        # Default peak estimates based on industrial reference types
+        if ref_name == "Chemical"
+            return 15.0  # Typical for chemical processes
+        elseif ref_name == "FlatLoad"
+            return 10.0  # Continuous flat load
+        elseif ref_name == "Warehouse"
+            return 7.0   # Warehouse heating
+        else
+            return 12.0  # Generic industrial
+        end
+    end
+    
+    # Method 6: Blended reference profiles (simplified approach)
+    if haskey(process_heat_data, "blended_industrial_reference_names") && 
+       haskey(process_heat_data, "blended_industrial_reference_percents")
+        
+        names = process_heat_data["blended_industrial_reference_names"]
+        percents = process_heat_data["blended_industrial_reference_percents"]
+        
+        if length(names) == length(percents) && !isempty(names)
+            # Estimate weighted average peak
+            total_peak = 0.0
+            for (name, percent) in zip(names, percents)
+                if name == "Chemical"
+                    total_peak += 15.0 * percent
+                elseif name == "FlatLoad"
+                    total_peak += 10.0 * percent
+                elseif name == "Warehouse"
+                    total_peak += 7.0 * percent
+                else
+                    total_peak += 12.0 * percent
+                end
+            end
+            return total_peak
+        end
+    end
+    
+    # Fallback: Default value for CST sizing
+    return 5.2
+end
+
 
 
 
@@ -203,11 +320,8 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["fluid_id"] = 21
         end
         if !haskey(user_defined_inputs, "q_pb_design")
-            if haskey(case_data["ProcessHeatLoad"], "fuel_loads_mmbtu_per_hour")
-                user_defined_inputs["q_pb_design"] = maximum(case_data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"]) * 0.293071
-            else
-                user_defined_inputs["q_pb_design"] = 5.2
-            end
+            max_process_heat_load = calculate_max_process_heat_load(case_data)
+            user_defined_inputs["q_pb_design"] = max_process_heat_load * 0.293071
         end
         if !haskey(user_defined_inputs, "use_solar_mult_or_aperture_area")
             user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
