@@ -5,7 +5,7 @@
     min_kw = 0.0,
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
-    om_cost_per_kw = 36.0,
+    om_cost_per_kw = 42.0,
     production_factor_series = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     size_class = "",
     wind_meters_per_sec = [],
@@ -41,10 +41,10 @@
     If no `installed_cost_per_kw` is provided then it is determined from:
     ```julia
     size_class_to_installed_cost = Dict(
-        "residential"=> 6339.0,
-        "commercial"=> 4760.0,
-        "medium"=> 3137.0,
-        "large"=> 2386.0
+        "residential"=> 7692.0,
+        "commercial"=> 5776.0,
+        "medium"=> 3807.0,
+        "large"=> 2896.0
     )
     ```
     If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
@@ -102,7 +102,7 @@ struct Wind <: AbstractTech
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
-        om_cost_per_kw = 36.0,
+        om_cost_per_kw = 42.0,
         production_factor_series = nothing,
         size_class = "",
         wind_meters_per_sec = [],
@@ -141,10 +141,10 @@ struct Wind <: AbstractTech
             "large"=> 80
         )
         size_class_to_installed_cost = Dict(
-            "residential"=> 6339.0,
-            "commercial"=> 4760.0,
-            "medium"=> 3137.0,
-            "large"=> 2386.0
+            "residential"=> 7692.0,
+            "commercial"=> 5776.0,
+            "medium"=> 3807.0,
+            "large"=> 2896.0
         )
         
         if size_class == ""
