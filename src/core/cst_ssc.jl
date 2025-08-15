@@ -349,7 +349,7 @@ function run_ssc(case_data::Dict)
         chmod(hdl, filemode(hdl) | 0o755) ### added just because I saw this in the wind module
         ssc_module = @ccall hdl.ssc_module_create(model_ssc[model]::Cstring)::Ptr{Cvoid}
         data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
-        @ccall hdl.ssc_module_exec_set_print(0::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
+        @ccall hdl.ssc_module_exec_set_print(1::Cint)::Cvoid # change to 1 to print outputs/errors (for debugging)
 
         ### Set defaults
         set_ssc_data_from_dict(defaults,model,data)
@@ -430,11 +430,11 @@ function run_ssc(case_data::Dict)
         #     thermal_production_norm = thermal_production .* tcf ./ rated_power
         # end
         thermal_production_norm = thermal_production .* tcf ./ rated_power
-        # if model in ["mst","ptc","lf"]
-        #     println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
-        # elseif model in ["swh_evactube","swh_flatplate"]
-        #     println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
-        # end
+        if model in ["mst","ptc","lf"]
+            println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
+        elseif model in ["swh_evactube","swh_flatplate"]
+            println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
+        end
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         ### Free SSC
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
