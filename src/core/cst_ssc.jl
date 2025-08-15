@@ -327,6 +327,7 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
             user_defined_inputs["specified_solar_multiple"] = 3.0
         end
+        print("user defined inputs: " * string(user_defined_inputs) * "\n")
     end
     R = Dict()
     error = ""
