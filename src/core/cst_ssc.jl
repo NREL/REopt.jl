@@ -292,8 +292,8 @@ function run_ssc(case_data::Dict)
             inlet_temp = (case_data["CST"]["inlet_temp_degF"] - 32) / (9/5)
             outlet_temp = (case_data["CST"]["outlet_temp_degF"] - 32) / (9/5)
         else
-            inlet_temp = 204.44
-            outlet_temp = 21.11
+            inlet_temp = 260
+            outlet_temp = 210
         end
         user_defined_inputs["h_tank_in"] = defaults["h_tank"]
         user_defined_inputs["f_htfmin"] = 0.0
