@@ -522,6 +522,8 @@ end
 """
 prob_matrix_update!(prob_matrix, survival)
 
+Updates probability matrix so that non-surviving states are sent to a "failed" absorbing state 
+which is assumed to be outside of the probability vector here.
 More efficient implementation of prob_matrix = prob_matrix .* survival
 """
 function prob_matrix_update!(prob_matrix, survival)
