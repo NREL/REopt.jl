@@ -800,12 +800,15 @@ survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, m
     generator_markov_matrix::Matrix{Float64}: probability transition matrix for generator states only
     maximum_generation::Array{Float64: 3}: maximum generation capacity by state
     t_max::Int: length of net_critical_loads_kw # TODO: remove?
-    starting_battery_bins::Vector{Int}: 
-    battery_bin_size_kwh::Real: 
-    starting_H2_bins::Vector{Int}: 
-    H2_bin_size_kg::Real: 
+    starting_battery_bins::Vector{Int}: battery SOC bin index at time period t
+    battery_bin_size_kwh::Real: size of battery bin [kWh]
+    starting_H2_bins::Vector{Int}: H2 storage bin index at time period t
+    H2_bin_size_kg::Real: size of H2 storage bin [kg]
     marginal_survival::Bool:  
-    time_steps_per_hour::Real)::Vector{Float64}: 
+    time_steps_per_hour::Real:
+
+# returns
+    ::Vector{Float64}: survival probability of place. 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_with_storage
 """
