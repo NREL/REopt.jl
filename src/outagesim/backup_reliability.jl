@@ -626,9 +626,8 @@ function gen_only_survival_single_start_time(
     marginal_survival::Bool)::Vector{Float64}
 
     survival_chances = zeros(max_outage_duration)
-    gen_prob_array = [copy(starting_gens), copy(starting_gens)]
-    survival = ones(length(1, generator_production))
-
+    gen_prob_array = [transpose(copy(starting_gens)),transpose(copy(starting_gens))] 
+    survival = ones(length(generator_production))
     for d in 1:max_outage_duration
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
         update_survival!(survival, generator_production, net_critical_loads_kw[h])
