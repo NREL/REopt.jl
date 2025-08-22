@@ -134,13 +134,18 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             end
             
             # Check for defined microgrid list of energy consumers to aggregate for critical load, built up along side the total load profile below
-            microgrid_name_list = mgravens["Group"]["ConnectivityNodeContainer"]["Microgrid.1"]["EquipmentContainer.Equipments"]
+            # TODO handle any unique name that has "Microgrid" in it instead of hard-coding this specific name
+            #   done by looping through types in Group.ConnectivityNodeContainer keys and finding something like "cimObjectType==microgrid"
+            microgrid_name_list = []
             mg_energy_consumers = []
             use_mg_energy_consumers_for_critical_load = false
-            for key in microgrid_name_list
-                if occursin("EnergyConsumer", key)
-                    push!(mg_energy_consumers, replace(split(key, "::")[2], "'" => ""))
-                    use_mg_energy_consumers_for_critical_load = true
+            if haskey(mgravens["Group"], "ConnectivityNodeContainer") && haskey(mgravens["Group"]["ConnectivityNodeContainer"], "Microgrid.1")
+                microgrid_name_list = mgravens["Group"]["ConnectivityNodeContainer"]["Microgrid.1"]["EquipmentContainer.Equipments"]
+                for key in microgrid_name_list
+                    if occursin("EnergyConsumer", key)
+                        push!(mg_energy_consumers, replace(split(key, "::")[2], "'" => ""))
+                        use_mg_energy_consumers_for_critical_load = true
+                    end
                 end
             end
 
@@ -227,7 +232,13 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 end
             end
             reopt_inputs["ElectricLoad"]["loads_kw"] = total_loads_kw
-            reopt_inputs["ElectricLoad"]["critical_loads_kw"] = microgrid_loads_kw
+            println("Min gross load (kW): ", minimum(total_loads_kw))
+            println("Max gross load (kW): ", maximum(total_loads_kw))
+            if sum(microgrid_loads_kw) > 0.0
+                reopt_inputs["ElectricLoad"]["critical_loads_kw"] = microgrid_loads_kw
+            end
+            println("Min critical load (kW): ", minimum(microgrid_loads_kw))
+            println("Max critical load (kW): ", maximum(microgrid_loads_kw))
 
             # A bunch of financial/prices stuff depends on the Region name, but this is all assumed to apply for all/aggregate loads
             subregion_name = replace(split(mgravens["ProposedSiteLocation"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
@@ -349,36 +360,42 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # loads_kw_is_net::Bool = true, --> we want to say this is FALSE because we are NOT modeling non-MG existing PV, and we are NOT subtracting MG PV from load
             # critical_loads_kw_is_net::Bool = false, --> keep as false because we are NOT netting out MG existing PV, but maybe we would sometimes if that's the load data we have?
             # TODO we cannot model an existing battery other than trick the cost to only estimate cost for new battery, but this won't have BAU value/dispatch for battery
-            existing_assets = mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"]["PowerElectronicsConnection"]
+            existing_assets = get(mgravens["PowerSystemResource"]["Equipment"]["ConductingEquipment"]["EnergyConnection"]["RegulatingCondEq"], "PowerElectronicsConnection", Dict())
             existing_asset_types = Set{String}()
             existing_pv_data = Dict()
-            existing_bess_data = Dict()
-            for (key, asset) in existing_assets
-                if haskey(asset, "PowerElectronicsConnection.PowerElectronicsUnit")
-                    unit = asset["PowerElectronicsConnection.PowerElectronicsUnit"]
-                    if haskey(unit, "Ravens.cimObjectType")
-                        asset_type = unit["Ravens.cimObjectType"]
-                        if asset_type == "PhotoVoltaicUnit"
-                            existing_pv_data[key] = Dict()
-                            existing_pv_data[key]["ac_rating_kw"] = get_value_in_kw(unit["PowerElectronicsUnit.maxP"])
-                        elseif asset_type == "BatteryUnit"
-                            existing_bess_data[key] = Dict()
-                            existing_bess_data[key]["ac_rating_kw"] = get_value_in_kw(unit["PowerElectronicsUnit.maxP"])
-                            existing_bess_data[key]["energy_rating_kwh"] = get_value_in_kw(unit["BatteryUnit.ratedE"])
+            existing_bess_data = Dict()            
+            if !isempty(existing_assets)
+                for (key, asset) in existing_assets
+                    if haskey(asset, "PowerElectronicsConnection.PowerElectronicsUnit")
+                        unit = asset["PowerElectronicsConnection.PowerElectronicsUnit"]
+                        if haskey(unit, "Ravens.cimObjectType")
+                            asset_type = unit["Ravens.cimObjectType"]
+                            if asset_type == "PhotoVoltaicUnit"
+                                existing_pv_data[key] = Dict()
+                                existing_pv_data[key]["ac_rating_kw"] = get_value_in_kw(unit["PowerElectronicsUnit.maxP"])
+                            elseif asset_type == "BatteryUnit"
+                                existing_bess_data[key] = Dict()
+                                existing_bess_data[key]["ac_rating_kw"] = get_value_in_kw(unit["PowerElectronicsUnit.maxP"])
+                                existing_bess_data[key]["energy_rating_kwh"] = get_value_in_kw(unit["BatteryUnit.ratedE"])
+                            end
+                            # The "Set" data type only keeps unique values with push!, so we can use it to collect unique asset types
+                            push!(existing_asset_types, asset_type)
+                        else
+                            @info "Warning: PowerElectronicsConnection.PowerElectronicsUnit does not have Ravens.cimObjectType for key: $key"
                         end
-                        # The "Set" data type only keeps unique values with push!, so we can use it to collect unique asset types
-                        push!(existing_asset_types, asset_type)
                     else
-                        @info "Warning: PowerElectronicsConnection.PowerElectronicsUnit does not have Ravens.cimObjectType for key: $key"
+                        @info "Warning: PowerElectronicsConnection.PowerElectronicsUnit key not found for key: $key"
                     end
-                else
-                    @info "Warning: PowerElectronicsConnection.PowerElectronicsUnit key not found for key: $key"
-                end
-            end 
+                end 
+            end
 
             # Check for existing assets in the microgrid which may be a SUBset of the list above, or possibly the same set if the whole network is the microgrid
             # TODO handle any unique name that has "Microgrid" in it instead of hard-coding this specific name
-            existing_mg_assets = mgravens["Group"]["ConnectivityNodeContainer"]["Microgrid.1"]["EquipmentContainer.Equipments"]
+            #   done by looping through types in Group.ConnectivityNodeContainer keys and finding something like "cimObjectType==microgrid"
+            existing_mg_assets = []
+            if haskey(mgravens["Group"], "ConnectivityNodeContainer") && haskey(mgravens["Group"]["ConnectivityNodeContainer"], "Microgrid.1")
+                existing_mg_assets = mgravens["Group"]["ConnectivityNodeContainer"]["Microgrid.1"]["EquipmentContainer.Equipments"]
+            end
             existing_mg_asset_types = Set{String}()
             existing_mg_pvs = []  # List of unique keys for existing PVs within the existing_assets object
             existing_mg_bess = []  # List of unique keys for existing BESS within the existing_assets object
@@ -401,6 +418,10 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
 
             # Subtract non-MG (outside of MG) PV from the whole network load profile because we are not modeling that PV capacity in REopt
             if "PhotoVoltaicUnit" in existing_asset_types
+                # We are conditionally subtracting out the non_mg_pvs generation from the load profile, but we are not including the non_mg_pvs in the existing_kw
+                #   so even though we are making the load profile "partially net", we are not netting out at least some PV so need to specify _is_net = false
+                reopt_inputs["ElectricLoad"]["loads_kw_is_net"] = false
+                reopt_inputs["ElectricLoad"]["critical_loads_kw_is_net"] = false # this is also the default value, but being explicit here.
                 push!(techs_to_include, "PV")
                 @info "Found existing PhotoVoltaicUnit assets in whole network"
                 if !(length(existing_mg_pvs) == length(keys(existing_pv_data)))
@@ -433,11 +454,15 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                             end
                         end
                     end
-                    # We are subtracting out the non_mg_pvs generation from the load profile, but we are not including the non_mg_pvs in the existing_kw
-                    reopt_inputs["ElectricLoad"]["loads_kw_is_net"] = false
                 end
 
-                # Aggregate the existing PV capacity, but just track the largest existing PV for the production factor below to avoid modeling multiple PVs
+                # Ensure ensure that the load doesn't go negative, and if it does, make it zero
+                reopt_inputs["ElectricLoad"]["loads_kw"] .*= (reopt_inputs["ElectricLoad"]["loads_kw"] .> 0)
+                if haskey(reopt_inputs["ElectricLoad"], "critical_loads_kw")
+                    reopt_inputs["ElectricLoad"]["critical_loads_kw"] .*= (reopt_inputs["ElectricLoad"]["critical_loads_kw"] .> 0)
+                end
+
+                # Aggregate the existing PV capacity, but just using MG PVs and the largest existing PV for the production factor below to avoid modeling multiple PVs
                 reopt_inputs["PV"]["existing_kw"] = 0.0  # Initialize existing_kw for REopt inputs
                 largest_pv = 0.0
                 largest_pv_name = ""
@@ -537,6 +562,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.operationsAndMaintenanceRateFixed", nothing))
                 reopt_inputs["PV"]["om_cost_per_kw"] = tech_data["ProposedEnergyProducerOption.operationsAndMaintenanceRateFixed"]["value"]
             end
+            # If there is existing PV identified above, the PV.production_factor_series would currently be assigned to that Curve GenerationProfile
             if !isnothing(get(tech_data, "ProposedPhotoVoltaicUnitOption.GenerationProfile", nothing))
                 pv_profile_name = replace(split(tech_data["ProposedPhotoVoltaicUnitOption.GenerationProfile"], "::")[2], "'" => "")
                 # Note, the Curve profile must be normalized to DC-capacity; otherwise will throw a REopt error
@@ -793,7 +819,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
                     "Curve.CurveDatas" => []
                     )
                 for ts in 1:(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                    append!(gravens["Curve"]["PVProfile_REOPT"]["Curve.CurveDatas"], 
+                    append!(mgravens["Curve"]["PVProfile_REOPT"]["Curve.CurveDatas"], 
                         [Dict("CurveData.xvalue" => ts-1, "CurveData.y1value" => reopt_results["PV"]["production_factor_series"][ts])])
                 end
             end
