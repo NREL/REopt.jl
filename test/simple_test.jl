@@ -7,10 +7,10 @@ start_time = time()  # Record start time
 
 m1 = Model(HiGHS.Optimizer)
 m2 = Model(HiGHS.Optimizer)
-results = run_reopt([m1,m2], "./scenarios/cst_tes.json")
+results = run_reopt([m1,m2], "./scenarios/cst_webtool.json")
 
 # Save results to JSON
-open("./outputs/cst_tes.json", "w") do f
+open("./outputs/cst_webtool.json", "w") do f
     JSON.print(f, results)
 end
 
