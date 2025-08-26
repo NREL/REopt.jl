@@ -858,13 +858,13 @@ function survival_with_storage_single_start_time(
     # an absorbing state outside of these states) is handled in subsequent steps. 
     for h in 1:M_H2
         for b in 1:M_b
-            start_state = (h-1)*N*M_H2 + (b-1)*N + 1
+            start_state = (h-1)*N*M_b + (b-1)*N + 1
             end_state = start_state + N - 1
             probability_transition_matrix[start_state:end_state,start_state:end_state] = generator_markov_matrix
         end
     end 
     gen_battery_prob_array = [zeros(1,N*M_b*M_H2), zeros(1,N*M_b*M_H2)]
-    start_state = (starting_H2_bins[t]-1)*N*M_H2 + (starting_battery_bins[t]-1)*N + 1
+    start_state = (starting_H2_bins[t]-1)*N*M_b + (starting_battery_bins[t]-1)*N + 1
     gen_battery_prob_array[1][start_state:(start_state+N-1)] = starting_gens
     gen_battery_prob_array[2][start_state:(start_state+N-1)] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
