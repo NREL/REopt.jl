@@ -1352,8 +1352,6 @@ function backup_reliability_single_run(;
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
 
-    println("kwargs: ",kwargs)
-     
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
         return []
