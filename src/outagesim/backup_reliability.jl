@@ -869,6 +869,7 @@ function survival_with_storage_single_start_time(
     gen_battery_prob_array[2][start_state:(start_state+N-1)] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
     survival = ones(N*M_b*M_H2)
+    gen_storage_matrix = zeros(N,M_b,M_H2)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -890,8 +891,10 @@ function survival_with_storage_single_start_time(
             return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_array[gen_matrix_counter_end], survival)
         end
 
+        gen_storage_matrix[:] .= gen_battery_prob_array[gen_matrix_counter_end][:]
+
         shift_gen_storage_prob_matrix!(
-            gen_battery_prob_array[gen_matrix_counter_end],
+            gen_storage_matrix,
             (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
             battery_bin_size_kwh,
             battery_size_kw,
@@ -904,7 +907,7 @@ function survival_with_storage_single_start_time(
             H2_discharge_efficiency_kwh_per_kg
         )
 
-        storage_leakage!(gen_battery_prob_array[gen_matrix_counter_end],
+        storage_leakage!(gen_storage_matrix,
                         battery_leakage_fraction_per_ts,
                         battery_bin_size_kwh,
                         battery_size_kw,
@@ -912,6 +915,8 @@ function survival_with_storage_single_start_time(
                         H2_bin_size_kg,
                         H2_electrolyzer_size_kw, 
                         H2_fuelcell_size_kw)
+
+        gen_battery_prob_array[gen_matrix_counter_end][:] .= gen_storage_matrix[:]
     end
 
     return return_survival_chance_vector
