@@ -823,6 +823,7 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
                         [Dict("CurveData.xvalue" => ts-1, "CurveData.y1value" => reopt_results["PV"]["production_factor_series"][ts])])
                 end
             end
+            # TODO add reference to Curve::PVProfile_REOPT that was just created above
         elseif occursin("ESS", name)
             # Add Battery stuff
             append!(mgravens["Group"]["ProposedAssetSet"][scenario_names[2]]["ProposedAssetSet.ProposedAssets"], ["ProposedBatteryUnit::'$name'"])
