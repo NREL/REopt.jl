@@ -58,7 +58,7 @@ function get_value_in_kw(object)
     value = NaN
     power_conversion = 1000.0  # Assume Watts ("W") or Watt-Hours ("Wh") to divide W or Wh by 1000 to get kW or kWh
     if typeof(object) <: Dict
-        if object["multiplier"] == "k"
+        if object["multiplier"] == "UnitMultiplier.k"
             power_conversion = 1.0  # Preserve kW
         end
         value = object["value"] / power_conversion
@@ -77,8 +77,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     # TODO if there are duplicative DER types or incompatible DER types, throw an error
 
     # Analysis period
-    algorithm_properties_key = first(keys(mgravens["AlgorithmProperties"]))
-    lifetime_str = get(mgravens["AlgorithmProperties"][algorithm_properties_key], "AlgorithmProperties.analysisPeriod", nothing)
+    algo_name = first(keys(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"]))
+    lifetime_str = get(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"][algo_name], "AlgorithmProperties.analysisPeriod", nothing)
     if !isnothing(lifetime_str)
         reopt_inputs["Financial"]["analysis_years"] = parse(Int64, split(split(lifetime_str, "P")[2], "Y")[1])
     end
@@ -325,18 +325,18 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             duration = []  # Only a list to take average at the end (assuming different)
             critical_load_fraction = []  # Only a list to take average at the end (assuming different)
             outage_start_time_steps = []
-            for outage in keys(get(mgravens, "OutageScenario", []))
-                duration_str = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedDuration"]
+            for outage in keys(get(mgravens["Document"], "Outage", []))
+                duration_str = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedDuration"]
                 append!(duration, [parse(Int64, split(split(duration_str, "P")[2], "H")[1])])
                 # This will be ignored if there is a critical_loads_kw input, as defined by the list of mg_energy_consumers
-                append!(critical_load_fraction, [mgravens["OutageScenario"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
-                start_date_str = get(mgravens["OutageScenario"][outage], "OutageScenario.anticipatedStartDay", nothing)
+                append!(critical_load_fraction, [mgravens["Document"]["Outage"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
+                start_date_str = get(mgravens["Document"]["Outage"][outage], "OutageScenario.anticipatedStartDay", nothing)
                 # Optional to input start date and hour, and otherwise REopt will use default 4 seasonal peak outages
                 if !isnothing(start_date_str)
                     monthly_time_steps = get_monthly_time_steps(reopt_inputs["ElectricLoad"]["year"]; time_steps_per_hour = convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
                     start_month = parse(Int64, split(start_date_str, "-")[3])
                     start_day_of_month = parse(Int64, split(start_date_str, "-")[4])
-                    start_hour_of_day = mgravens["OutageScenario"][outage]["OutageScenario.anticipatedStartHour"]
+                    start_hour_of_day = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedStartHour"]
                     append!(outage_start_time_steps, [monthly_time_steps[start_month][(start_day_of_month - 1) * 24 + start_hour_of_day]])
                 end
             end
@@ -559,8 +559,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             if !isnothing(get(tech_data, "ProposedEnergyProducerOption.variablePrice", nothing))
                 reopt_inputs["PV"]["installed_cost_per_kw"] = tech_data["ProposedEnergyProducerOption.variablePrice"]["value"]
             end
-            if !isnothing(get(tech_data, "ProposedEnergyProducerOption.operationsAndMaintenanceRateFixed", nothing))
-                reopt_inputs["PV"]["om_cost_per_kw"] = tech_data["ProposedEnergyProducerOption.operationsAndMaintenanceRateFixed"]["value"]
+            if !isnothing(get(tech_data, "ProposedAssetOption.operationsAndMaintenanceRateFixed", nothing))
+                reopt_inputs["PV"]["om_cost_per_kw"] = tech_data["ProposedAssetOption.operationsAndMaintenanceRateFixed"]["value"]
             end
             # If there is existing PV identified above, the PV.production_factor_series would currently be assigned to that Curve GenerationProfile
             if !isnothing(get(tech_data, "ProposedPhotoVoltaicUnitOption.GenerationProfile", nothing))
@@ -607,8 +607,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 # reopt_inputs["ElectricStorage"]["replace_cost_per_kw"] = 0.5 * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"]
                 # reopt_inputs["ElectricStorage"]["inverter_replacement_year"] = convert(Int64, floor(0.5 * reopt_inputs["Financial"]["analysis_years"], digits=0))
             end
-            if !isnothing(get(tech_data, "ProposedBatteryUnitOption.variableEnergyPrice", nothing))
-                reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = tech_data["ProposedBatteryUnitOption.variableEnergyPrice"]["value"]
+            if !isnothing(get(tech_data, "ProposedBatteryUnitOption.variablePriceEnergy", nothing))
+                reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = tech_data["ProposedBatteryUnitOption.variablePriceEnergy"]["value"]
                 # reopt_inputs["ElectricStorage"]["replace_cost_per_kwh"] = 0.5 * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
                 # reopt_inputs["ElectricStorage"]["battery_replacement_year"] = convert(Int64, floor(0.5 * reopt_inputs["Financial"]["analysis_years"], digits=0))
             end
