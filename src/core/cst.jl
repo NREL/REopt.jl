@@ -1,7 +1,7 @@
 struct CST <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
-    capacity_factor_series::AbstractVector{<:Real}
+    production_factor::AbstractVector{<:Real}
     elec_consumption_factor_series::AbstractVector{<:Real}
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
@@ -32,7 +32,7 @@ to meet the heating load(s).
 function CST(;
     min_mmbtu_per_hour::Real = 0.0, # Minimum thermal power size
     max_mmbtu_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
-    capacity_factor_series::AbstractVector{<:Real} = Float64[],  production factor
+    production_factor::AbstractVector{<:Real} = Float64[],  production factor
     elec_consumption_factor_series::AbstractVector{<:Real} = Float64[], electric consumption factor per kw TODO: (do we need? are we including parasitics?) 
     acres_per_kw::Real = 0, # 
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
@@ -56,7 +56,7 @@ function CST(;
 function CST(;
         min_kw::Real = 0.0,
         max_kw::Real = BIG_NUMBER,
-        capacity_factor_series::AbstractVector{<:Real} = Float64[],
+        production_factor::AbstractVector{<:Real} = Float64[],
         elec_consumption_factor_series::AbstractVector{<:Real} = Float64[],
         macrs_option_years::Union{Int,Nothing} = nothing,
         macrs_bonus_fraction::Union{Real,Nothing} = nothing,
@@ -81,8 +81,8 @@ function CST(;
     elseif !(tech_type in CST_TYPES)
         throw(@error("CST.tech_type value is invalid."))
     end
-    if isempty(capacity_factor_series)
-        throw(@error("CST.capacity_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
+    if isempty(production_factor)
+        throw(@error("CST.production_factor is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
     if isempty(elec_consumption_factor_series)
         throw(@error("CST.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
@@ -126,7 +126,7 @@ function CST(;
     CST(
         min_kw,
         max_kw,
-        capacity_factor_series,
+        production_factor,
         elec_consumption_factor_series,
         installed_cost_per_kw,
         om_cost_per_kw,

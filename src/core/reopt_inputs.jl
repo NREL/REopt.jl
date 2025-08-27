@@ -952,7 +952,7 @@ function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_k
     min_sizes["CST"] = s.cst.min_kw
     om_cost_per_kw["CST"] = s.cst.om_cost_per_kw
     heating_cop["CST"] = 1000*ones(s.settings.time_steps_per_hour*8760)  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
-    heating_cf["CST"] = s.cst.capacity_factor_series
+    heating_cf["CST"] = s.cst.production_factor
 
     if s.cst.macrs_option_years in [5, 7]
         cap_cost_slope["CST"] = effective_cost(;
