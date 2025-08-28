@@ -157,20 +157,10 @@ end
 function add_hot_sensible_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     # Adds the `HotSensibleTes` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
-
-    try 
-        kwh_per_gal = get_kwh_per_gal(p.s.storage.attr["HotSensibleTes"].hot_temp_degF,
-                                    p.s.storage.attr["HotSensibleTes"].cool_temp_degF,
-                                    p.s.storage.attr["HotSensibleTes"].fluid)
-    catch e
-        @warn "fluid not valid for kWh_per_gal function, assuming 1.0 kWh/gallon."
-        kwh_per_gal = 1.0
-    end
     
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
-    r["size_kwh"] = size_kwh
-    r["size_gal"] = round(size_kwh / 1.0, digits=0) #what this should be: round(size_kwh / kwh_per_gal, digits=0), but got "UndefVarError: 'kwh_per_gal' not defined" error
+    r["size_kwh"] = size_kwh  
 
     if size_kwh != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
