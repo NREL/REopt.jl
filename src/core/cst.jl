@@ -77,7 +77,9 @@ function CST(;
         emissions_factor_lb_CO2_per_mmbtu::Real = 0.0,
         emissions_factor_lb_NOx_per_mmbtu::Real = 0.0,
         emissions_factor_lb_SO2_per_mmbtu::Real = 0.0,
-        emissions_factor_lb_PM25_per_mmbtu::Real = 0.0
+        emissions_factor_lb_PM25_per_mmbtu::Real = 0.0,
+        inlet_temp_degF::Real = 400.0,
+        outlet_temp_degF::Real = 70.0
     )
 
     if isempty(production_factor)
