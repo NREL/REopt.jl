@@ -161,7 +161,7 @@ function set_ssc_data_from_dict(D,model,data)
             @ccall hdl.ssc_data_set_table(data::Ptr{Cvoid}, key::Cstring, table::Ptr{Cvoid})::Cvoid
             @ccall hdl.ssc_data_free(table::Ptr{Cvoid})::Cvoid
         else
-            print("Could not assign variable " * key)
+            @warn "Could not assign variable " * key * " in CST SSC instance."
         end
         
     end
@@ -327,7 +327,6 @@ function run_ssc(case_data::Dict)
             user_defined_inputs["use_solar_mult_or_aperture_area"] = 0
             user_defined_inputs["specified_solar_multiple"] = 3.0
         end
-        print("user defined inputs: " * string(user_defined_inputs) * "\n")
     end
     R = Dict()
     error = ""
@@ -421,8 +420,6 @@ function run_ssc(case_data::Dict)
         
         tcf = thermal_conversion_factor[model]
         ecf = elec_conversion_factor[model]
-        #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
-        # print(c_response)
         ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
         # if model == "ptc"
         #     thermal_production_norm = normalize_response(thermal_production, case_data, user_defined_inputs)
@@ -430,11 +427,6 @@ function run_ssc(case_data::Dict)
         #     thermal_production_norm = thermal_production .* tcf ./ rated_power
         # end
         thermal_production_norm = thermal_production .* tcf ./ rated_power
-        if model in ["mst","ptc","lf"]
-            println("Maximum annual thermal energy collected by CST: " * string(round(sum(thermal_production),digits=2)) * " MWht.")
-        elseif model in ["swh_evactube","swh_flatplate"]
-            println("Maximum annual thermal energy collected by solar water heater: " * string(round(sum(thermal_production),digits=2)) * " kWht.")
-        end
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         ### Free SSC
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
