@@ -373,16 +373,11 @@ struct HighTempThermalStorage <: AbstractThermalStorage
 
     function HighTempThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
-        # kwh_per_gal = get_kwh_per_gal(s.hot_temp_degF, s.cool_temp_degF, s.fluid)
-        # min_kwh = s.min_gal * kwh_per_gal
-        # max_kwh = s.max_gal * kwh_per_gal
         min_kw = s.min_kwh / max(s.num_charge_hours, s.num_discharge_hours)
         max_kw = s.max_kwh / min(s.num_charge_hours, s.num_discharge_hours)
-        # om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
         charge_efficiency = s.internal_efficiency_fraction^0.5
         discharge_efficiency = s.internal_efficiency_fraction^0.5
-        # installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,

@@ -145,7 +145,7 @@ end
 
 """
 `HighTempThermalStorage` results keys:
-- `size_gal` Optimal TES capacity, by volume [gal]
+- `size_kwh` Optimal TES capacity, by energy capacity [kWh]
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year [-]
 - `storage_to_load_series_mmbtu_per_hour` Vector of power used to meet load over the first year [MMBTU/hr]
 
