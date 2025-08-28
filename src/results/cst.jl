@@ -2,7 +2,8 @@
 
 """
 `CST` results keys:
-- `size_kw`  # Thermal production capacity size of the CST [MMBtu/hr]
+- `size_kw`  # Thermal production capacity size of the CST [kW]
+- `size_mmbtu_per_hour`` Thermal production capacity size of the CST [MMBtu/hr]
 - `electric_consumption_series_kw`  # Fuel consumption series [kW]
 - `annual_electric_consumption_kwh`  # Fuel consumed in a year [kWh]
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
@@ -22,6 +23,7 @@
 function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["CST"]), digits=3)
+    r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["CST"]) / KWH_PER_MMBTU, digits=3)
     @expression(m, CSTElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction]["CST",q,ts] / p.heating_cop["CST"][ts] 
         for q in p.heating_loads))
