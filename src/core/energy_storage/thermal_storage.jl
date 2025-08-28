@@ -92,7 +92,7 @@ end
 
 
 """
-`HotSensibleTes` is an optional REopt input with the following keys and default values:
+`HighTempThermalStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
     fluid::String = "INCOMP::Nak"
@@ -323,12 +323,12 @@ end
 
 
 """
-function HotSensibleTes(d::Dict, f::Financial, time_steps_per_hour::Int)
+function HighTempThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
 
-Construct HotSensibleTes struct from Dict with keys-val pairs from the 
-REopt HotSensibleTes and Financial inputs. 
+Construct HighTempThermalStorage struct from Dict with keys-val pairs from the 
+REopt HighTempThermalStorage and Financial inputs. 
 """
-struct HotSensibleTes <: AbstractThermalStorage
+struct HighTempThermalStorage <: AbstractThermalStorage
     fluid::String
     hot_temp_degF::Float64
     cool_temp_degF::Float64
@@ -357,7 +357,7 @@ struct HotSensibleTes <: AbstractThermalStorage
     num_charge_hours::Float64
     num_discharge_hours::Float64
 
-    function HotSensibleTes(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
+    function HighTempThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
         # kwh_per_gal = get_kwh_per_gal(s.hot_temp_degF, s.cool_temp_degF, s.fluid)
         # min_kwh = s.min_gal * kwh_per_gal

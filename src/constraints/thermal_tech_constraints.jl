@@ -93,9 +93,9 @@ function add_heating_tech_constraints(m, p; _n="")
     if "ElectricHeater" in p.techs.electric_heater
         if p.s.electric_heater.charge_storage_only
             #assume sensible TES first, and hot water otherwise.
-            if "HotSensibleTes" in p.s.storage.types.hot
+            if "HighTempThermalStorage" in p.s.storage.types.hot
                 @constraint(m, ElectricHeaterToStorageOnly[q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)]["ElectricHeater",q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes","ElectricHeater",q,ts]
+                    m[Symbol("dvHeatingProduction"*_n)]["ElectricHeater",q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HighTempThermalStorage","ElectricHeater",q,ts]
                 )
             elseif "HotThermalStorage" in p.s.storage.types.hot
                 @constraint(m, ElectricHeaterToStorageOnly[q in p.heating_loads, ts in p.time_steps],
@@ -113,9 +113,9 @@ function add_heating_tech_constraints(m, p; _n="")
         )
         if p.s.cst.charge_storage_only
             #assume sensible TES first, and hot water otherwise.
-            if "HotSensibleTes" in p.s.storage.types.hot
+            if "HighTempThermalStorage" in p.s.storage.types.hot
                 @constraint(m, CSTToStorageOnly[q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)]["CST",q,ts] == m[Symbol("dvProductionToWaste"*_n)]["CST",q,ts] + m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes","CST",q,ts]
+                    m[Symbol("dvHeatingProduction"*_n)]["CST",q,ts] == m[Symbol("dvProductionToWaste"*_n)]["CST",q,ts] + m[Symbol("dvHeatToStorage"*_n)]["HighTempThermalStorage","CST",q,ts]
                 )
             elseif "HotThermalStorage" in p.s.storage.types.hot
                 @constraint(m, CSTToStorageOnly[q in p.heating_loads, ts in p.time_steps],

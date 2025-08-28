@@ -39,9 +39,9 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         @expression(m, ElectricHeaterToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 
             sum(m[:dvHeatToStorage][b,"ElectricHeater",q,ts] for b in p.s.storage.types.hot)
             )
-        if "HotSensibleTes" in p.s.storage.types.hot
+        if "HighTempThermalStorage" in p.s.storage.types.hot
             @expression(m, ElectricHeaterToHotSensibleTESKW[ts in p.time_steps],
-                sum(m[:dvHeatToStorage]["HotSensibleTes","ElectricHeater",q,ts] for q in p.heating_loads)
+                sum(m[:dvHeatToStorage]["HighTempThermalStorage","ElectricHeater",q,ts] for q in p.heating_loads)
                 )
         else
             @expression(m, ElectricHeaterToHotSensibleTESKW[ts in p.time_steps], 0.0)

@@ -69,9 +69,9 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 			@expression(m, SteamTurbinetoHotTESKW[ts in p.time_steps], 0.0)
 			@expression(m, SteamTurbineToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
 		end
-		if "HotSensibleTes" in p.s.storage.types.hot
+		if "HighTempThermalStorage" in p.s.storage.types.hot
 			@expression(m, SteamTurbineToHotSensibleTESKW[ts in p.time_steps],
-				sum(m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts] for t in p.techs.steam_turbine, q in p.heating_loads)
+				sum(m[Symbol("dvHeatToStorage"*_n)]["HighTempThermalStorage",t,q,ts] for t in p.techs.steam_turbine, q in p.heating_loads)
 				)
 		else
 			@expression(m, SteamTurbineToHotSensibleTESKW[ts in p.time_steps], 0.0)
