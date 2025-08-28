@@ -3367,7 +3367,7 @@ else  # run HiGHS tests
             @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 272.49 atol=0.1
             @test results["CST"]["size_kw"] ≈ 100.0 atol=0.001
             @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 717087.35 atol=0.1
-            @test results["HotSensibleTES"]["size_kwh"] ≈ 10000.0 atol=0.1
+            @test results["HighTempThermalStorage"]["size_kwh"] ≈ 10000.0 atol=0.1
         end
 
         @testset "Custom REopt logger" begin

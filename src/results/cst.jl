@@ -41,9 +41,9 @@ function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, 
         @expression(m, CSTToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 
             sum(m[:dvHeatToStorage][b,"CST",q,ts] for b in p.s.storage.types.hot)
             )
-        if "HotSensibleTes" in p.s.storage.types.hot
+        if "HighTempThermalStorage" in p.s.storage.types.hot
             @expression(m, CSTToHotSensibleTESKW[ts in p.time_steps],
-                sum(m[:dvHeatToStorage]["HotSensibleTes","CST",q,ts] for q in p.heating_loads)
+                sum(m[:dvHeatToStorage]["HighTempThermalStorage","CST",q,ts] for q in p.heating_loads)
                 )
         else
             @expression(m, CSTToHotSensibleTESKW[ts in p.time_steps], 0.0)

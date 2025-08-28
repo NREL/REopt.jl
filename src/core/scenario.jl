@@ -196,9 +196,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
         storage_structs["HotThermalStorage"] = HotThermalStorage(params, financial, settings.time_steps_per_hour)
     end
-    if haskey(d, "HotSensibleTes")
-        params = HotSensibleTesDefaults(; dictkeys_tosymbols(d["HotSensibleTes"])...)
-        storage_structs["HotSensibleTes"] = HotSensibleTes(params, financial, settings.time_steps_per_hour)
+    if haskey(d, "HighTempThermalStorage")
+        params = HotSensibleTesDefaults(; dictkeys_tosymbols(d["HighTempThermalStorage"])...)
+        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)

@@ -144,7 +144,7 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, 
 end
 
 """
-`HotSensibleTes` results keys:
+`HighTempThermalStorage` results keys:
 - `size_gal` Optimal TES capacity, by volume [gal]
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year [-]
 - `storage_to_load_series_mmbtu_per_hour` Vector of power used to meet load over the first year [MMBTU/hr]
@@ -154,8 +154,8 @@ end
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
 
 """
-function add_hot_sensible_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
-    # Adds the `HotSensibleTes` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+function add_high_temp_thermal_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
+    # Adds the `HighTempThermalStorage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
     
     r = Dict{String, Any}()
