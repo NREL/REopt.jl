@@ -148,10 +148,10 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4f)-1b: SteamTurbineTechs
 	if !isempty(p.techs.steam_turbine)
-		@constraint(m, SteamTurbineTechProductionFlowCon[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+		@constraint(m, [t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
 			m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
 			)
-        @constraint(m, StorageToTurbineProductionFlowCon[q in p.heating_loads, ts in p.time_steps],
+        @constraint(m, [q in p.heating_loads, ts in p.time_steps],
             m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts] <= m[Symbol("dvHeatFromStorage"*_n)][b,q,ts]
         )
         if !p.s.storage.attr[b].can_supply_steam_turbine
@@ -161,7 +161,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
                 end
             end
         elseif p.s.storage.attr[b].supply_turbine_only
-            @constraint(m, StorageOnlyToSteamTurbineCon[q in p.heating_loads, ts in p.time_steps],
+            @constraint(m, [q in p.heating_loads, ts in p.time_steps],
                 m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] ==  m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts]
                 )
             for t in p.techs.steam_turbine
