@@ -2948,13 +2948,16 @@ else  # run HiGHS tests
             @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 105120.0 atol=0.1
         end
 
-        @testset "CST" begin
+        @testset "CST + High-temperature TES" begin
             d = JSON.parsefile("./scenarios/cst.json")
             s = Scenario(d)
             p = REoptInputs(s)
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(m, p)
-            @test results["CST"]["size_kw"] ≈ 100.0 atol=0.1
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt(m1, p)
+            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 272.49 atol=0.1
+            @test results["CST"]["size_kw"] ≈ 100.0 atol=0.001
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 717087.35 atol=0.1
+            @test results["HotSensibleTES"]["size_kwh"] ≈ 10000.0 atol=0.1
         end
 
         @testset "Custom REopt logger" begin
