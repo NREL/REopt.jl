@@ -3359,6 +3359,7 @@ else  # run HiGHS tests
         end
 
         @testset "CST + High-temperature TES" begin
+            # TODO add a test that pairs with a steam turbine for a CSP system
             d = JSON.parsefile("./scenarios/cst.json")
             s = Scenario(d)
             p = REoptInputs(s)
