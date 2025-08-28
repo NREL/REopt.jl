@@ -420,12 +420,6 @@ function run_ssc(case_data::Dict)
         
         tcf = thermal_conversion_factor[model]
         ecf = elec_conversion_factor[model]
-        ## TODO: DO WE NEED THIS FUNCTION/IF STATEMENT ANYMORE??
-        # if model == "ptc"
-        #     thermal_production_norm = normalize_response(thermal_production, case_data, user_defined_inputs)
-        # else
-        #     thermal_production_norm = thermal_production .* tcf ./ rated_power
-        # end
         thermal_production_norm = thermal_production .* tcf ./ rated_power
         electric_consumption_norm = zeros(8760) #elec_consumption .* ecf ./ rated_power
         ### Free SSC
