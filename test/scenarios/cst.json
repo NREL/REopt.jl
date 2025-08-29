@@ -16,6 +16,10 @@
     "ElectricTariff": {
         "urdb_label": "5ed6c1a15457a3367add15ae"
     }, 
+    "HotThermalStorage": {
+        "min_gal": 1000,
+        "max_gal": 1000
+    },
     "HighTempThermalStorage": {
          "min_kwh": 10000.0,
          "max_kwh": 10000.0,
