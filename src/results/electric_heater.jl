@@ -52,7 +52,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         @expression(m, ElectricHeaterToHotSensibleTESKW[ts in p.time_steps], 0.0)
     end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToHotTESKW) / KWH_PER_MMBTU, digits=3)
-    r["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToHotSensibleTESKW) / KWH_PER_MMBTU, digits=3)
+    r["thermal_to_high_temp_thermal_storage_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToHotSensibleTESKW) / KWH_PER_MMBTU, digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.electric_heater.can_supply_steam_turbine
         @expression(m, ElectricHeaterToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["ElectricHeater",q,ts] for q in p.heating_loads))

@@ -9,7 +9,7 @@
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
 - `annual_thermal_production_mmbtu`  # Thermal energy produced in a year [MMBtu]
 - `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
-- `thermal_to_hot_sensible_tes_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
+- `thermal_to_high_temp_thermal_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
 - `thermal_curtailed_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
@@ -56,7 +56,7 @@ function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, 
         @expression(m, CSTToHotSensibleTESKW[ts in p.time_steps], 0.0)
     end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CSTToHotTESKW) / KWH_PER_MMBTU, digits=3)
-    r["thermal_to_hot_sensible_tes_series_mmbtu_per_hour"] = round.(value.(CSTToHotSensibleTESKW) / KWH_PER_MMBTU, digits=3)
+    r["thermal_to_high_temp_thermal_storage_series_mmbtu_per_hour"] = round.(value.(CSTToHotSensibleTESKW) / KWH_PER_MMBTU, digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.cst.can_supply_steam_turbine
         @expression(m, CSTToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["CST",q,ts] for q in p.heating_loads))
