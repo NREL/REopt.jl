@@ -221,7 +221,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     # TODO missing thermal storage constraints from API ???
 
     # Constraint (4o): Discharge from storage is equal to sum of heat from storage for all qualities
-    @constraint(m, HeatDischargeReconciliation[ts in p.time_steps],
+    @constraint(m, [ts in p.time_steps],
         m[Symbol("dvDischargeFromStorage"*_n)][b,ts] == 
         sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads)
     )
