@@ -56,6 +56,7 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 
     if !isempty(p.techs.electrolyzer)
         add_electrolyzer_results(m, p, d; _n)
+        add_hydrogen_load_results(m, p, d; _n)
     end
 
     if !isempty(p.techs.fuel_cell)
@@ -64,7 +65,6 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 
     if !isempty(p.techs.compressor)
         add_compressor_results(m, p, d; _n)
-        add_hydrogen_load_results(m, p, d; _n)
     end
 
     for b in p.s.storage.types.hydrogen
