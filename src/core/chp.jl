@@ -41,10 +41,10 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     can_serve_process_heat::Bool = true # If CHP can supply heat to the process heating load
     is_electric_only::Bool = false # If CHP is a prime generator that does not supply heat
 
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.4 # TODO: Confirm if 1.0 or 0
+    macrs_option_years::Int = 0
+    macrs_bonus_fraction::Float64 = 0.0 
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.0 # TODO: Confirm if 30% or 0%
+    federal_itc_fraction::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -115,8 +115,8 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_serve_process_heat::Bool = true
     is_electric_only::Bool = false
 
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.4
+    macrs_option_years::Int = 0
+    macrs_bonus_fraction::Float64 = 0.0
     macrs_itc_reduction::Float64 = 0.5
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0

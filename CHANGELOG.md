@@ -38,7 +38,9 @@ Update the following inputs from the previous --> new values:
 - `Generator.fuel_cost_per_gallon`: 3.61 --> 2.25
 - `ColdThermalStorage`, `HotThermalStorage`, `ElectricStorage` `macrs_option_years` 7 --> 5
 - `ColdThermalStorage`, `HotThermalStorage`, `ElectricStorage`, `PV`, `Wind` `macrs_bonus_fraction` 0.6 --> 1.0
-- `CHP.federal_itc_fraction`: 0.3 --> 0.0 
+- `CHP.federal_itc_fraction`: 0.3 --> 0.0
+- `CHP.macrs_bonus_fraction` and `GHP.macrs_bonus_fraction`: 0.4 --> 0.0
+- `CHP.macrs_option_years` and `GHP.macrs_option_years`: 5 --> 0
 - `Wind.om_cost_per_kw`: 36.0 --> 42.0 
 - `Wind.size_class_to_installed_cost` = Dict(
         "residential"=> 6339.0, --> 7692.0
