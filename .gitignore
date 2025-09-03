@@ -3,4 +3,3 @@
 docs/build/
 docs/Manifest.toml
 **.log
-src/sam/*.dylib
