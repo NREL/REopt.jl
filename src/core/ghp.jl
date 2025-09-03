@@ -28,10 +28,10 @@ struct with outer constructor:
     max_number_of_boreholes::Real                           # Maximum GHX size
     load_served_by_ghp::String                              # "scaled" or "nonpeak"
 
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 5 #Note: default may change if Site.sector is not "commercial/industrial"
+    macrs_bonus_fraction::Float64 = 0.6 #Note: default may change if Site.sector is not "commercial/industrial"
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.3
+    federal_itc_fraction::Float64 = 0.3 #Note: default may change if Site.sector is not "commercial/industrial"
     federal_rebate_per_ton::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
