@@ -604,3 +604,22 @@ function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
         throw(@error("All values in the provided $(input_struct_name) $(input_name) must be between 0 and 1."))
     end
 end
+
+# Load sector dependent default data from JSON file
+function get_sector_defaults(;sector=nothing, federal_procurement_type=nothing)
+    sector_defaults_path = joinpath(@__DIR__, "..", "..", "data", "sector_dependent_defaults.json")
+    if !isfile(sector_defaults_path)
+        throw(ErrorException("sector_dependent_defaults.json not found at path: $sector_defaults_path"))
+    end
+
+    sector_defaults_all = JSON.parsefile(sector_defaults_path)
+    if sector != nothing
+        if sector=="federal" && federal_procurement_type!=nothing
+            return get(get(sector_defaults_all, sector, {}), federal_procurement_type, {})
+        else
+            return get(sector_defaults_all, sector, {})
+        end
+    else
+        return sector_defaults_all
+    end
+end
