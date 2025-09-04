@@ -613,7 +613,7 @@ function get_sector_defaults(; sector::String="", federal_procurement_type::Stri
     end
 
     sector_defaults_all = JSON.parsefile(sector_defaults_path)
-    if isempty(sector)
+    if !isempty(sector)
         if sector=="federal" && !isempty(federal_procurement_type)
             return get(get(sector_defaults_all, sector, Dict{String,Any}()), federal_procurement_type, Dict{String,Any}())
         else
@@ -632,8 +632,25 @@ function get_sector_defaults_techs(; sector::String, federal_procurement_type::S
                 Dict{String,Any}()
             )
 end
-function set_tech_sector_defaults(d::Dict; sector::String, federal_procurement_type::String)
+function set_tech_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
     sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
+    for (input_name, input_val) in sector_defaults
+        if !(input_name in keys(d))
+            d[input_name] = input_val
+        end
+    end
+end
+function get_sector_defaults_storage(; sector::String, federal_procurement_type::String)
+    return get(get_sector_defaults(;
+                    sector=sector, 
+                    federal_procurement_type=federal_procurement_type
+                ), 
+                "Storage", 
+                Dict{String,Any}()
+            )
+end
+function set_storage_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
+    sector_defaults = get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type)
     for (input_name, input_val) in sector_defaults
         if !(input_name in keys(d))
             d[input_name] = input_val
