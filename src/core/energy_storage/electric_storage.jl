@@ -294,7 +294,7 @@ struct ElectricStorage <: AbstractElectricStorage
     function ElectricStorage(d::Dict, f::Financial, s::Site)  
         set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
 
-        s = ElectricStorageDefaults(;d...)
+        s = ElectricStorageDefaults(;dictkeys_tosymbols(d)...)
 
         if s.inverter_replacement_year >= f.analysis_years
             @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."

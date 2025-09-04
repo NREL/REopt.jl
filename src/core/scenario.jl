@@ -185,10 +185,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
-        storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
-        storage_dict[:off_grid_flag] = settings.off_grid_flag
+        storage_dict = d["ElectricStorage"]
+        storage_dict["off_grid_flag"] = settings.off_grid_flag
     else
-        storage_dict = Dict(:max_kw => 0.0) 
+        storage_dict = Dict("max_kw" => 0.0)
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial, site)
     # TODO stop building ElectricStorage when it is not modeled by user 
