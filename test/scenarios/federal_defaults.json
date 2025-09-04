@@ -1,7 +1,10 @@
 {
     "Site": {
         "latitude": 37.78, 
-        "longitude": -122.45
+        "longitude": -122.45,
+        "sector": "federal",
+        "federal_procurement_type": "fedowned_dirpurch",
+        "federal_sector_state": "CA"
     },
     "Financial": {
         "analysis_years": 25
