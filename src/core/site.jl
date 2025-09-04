@@ -100,7 +100,7 @@ mutable struct Site
         end
 
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_time_steps, 
-            mg_tech_sizes_equal_grid_sizes, sector, NIST_region, 
+            mg_tech_sizes_equal_grid_sizes, sector, federal_elec_cost_escalation_region, 
             federal_procurement_type, CO2_emissions_reduction_min_fraction, 
             CO2_emissions_reduction_max_fraction, bau_emissions_lb_CO2_per_year,
             bau_grid_emissions_lb_CO2_per_year, renewable_electricity_min_fraction,
