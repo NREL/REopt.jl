@@ -91,7 +91,7 @@ end
 
 
 """
-function ColdThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
 
 Construct ColdThermalStorage struct from Dict with keys-val pairs from the 
 REopt ColdThermalStorage and Financial inputs. 
@@ -120,7 +120,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
-    function ColdThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+    function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
         s = ColdThermalStorage(; dictkeys_tosymbols(d)...)
 
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
@@ -182,7 +182,7 @@ end
 
 
 """
-function HotThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+function HotThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
 
 Construct HotThermalStorage struct from Dict with keys-val pairs from the 
 REopt HotThermalStorage and Financial inputs. 
@@ -214,7 +214,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
 
-    function HotThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+    function HotThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
         s = HotThermalStorageDefaults(; dictkeys_tosymbols(d)...)
 
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
