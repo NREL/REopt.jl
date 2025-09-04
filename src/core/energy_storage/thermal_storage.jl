@@ -121,6 +121,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
     om_cost_per_kwh::Float64
 
     function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
+        set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
         s = ColdThermalStorageDefaults(; dictkeys_tosymbols(d)...)
 
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
@@ -215,6 +216,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     can_serve_process_heat::Bool
 
     function HotThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
+        set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
         s = HotThermalStorageDefaults(; dictkeys_tosymbols(d)...)
 
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
