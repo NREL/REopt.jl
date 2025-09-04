@@ -177,7 +177,7 @@ mutable struct Site
             nothing
         )
     end
-    function get_NIST_EERC_rate_region(state::String)
+    function get_NIST_EERC_rate_region(state::Union{Nothing,String})
         abbr_to_region = Dict{String,String}(
             "WA" => "Pacific",
             "OR" => "Pacific",
