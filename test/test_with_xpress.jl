@@ -4,6 +4,20 @@ using Random
 using DelimitedFiles
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
+@testset "Federal defaults" begin
+    s = Scenario("./scenarios/federal_defaults.json")
+    for tech_struct in (s.pvs[1], p.wind, s.chp, s.ghp)
+        for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
+            @test getfield(tech_struct, incentive_input_name) == 0
+        end
+    end
+    for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+        stor_struct = s.storage.attr[stor_name]
+        for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+            @test getfield(stor_struct, incentive_input_name) == 0
+        end
+    end
+end
 @testset "Heating loads and addressable load fraction" begin
     # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
