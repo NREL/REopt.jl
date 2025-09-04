@@ -132,7 +132,7 @@ end
 
 
 function GHP(response::Dict, d::Dict; sector::String, federal_procurement_type::String)
-    set_tech_sector_defaults(d; sector=sector, federal_procurement_type=federal_procurement_type)
+    set_tech_sector_defaults!(d; sector=sector, federal_procurement_type=federal_procurement_type)
 
     ghp = GHP(; ghpghx_response = response, dictkeys_tosymbols(d)...)
     

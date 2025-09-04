@@ -292,7 +292,7 @@ struct ElectricStorage <: AbstractElectricStorage
     max_duration_hours::Real
 
     function ElectricStorage(d::Dict, f::Financial, s::Site)  
-        set_storage_sector_defaults(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
+        set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
 
         s = ElectricStorageDefaults(;d...)
 
