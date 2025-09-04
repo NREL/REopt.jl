@@ -121,7 +121,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
     om_cost_per_kwh::Float64
 
     function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
-        s = ColdThermalStorage(; dictkeys_tosymbols(d)...)
+        s = ColdThermalStorageDefaults(; dictkeys_tosymbols(d)...)
 
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
