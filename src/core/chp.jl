@@ -147,7 +147,9 @@ function CHP(d::Dict;
             avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, 
             existing_boiler::Union{ExistingBoiler, Nothing}=nothing,
             electric_load_series_kw::Array{<:Real,1}=Real[],
-            year::Int64=2017)
+            year::Int64=2017,
+            sector::String,
+            federal_procurement_type::String)
     # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
     for (k,v) in d
         if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
@@ -159,6 +161,9 @@ function CHP(d::Dict;
     if !haskey(d, "fuel_cost_per_mmbtu")
         throw(@error("CHP must have the required fuel_cost_per_mmbtu input"))
     end
+
+    set_tech_sector_defaults(d; sector=sector, federal_procurement_type=federal_procurement_type)
+
     # Create CHP struct from inputs, to be mutated as needed
     chp = CHP(; dictkeys_tosymbols(d)...)
 

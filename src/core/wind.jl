@@ -99,6 +99,8 @@ struct Wind <: AbstractTech
 
     function Wind(;
         off_grid_flag::Bool = false,
+        sector::String = "commercial/industrial",
+        federal_procurement_type::String = nothing,
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
@@ -110,10 +112,10 @@ struct Wind <: AbstractTech
         temperature_celsius = [],
         pressure_atmospheres = [],
         acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity.
-        macrs_option_years = 5,
-        macrs_bonus_fraction = 0.6,
+        macrs_option_years = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_option_years", 5),
+        macrs_bonus_fraction = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_bonus_fraction", 0.6),
         macrs_itc_reduction = 0.5,
-        federal_itc_fraction = 0.3,
+        federal_itc_fraction = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "federal_itc_fraction", 0.3),
         federal_rebate_per_kw = 0.0,
         state_ibi_fraction = 0.0,
         state_ibi_max = 1.0e10,
