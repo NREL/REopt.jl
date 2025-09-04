@@ -103,6 +103,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 push!(pvs, PV(
                     ; dictkeys_tosymbols(pv)...,
                     off_grid_flag = settings.off_grid_flag, 
+                    sector = site.sector,
+                    federal_procurement_type = site.federal_procurement_type,
                     latitude = site.latitude,
                     electric_load_annual_kwh = electric_load_annual_kwh,
                     site_land_acres = site.land_acres,
@@ -113,6 +115,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             push!(pvs, PV(
                 ; dictkeys_tosymbols(d["PV"])..., 
                 off_grid_flag = settings.off_grid_flag, 
+                sector = site.sector,
+                federal_procurement_type = site.federal_procurement_type,
                 latitude = site.latitude,
                 electric_load_annual_kwh = electric_load_annual_kwh,
                 site_land_acres = site.land_acres,
@@ -218,6 +222,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., off_grid_flag=settings.off_grid_flag,
+                    sector = site.sector, federal_procurement_type = site.federal_procurement_type,
                     average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
     else
         wind = Wind(; max_kw=0)
@@ -403,11 +408,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
                     existing_boiler = existing_boiler,
                     electric_load_series_kw = electric_load.loads_kw,
-                    year = electric_load.year)
+                    year = electric_load.year,
+                    sector = site.sector,
+                    federal_procurement_type = site.federal_procurement_type)
         else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
                     electric_load_series_kw = electric_load.loads_kw,
-                    year = electric_load.year)
+                    year = electric_load.year,
+                    sector = site.sector,
+                    federal_procurement_type = site.federal_procurement_type)
         end
         chp_prime_mover = chp.prime_mover
     end
@@ -746,7 +755,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     pop!(ghp_inputs_removed_ghpghx_params, param)
                 end
             end                    
-            append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
+            append!(
+                ghp_option_list, 
+                [GHP(
+                    ghpghx_response, 
+                    ghp_inputs_removed_ghpghx_params;
+                    sector = site.sector,
+                    federal_procurement_type = site.federal_procurement_type
+                )]
+            )
             # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
             # open("scenarios/ghpghx_response.json","w") do f             
         end
@@ -763,7 +780,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
                 end
             end
-            append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
+            append!(
+                ghp_option_list, 
+                [GHP(
+                    ghpghx_response, 
+                    ghp_inputs_removed_ghpghx_responses;
+                    sector = site.sector,
+                    federal_procurement_type = site.federal_procurement_type
+                )]
+            )
         end
     end
 
