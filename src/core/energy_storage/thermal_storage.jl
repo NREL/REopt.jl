@@ -120,8 +120,9 @@ struct ColdThermalStorage <: AbstractThermalStorage
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
-    function ColdThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
-         
+    function ColdThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+        s = ColdThermalStorage(; dictkeys_tosymbols(d)...)
+
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
@@ -213,8 +214,9 @@ struct HotThermalStorage <: AbstractThermalStorage
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
 
-    function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
-         
+    function HotThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+        s = HotThermalStorageDefaults(; dictkeys_tosymbols(d)...)
+
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
