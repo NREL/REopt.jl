@@ -245,7 +245,7 @@ end
 
 
 """
-    function ElectricStorage(d::Dict, f::Financial, settings::Settings)
+    function ElectricStorage(d::Dict, f::Financial, s::Site)
 
 Construct ElectricStorage struct from Dict with keys-val pairs from the 
 REopt ElectricStorage and Financial inputs.
@@ -291,7 +291,9 @@ struct ElectricStorage <: AbstractElectricStorage
     min_duration_hours::Real
     max_duration_hours::Real
 
-    function ElectricStorage(d::Dict, f::Financial)  
+    function ElectricStorage(d::Dict, f::Financial, s::Site)  
+        set_storage_sector_defaults(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
+
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
