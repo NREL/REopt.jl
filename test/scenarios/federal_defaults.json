@@ -52,7 +52,8 @@
     },
     "CHP": {
         "prime_mover": "recip_engine",
-        "max_kw": 100
+        "max_kw": 100,
+        "fuel_cost_per_mmbtu": 10.0
     },
     "ElectricStorage": {
         "max_kw": 100.0,
