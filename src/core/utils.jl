@@ -606,20 +606,46 @@ function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
 end
 
 # Load sector dependent default data from JSON file
-function get_sector_defaults(;sector=nothing, federal_procurement_type=nothing)
+function get_sector_defaults(; sector::String="", federal_procurement_type::String="")
     sector_defaults_path = joinpath(@__DIR__, "..", "..", "data", "sector_dependent_defaults.json")
     if !isfile(sector_defaults_path)
         throw(ErrorException("sector_dependent_defaults.json not found at path: $sector_defaults_path"))
     end
 
     sector_defaults_all = JSON.parsefile(sector_defaults_path)
-    if sector != nothing
-        if sector=="federal" && federal_procurement_type!=nothing
-            return get(get(sector_defaults_all, sector, {}), federal_procurement_type, {})
+    if isempty(sector)
+        if sector=="federal" && !isempty(federal_procurement_type)
+            return get(get(sector_defaults_all, sector, Dict{String,Any}()), federal_procurement_type, Dict{String,Any}())
         else
-            return get(sector_defaults_all, sector, {})
+            return get(sector_defaults_all, sector, Dict{String,Any}())
         end
     else
         return sector_defaults_all
     end
+end
+function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
+    return get(get_sector_defaults(;
+                    sector=sector, 
+                    federal_procurement_type=federal_procurement_type
+                ), 
+                "Techs", 
+                Dict{String,Any}()
+            )
+end
+function set_tech_sector_defaults(d::Dict; sector::String, federal_procurement_type::String)
+    sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
+    for (input_name, input_val) in sector_defaults
+        if !(input_name in keys(d))
+            d[input_name] = input_val
+        end
+    end
+end
+function get_sector_defaults_financial(; sector::String, federal_procurement_type::String)
+    return get(get_sector_defaults(;
+                    sector=sector, 
+                    federal_procurement_type=federal_procurement_type
+                ), 
+                "Financial", 
+                Dict{String,Any}()
+            )
 end
