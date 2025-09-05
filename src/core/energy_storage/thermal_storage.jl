@@ -130,8 +130,8 @@ Base.@kwdef struct HighTempThermalStorageDefaults <: AbstractThermalStorageDefau
     installed_cost_per_kwh::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_kwh::Float64 = 0.0
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
