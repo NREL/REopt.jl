@@ -118,7 +118,7 @@ end
     one_direction_flow::Bool = false
 ```
 """
-Base.@kwdef struct HotSensibleTesDefaults <: AbstractThermalStorageDefaults
+Base.@kwdef struct HighTempThermalStorageDefaults <: AbstractThermalStorageDefaults
     fluid::String = "INCOMP::NaK"
     min_kwh::Float64 = 0.0
     max_kwh::Float64 = 0.0
