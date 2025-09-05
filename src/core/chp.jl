@@ -260,9 +260,9 @@ function CHP(d::Dict;
         chp.size_class = chp_defaults_response["size_class"]
     end
 
-    #if chp_defaults not used to update federal_itc_fraction, use default of 0.3
+    #if chp_defaults not used to update federal_itc_fraction, use default of 0.0
     if isnan(chp.federal_itc_fraction)
-        @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.3"
+        @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.0"
         setproperty!(chp, :federal_itc_fraction, 0.0)
     end
 
