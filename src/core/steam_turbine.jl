@@ -33,8 +33,8 @@
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = true
 
-    macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 0.0    
+    macrs_option_years::Int = 5 # Note that this value cannot be 0 if aiming to apply 100% bonus depreciation
+    macrs_bonus_fraction::Float64 = 1.0
 ```
 
 """
@@ -69,8 +69,8 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = true
 
-    macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 0.0   
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0   
 end
 
 
