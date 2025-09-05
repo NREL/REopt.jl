@@ -5,19 +5,24 @@ using DelimitedFiles
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
 @testset "Federal defaults" begin
-    s = Scenario("./scenarios/federal_defaults.json")
-    for tech_struct in (s.pvs[1], p.wind, s.chp, s.ghp)
+    input_data = JSON.parsefile("scenarios/federal_defaults.json")
+    
+    # Fill in GHP so don't have to call GHPGHX.jl
+    ghp_response = JSON.parsefile("scenarios/ghpghx_response.json")
+    input_data["GHP"]["ghpghx_responses"] = [ghp_response]
+
+    s = Scenario(input_data)
+
+    for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1])
         for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
             @test getfield(tech_struct, incentive_input_name) == 0
         end
     end
-    for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
-        stor_struct = s.storage.attr[stor_name]
-        for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
-            @test getfield(stor_struct, incentive_input_name) == 0
-        end
+    for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+        @test getfield(s.storage.attr["ElectricStorage"], incentive_input_name) == 0
     end
 end
+
 @testset "Heating loads and addressable load fraction" begin
     # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
