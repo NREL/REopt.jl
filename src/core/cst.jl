@@ -52,8 +52,8 @@ function CST(;
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
-    inlet_temp_degF::Real = 400.0 # Initial process temperature for Industrial Process Heating
-    outlet_temp_degF::Real = 70.0 # Final process temperature for Industrial Process Heating
+    inlet_temp_degF::Real = 400.0 # heat transfer medium temperature at inlet of CST heat offtaker (e.g., inlet to HTF hot tank or industrial process)
+    outlet_temp_degF::Real = 70.0 # heat transfer medium temperature at outlet of CST heat offtaker (e.g., HTF cold tank storage)
 )
 ```
 """
