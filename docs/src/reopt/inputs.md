@@ -132,6 +132,11 @@ REopt.Boiler
 REopt.HotThermalStorageDefaults
 ```
 
+## HighTempThermalStorage
+```@docs
+REopt.HighTempThermalStorageDefaults
+```
+
 ## ColdThermalStorage
 ```@docs
 REopt.ColdThermalStorageDefaults
