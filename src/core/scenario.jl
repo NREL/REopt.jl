@@ -42,6 +42,7 @@ A Scenario struct can contain the following keys:
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [HotThermalStorage](@ref) (optional)
+- [HighTempThermalStorage](@ref) (optional)
 - [ColdThermalStorage](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
