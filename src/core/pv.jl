@@ -118,7 +118,7 @@ mutable struct PV <: AbstractTech
     function PV(;
         off_grid_flag::Bool = false,
         sector::String = "commercial/industrial",
-        federal_procurement_type::String = nothing,
+        federal_procurement_type::String = "",
         latitude::Real,
         array_type::Int=1,
         tilt::Real = (array_type == 0 || array_type == 1) ? 20 : 0,

@@ -11,8 +11,8 @@ Inputs related to the physical location:
     min_resil_time_steps::Int=0, # The minimum number consecutive timesteps that load must be fully met once an outage begins. Only applies to multiple outage modeling using inputs outage_start_time_steps and outage_durations.
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     sector::String = "commercial/industrial",
-    federal_sector_state::Union{String, Nothing} = nothing,
-    federal_procurement_type::Union{String, Nothing} = nothing,
+    federal_sector_state::String = "",
+    federal_procurement_type::String = "",
     CO2_emissions_reduction_min_fraction::Union{Float64, Nothing} = nothing,
     CO2_emissions_reduction_max_fraction::Union{Float64, Nothing} = nothing,
     bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing, # Auto-populated based on BAU run. This input will be overwritten if the BAU scenario is run, but can be user-provided if no BAU scenario is run.
@@ -57,8 +57,8 @@ mutable struct Site
         min_resil_time_steps::Int=0,
         mg_tech_sizes_equal_grid_sizes::Bool = true,
         sector::String = "commercial/industrial",
-        federal_sector_state::Union{String, Nothing} = nothing,
-        federal_procurement_type::Union{String, Nothing} = nothing,
+        federal_sector_state::String = "",
+        federal_procurement_type::String = "",
         CO2_emissions_reduction_min_fraction::Union{Float64, Nothing} = nothing,
         CO2_emissions_reduction_max_fraction::Union{Float64, Nothing} = nothing,
         bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
@@ -81,9 +81,10 @@ mutable struct Site
         if sector != "commercial/industrial" && sector != "federal"
             push!(invalid_args, "sector must be either 'commercial/industrial' or 'federal', got $(sector)")
         end
+        federal_elec_cost_escalation_region = ""
         if sector == "federal"
             federal_elec_cost_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
-            if federal_elec_cost_escalation_region == nothing
+            if isempty(federal_elec_cost_escalation_region)
                 push!(invalid_args, "federal_sector_state must be a valid US state name or abbreviation when sector is 'federal'")
             end
             if !(federal_procurement_type in ("fedowned_dirpurch", "fedowned_thirdparty", "privateowned_thirdparty"))
@@ -174,10 +175,10 @@ mutable struct Site
                 "New Jersey" => "NJ"
             ),
             federal_sector_state,
-            nothing
+            ""
         )
     end
-    function get_NIST_EERC_rate_region(state::Union{Nothing,String})
+    function get_NIST_EERC_rate_region(state::String)
         abbr_to_region = Dict{String,String}(
             "WA" => "Pacific",
             "OR" => "Pacific",
@@ -240,9 +241,9 @@ mutable struct Site
             "VT" => "New England",
             "NJ" => "New England"
         )
-        region = get(abbr_to_region, state, nothing)
-        if region == nothing
-            region = get(abbr_to_region, state_name_to_abbr(state), nothing)
+        region = get(abbr_to_region, state, "")
+        if isempty(region)
+            region = get(abbr_to_region, state_name_to_abbr(state), "")
         end
         return region
     end

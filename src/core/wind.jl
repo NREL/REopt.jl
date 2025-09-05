@@ -100,7 +100,7 @@ struct Wind <: AbstractTech
     function Wind(;
         off_grid_flag::Bool = false,
         sector::String = "commercial/industrial",
-        federal_procurement_type::String = nothing,
+        federal_procurement_type::String = "",
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
