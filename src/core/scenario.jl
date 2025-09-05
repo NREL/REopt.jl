@@ -131,12 +131,18 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         financial = Financial(; dictkeys_tosymbols(d["Financial"])...,
                                 latitude=site.latitude, longitude=site.longitude, 
                                 off_grid_flag = settings.off_grid_flag,
-                                include_health_in_objective = settings.include_health_in_objective
+                                include_health_in_objective = settings.include_health_in_objective,
+                                sector = site.sector,
+                                federal_procurement_type = site.federal_procurement_type,
+                                federal_elec_cost_escalation_region = site.federal_elec_cost_escalation_region
                             )
     else
         financial = Financial(; latitude=site.latitude, longitude=site.longitude,
                                 off_grid_flag = settings.off_grid_flag,
-                                include_health_in_objective = settings.include_health_in_objective
+                                include_health_in_objective = settings.include_health_in_objective,
+                                sector = site.sector,
+                                federal_procurement_type = site.federal_procurement_type,
+                                federal_elec_cost_escalation_region = site.federal_elec_cost_escalation_region
                             )
     end
 
