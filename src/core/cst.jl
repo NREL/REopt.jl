@@ -52,8 +52,8 @@ function CST(;
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
-    inlet_temp_degF::Real = 400.0 # Minimum temperature for Industrial Process Heating
-    outlet_temp_degF::Real = 70.0 # Maximum temperature for Industrial Process Heating
+    inlet_temp_degF::Real = 400.0 # Maximum process temperature for Industrial Process Heating
+    outlet_temp_degF::Real = 70.0 # Minimum process temperature for Industrial Process Heating
 )
 ```
 """
