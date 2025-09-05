@@ -32,8 +32,8 @@ to meet the heating load(s).
 
 ```julia
 function CST(;
-    min_mmbtu_per_hour::Real = 0.0, # Minimum thermal power size
-    max_mmbtu_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
+    min_kw::Real = 0.0, # Minimum thermal power size (capacity)
+    max_kw::Real = BIG_NUMBER, # Maximum thermal power size (capacity)
     production_factor::AbstractVector{<:Real} = Float64[],  production factor
     elec_consumption_factor_series::AbstractVector{<:Real} = Float64[], electric consumption factor per kw TODO: (do we need? are we including parasitics?) 
     acres_per_kw::Real = 0, # 
