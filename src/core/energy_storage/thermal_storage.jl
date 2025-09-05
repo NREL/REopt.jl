@@ -96,9 +96,9 @@ end
 
 ```julia
     fluid::String = "INCOMP::Nak"
-    hot_temp_degF::Float64 = 1065.0
     min_kwh::Float64 = 0.0
     max_kwh::Float64 = 0.0
+    hot_temp_degF::Float64 = 1065.0
     cool_temp_degF::Float64 = 554.0
     internal_efficiency_fraction::Float64 = 0.999999
     soc_min_fraction::Float64 = 0.1
