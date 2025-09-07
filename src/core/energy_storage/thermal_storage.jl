@@ -127,7 +127,7 @@ Base.@kwdef struct HighTempThermalStorageDefaults <: AbstractThermalStorageDefau
     internal_efficiency_fraction::Float64 = 0.999999
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
-    installed_cost_per_kwh::Float64 = 1.50
+    installed_cost_per_kwh::Float64 = 62
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_kwh::Float64 = 0.0
     macrs_option_years::Int = 5
@@ -372,7 +372,7 @@ struct HighTempThermalStorage <: AbstractThermalStorage
     num_discharge_hours::Float64
 
     function HighTempThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
-         
+        # TODO: develop a storage sizing/costing model using delta-T from hot_temp_degF and cool_temp_degF, as is done in HotThermalStorage 
         min_kw = s.min_kwh / max(s.num_charge_hours, s.num_discharge_hours)
         max_kw = s.max_kwh / min(s.num_charge_hours, s.num_discharge_hours)
     
