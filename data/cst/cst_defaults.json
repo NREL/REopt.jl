@@ -1,8 +1,8 @@
 {
     "ptc": {
         "max_kw": 99999999,
-        "installed_cost_per_kw": 2200,
-        "om_cost_per_kw": 33,
+        "installed_cost_per_kw": 2200.0,
+        "om_cost_per_kw": 33.0,
         "om_cost_per_kwh": 0.0,
         "acres_per_kw": 0.000939,
         "macrs_option_years": 0,

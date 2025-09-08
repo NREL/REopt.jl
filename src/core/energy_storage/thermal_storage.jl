@@ -103,11 +103,11 @@ end
     internal_efficiency_fraction::Float64 = 0.999999
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
-    installed_cost_per_gal::Float64 = 86.0
+    installed_cost_per_kwh::Float64 = 86.0
     thermal_decay_rate_fraction::Float64 = 0.0004
-    om_cost_per_gal::Float64 = 0.0
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.6
+    om_cost_per_kwh::Float64 = 0.0
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
