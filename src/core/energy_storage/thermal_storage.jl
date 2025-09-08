@@ -103,7 +103,7 @@ end
     internal_efficiency_fraction::Float64 = 0.999999
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
-    installed_cost_per_gal::Float64 = 1.50
+    installed_cost_per_gal::Float64 = 86.0
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
@@ -127,7 +127,7 @@ Base.@kwdef struct HighTempThermalStorageDefaults <: AbstractThermalStorageDefau
     internal_efficiency_fraction::Float64 = 0.999999
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
-    installed_cost_per_kwh::Float64 = 62
+    installed_cost_per_kwh::Float64 = 86.0
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_kwh::Float64 = 0.0
     macrs_option_years::Int = 5
