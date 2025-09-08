@@ -26,7 +26,7 @@
     dc_ac_ratio::Real=1.2,
     production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     federal_itc_fraction::Real = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "federal_itc_fraction", 0.3),
-    federal_rebate_per_kw::Real = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "federal_rebate_per_kw", 0.0),
+    federal_rebate_per_kw::Real = 0.0,
     state_ibi_fraction::Real = 0.0,
     state_ibi_max::Real = 1.0e10,
     state_rebate_per_kw::Real = 0.0,
