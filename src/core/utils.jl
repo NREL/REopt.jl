@@ -780,7 +780,9 @@ function get_sector_defaults(; sector::String="", federal_procurement_type::Stri
             sector_defaults = get(sector_defaults, sector, Dict{String,Any}())
         end
     end
-    filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
+    if !isempty(federal_escalation_region)
+        filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
+    end
     return sector_defaults
 end
 function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
