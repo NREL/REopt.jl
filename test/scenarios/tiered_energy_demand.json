@@ -5,7 +5,7 @@
     },
     "ElectricLoad": {
         "doe_reference_name": "FlatLoad",
-        "annual_kwh": 8760.0
+        "annual_kwh": 876000.0
     },
     "ElectricTariff": {
         "urdb_response": {
@@ -640,13 +640,13 @@
             "energyratestructure": [
                 [
                     {
-                        "rate": 0.1,
-                        "max": 1000.0,
+                        "rate": 0.10,
+                        "max": 1000000.0,
                         "unit": "kWh"
                     },
                     {
                         "rate": 0.05,
-                        "max": 1000000000000,
+                        "max": 100000000000000,
                         "unit": "kWh"
                     }
                 ]
@@ -660,7 +660,7 @@
                     },
                     {
                         "rate": 5.0,
-                        "max": 1000000000000,
+                        "max": 100000000000000,
                         "unit": "kW"
                     }
                 ]
