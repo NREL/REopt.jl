@@ -606,7 +606,7 @@ function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
 end
 
 # Functions to load sector dependent default data from JSON file
-function state_name_to_abbr(federal_sector_state)
+function state_name_to_abbr(federal_sector_state::String)
     abbr_lookup = Dict{String,String}(
             "Washington" => "WA",
             "Oregon" => "OR",
