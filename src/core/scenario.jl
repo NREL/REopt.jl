@@ -199,23 +199,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     storage = Storage(storage_structs)
 
-    if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
-        electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
-                                        year=electric_load.year,
-                                        NEM=electric_utility.net_metering_limit_kw > 0, 
-                                        time_steps_per_hour=settings.time_steps_per_hour
-                                        )
-    else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
-        if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
-        end
-        electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
-                                            blended_annual_demand_rate = 0.0,
-                                            year=electric_load.year,
-                                            time_steps_per_hour=settings.time_steps_per_hour
-        )
-    end
-
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., off_grid_flag=settings.off_grid_flag,
                     average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
@@ -783,6 +766,23 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     electric_heater = nothing
     if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
+    end
+
+    if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
+        electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
+                                        year=electric_load.year,
+                                        NEM=electric_utility.net_metering_limit_kw > 0, 
+                                        time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
+        if haskey(d, "ElectricTariff")
+            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
+        end
+        electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
+                                            blended_annual_demand_rate = 0.0,
+                                            year=electric_load.year,
+                                            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
 
     # ASHP
