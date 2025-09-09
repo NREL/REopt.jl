@@ -110,7 +110,9 @@ function ElectricTariff(;
     demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
-    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[],
+    electric_demand_bigM::Union{Float64, Nothing}=1.0e6,
+    electric_energy_bigM::Union{Float64, Nothing}=1.0e6
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 
@@ -326,6 +328,23 @@ function ElectricTariff(;
     if !isempty(coincident_peak_load_charge_per_kw)
         coincpeak_periods = collect(eachindex(coincident_peak_load_charge_per_kw))
     end
+
+    if n_monthly_demand_tiers > 1
+        for mth in 1:12
+            monthly_demand_tier_limits[mth, n_monthly_demand_tiers] = electric_demand_bigM
+        end
+    end
+    if n_energy_tiers > 1
+        for mth in 1:12
+            energy_tier_limits[mth, n_energy_tiers] = electric_energy_bigM
+        end
+    end
+    if n_tou_demand_tiers > 1
+        for r in 1:length(tou_demand_tier_limits[:,1])
+            tou_demand_tier_limits[r, n_tou_demand_tiers] = electric_demand_bigM
+        end
+    end
+
 
     ElectricTariff(
         energy_rates,
