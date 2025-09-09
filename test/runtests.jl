@@ -15,8 +15,8 @@ Random.seed!(42)
 
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
-        @test true  #skipping Xpress while import to HiGHS takes place
-        # include("test_with_xpress.jl")
+        # @test true  #skipping Xpress while import to HiGHS takes place
+        include("test_with_xpress.jl")
     end
 
 elseif "CPLEX" in ARGS
@@ -2456,7 +2456,7 @@ else  # run HiGHS tests
 
             pop!(input_data["GHP"], "ghpghx_inputs", nothing)
             pop!(input_data["GHP"], "ghpghx_responses", nothing)
-            ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
+            ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"]; sector="commercial/industrial", federal_procurement_type="")
 
             calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
             (
