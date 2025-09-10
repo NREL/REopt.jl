@@ -27,7 +27,7 @@ Classify the change according to the following categories:
 
 ## arm-sam-lib
 ### Changed
-- Use ARM version of SAM library file if processor architechture is ARM
+- Use ARM version of SAM library file if processor architecture is ARM
 
 ## v0.54.0
 ### Changed
