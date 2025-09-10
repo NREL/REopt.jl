@@ -3,14 +3,16 @@
 function add_operating_reserve_constraints(m, p; _n="")
     # Calculate operating reserves (OR) required 
 	# 1. Production going to load from providing_oper_res 
-	m[:ProductionToLoadOR] = @expression(m, [t in p.techs.providing_oper_res, ts in p.time_steps_without_grid],
-        p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] -
-        sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) -
-        m[Symbol("dvCurtail"*_n)][t, ts]
+    m[:ORProductionToLoad] = @expression(m, [t in p.techs.providing_oper_res, ts in p.time_steps_without_grid],
+        (
+            p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] -
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) -
+            m[Symbol("dvCurtail"*_n)][t, ts]
+        ) * (t in p.techs.dc_coupled_with_storage ? p.s.storage.attr["ElectricStorage"].rectifier_efficiency_fraction : 1.0)
     )
     # 2. Total OR required by requiring_oper_res & Load 
     m[:OpResRequired] = @expression(m, [ts in p.time_steps_without_grid],
-        sum(m[:ProductionToLoadOR][t,ts] * p.techs_operating_reserve_req_fraction[t] for t in p.techs.requiring_oper_res)
+        sum(m[:ORProductionToLoad][t,ts] * p.techs_operating_reserve_req_fraction[t] for t in p.techs.requiring_oper_res)
         + p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] * p.s.electric_load.operating_reserve_required_fraction
     )
     # 3. Operating reserve provided - battery  
@@ -23,8 +25,11 @@ function add_operating_reserve_constraints(m, p; _n="")
     )
     # 4. Operating reserve provided - techs 
     @constraint(m, [t in p.techs.providing_oper_res, ts in p.time_steps_without_grid],
-        m[Symbol("dvOpResFromTechs"*_n)][t,ts] <= (p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvSize"*_n)][t] -
-                        m[:ProductionToLoadOR][t,ts]) * (1 - p.techs_operating_reserve_req_fraction[t])
+        m[Symbol("dvOpResFromTechs"*_n)][t,ts] <= (
+            p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvSize"*_n)][t] 
+                * (t in p.techs.dc_coupled_with_storage ? p.s.storage.attr["ElectricStorage"].rectifier_efficiency_fraction : 1.0) 
+            - m[:ORProductionToLoad][t,ts]) * (1 - p.techs_operating_reserve_req_fraction[t]
+        )
     )
     
     # 5a. Upper bound on dvOpResFromTechs (for generator techs).  Note: will need to add new constraints for each new tech that can provide operating reserves
