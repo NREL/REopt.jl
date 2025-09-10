@@ -17,7 +17,7 @@ Inputs related to the physical location:
     CO2_emissions_reduction_max_fraction::Union{Float64, Nothing} = nothing,
     bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing, # Auto-populated based on BAU run. This input will be overwritten if the BAU scenario is run, but can be user-provided if no BAU scenario is run.
     bau_grid_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
-    renewable_electricity_min_fraction::Real = 0.0,
+    renewable_electricity_min_fraction::Union{Float64, Nothing} = nothing,
     renewable_electricity_max_fraction::Union{Float64, Nothing} = nothing,
     include_grid_renewable_fraction_in_RE_constraints::Bool = false,
     include_exported_elec_emissions_in_total::Bool = true,
