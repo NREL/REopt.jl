@@ -80,7 +80,7 @@ REopt.add_heating_load_results
 REopt.add_cooling_load_results
 ```
 
-## Uncertain Outages outputs
+## Outages outputs
 ```@docs
 REopt.add_outage_results
 ```
