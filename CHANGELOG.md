@@ -25,7 +25,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## misc-defaults
+## v0.54.0
 ### Changed
 Update the following inputs from the previous --> new values:
 - `Financial.offtaker_discount_rate_fraction`: 0.0638 --> 0.0624
@@ -49,17 +49,14 @@ Update the following inputs from the previous --> new values:
         "commercial"=> 4760.0, --> 5776.0
         "medium"=> 3137.0, --> 3807.0
         "large"=> 2386.0 --> 2896.0)
-
-## Develop
+- Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
+- Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
+- Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
 ### Added
 - Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
 - Added **cycle_fade_fraction** as an input for portion of BESS that is tied to each cycle fade coefficient.
 - Added **total_residual_kwh** output which captures healthy residual battery capacity due to degradation and the replacement strategy
 - Added ARM version of SAM library file `src/sam/libssc_arm.dylib`, which can be renamed to `libssc.dylib` for running REopt.jl locally on an ARM Mac. 
-### Changed
-- Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
-- Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
-- Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
 
 ## v0.53.2
 ### Fixed
