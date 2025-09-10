@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## arm-sam-lib
+### Changed
+- Use ARM version of SAM library file if processor architechture is ARM
+
 ## v0.54.0
 ### Changed
 Update the following inputs from the previous --> new values:
