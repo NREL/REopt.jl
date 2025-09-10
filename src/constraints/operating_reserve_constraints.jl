@@ -17,11 +17,17 @@ function add_operating_reserve_constraints(m, p; _n="")
     )
     # 3. Operating reserve provided - battery  
     @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps_without_grid],
-        m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= (m[Symbol("dvStoredEnergy"*_n)][b, ts-1] - p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b]) / p.hours_per_time_step 
-        - (m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].ac_discharge_efficiency)
+        m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= 
+        (
+            m[Symbol("dvStoredEnergy"*_n)][b, ts-1]
+            - p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+        ) * p.s.storage.attr[b].ac_discharge_efficiency / p.hours_per_time_step 
+        - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
     )
     @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps_without_grid],
-        m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= m[Symbol("dvStoragePower"*_n)][b] - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].ac_discharge_efficiency
+        m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= 
+        m[Symbol("dvStoragePower"*_n)][b] * (b in p.s.storage.types.dc_coupled ? p.s.storage.attr[b].inverter_efficiency_fraction : 1.0)
+        - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
     )
     # 4. Operating reserve provided - techs 
     @constraint(m, [t in p.techs.providing_oper_res, ts in p.time_steps_without_grid],
