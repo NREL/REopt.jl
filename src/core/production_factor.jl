@@ -129,7 +129,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
     try        
         if Sys.isapple() 
             if Sys.ARCH == :aarch64
-                libfile = "libssc_arm64.dylib"
+                libfile = "libssc_arm.dylib"
             elseif Sys.ARCH == :x86_64
                 libfile = "libssc.dylib"
             else
