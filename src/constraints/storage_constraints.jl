@@ -99,7 +99,8 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
         )
-        - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
 	)
 	# Constraint (4g)-2: state-of-charge for electrical storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
@@ -107,7 +108,8 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
         )
-        - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
     )	
 
 	# Constraint (4h): prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
@@ -117,12 +119,16 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
         )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
 	)
 	# (4h)-2: no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
         )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
     )
 
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
@@ -179,9 +185,10 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m, [ts in p.time_steps],
             m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (
                 p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
-                sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
-                p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+                sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency
             )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
         )
     else
         @constraint(m, [ts in p.time_steps],
@@ -197,9 +204,10 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     if b != "HighTempThermalStorage"
         @constraint(m, [ts in p.time_steps],
             m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (  
-                p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
-                p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+                p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)
             )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
         )
     else
         @constraint(m, [ts in p.time_steps],
@@ -282,17 +290,19 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 	@constraint(m, ColdTESInventoryCon[ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling) -
-            m[Symbol("dvDischargeFromStorage"*_n)][b,ts]/p.s.storage.attr[b].discharge_efficiency -
-            p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+            m[Symbol("dvDischargeFromStorage"*_n)][b,ts]/p.s.storage.attr[b].discharge_efficiency
         )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
     )
 
     # Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
 	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (  
             p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling)
-            - p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
+        - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+        - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
     )
 
     #Constraint (4n)-2: Dispatch to and from thermal storage is no greater than power capacity
@@ -329,7 +339,8 @@ function add_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
                 sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.compressor) 
                 - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
             )
-            - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
+            - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+            - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
         )
         # Constraint: Dispatch to hydrogen storage is no greater than capacity
         @constraint(m, [ts in p.time_steps],
@@ -348,7 +359,8 @@ function add_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
                 sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.electrolyzer) 
                 - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
             )
-            - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
+            - (p.s.storage.attr[b].soc_based_per_ts_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts-1])
+            - (p.s.storage.attr[b].capacity_based_per_ts_self_discharge_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
         )
         # Constraint: Dispatch to hydrogen storage is no greater than capacity
         @constraint(m, [ts in p.time_steps],

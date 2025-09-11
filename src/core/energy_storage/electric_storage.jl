@@ -187,7 +187,8 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.0
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on the rated kWh capacity of the sized storage system
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
     fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
     require_start_and_end_charge_to_be_equal::Bool = false
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
@@ -226,7 +227,8 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.0
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0
     fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
     require_start_and_end_charge_to_be_equal::Bool = false
     optimize_soc_init_fraction::Bool = false
@@ -273,7 +275,8 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
-    daily_leakage_fraction::Float64
+    capacity_based_per_ts_self_discharge_fraction::Float64
+    soc_based_per_ts_self_discharge_fraction::Float64
     fixed_dispatch_series::Union{Nothing, Array{Real,1}}
     require_start_and_end_charge_to_be_equal::Bool
     optimize_soc_init_fraction::Bool
@@ -370,7 +373,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
-            s.daily_leakage_fraction,
+            s.capacity_based_per_ts_self_discharge_fraction,
+            s.soc_based_per_ts_self_discharge_fraction,
             s.fixed_dispatch_series,
             s.require_start_and_end_charge_to_be_equal,
             s.optimize_soc_init_fraction,

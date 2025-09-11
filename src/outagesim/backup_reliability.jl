@@ -522,6 +522,8 @@ end
 """
 prob_matrix_update!(prob_matrix, survival)
 
+Updates probability matrix so that non-surviving states are sent to a "failed" absorbing state 
+which is assumed to be outside of the probability vector here.
 More efficient implementation of prob_matrix = prob_matrix .* survival
 """
 function prob_matrix_update!(prob_matrix, survival)
@@ -624,9 +626,8 @@ function gen_only_survival_single_start_time(
     marginal_survival::Bool)::Vector{Float64}
 
     survival_chances = zeros(max_outage_duration)
-    gen_prob_array = [copy(starting_gens), copy(starting_gens)]
-    survival = ones(length(1, generator_production))
-
+    gen_prob_array = [transpose(copy(starting_gens)),transpose(copy(starting_gens))] 
+    survival = ones(length(generator_production))
     for d in 1:max_outage_duration
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
         update_survival!(survival, generator_production, net_critical_loads_kw[h])
@@ -643,7 +644,6 @@ function gen_only_survival_single_start_time(
         else
             survival_chances[d] = survival_chance_mult(gen_prob_array[gen_matrix_counter_end], survival)
         end
-
     end
     return survival_chances
 end
@@ -798,12 +798,15 @@ survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, m
     generator_markov_matrix::Matrix{Float64}: probability transition matrix for generator states only
     maximum_generation::Array{Float64: 3}: maximum generation capacity by state
     t_max::Int: length of net_critical_loads_kw # TODO: remove?
-    starting_battery_bins::Vector{Int}: 
-    battery_bin_size_kwh::Real: 
-    starting_H2_bins::Vector{Int}: 
-    H2_bin_size_kg::Real: 
+    starting_battery_bins::Vector{Int}: battery SOC bin index at time period t
+    battery_bin_size_kwh::Real: size of battery bin [kWh]
+    starting_H2_bins::Vector{Int}: H2 storage bin index at time period t
+    H2_bin_size_kg::Real: size of H2 storage bin [kg]
     marginal_survival::Bool:  
-    time_steps_per_hour::Real)::Vector{Float64}: 
+    time_steps_per_hour::Real:
+
+# returns
+    ::Vector{Float64}: survival probability of place. 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_with_storage
 """
@@ -835,11 +838,38 @@ function survival_with_storage_single_start_time(
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
 
-    gen_battery_prob_matrix_array = [zeros(N, M_b, M_H2), zeros(N, M_b, M_H2)]
-    gen_battery_prob_matrix_array[1][:, starting_battery_bins[t], starting_H2_bins[t]] = starting_gens
-    gen_battery_prob_matrix_array[2][:, starting_battery_bins[t], starting_H2_bins[t]] = starting_gens
+    # the probability matrix is set up the the order of states (row for start, column for destination) as follows, with the example of G=2 (g)enerator states, B=3 (b)attery bins and H=2 (h)ydrogen bins: 
+    # 1: (g1, b1, h1)
+    # 2: (g2, b1, h1)
+    # 3: (g1, b2, h1)
+    # 4: (g2, b2, h1)
+    # 5: (g1, b3, h1)
+    # 6: (g2, b3, h1)
+    # 7: (g1, b1, h2)
+    # 8: (g2, b1, h2)
+    # 9: (g1, b2, h2)
+    # (g2, b2, h2)
+    # (g1, b3, h2)
+    # (g2, b3, h2)
+    # starting index for state (g,b,h) is (h-1)*B*G + (b-1)*G + g.
+
+    probability_transition_matrix = zeros(N*M_b*M_H2, N*M_b*M_H2)
+    # The probabiility transition matrix is block-diagonal, as our simulation only treats the generator states as a discrete-time Markov chain.  Storage transitions and failures (i.e., movement to
+    # an absorbing state outside of these states) is handled in subsequent steps. 
+    for h in 1:M_H2
+        for b in 1:M_b
+            start_state = (h-1)*N*M_b + (b-1)*N + 1
+            end_state = start_state + N - 1
+            probability_transition_matrix[start_state:end_state,start_state:end_state] = generator_markov_matrix
+        end
+    end 
+    gen_battery_prob_array = [zeros(1,N*M_b*M_H2), zeros(1,N*M_b*M_H2)]
+    start_state = (starting_H2_bins[t]-1)*N*M_b + (starting_battery_bins[t]-1)*N + 1
+    gen_battery_prob_array[1][start_state:(start_state+N-1)] = starting_gens
+    gen_battery_prob_array[2][start_state:(start_state+N-1)] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
-    survival = ones(N, M_b, M_H2)
+    survival = ones(N*M_b*M_H2)
+    gen_storage_matrix = zeros(N,M_b,M_H2)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -847,21 +877,24 @@ function survival_with_storage_single_start_time(
         update_survival!(survival, maximum_generation, net_critical_loads_kw[h])
         
         #Update probabilities to account for generator failures
-        #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
+        #This is a more memory efficient way of implementing gen_battery_prob_matrix * probability_transition_matrix than traditional Matrix multiplicatoin operators in Julia.
+        #see, Julia docs: https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/#LinearAlgebra.mul!
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
+        mul!(gen_battery_prob_array[gen_matrix_counter_end], gen_battery_prob_array[gen_matrix_counter_start], probability_transition_matrix)
 
         if marginal_survival == false
-            # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
-            prob_matrix_update!(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival) 
-            return_survival_chance_vector[d] = sum(gen_battery_prob_matrix_array[gen_matrix_counter_end])
+            # @timeit to "survival chance" gen_battery_prob_array[gen_matrix_counter_end] = gen_battery_prob_array[gen_matrix_counter_end] .* survival 
+            prob_matrix_update!(gen_battery_prob_array[gen_matrix_counter_end], survival) 
+            return_survival_chance_vector[d] = sum(gen_battery_prob_array[gen_matrix_counter_end])
         else
-            return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
+            return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_array[gen_matrix_counter_end], survival)
         end
 
+        gen_storage_matrix[:] .= gen_battery_prob_array[gen_matrix_counter_end][:]
+
         shift_gen_storage_prob_matrix!(
-            gen_battery_prob_matrix_array[gen_matrix_counter_end],
+            gen_storage_matrix,
             (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
             battery_bin_size_kwh,
             battery_size_kw,
@@ -874,7 +907,7 @@ function survival_with_storage_single_start_time(
             H2_discharge_efficiency_kwh_per_kg
         )
 
-        storage_leakage!(gen_battery_prob_matrix_array[gen_matrix_counter_end],
+        storage_leakage!(gen_storage_matrix,
                         battery_leakage_fraction_per_ts,
                         battery_bin_size_kwh,
                         battery_size_kw,
@@ -882,6 +915,8 @@ function survival_with_storage_single_start_time(
                         H2_bin_size_kg,
                         H2_electrolyzer_size_kw, 
                         H2_fuelcell_size_kw)
+
+        gen_battery_prob_array[gen_matrix_counter_end][:] .= gen_storage_matrix[:]
     end
 
     return return_survival_chance_vector
@@ -1317,8 +1352,6 @@ function backup_reliability_single_run(;
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
 
-    println("kwargs: ",kwargs)
-     
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
         return []

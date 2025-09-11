@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `HydrogenStorage` is an optional REopt input with the following keys and default values:
 
@@ -44,7 +16,8 @@
     total_itc_fraction::Float64 = 0.3, # Total Investment Tax Credit (ITC) fraction
     minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
     soc_min_applies_during_outages::Bool = false, # If true, the minimum state of charge fraction applies during outages. Otherwise min SOC is set to 0 during outages.
-    daily_leakage_fraction::Float64 = 0.0, # Fraction of stored hydrogen that is lost from the system each day 
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg capacity of the storage tank
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg of H2 stored in each timestep
     require_start_and_end_charge_to_be_equal::Bool = true, # If true, the model will constrain final SOC = initial SOC
 ```
 """
@@ -63,7 +36,8 @@ Base.@kwdef struct HydrogenStorageDefaults
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
     soc_min_applies_during_outages::Bool = false
-    daily_leakage_fraction::Float64 = 0.0
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 
     require_start_and_end_charge_to_be_equal::Bool = true
 end
 
@@ -90,7 +64,8 @@ struct HydrogenStorage <: AbstractHydrogenStorage
     net_present_cost_per_kg::Real
     minimum_avg_soc_fraction::Float64
     soc_min_applies_during_outages::Bool
-    daily_leakage_fraction::Float64
+    capacity_based_per_ts_self_discharge_fraction::Float64
+    soc_based_per_ts_self_discharge_fraction::Float64
     require_start_and_end_charge_to_be_equal::Bool
 
     function HydrogenStorage(d::Dict, f::Financial)  
@@ -130,7 +105,8 @@ struct HydrogenStorage <: AbstractHydrogenStorage
             net_present_cost_per_kg,
             s.minimum_avg_soc_fraction,
             s.soc_min_applies_during_outages,
-            s.daily_leakage_fraction,
+            s.capacity_based_per_ts_self_discharge_fraction,
+            s.soc_based_per_ts_self_discharge_fraction,
             s.require_start_and_end_charge_to_be_equal
         )
     end
