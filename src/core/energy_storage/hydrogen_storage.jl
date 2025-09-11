@@ -16,8 +16,8 @@
     total_itc_fraction::Float64 = 0.3, # Total Investment Tax Credit (ITC) fraction
     minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
     soc_min_applies_during_outages::Bool = false, # If true, the minimum state of charge fraction applies during outages. Otherwise min SOC is set to 0 during outages.
-    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg capacity of the storage tank
-    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg of H2 stored in each timestep
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage per timestep, as a fraction of the rated kg capacity of the H2 storage tank
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage per timestep, as a fraction of the kg of H2 stored in each timestep
     require_start_and_end_charge_to_be_equal::Bool = true, # If true, the model will constrain final SOC = initial SOC
 ```
 """

@@ -15,8 +15,8 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     soc_min_fraction::Float64 = 0.1 # Minimum allowable TES thermal state of charge
     soc_init_fraction::Float64 = 0.5 # TES thermal state of charge at first hour of optimization
     installed_cost_per_gal::Float64 = 1.50 # Thermal energy-based cost of TES (e.g. volume of the tank)
-    soc_based_per_ts_thermal_decay_fraction::Float64 = 0.0 # Thermal loss (gain) rate as a fraction of the energy stored in each timestep (frac*energy_stored = kw_thermal)
-    capacity_based_per_ts_thermal_decay_fraction::Float64 = 0.0004 # Thermal loss (gain) rate as a fraction of the installed storage capacity per timestep (frac*energy_capacity = kw_thermal); the provided default is for an hourly thermal loss/gain
+    soc_based_per_ts_thermal_decay_fraction::Float64 = 0.0 # Thermal loss (gain) per timestep, as a fraction of the energy stored in each timestep
+    capacity_based_per_ts_thermal_decay_fraction::Float64 = 0.0004 # Thermal loss (gain) per timestep, as a fraction of the rated storage capacity per timestep; the provided default is for an hourly thermal loss/gain
     om_cost_per_gal::Float64 = 0.0 # Yearly fixed O&M cost dependent on storage energy size
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.6

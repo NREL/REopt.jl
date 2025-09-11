@@ -257,8 +257,8 @@ end
     soc_init_fraction::Float64 = 0.5, # Initial state of charge fraction
     can_grid_charge::Bool = true, # True/False for if storage can charge from the grid
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0, # Efficiency of charging the storage from the grid
-    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on the rated kWh capacity of the sized storage system
-    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge per timestep, as a fraction of the system's rated kWh capacity
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge per timestep, as a fraction of the kWh stored in each timestep
 ```
 """
 Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
@@ -366,8 +366,8 @@ end
     size_kg::Float64, # Size of the hydrogen storage in kg
     soc_min_fraction::Float64 = 0.05, # Minimum state of charge fraction
     soc_init_fraction::Float64 = 0.5, # Initial state of charge fraction
-    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg capacity of the storage tank
-    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage as a fraction per timestep loss based on the kg of H2 stored in each timestep
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage per timestep, as a fraction of the rated kg capacity of the H2 storage tank
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Storage leakage per timestep, as a fraction of the kg of H2 stored in each timestep
     minimum_avg_soc_fraction::Float64 = 0.0, # Minimum average state of charge fraction of the system over a typical year of operation
 ```
 """

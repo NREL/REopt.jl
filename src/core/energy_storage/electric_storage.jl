@@ -187,8 +187,8 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on the rated kWh capacity of the sized storage system
-    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
+    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge per timestep, as a fraction of the system's rated kWh capacity
+    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge per timestep, as a fraction of the kWh stored in each timestep
     fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
     require_start_and_end_charge_to_be_equal::Bool = false
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
