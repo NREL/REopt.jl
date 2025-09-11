@@ -132,6 +132,11 @@ REopt.Boiler
 REopt.HotThermalStorageDefaults
 ```
 
+## HighTempThermalStorage
+```@docs
+REopt.HighTempThermalStorageDefaults
+```
+
 ## ColdThermalStorage
 ```@docs
 REopt.ColdThermalStorageDefaults
@@ -175,4 +180,9 @@ REopt.ElectricHeater
 ## ASHP
 ```@docs
 REopt.ASHP
+```
+
+## CST
+```@docs
+REopt.CST
 ```

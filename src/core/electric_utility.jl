@@ -138,7 +138,9 @@ struct ElectricUtility
     outage_time_steps::Union{Nothing, UnitRange} 
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
-    interconnection_limit_kw::Real
+    interconnection_limit_kw::Real 
+    transmission_limit_kw::Real
+
 
     function ElectricUtility(;
 
@@ -158,6 +160,7 @@ struct ElectricUtility
         # Inputs for ElectricUtility
         net_metering_limit_kw::Real = 0, # Upper limit on the total capacity of technologies that can participate in net metering agreement.
         interconnection_limit_kw::Real = 1.0e9,
+        transmission_limit_kw::Real = 1.0e9, #Upper limit on purchases from or exports to the grid
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
 
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
@@ -365,7 +368,8 @@ struct ElectricUtility
             outage_time_steps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw
+            interconnection_limit_kw,
+            transmission_limit_kw
         )
     end
 end
