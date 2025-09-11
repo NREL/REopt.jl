@@ -299,7 +299,8 @@ function add_MG_elec_storage_dispatch_constraints(m,p)
             p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts] for t in p.techs.elec)
             - m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
         )
-        - ((p.s.storage.attr["ElectricStorage"].daily_leakage_fraction/24/p.hours_per_time_step) * m[:dvMGStoredEnergy]["ElectricStorage", s, tz, ts-1])
+        - (p.s.storage.attr["ElectricStorage"].soc_based_per_ts_self_discharge_fraction * m[:dvMGStoredEnergy]["ElectricStorage", s, tz, ts-1])
+        - (p.s.storage.attr["ElectricStorage"].capacity_based_per_ts_self_discharge_fraction * m[:dvStorageEnergy]["ElectricStorage"])
     )
 
 	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
@@ -536,7 +537,8 @@ function add_MG_hydrogen_constraints(m, p; _n="")
                 sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.compressor) 
                 - m[:dvMGDischargeFromStorage][b, s, tz, ts]
             )
-            - ((p.s.storage.attr["HydrogenStorage"].daily_leakage_fraction/24/p.hours_per_time_step) * m[:dvMGStoredEnergy]["HydrogenStorage", s, tz, ts-1])
+            - (p.s.storage.attr["HydrogenStorage"].soc_based_per_ts_self_discharge_fraction * m[:dvMGStoredEnergy]["HydrogenStorage", s, tz, ts-1])
+            - (p.s.storage.attr["HydrogenStorage"].capacity_based_per_ts_self_discharge_fraction * m[:dvStorageEnergy]["HydrogenStorage"])
         )
     else
         # Constraint: state-of-charge for hydrogen storage
@@ -545,7 +547,8 @@ function add_MG_hydrogen_constraints(m, p; _n="")
                 sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.electrolyzer) 
                 - m[:dvMGDischargeFromStorage][b, s, tz, ts]
             )
-            - ((p.s.storage.attr["HydrogenStorage"].daily_leakage_fraction/24/p.hours_per_time_step) * m[:dvMGStoredEnergy]["HydrogenStorage", s, tz, ts-1])
+            - (p.s.storage.attr["HydrogenStorage"].soc_based_per_ts_self_discharge_fraction * m[:dvMGStoredEnergy]["HydrogenStorage", s, tz, ts-1])
+            - (p.s.storage.attr["HydrogenStorage"].capacity_based_per_ts_self_discharge_fraction * m[:dvStorageEnergy]["HydrogenStorage"])
         )
     end
     # Storage discharges through fuel cell 
