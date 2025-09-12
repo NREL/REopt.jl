@@ -812,6 +812,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             bigM_hourly_load=bigM_hourly_load,
                                             electric_demand_bigM=electric_demand_bigM
                                         )
+    end
 
     # CST                                    
     cst = nothing
