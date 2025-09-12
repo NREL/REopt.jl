@@ -331,17 +331,24 @@ function ElectricTariff(;
 
     if n_monthly_demand_tiers > 1
         for mth in 1:12
-            monthly_demand_tier_limits[mth, n_monthly_demand_tiers] = electric_demand_bigM
+            for n in 2:n_monthly_demand_tiers
+                monthly_demand_tier_limits[mth, n] = min(electric_demand_bigM, monthly_demand_tier_limits[mth, n])
+            end
         end
     end
     if n_energy_tiers > 1
         for mth in 1:12
-            energy_tier_limits[mth, n_energy_tiers] = electric_energy_bigM
+            monthly_bigM = sum(bigM_hourly_load[ts] for ts in time_steps_monthly[mth])
+            for u in 2:n_energy_tiers
+                energy_tier_limits[mth, u] = min(monthly_bigM, energy_tier_limits[mth, u])
+            end
         end
     end
     if n_tou_demand_tiers > 1
         for r in 1:length(tou_demand_tier_limits[:,1])
-            tou_demand_tier_limits[r, n_tou_demand_tiers] = electric_demand_bigM
+            for e in 2:n_tou_demand_tiers
+                tou_demand_tier_limits[r, e] = min(electric_demand_bigM, tou_demand_tier_limits[r, e])
+            end
         end
     end
 
