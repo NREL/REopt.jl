@@ -1642,6 +1642,7 @@ else  # run HiGHS tests
                 results = run_reopt(m1, p)
                 # demand tier 1 limit = flat load = 100, so no demand charge should be present in Tier 2
                 @test sum(value.(m1[Symbol(:dvPeakDemandTOU)][:,2])) ≈ 0.0 atol=1e-6
+                @test sum(value.(m1[Symbol(:dvGridPurchase)][:,2])) ≈ 0.0 atol=1e-6
                 @test (results["Financial"]["lcc"]) ≈ 1.092312443e6 rtol=1e-6
             end
 
