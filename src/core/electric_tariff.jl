@@ -111,8 +111,8 @@ function ElectricTariff(;
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[],
-    electric_demand_bigM::Union{Float64, Nothing}=1.0e6,
-    electric_energy_bigM::Union{Float64, Nothing}=1.0e6
+    electric_demand_bigM::Union{Float64, Nothing}=1.0e9,
+    bigM_hourly_load::AbstractVector{<:Real}=Real[]
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 

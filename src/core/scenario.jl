@@ -768,11 +768,30 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
+    # set big M's for demand and energy charges
+    if !isempty(storage.types.elec)
+        added_power = sum(storage.attr[b].max_kw for b in storage.types.elec)
+        added_energy = sum(storage.attr[b].max_kwh for b in storage.types.elec)
+    else 
+        added_power = 1.0e-3
+        added_energy = 1.0e-3
+    end
+
+    bigM_hourly_load = (electric_load.loads_kw  .+
+                    space_heating_load.loads_kw .+ 
+                    process_heat_load.loads_kw .+ 
+                    dhw_load.loads_kw .+ 
+                    cooling_load.loads_kw_thermal
+                        )
+    electric_demand_bigM = 2 * maximum(bigM_hourly_load + 99*electric_load.loads_kw)
+    
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
                                         year=electric_load.year,
                                         NEM=electric_utility.net_metering_limit_kw > 0, 
-                                        time_steps_per_hour=settings.time_steps_per_hour
+                                        time_steps_per_hour=settings.time_steps_per_hour,
+                                        bigM_hourly_load=bigM_hourly_load,
+                                        electric_demand_bigM=electric_demand_bigM
                                         )
     else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
@@ -781,8 +800,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,
                                             year=electric_load.year,
-                                            time_steps_per_hour=settings.time_steps_per_hour
-        )
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            bigM_hourly_load=bigM_hourly_load,
+                                            electric_demand_bigM=electric_demand_bigM
+                                        )
     end
 
     # ASHP
