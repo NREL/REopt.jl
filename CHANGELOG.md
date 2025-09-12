@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## tariff-bigM-updates
+### Fixed 
+- fixed a bug in which demand and energy charges are applied to incorrect tiers in instances where tiered rates decrease as consumption increases, and the limits on the last tier are very large.
+
 ## misc-defaults
 ### Changed
 Update the following inputs from the previous --> new values:
