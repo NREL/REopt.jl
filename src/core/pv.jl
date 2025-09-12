@@ -14,7 +14,7 @@
     existing_kw::Real=0,
     min_kw::Real=0,
     max_kw::Real=1.0e9, # max new DC capacity (beyond existing_kw)
-    installed_cost_per_kw::Real=1790.0,
+    installed_cost_per_kw::Union{Real, AbstractVector{<:Real}} = Float64[], # defaults to avg_installed_cost_per_kw for the determined size class as specified in data/pv/pv_defaults.json. Note that mount_premium scaling factors are applied for ground-mount systems based on array_type. 
     om_cost_per_kw::Real=18.0,
     degradation_fraction::Real=0.005,
     macrs_option_years::Int = 5,

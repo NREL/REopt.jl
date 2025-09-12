@@ -25,7 +25,8 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## misc-defaults
+
+## v0.54.0
 ### Changed
 Update the following inputs from the previous --> new values:
 - `Financial.offtaker_discount_rate_fraction`: 0.0638 --> 0.0624
@@ -49,17 +50,23 @@ Update the following inputs from the previous --> new values:
         "commercial"=> 4760.0, --> 5776.0
         "medium"=> 3137.0, --> 3807.0
         "large"=> 2386.0 --> 2896.0)
-
-## Develop
+- Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
+- Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
+- Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
+- Require NREL Developer API email set as ENV["NREL_DEVELOPER_EMAIL"] = 'your contact email' for CST runs (also requires ENV["NREL_DEVELOPER_API_KEY"])
 ### Added
 - Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
 - Added **cycle_fade_fraction** as an input for portion of BESS that is tied to each cycle fade coefficient.
 - Added **total_residual_kwh** output which captures healthy residual battery capacity due to degradation and the replacement strategy
-- Added ARM version of SAM library file `src/sam/libssc_arm.dylib`, which can be renamed to `libssc.dylib` for running REopt.jl locally on an ARM Mac. 
-### Changed
-- Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
-- Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
-- Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
+- Added ARM version of SAM library file `src/sam/libssc_arm.dylib`, which can be renamed to `libssc.dylib` for running REopt.jl locally on an ARM Mac.
+- Added new file `src/core/cst.jl` with new technology **CST**, which provides heating as output; technology-specific sets and results have been updated and added accordingly.
+- Added new file `src/core/cst_ssc.jl` to interface with SAM when populating inputs (i.e., performance profile) with new technology **CST**.
+- Added to file `src/core/energy_storage/thermal_storage.jl` with new technology **HighTempThermalStorage**, which stores heat for industrial processes primarily; technology-specific sets have been updated and added accordingly.
+- Added new file `src/results/cst.jl` to provide results from new technology **CST**.
+- Added to file `src/results/thermal_storage.jl` to provide results from new storage technology **HighTempThermalStorage**.
+- Added new file `test/scenarios/cst.json` with new test for technologies **CST**.
+### Fixed
+- Corrected pv_defaults.jl "Small Commercial" "om_premium" from 0.95 to 1.0 
 
 ## v0.53.2
 ### Fixed
