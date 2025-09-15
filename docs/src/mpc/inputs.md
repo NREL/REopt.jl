@@ -237,6 +237,11 @@ MPC uses the standard [Settings](@ref) struct.
 REopt.Settings
 ```
 
+## Site
+```@docs
+REopt.MPCSite
+```
+
 ## MPCLimits
 ```@docs
 REopt.MPCLimits

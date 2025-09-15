@@ -53,9 +53,9 @@ end
 
 """
 MPC `ElectricTariff` results keys:
-- `energy_cost`
-- `demand_cost`
-- `export_benefit`
+- `energy_cost` Cost of energy from the grid in \$/kWh
+- `demand_cost` Cost of power from the grid in \$/kW
+- `export_benefit` Export credits in \$/kWh
 """
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()

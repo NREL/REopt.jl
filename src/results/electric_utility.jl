@@ -101,11 +101,15 @@ end
 
 """
 MPC `ElectricUtility` results keys:
-- `energy_supplied_kwh` 
-- `electric_to_storage_series_kw`
-- `electric_to_load_series_kw`
+- `energy_supplied_kwh` Total energy supplied from the grid in kWh
+- `electric_to_storage_series_kw` Vector of power drawn from the grid to charge the battery.
+- `electric_to_load_series_kw` Vector of power drawn from the grid to serve load.
 - `electric_to_electrolyzer_series_kw` Vector of power drawn from the grid to be used by electrolyzer.
 - `electric_to_compressor_series_kw` Vector of power drawn from the grid to be used by compressor.
+- `emissions_series_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
+- `emissions_series_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
+- `emissions_series_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
+- `emissions_series_tonnes_PM25` # Total tons of PM25 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchsaes. Otherwise, it accounts for emissions offset from any export to the grid.
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()

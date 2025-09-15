@@ -402,7 +402,7 @@ end
 `MPCHydrogenLoad` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-    loads_kg::Array{Real,1} = Real[], # Hydrogen loads in kg
+    loads_kg::Array{Real,1} = Real[], # Hydrogen loads in kg; must be equal to the length of loads_kw
 ```
 """
 Base.@kwdef struct MPCHydrogenLoad
@@ -432,7 +432,7 @@ end
 `MPCProcessHeatLoad` is an optional REopt MPC input with the following keys and default values:
 
 ```julia
-    heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Process heat loads in MMBTU per hour
+    heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Process heat loads in MMBTU per hour; must be equal to the length of loads_kw
 ```
 """
 struct MPCProcessHeatLoad
