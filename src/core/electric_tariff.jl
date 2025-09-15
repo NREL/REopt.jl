@@ -110,9 +110,7 @@ function ElectricTariff(;
     demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
-    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[],
-    electric_demand_bigM::Union{Float64, Nothing}=1.0e9,
-    bigM_hourly_load::AbstractVector{<:Real}=Real[]
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 
@@ -328,30 +326,6 @@ function ElectricTariff(;
     if !isempty(coincident_peak_load_charge_per_kw)
         coincpeak_periods = collect(eachindex(coincident_peak_load_charge_per_kw))
     end
-
-    if n_monthly_demand_tiers > 1
-        for mth in 1:12
-            for n in 2:n_monthly_demand_tiers
-                monthly_demand_tier_limits[mth, n] = min(electric_demand_bigM, monthly_demand_tier_limits[mth, n])
-            end
-        end
-    end
-    if n_energy_tiers > 1
-        for mth in 1:12
-            monthly_bigM = sum(bigM_hourly_load[ts] for ts in time_steps_monthly[mth])
-            for u in 2:n_energy_tiers
-                energy_tier_limits[mth, u] = min(monthly_bigM, energy_tier_limits[mth, u])
-            end
-        end
-    end
-    if n_tou_demand_tiers > 1
-        for r in 1:length(tou_demand_tier_limits[:,1])
-            for e in 2:n_tou_demand_tiers
-                tou_demand_tier_limits[r, e] = min(electric_demand_bigM, tou_demand_tier_limits[r, e])
-            end
-        end
-    end
-
 
     ElectricTariff(
         energy_rates,
