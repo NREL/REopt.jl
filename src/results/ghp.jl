@@ -31,7 +31,7 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     if ghp_option_chosen >= 1
         
-        r["test_hybrid_case"] = p.s.ghp_option_list[ghp_option_chosen].test_hybrid_case
+        r["hybrid_solution_type"] = p.s.ghp_option_list[ghp_option_chosen].hybrid_solution_type
         r["solve_time_min"] = p.s.ghp_option_list[ghp_option_chosen].solve_time_min
         r["number_of_boreholes_nonhybrid"] = p.s.ghp_option_list[ghp_option_chosen].number_of_boreholes_nonhybrid
         r["number_of_boreholes_auto_guess"] = p.s.ghp_option_list[ghp_option_chosen].number_of_boreholes_auto_guess

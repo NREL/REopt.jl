@@ -125,7 +125,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
 
     # Process and populate these parameters needed more directly by the model
     om_cost_year_one::Float64 = NaN
-    test_hybrid_case::String = "" # automatic_guess_correct, flipped_guess, nonhybrid_solution
+    hybrid_solution_type::String = "" # automatic_guess_correct, flipped_guess, nonhybrid_solution
     number_of_boreholes_auto_guess::Float64 = -1.0
     number_of_boreholes_flipped_guess::Float64 = -1.0
     number_of_boreholes_nonhybrid::Float64 = -1.0
