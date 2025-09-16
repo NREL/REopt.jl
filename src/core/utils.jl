@@ -153,7 +153,9 @@ function dictkeys_tosymbols(d::Dict)
             "thermal_loads_ton",
             "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
-            "production_factor_series", 
+            "production_factor_series",
+            "production_factor",
+            "elec_consumption_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
             "blended_industrial_reference_percents",
@@ -595,6 +597,14 @@ function check_api_key()
     if isempty(get(ENV, "NREL_DEVELOPER_API_KEY", ""))
         throw(@error("No NREL Developer API Key provided when trying to call PVWatts or Wind Toolkit.
                     Within your Julia environment, specify ENV['NREL_DEVELOPER_API_KEY']='your API key'
+                    See https://nrel.github.io/REopt.jl/dev/ for more information."))
+    end
+end
+
+function check_api_email()
+    if isempty(get(ENV, "NREL_DEVELOPER_EMAIL", ""))
+        throw(@error("No NREL Developer API Email provided when trying to call PVWatts or Wind Toolkit.
+                    Within your Julia environment, specify ENV['NREL_DEVELOPER_EMAIL']='your contact email'
                     See https://nrel.github.io/REopt.jl/dev/ for more information."))
     end
 end

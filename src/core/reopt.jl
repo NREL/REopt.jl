@@ -359,10 +359,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
-			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
-			@constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
-				m[:dvProductionToWaste][t,q,ts] == 0.0
-			)
         end
 
         if !isempty(p.techs.pbi)
@@ -428,15 +424,24 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	for b in p.s.storage.types.elec
 		# ElectricStorageCapCost used for calculating O&M and is based on initial costs, not net present costs
+		# If costing battery degradation, omit installed_cost_per_kwh here, its accounted for in degr_cost expression
 		m[:ElectricStorageCapCost] += (
-			sum( p.s.storage.attr[b].installed_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
-			sum( p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.elec )
+			p.s.storage.attr[b].installed_cost_per_kw * m[:dvStoragePower][b] + 
+			p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b]
 		)
 		if (p.s.storage.attr[b].installed_cost_constant != 0) || (p.s.storage.attr[b].replace_cost_constant != 0)
 			add_to_expression!(TotalStorageCapCosts, p.third_party_factor * sum(p.s.storage.attr[b].net_present_cost_cost_constant * m[:binIncludeStorageCostConstant][b] ))
 			m[:ElectricStorageCapCost] += sum(p.s.storage.attr[b].installed_cost_constant * m[:binIncludeStorageCostConstant][b])
 		end
 		m[:ElectricStorageOMCost] += p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * m[:ElectricStorageCapCost]
+
+		degr_bool = p.s.storage.attr[b].model_degradation
+		if degr_bool
+			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost will include costs to be incurred for power electronics and the cost constant."
+            add_to_expression!(
+				m[:ElectricStorageOMCost], -1.0 * p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b]
+			)
+        end
 	end
 
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
@@ -711,6 +716,9 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.s.storage.types.hot)
 			@variable(m, dvHeatToStorage[p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
 			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
+			if !isempty(p.techs.steam_turbine)
+				@variable(m, dvHeatFromStorageToTurbine[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0)
+			end
     	end
 	end
 
@@ -721,8 +729,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     if !isempty(p.techs.steam_turbine)
 		if !isempty(p.techs.can_supply_steam_turbine)
 	        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
-		else
-			throw(@error("Steam turbine is present, but set p.techs.can_supply_steam_turbine is empty."))
+		elseif !any(p.s.storage.attr[b].can_supply_steam_turbine for b in p.s.storage.types.hot)
+			throw(@error("Steam turbine is present, but set p.techs.can_supply_steam_turbine is empty and no storage is compatible with steam turbine."))
 		end
     end
 
