@@ -644,7 +644,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
                 hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
-            else
+            elseif hybrid_ghx_sizing_method !== nothing
                 @warn "Unknown hybrid GHX sizing model provided"
             end
 
