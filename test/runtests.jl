@@ -25,6 +25,25 @@ elseif "CPLEX" in ARGS
     end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
+        @testset "Federal defaults" begin
+            input_data = JSON.parsefile("scenarios/federal_defaults.json")
+            
+            # Fill in GHP so don't have to call GHPGHX.jl
+            ghp_response = JSON.parsefile("scenarios/ghpghx_response.json")
+            input_data["GHP"]["ghpghx_responses"] = [ghp_response]
+
+            s = Scenario(input_data)
+
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1])
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
+                    @test getfield(tech_struct, incentive_input_name) == 0
+                end
+            end
+            for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                @test getfield(s.storage.attr["ElectricStorage"], incentive_input_name) == 0
+            end
+        end
+
         @testset "Prevent simultaneous charge and discharge" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
