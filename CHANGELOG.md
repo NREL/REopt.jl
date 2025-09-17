@@ -25,10 +25,76 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## test-runners
+
+## v0.54.0
+### Changed
+Update the following inputs from the previous --> new values:
+- `Financial.offtaker_discount_rate_fraction`: 0.0638 --> 0.0624
+- `Financial.owner_discount_rate_fraction`: 0.0638 --> 0.0624
+- `Financial.elec_cost_escalation_rate_fraction`: 0.017 --> 0.0166
+- `Financial.existing_boiler_fuel_cost_escalation_rate_fraction `: 0.015 --> 0.0348
+- `Financial.boiler_fuel_cost_escalation_rate_fraction `: 0.015 --> 0.0348
+- `Financial.chp_fuel_cost_escalation_rate_fraction `: 0.015 --> 0.0348
+- `Financial.generator_fuel_cost_escalation_rate_fraction `: 0.012 --> 0.0197
+- `Generator.fuel_cost_per_gallon`: 3.61 --> 2.25
+- `ColdThermalStorage`, `HotThermalStorage`, `ElectricStorage` `macrs_option_years`: 7 --> 5
+-  `CHP`, `ColdThermalStorage`, `HotThermalStorage`, `ElectricStorage`, `PV`, `Wind` `macrs_bonus_fraction` 0.6 --> 1.0
+- `GHP.macrs_bonus_fraction`: 0.4 --> 0.0
+- `GHP.macrs_option_years`: 5 --> 0
+- `SteamTurbine.macrs_bonus_fraction`: 0 --> 1.0 
+- `SteamTurbine.macrs_option_years`: 0 --> 5 (in order for 100% bonus depr to apply)
+- `CHP.federal_itc_fraction`: 0.3 --> 0.0
+- `Wind.om_cost_per_kw`: 36.0 --> 42.0 
+- `Wind.size_class_to_installed_cost` = Dict(
+        "residential"=> 6339.0, --> 7692.0
+        "commercial"=> 4760.0, --> 5776.0
+        "medium"=> 3137.0, --> 3807.0
+        "large"=> 2386.0 --> 2896.0)
+- Changed **cycle_fade_coefficient** input to be a vector and accept vector of inputs.
+- Changed default inputs for degradation module to match parameters for NMC-Gr Kokam 75Ah cell.
+- Changed residual battery fraction calculation to calculate useful healthy capacity for residual value and capacity calculations.
+- Require NREL Developer API email set as ENV["NREL_DEVELOPER_EMAIL"] = 'your contact email' for CST runs (also requires ENV["NREL_DEVELOPER_API_KEY"])
 ### Added
+- Added constraints in `src/constraints/battery_degradation.jl` to allow use of segmented cycle fade coefficients in the model.
+- Added **cycle_fade_fraction** as an input for portion of BESS that is tied to each cycle fade coefficient.
+- Added **total_residual_kwh** output which captures healthy residual battery capacity due to degradation and the replacement strategy
+- Added ARM version of SAM library file `src/sam/libssc_arm.dylib`, which can be renamed to `libssc.dylib` for running REopt.jl locally on an ARM Mac.
+- Added new file `src/core/cst.jl` with new technology **CST**, which provides heating as output; technology-specific sets and results have been updated and added accordingly.
+- Added new file `src/core/cst_ssc.jl` to interface with SAM when populating inputs (i.e., performance profile) with new technology **CST**.
+- Added to file `src/core/energy_storage/thermal_storage.jl` with new technology **HighTempThermalStorage**, which stores heat for industrial processes primarily; technology-specific sets have been updated and added accordingly.
+- Added new file `src/results/cst.jl` to provide results from new technology **CST**.
+- Added to file `src/results/thermal_storage.jl` to provide results from new storage technology **HighTempThermalStorage**.
+- Added new file `test/scenarios/cst.json` with new test for technologies **CST**.
+### Fixed
+- Corrected pv_defaults.jl "Small Commercial" "om_premium" from 0.95 to 1.0 
+
+## v0.53.2
+### Fixed
+- `PV` `size_class` and cost defaults not updating correctly when both `max_kw` and the site's land or roof space are input
+
+## v0.53.1
+### Fixed
+- Issue with `CHP` and `PV` cost curves when with-incentives segments is greater than no-incentives segments
+
+## v0.53.0
+### Added
+- Add new **ElectricStorage** input fields **installed_cost_constant**, **replace_cost_constant** (both default to 0), and **cost_constant_replacement_year** (defaults to year 10).
+- Added new binary variable **binIncludeStorageCostConstant** which is indexed on `p.s.storage.types.elec`
+- Added `ElectricStorage.om_cost_fraction_of_installed_cost` input, default, and model expression as the main battery O&M
+- New inputs for `PV` to determine default cost parameters and optional piece-wise linear (PWL) cost curves: `size_class`, `tech_sizes_for_cost_curve`, and `use_detailed_cost_curve`. The `installed_cost_per_kw` can also now be an array to go along with the `tech_sizes_for_cost_curve` input.
+- New function for calculating `PV` size class and cost parameters from other inputs
 - Memory-clearing commands after each JuMP model instance in `runtests.jl` to avoid memory buildup which were slowing down Actions test job
 - Added back `ubuntu` OS as an additional runner OS for the tests Action job, now that memory buildup is reduced (removed a year ago due to memory crashing the runner)
+- Add `installed_cost...` for `ExistingBoiler` and `ExistingChiller` which is incurred in the BAU scenario, and may be avoided with other heating and cooling technologies in the Optimal scenario.
+### Changed
+- Updated default `ElectricStorage` cost values per ATB 2024
+- Zeroed-out `ElectricStorage` replacement costs because they are now included in the default O&M as fraction of installed cost
+- `PV.installed_cost_per_kw` and `PV.om_cost_per_kw` does not have a fixed default value, and instead it is dependent on other inputs such as the `ElectricLoad.annual_kwh` and `Site.roof_squarefeet` to determine the `size_class` based on an estimated `PV` size which is calculated from those inputs.
+- The default `installed_cost_per_kw` is a fixed/single value for the calculated `size_class`, but if `use_detailed_cost_curve` is set to `true`, then it will use a 2-point PWL cost curve with `tech_sizes_for_cost_curve`.
+### Fixed
+- Correctly apply zero/no MACRS for `ElectricStorage`, `HotThermalStorage`, and `ColdThermalStorage` which were always using 5 years MACRS schedules if not the default 7
+- Fixed bug by setting `min_initial_capital_costs_before_incentives` and `max_initial_capital_costs_before_incentives` to nothing for BAU Scenario
+- Fixed handling of non-hourly (e.g. 15-min interval) fuel cost
 
 ## v0.52.0
 ### Added
@@ -185,7 +251,7 @@ Classify the change according to the following categories:
 - Refactored various functions to ensure **ProcessHeatLoad** is processed correctly in line with other heating loads.
 - When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 - Refactored heating flow constraints to be in ./src/constraints/thermal_tech_constraints.jl instead of its previous separate locations in the storage and turbine constraints.
-- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults.
+- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
 ### Fixed
 - Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`

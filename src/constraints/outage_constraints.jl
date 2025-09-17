@@ -88,6 +88,7 @@ function add_outage_cost_constraints(m,p)
                     sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec) + 
                     sum( p.s.storage.attr[b].net_present_cost_per_kwh * p.s.storage.attr[b].max_kwh for b in p.s.storage.types.nonhydrogen) + 
                     sum( p.s.storage.attr[b].net_present_cost_per_kg * p.s.storage.attr[b].max_kg for b in p.s.storage.types.hydrogen)
+                    sum(p.s.storage.attr[b].net_present_cost_cost_constant for b in p.s.storage.types.elec)
                 ) * (1-m[:binMGStorageUsed])  # Big-M is capital cost of battery with max size kw and kwh
             )
         )

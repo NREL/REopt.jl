@@ -1,6 +1,13 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_export_constraints(m, p; _n="")
 
+    ## Imports and Exports must be no greater than the transmission limit
+    m[Symbol("ImportExportLimitCon"*_n)] = @constraint(m, [ts in p.time_steps_with_grid],
+    sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for t in p.techs.elec, u in p.export_bins_by_tech[t])
+        + sum(sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers))
+        <= p.s.electric_utility.transmission_limit_kw
+    )
+
     ##Constraint (8e): Production export and curtailment no greater than production
     @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
         p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
@@ -52,7 +59,7 @@ function add_export_constraints(m, p; _n="")
             @warn "Adding binary variable for net metering choice. Some solvers are slow with binaries."
 
             # Good to bound the benefit - we use max_bene as a lower bound because the benefit is treated as a negative cost
-            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*p.pwf_e*p.hours_per_time_step*10
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*p.pwf_e*p.hours_per_time_step*100
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
@@ -141,7 +148,7 @@ function add_export_constraints(m, p; _n="")
         else
             binWHL = @variable(m, binary = true)
             @warn "Adding binary variable for wholesale export choice. Some solvers are slow with binaries."
-            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*p.pwf_e*p.hours_per_time_step*100
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*p.pwf_e*p.hours_per_time_step*1000 + 1e8
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both

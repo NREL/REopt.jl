@@ -34,13 +34,14 @@
 - `electric_soc_series_fraction` ElectricStorage state of charge series in every outage modeled
 
 !!! warn
-	The output keys for "Outages" are subject to change.
+	The output keys for `Outages` are subject to change.
 
 !!! note 
-	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_start_time_steps` and `ElectricUtility.outage_durations` inputs.
+	This `Outages` section is only added to results when outages are modeled via the `ElectricUtility.outage_start_time_steps` and `ElectricUtility.outage_durations` inputs. 
+	If the single outage model is used, the outage is included in all time series outputs. See [`ElectricUtility`](@ref ElectricUtility) for an explanation of these outage modeling options.
 	
 !!! warn
-	The Outage results can be very large when many outages are modeled and can take a long time to generate.
+	The `Outages` results can be very large when many outages are modeled and can take a long time to generate.
 """
 function add_outage_results(m, p, d::Dict)
 	# Adds the `Outages` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.

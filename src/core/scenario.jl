@@ -29,6 +29,7 @@ struct Scenario <: AbstractScenario
     electrolyzer::Union{Electrolyzer, Nothing}
     compressor::Union{Compressor, Nothing}
     fuel_cell::Union{FuelCell, Nothing}
+    cst::Union{CST, Nothing}
     ashp::Union{ASHP, Nothing}
     ashp_wh::Union{ASHP, Nothing}
 end
@@ -45,6 +46,7 @@ A Scenario struct can contain the following keys:
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [HotThermalStorage](@ref) (optional)
+- [HighTempThermalStorage](@ref) (optional)
 - [ColdThermalStorage](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
@@ -66,6 +68,9 @@ A Scenario struct can contain the following keys:
 - [FuelCell](@ref) (optional)
 - [HydrogenStorage](@ref) (optional)
 - [ASHP](@ref) (optional)
+- [CST](@ref) (optional)
+- [ASHPSpaceHeater](@ref) (optional)
+- [ASHPWaterHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -94,20 +99,39 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
+
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
+    latitude=site.latitude, longitude=site.longitude, 
+    time_steps_per_hour=settings.time_steps_per_hour,
+    off_grid_flag = settings.off_grid_flag
+    )
     
     pvs = PV[]
+    electric_load_annual_kwh = sum(electric_load.loads_kw) / settings.time_steps_per_hour
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
             for (i, pv) in enumerate(d["PV"])
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag, 
-                            latitude=site.latitude))
+                push!(pvs, PV(
+                    ; dictkeys_tosymbols(pv)...,
+                    off_grid_flag = settings.off_grid_flag, 
+                    latitude = site.latitude,
+                    electric_load_annual_kwh = electric_load_annual_kwh,
+                    site_land_acres = site.land_acres,
+                    site_roof_squarefeet = site.roof_squarefeet
+                ))
             end
         elseif typeof(d["PV"]) <: AbstractDict
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
-                        latitude=site.latitude))
+            push!(pvs, PV(
+                ; dictkeys_tosymbols(d["PV"])..., 
+                off_grid_flag = settings.off_grid_flag, 
+                latitude = site.latitude,
+                electric_load_annual_kwh = electric_load_annual_kwh,
+                site_land_acres = site.land_acres,
+                site_roof_squarefeet = site.roof_squarefeet
+            ))
         else
             throw(@error("PV input must be Dict or Dict[]."))
         end
@@ -126,11 +150,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             )
     end
 
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                    latitude=site.latitude, longitude=site.longitude, 
-                                    time_steps_per_hour=settings.time_steps_per_hour,
-                                    off_grid_flag = settings.off_grid_flag
-                                )
+
 
     if settings.off_grid_flag
         if haskey(d, "ElectricUtility")
@@ -188,6 +208,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "HotThermalStorage")
         params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
         storage_structs["HotThermalStorage"] = HotThermalStorage(params, financial, settings.time_steps_per_hour)
+    end
+    if haskey(d, "HighTempThermalStorage")
+        params = HighTempThermalStorageDefaults(; dictkeys_tosymbols(d["HighTempThermalStorage"])...)
+        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
@@ -288,6 +312,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     max_heat_demand_kw = 0.0
+    total_heating_load_series_kw = zeros(8760 * settings.time_steps_per_hour)
 
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
@@ -300,7 +325,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         time_steps_per_hour=settings.time_steps_per_hour,
                                         existing_boiler_efficiency = existing_boiler_efficiency
                                         )
-        max_heat_demand_kw = maximum(dhw_load.loads_kw)
+        total_heating_load_series_kw .+= dhw_load.loads_kw
     else
         dhw_load = HeatingLoad(;
             load_type = "domestic_hot_water", 
@@ -322,7 +347,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             existing_boiler_efficiency = existing_boiler_efficiency
                                             )
-        max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
+        total_heating_load_series_kw .+= space_heating_load.loads_kw
     else
         space_heating_load = HeatingLoad(; 
             load_type = "space_heating",        
@@ -345,6 +370,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             )
 
         max_heat_demand_kw = maximum(process_heat_load.loads_kw .+ max_heat_demand_kw)
+                                    
+        total_heating_load_series_kw .+= process_heat_load.loads_kw
     else
         process_heat_load = HeatingLoad(;
                 load_type = "process_heat",                
@@ -427,6 +454,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    max_heat_demand_kw = maximum(total_heating_load_series_kw)
     if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
@@ -838,8 +866,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # Electric Heater
     electric_heater = nothing
-    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
+    if haskey(d, "ElectricHeater") && (!haskey(d["ElectricHeater"], "max_mmbtu_per_hour") || d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
+    end
+
+    cst = nothing
+    if haskey(d, "CST") && (!haskey(d["CST"], "max_kw") || d["CST"]["max_kw"] > 0.0)
+        if !haskey(d,"Site") || !haskey(d["Site"], "land_acres")
+            throw(@error("Site.land_acres not provided as an input, which is required when CST is included as a technology."))
+        end
+        cst_ssc_response = run_ssc(d)
+        d["CST"]["production_factor"] = cst_ssc_response["thermal_production_series"]
+        d["CST"]["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption_series"]
+        if haskey(d["CST"], "SSC_Inputs")
+            pop!(d["CST"],"SSC_Inputs")
+        end
+        cst = CST(;dictkeys_tosymbols(d["CST"])...)
     end
 
     # ASHP
@@ -929,7 +971,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         wind,
         storage,
         electric_tariff, 
-        electric_load, 
+        electric_load,
         electric_utility, 
         financial,
         generator,
@@ -949,9 +991,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
         electric_heater,
-        electrolyzer,
-        compressor,
-        fuel_cell,
+        cst,
         ashp,
         ashp_wh
     )

@@ -108,6 +108,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_electric_heater_results(m, p, d; _n)
     end
 
+    if "CST" in p.techs.electric_heater
+        add_concentrating_solar_results(m, p, d; _n)
+    end
+
     if "ASHPSpaceHeater" in p.techs.ashp
         add_ashp_results(m, p, d; _n)
     end
@@ -184,6 +188,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "lifecycle_production_incentive_after_tax"),
         ("Financial", "lifecycle_outage_cost"),
         ("Financial", "lifecycle_MG_upgrade_and_fuel_cost"),
+        ("Financial", "initial_capital_costs_after_incentives"),
+        ("Financial", "lifecycle_capital_costs"),
         ("ElectricTariff", "year_one_energy_cost_before_tax"),
         ("ElectricTariff", "year_one_demand_cost_before_tax"),
         ("ElectricTariff", "year_one_fixed_cost_before_tax"),
@@ -227,8 +233,10 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ExistingBoiler", "year_one_fuel_cost_after_tax"),
         ("ExistingBoiler", "annual_thermal_production_mmbtu"),
         ("ExistingBoiler", "annual_fuel_consumption_mmbtu"),
+        ("ExistingBoiler", "size_mmbtu_per_hour"),
         ("ExistingChiller", "annual_thermal_production_tonhour"),
         ("ExistingChiller", "annual_electric_consumption_kwh"),
+        ("ExistingChiller", "size_ton"),
         ("Site", "annual_onsite_renewable_electricity_kwh"),
         ("Site", "onsite_renewable_electricity_fraction_of_elec_load"),
         ("Site", "onsite_renewable_energy_fraction_of_total_load"),

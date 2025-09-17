@@ -3,16 +3,16 @@
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
     om_cost_escalation_rate_fraction::Real = 0.025,
-    elec_cost_escalation_rate_fraction::Real = 0.017,
-    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015, 
-    boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
-    chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
-    generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+    elec_cost_escalation_rate_fraction::Real = 0.0166,
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.0348, 
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.0197,
     offtaker_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
-    offtaker_discount_rate_fraction::Real = 0.0638,
+    offtaker_discount_rate_fraction::Real = 0.0624,
     third_party_ownership::Bool = false,
     owner_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
-    owner_discount_rate_fraction::Real = 0.0638,
+    owner_discount_rate_fraction::Real = 0.0624,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
     microgrid_upgrade_cost_fraction::Real = 0.0
@@ -45,7 +45,7 @@
         end
     ```
 """
-struct Financial
+mutable struct Financial
     om_cost_escalation_rate_fraction::Float64
     elec_cost_escalation_rate_fraction::Float64
     existing_boiler_fuel_cost_escalation_rate_fraction::Float64
@@ -81,16 +81,16 @@ struct Financial
     function Financial(;
         off_grid_flag::Bool = false,
         om_cost_escalation_rate_fraction::Real = 0.025,
-        elec_cost_escalation_rate_fraction::Real = 0.017,
-        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015,
-        boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
-        chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
-        generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+        elec_cost_escalation_rate_fraction::Real = 0.0166,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.0348,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.0197,
         offtaker_tax_rate_fraction::Real = 0.26,
-        offtaker_discount_rate_fraction::Real = 0.0638,
+        offtaker_discount_rate_fraction::Real = 0.0624,
         third_party_ownership::Bool = false,
         owner_tax_rate_fraction::Real = 0.26,
-        owner_discount_rate_fraction::Real = 0.0638,
+        owner_discount_rate_fraction::Real = 0.0624,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
         microgrid_upgrade_cost_fraction::Real = 0.0,
@@ -213,7 +213,6 @@ struct Financial
         )
     end
 end
-
 
 function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     # Assumption: grid emissions occur at site at 150m above ground
