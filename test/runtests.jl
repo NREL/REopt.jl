@@ -3358,6 +3358,21 @@ else  # run HiGHS tests
             GC.gc()             
         end
 
+        @testset "CST + High-temperature TES" begin
+            # TODO add a test that pairs with a steam turbine for a CSP system
+            d = JSON.parsefile("./scenarios/cst.json")
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt(m1, p)
+            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 272.49 atol=0.1
+            @test results["CST"]["size_kw"] ≈ 100.0 atol=0.001
+            @test results["CST"]["size_mmbtu_per_hour"] ≈ 100.0 / REopt.KWH_PER_MMBTU atol=1.0e-3
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 717087.86 rtol=1.0e-4
+            @test results["HighTempThermalStorage"]["size_kwh"] ≈ 10000.0 atol=0.1
+            @test results["HotThermalStorage"]["size_gal"] ≈ 1000.0 atol=0.1
+        end
+
         @testset "Custom REopt logger" begin
             
             # Throw a handled error

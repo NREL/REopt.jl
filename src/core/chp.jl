@@ -41,10 +41,10 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     can_serve_process_heat::Bool = true # If CHP can supply heat to the process heating load
     is_electric_only::Bool = false # If CHP is a prime generator that does not supply heat
 
-    macrs_option_years::Int = 5 #Note: default may change if Site.sector is not "commercial/industrial"
-    macrs_bonus_fraction::Float64 = 0.6 #Note: default may change if Site.sector is not "commercial/industrial"
+    macrs_option_years::Int = 5 # Notes: this value cannot be 0 if aiming to apply 100% bonus depreciation; default may change if Site.sector is not "commercial/industrial"
+    macrs_bonus_fraction::Float64 = 1.0 #Note: default may change if Site.sector is not "commercial/industrial"
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.3 #Note: default may change if Site.sector is not "commercial/industrial"
+    federal_itc_fraction::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -116,7 +116,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     is_electric_only::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
@@ -265,10 +265,10 @@ function CHP(d::Dict;
         chp.size_class = chp_defaults_response["size_class"]
     end
 
-    #if chp_defaults not used to update federal_itc_fraction, use default of 0.3
+    #if chp_defaults not used to update federal_itc_fraction, use default of 0.0
     if isnan(chp.federal_itc_fraction)
-        @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.3"
-        setproperty!(chp, :federal_itc_fraction, 0.3)
+        @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.0"
+        setproperty!(chp, :federal_itc_fraction, 0.0)
     end
 
     if chp.is_electric_only && (chp.thermal_efficiency_full_load > 0.0)
@@ -502,7 +502,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw * conflict_res_min_allowable_fraction_of_max
     end
 
-    federal_itc_fraction = 0.3
+    federal_itc_fraction = 0.0
     # Add ITC fraction 
     if is_electric_only && prime_mover in ["recip_engine", "combustion_turbine"]
         federal_itc_fraction = 0.0

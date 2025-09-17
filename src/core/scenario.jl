@@ -25,6 +25,7 @@ struct Scenario <: AbstractScenario
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
+    cst::Union{CST, Nothing}
     ashp::Union{ASHP, Nothing}
     ashp_wh::Union{ASHP, Nothing}
 end
@@ -41,6 +42,7 @@ A Scenario struct can contain the following keys:
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [HotThermalStorage](@ref) (optional)
+- [HighTempThermalStorage](@ref) (optional)
 - [ColdThermalStorage](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
@@ -56,7 +58,9 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
-- [ASHP](@ref) (optional)
+- [CST](@ref) (optional)
+- [ASHPSpaceHeater](@ref) (optional)
+- [ASHPWaterHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -201,6 +205,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
         storage_structs["HotThermalStorage"] = HotThermalStorage(d["HotThermalStorage"], financial, site, settings.time_steps_per_hour)
+    end
+    if haskey(d, "HighTempThermalStorage")
+        params = HighTempThermalStorageDefaults(; dictkeys_tosymbols(d["HighTempThermalStorage"])...)
+        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(d["ColdThermalStorage"], financial, site, settings.time_steps_per_hour)
@@ -810,8 +818,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # Electric Heater
     electric_heater = nothing
-    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
+    if haskey(d, "ElectricHeater") && (!haskey(d["ElectricHeater"], "max_mmbtu_per_hour") || d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
+    end
+
+    cst = nothing
+    if haskey(d, "CST") && (!haskey(d["CST"], "max_kw") || d["CST"]["max_kw"] > 0.0)
+        if !haskey(d,"Site") || !haskey(d["Site"], "land_acres")
+            throw(@error("Site.land_acres not provided as an input, which is required when CST is included as a technology."))
+        end
+        cst_ssc_response = run_ssc(d)
+        d["CST"]["production_factor"] = cst_ssc_response["thermal_production_series"]
+        d["CST"]["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption_series"]
+        if haskey(d["CST"], "SSC_Inputs")
+            pop!(d["CST"],"SSC_Inputs")
+        end
+        cst = CST(;dictkeys_tosymbols(d["CST"])...)
     end
 
     # ASHP
@@ -920,6 +942,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
         electric_heater,
+        cst,
         ashp,
         ashp_wh
     )
