@@ -2317,14 +2317,14 @@ else  # run HiGHS tests
             GC.gc()
 
             # Test hybrid GHP functionality
-            input_data = JSON.parsefile("scenarios/ghp_inputs_hybrid.json")
+            input_data_hybrid = JSON.parsefile("scenarios/ghp_inputs_hybrid.json")
 
-            hybrid_inputs = REoptInputs(input_data)
+            hybrid_inputs = REoptInputs(input_data_hybrid)
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             hybrid_results = run_reopt(m1, hybrid_inputs)
 
-            pop!(input_data["GHP"], "ghpghx_inputs", nothing)
-            non_hybrid_inputs = REoptInputs(input_data)
+            pop!(input_data_hybrid["GHP"], "ghpghx_inputs", nothing)
+            non_hybrid_inputs = REoptInputs(input_data_hybrid)
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             non_hybrid_results = run_reopt(m2, non_hybrid_inputs)
 
