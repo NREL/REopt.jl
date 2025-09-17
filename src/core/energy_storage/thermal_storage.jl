@@ -83,11 +83,67 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
+    can_supply_steam_turbine = false
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
+    supply_turbine_only::Bool = false
 end
 
+
+"""
+`HighTempThermalStorage` is an optional REopt input with the following keys and default values:
+
+```julia
+    fluid::String = "INCOMP::Nak"
+    min_kwh::Float64 = 0.0
+    max_kwh::Float64 = 0.0
+    hot_temp_degF::Float64 = 1065.0
+    cool_temp_degF::Float64 = 554.0
+    internal_efficiency_fraction::Float64 = 0.999999
+    soc_min_fraction::Float64 = 0.1
+    soc_init_fraction::Float64 = 0.5
+    installed_cost_per_kwh::Float64 = 86.0
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    om_cost_per_kwh::Float64 = 0.0
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
+    macrs_itc_reduction::Float64 = 0.5
+    total_itc_fraction::Float64 = 0.3
+    total_rebate_per_kwh::Float64 = 0.0
+    can_supply_steam_turbine::Bool = true
+    can_serve_dhw::Bool = false
+    can_serve_space_heating:Bool = false
+    can_serve_process_heat::Bool = true
+    one_direction_flow::Bool = false
+```
+"""
+Base.@kwdef struct HighTempThermalStorageDefaults <: AbstractThermalStorageDefaults
+    fluid::String = "INCOMP::NaK"
+    min_kwh::Float64 = 0.0
+    max_kwh::Float64 = 0.0
+    hot_temp_degF::Float64 = 1065.0
+    cool_temp_degF::Float64 = 554.0
+    internal_efficiency_fraction::Float64 = 0.999999
+    soc_min_fraction::Float64 = 0.1
+    soc_init_fraction::Float64 = 0.5
+    installed_cost_per_kwh::Float64 = 86.0
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    om_cost_per_kwh::Float64 = 0.0
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
+    macrs_itc_reduction::Float64 = 0.5
+    total_itc_fraction::Float64 = 0.3
+    total_rebate_per_kwh::Float64 = 0.0
+    can_supply_steam_turbine::Bool = true
+    can_serve_dhw::Bool = false
+    can_serve_space_heating::Bool = false
+    can_serve_process_heat::Bool = true
+    supply_turbine_only::Bool = false
+    one_direction_flow::Bool = false
+    num_charge_hours::Float64 = 4.0
+    num_discharge_hours::Float64 = 10.0
+end
 
 
 """
@@ -209,9 +265,11 @@ struct HotThermalStorage <: AbstractThermalStorage
     discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
+    can_supply_steam_turbine::Bool
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
+    supply_turbine_only::Bool
 
     function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
@@ -268,9 +326,99 @@ struct HotThermalStorage <: AbstractThermalStorage
             discharge_efficiency,
             net_present_cost_per_kwh,
             om_cost_per_kwh,
+            s.can_supply_steam_turbine,
             s.can_serve_dhw,
             s.can_serve_space_heating,
-            s.can_serve_process_heat
+            s.can_serve_process_heat,
+            s.supply_turbine_only
+        )
+    end
+end
+
+
+"""
+function HighTempThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+
+Construct HighTempThermalStorage struct from Dict with keys-val pairs from the 
+REopt HighTempThermalStorage and Financial inputs. 
+"""
+struct HighTempThermalStorage <: AbstractThermalStorage
+    fluid::String
+    hot_temp_degF::Float64
+    cool_temp_degF::Float64
+    internal_efficiency_fraction::Float64
+    soc_min_fraction::Float64
+    soc_init_fraction::Float64
+    thermal_decay_rate_fraction::Float64
+    macrs_option_years::Int
+    macrs_bonus_fraction::Float64
+    total_rebate_per_kwh::Float64
+    min_kw::Float64
+    max_kw::Float64
+    min_kwh::Float64
+    max_kwh::Float64
+    installed_cost_per_kwh::Float64
+    charge_efficiency::Float64
+    discharge_efficiency::Float64
+    net_present_cost_per_kwh::Float64
+    om_cost_per_kwh::Float64
+    can_supply_steam_turbine::Bool
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
+    supply_turbine_only::Bool
+    one_direction_flow::Bool
+    num_charge_hours::Float64
+    num_discharge_hours::Float64
+
+    function HighTempThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
+        # TODO: develop a storage sizing/costing model using delta-T from hot_temp_degF and cool_temp_degF, as is done in HotThermalStorage 
+        min_kw = s.min_kwh / max(s.num_charge_hours, s.num_discharge_hours)
+        max_kw = s.max_kwh / min(s.num_charge_hours, s.num_discharge_hours)
+    
+        charge_efficiency = s.internal_efficiency_fraction^0.5
+        discharge_efficiency = s.internal_efficiency_fraction^0.5
+      
+        net_present_cost_per_kwh = effective_cost(;
+            itc_basis = s.installed_cost_per_kwh,
+            replacement_cost = 0.0,
+            replacement_year = 100,
+            discount_rate = f.owner_discount_rate_fraction,
+            tax_rate = f.owner_tax_rate_fraction,
+            itc = s.total_itc_fraction,
+            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_bonus_fraction = s.macrs_bonus_fraction,
+            macrs_itc_reduction = s.macrs_itc_reduction
+        ) - s.total_rebate_per_kwh
+    
+        return new(
+            s.fluid,
+            s.hot_temp_degF,
+            s.cool_temp_degF,
+            s.internal_efficiency_fraction,
+            s.soc_min_fraction,
+            s.soc_init_fraction,
+            s.thermal_decay_rate_fraction,
+            s.macrs_option_years,
+            s.macrs_bonus_fraction,
+            s.total_rebate_per_kwh,
+            min_kw,
+            max_kw,
+            s.min_kwh,
+            s.max_kwh,
+            s.installed_cost_per_kwh,
+            charge_efficiency,
+            discharge_efficiency,
+            net_present_cost_per_kwh,
+            s.om_cost_per_kwh,
+            s.can_supply_steam_turbine,
+            s.can_serve_dhw,
+            s.can_serve_space_heating,
+            s.can_serve_process_heat,
+            s.supply_turbine_only,
+            s.one_direction_flow,
+            s.num_charge_hours,
+            s.num_discharge_hours
         )
     end
 end
