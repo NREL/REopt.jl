@@ -25,7 +25,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## arm-sam-lib
+## Develop
 ### Changed
 - Use ARM version of SAM library file if processor architecture is ARM
 
