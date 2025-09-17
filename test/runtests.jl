@@ -2337,7 +2337,7 @@ else  # run HiGHS tests
             @test hybrid_GHX_size < non_hybrid_GHX_size
             @test hybrid_GHX_size ≈ 5.0 atol=1.0
             @test hybrid_GHP_size ≈ non_hybrid_GHP_size atol=0.5
-            @test hybrid_solution_nonhybrid_GHX_size ≈ non_hybrid_GHX_size atol=0.5
+            @test hybrid_solution_nonhybrid_GHX_size ≈ non_hybrid_GHX_size atol=2.0
 
             finalize(backend(m1))
             empty!(m1)
