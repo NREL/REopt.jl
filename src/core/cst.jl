@@ -14,6 +14,7 @@ struct CST <: AbstractThermalTech
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
+    can_waste_heat::Bool
     charge_storage_only::Bool
     emissions_factor_lb_CO2_per_mmbtu::Real
     emissions_factor_lb_NOx_per_mmbtu::Real
@@ -47,6 +48,7 @@ function CST(;
     can_serve_dhw::Union{Bool,Nothing} = nothing # If Boiler can supply heat to the domestic hot water load
     can_serve_space_heating::Union{Bool,Nothing} = nothing # If Boiler can supply heat to the space heating load
     can_serve_process_heat::Union{Bool,Nothing} = nothing # If Boiler can supply heat to the process heating load
+    can_waste_heat::Union{Bool,Nothing} = nothing # If CST can curtail excess heat
     charge_storage_only::Union{Bool,Nothing} = nothing # If CST can only supply hot TES (i.e., cannot meet load directly)
     emissions_factor_lb_CO2_per_mmbtu::Real = 0.0
     emissions_factor_lb_NOx_per_mmbtu::Real = 0.0
@@ -73,6 +75,7 @@ function CST(;
         can_serve_dhw::Union{Bool,Nothing} = nothing,
         can_serve_space_heating::Union{Bool,Nothing} = nothing,
         can_serve_process_heat::Union{Bool,Nothing} = nothing,
+        can_waste_heat::Union{Bool,Nothing} = nothing,
         charge_storage_only::Union{Bool,Nothing} = nothing,
         emissions_factor_lb_CO2_per_mmbtu::Real = 0.0,
         emissions_factor_lb_NOx_per_mmbtu::Real = 0.0,
@@ -122,6 +125,9 @@ function CST(;
     end
     if isnothing(can_serve_process_heat)
         can_serve_process_heat = defaults["can_serve_process_heat"]
+    end
+    if isnothing(can_waste_heat)
+        can_waste_heat = defaults["can_waste_heat"]
     end
     if isnothing(charge_storage_only)
         charge_storage_only = defaults["charge_storage_only"]

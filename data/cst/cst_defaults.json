@@ -11,6 +11,7 @@
         "can_serve_process_heat": true,
         "can_serve_dhw": true, 
         "can_serve_space_heating": true,
+        "can_waste_heat": true,
         "charge_storage_only": false
     },
     "mst": {
@@ -25,6 +26,7 @@
         "can_serve_process_heat": true,
         "can_serve_dhw": true, 
         "can_serve_space_heating": true,
+        "can_waste_heat": true,
         "charge_storage_only": false
     },
     "lf": {
@@ -39,6 +41,7 @@
         "can_serve_process_heat": true,
         "can_serve_dhw": true, 
         "can_serve_space_heating": true,
+        "can_waste_heat": true,
         "charge_storage_only": false
     },
     "swh_evactube": {
@@ -53,6 +56,7 @@
         "can_serve_process_heat": true,
         "can_serve_dhw": true, 
         "can_serve_space_heating": true,
+        "can_waste_heat": true,
         "charge_storage_only": false
     },
     "swh_flatplate": {
@@ -67,6 +71,7 @@
         "can_serve_process_heat": true,
         "can_serve_dhw": true, 
         "can_serve_space_heating": true,
+        "can_waste_heat": true,
         "charge_storage_only": false
     }
 }
