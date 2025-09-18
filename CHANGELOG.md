@@ -29,6 +29,11 @@ Classify the change according to the following categories:
 ### Changed
 - Use ARM version of SAM library file if processor architecture is ARM
 
+## fix-tes-results
+### Fixed
+- Fix `CHP` and `Boiler` results when there is HighTempThermalStorage
+
+
 ## v0.54.0
 ### Changed
 Update the following inputs from the previous --> new values:
