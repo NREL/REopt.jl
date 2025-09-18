@@ -44,10 +44,10 @@ function CST(;
     om_cost_per_kw::Union{Real,Nothing} = nothing, # Thermal power-based fixed O&M cost, see cst_defaults.json for CST default by type
     om_cost_per_kwh::Union{Real,Nothing} = nothing, # Thermal energy produced-based variable O&M cost
     tech_type::Union{String,Nothing} = nothing,  # restrict to: ["ptc", "mst", "lf", "swh_evactube", "swh_flatplate"]
-    can_supply_steam_turbine::Union{Bool,Nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
-    can_serve_dhw::Union{Bool,Nothing} = nothing # If Boiler can supply heat to the domestic hot water load
-    can_serve_space_heating::Union{Bool,Nothing} = nothing # If Boiler can supply heat to the space heating load
-    can_serve_process_heat::Union{Bool,Nothing} = nothing # If Boiler can supply heat to the process heating load
+    can_supply_steam_turbine::Union{Bool,Nothing} = nothing # If the CST can supply steam to the steam turbine for electric production
+    can_serve_dhw::Union{Bool,Nothing} = nothing # If CST can supply heat to the domestic hot water load
+    can_serve_space_heating::Union{Bool,Nothing} = nothing # If CST can supply heat to the space heating load
+    can_serve_process_heat::Union{Bool,Nothing} = nothing # If CST can supply heat to the process heating load
     can_waste_heat::Union{Bool,Nothing} = nothing # If CST can curtail excess heat
     charge_storage_only::Union{Bool,Nothing} = nothing # If CST can only supply hot TES (i.e., cannot meet load directly)
     emissions_factor_lb_CO2_per_mmbtu::Real = 0.0
