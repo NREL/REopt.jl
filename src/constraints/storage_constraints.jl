@@ -243,7 +243,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
             p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)
             - p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
-    end
+    )
 
     # Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
     # Thermal decay for HighTempThermalStorage is based on stored kWh, not rated capacity; value is entered as per ts (not hourly)

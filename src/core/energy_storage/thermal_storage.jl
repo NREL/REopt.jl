@@ -33,8 +33,7 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
-    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0
-    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0004
+    thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 1.0
@@ -77,8 +76,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     soc_min_fraction::Float64 = 0.1
     soc_init_fraction::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
-    soc_based_per_ts_self_discharge_fraction::Float64 = 0.0
-    capacity_based_per_ts_self_discharge_fraction::Float64 = 0.0004
+    thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 1.0
@@ -163,8 +161,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
     soc_min_fraction::Float64
     soc_init_fraction::Float64
     installed_cost_per_gal::Float64
-    soc_based_per_ts_self_discharge_fraction::Float64
-    capacity_based_per_ts_self_discharge_fraction::Float64
+    thermal_decay_rate_fraction::Float64
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
@@ -220,8 +217,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
             s.soc_min_fraction,
             s.soc_init_fraction,
             s.installed_cost_per_gal,
-            s.soc_based_per_ts_self_discharge_fraction,
-            s.capacity_based_per_ts_self_discharge_fraction,
+            s.thermal_decay_rate_fraction,
             s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
@@ -255,8 +251,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     soc_min_fraction::Float64
     soc_init_fraction::Float64
     installed_cost_per_gal::Float64
-    soc_based_per_ts_self_discharge_fraction::Float64
-    capacity_based_per_ts_self_discharge_fraction::Float64
+    thermal_decay_rate_fraction::Float64
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
@@ -317,8 +312,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             s.soc_min_fraction,
             s.soc_init_fraction,
             s.installed_cost_per_gal,
-            s.soc_based_per_ts_self_discharge_fraction,
-            s.capacity_based_per_ts_self_discharge_fraction,
+            s.thermal_decay_rate_fraction,
             s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,

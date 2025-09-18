@@ -991,6 +991,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
         electric_heater,
+        electrolyzer,
+        compressor,
+        fuel_cell,
         cst,
         ashp,
         ashp_wh
