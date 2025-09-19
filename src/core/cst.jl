@@ -149,6 +149,7 @@ function CST(;
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
+        can_waste_heat,
         charge_storage_only,
         emissions_factor_lb_CO2_per_mmbtu,
         emissions_factor_lb_NOx_per_mmbtu,
