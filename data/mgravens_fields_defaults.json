@@ -25,7 +25,9 @@
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0.0,
         "macrs_itc_reduction": 0.0,
-        "dc_ac_ratio": 1.2
+        "dc_ac_ratio": 1.0,
+        "installed_cost_per_kw": 2000.0,
+        "om_cost_per_kw": 24.0
     },
     "ElectricStorage": {
         "installed_cost_per_kw": 968.0,
