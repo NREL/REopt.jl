@@ -17,7 +17,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     for b in p.s.storage.types.hot
         if p.s.storage.attr[b].max_kwh > 0
-            add_hot_storage_results(m, p, d, b; _n)
+            if b == "HighTempThermalStorage"
+                add_high_temp_thermal_storage_results(m, p, d, b; _n)
+            else
+                add_hot_storage_results(m, p, d, b; _n)
+            end
         end
     end
 
@@ -102,6 +106,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if "ElectricHeater" in p.techs.electric_heater
         add_electric_heater_results(m, p, d; _n)
+    end
+
+    if "CST" in p.techs.electric_heater
+        add_concentrating_solar_results(m, p, d; _n)
     end
 
     if "ASHPSpaceHeater" in p.techs.ashp
