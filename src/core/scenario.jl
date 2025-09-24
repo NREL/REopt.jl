@@ -810,9 +810,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw + process_heat_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             steam_turbine = SteamTurbine(d["SteamTurbine"];  
-                                        avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour)
+                                        avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
+                                        sector = site.sector, 
+                                        federal_procurement_type = site.federal_procurement_type)
         else
-            steam_turbine = SteamTurbine(d["SteamTurbine"])
+            steam_turbine = SteamTurbine(d["SteamTurbine"]; 
+                                        sector = site.sector, 
+                                        federal_procurement_type = site.federal_procurement_type)
         end
     end
 

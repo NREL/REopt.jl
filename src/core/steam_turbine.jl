@@ -78,7 +78,9 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
 end
 
 
-function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing)
+function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, sector::String, federal_procurement_type::String)
+    set_tech_sector_defaults!(d; sector=sector, federal_procurement_type=federal_procurement_type)
+    pop!(d, "federal_itc_fraction", nothing)  #gets added in set_tech_sector_defaults but not an input option for SteamTurbine
     st = SteamTurbine(; dictkeys_tosymbols(d)...)
 
     # Must provide prime_mover or all of custom_chp_inputs
