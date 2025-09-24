@@ -46,8 +46,11 @@ else  # run HiGHS tests
                     @test default == 0 
                 end
             end
-            for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
-                @test getfield(s.storage.attr["ElectricStorage"], incentive_input_name) == 0
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) == 0
+                end
             end
         end
 
