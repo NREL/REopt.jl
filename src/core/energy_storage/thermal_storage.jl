@@ -165,6 +165,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
+    total_itc_fraction::Float64
     total_rebate_per_kwh::Float64
     min_kw::Float64
     max_kw::Float64
@@ -223,6 +224,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
             s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
+            s.total_itc_fraction,
             s.total_rebate_per_kwh,
             min_kw,
             max_kw,
@@ -257,6 +259,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
+    total_itc_fraction::Float64
     total_rebate_per_kwh::Float64
     min_kw::Float64
     max_kw::Float64
@@ -320,6 +323,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
+            s.total_itc_fraction,
             s.total_rebate_per_kwh,
             min_kw,
             max_kw,
