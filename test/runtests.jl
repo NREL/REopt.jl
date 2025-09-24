@@ -34,9 +34,16 @@ else  # run HiGHS tests
 
             s = Scenario(input_data)
 
-            for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1])
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1], s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
-                    @test getfield(tech_struct, incentive_input_name) == 0
+                    default = 0
+                    try
+                        #need try catch b/c SteamTurbine does not have federal_itc_fraction input
+                        default = getfield(tech_struct, incentive_input_name)
+                    catch
+                        continue
+                    end
+                    @test default == 0 
                 end
             end
             for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)

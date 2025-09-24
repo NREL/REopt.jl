@@ -55,6 +55,9 @@
         "max_kw": 100,
         "fuel_cost_per_mmbtu": 10.0
     },
+    "SteamTurbine": {
+        "max_kw": 100.0
+    },
     "ElectricStorage": {
         "max_kw": 100.0,
         "max_kwh": 200.0
