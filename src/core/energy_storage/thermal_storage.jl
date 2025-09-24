@@ -17,10 +17,10 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     installed_cost_per_gal::Float64 = 1.50 # Thermal energy-based cost of TES (e.g. volume of the tank)
     thermal_decay_rate_fraction::Float64 = 0.0004 # Thermal loss (gain) rate as a fraction of energy storage capacity, per hour (frac*energy_capacity/hr = kw_thermal)
     om_cost_per_gal::Float64 = 0.0 # Yearly fixed O&M cost dependent on storage energy size
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_option_years::Int = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_option_years", 5)
+    macrs_bonus_fraction::Float64 = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_bonus_fraction", 1.0)
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.3
+    total_itc_fraction::Float64 = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "federal_itc_fraction", 0.3)
     total_rebate_per_kwh::Float64 = 0.0
 ```
 """
@@ -57,10 +57,10 @@ end
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_option_years::Int = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_option_years", 5)
+    macrs_bonus_fraction::Float64 = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_bonus_fraction", 1.0)
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.3
+    total_itc_fraction::Float64 = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "federal_itc_fraction", 0.3)
     total_rebate_per_kwh::Float64 = 0.0
     can_serve_dhw::Bool = true
     can_serve_space_heating:Bool = true
@@ -147,7 +147,7 @@ end
 
 
 """
-function ColdThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
 
 Construct ColdThermalStorage struct from Dict with keys-val pairs from the 
 REopt ColdThermalStorage and Financial inputs. 
@@ -165,6 +165,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
+    total_itc_fraction::Float64
     total_rebate_per_kwh::Float64
     min_kw::Float64
     max_kw::Float64
@@ -176,8 +177,10 @@ struct ColdThermalStorage <: AbstractThermalStorage
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
-    function ColdThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
-         
+    function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
+        set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
+        s = ColdThermalStorageDefaults(; dictkeys_tosymbols(d)...)
+
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
@@ -221,6 +224,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
             s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
+            s.total_itc_fraction,
             s.total_rebate_per_kwh,
             min_kw,
             max_kw,
@@ -237,7 +241,7 @@ end
 
 
 """
-function HotThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+function HotThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
 
 Construct HotThermalStorage struct from Dict with keys-val pairs from the 
 REopt HotThermalStorage and Financial inputs. 
@@ -255,6 +259,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
+    total_itc_fraction::Float64
     total_rebate_per_kwh::Float64
     min_kw::Float64
     max_kw::Float64
@@ -271,8 +276,10 @@ struct HotThermalStorage <: AbstractThermalStorage
     can_serve_process_heat::Bool
     supply_turbine_only::Bool
 
-    function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
-         
+    function HotThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
+        set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
+        s = HotThermalStorageDefaults(; dictkeys_tosymbols(d)...)
+
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
@@ -316,6 +323,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             s.om_cost_per_gal,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
+            s.total_itc_fraction,
             s.total_rebate_per_kwh,
             min_kw,
             max_kw,

@@ -41,8 +41,8 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     can_serve_process_heat::Bool = true # If CHP can supply heat to the process heating load
     is_electric_only::Bool = false # If CHP is a prime generator that does not supply heat
 
-    macrs_option_years::Int = 5 # Note that this value cannot be 0 if aiming to apply 100% bonus depreciation 
-    macrs_bonus_fraction::Float64 = 1.0 
+    macrs_option_years::Int = 5 # Notes: this value cannot be 0 if aiming to apply 100% bonus depreciation; default may change if Site.sector is not "commercial/industrial"
+    macrs_bonus_fraction::Float64 = 1.0 #Note: default may change if Site.sector is not "commercial/industrial"
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
@@ -147,7 +147,9 @@ function CHP(d::Dict;
             avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, 
             existing_boiler::Union{ExistingBoiler, Nothing}=nothing,
             electric_load_series_kw::Array{<:Real,1}=Real[],
-            year::Int64=2017)
+            year::Int64=2017,
+            sector::String,
+            federal_procurement_type::String)
     # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
     for (k,v) in d
         if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
@@ -159,6 +161,9 @@ function CHP(d::Dict;
     if !haskey(d, "fuel_cost_per_mmbtu")
         throw(@error("CHP must have the required fuel_cost_per_mmbtu input"))
     end
+
+    set_tech_sector_defaults!(d; sector=sector, federal_procurement_type=federal_procurement_type)
+
     # Create CHP struct from inputs, to be mutated as needed
     chp = CHP(; dictkeys_tosymbols(d)...)
 
