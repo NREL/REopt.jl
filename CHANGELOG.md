@@ -33,6 +33,13 @@ Classify the change according to the following categories:
 ### Fixed
 - Fix `CHP` and `Boiler` results when there is HighTempThermalStorage
 
+## allow-cst-waste-heat-option
+### Added 
+- Added attribute `can_waste_heat` to CST module, allowing for CST to curtail heat.
+
+### Changed
+- Fixed some docstrings in the CST source code.
+
 
 ## v0.54.0
 ### Changed
