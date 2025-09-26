@@ -28,8 +28,8 @@ struct with outer constructor:
     max_number_of_boreholes::Real                           # Maximum GHX size
     load_served_by_ghp::String                              # "scaled" or "nonpeak"
 
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 0
+    macrs_bonus_fraction::Float64 = 0.0
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0
@@ -90,8 +90,8 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     aux_cooler_installed_cost_per_ton::Float64 = 400.00
     aux_unit_capacity_sizing_factor_on_peak_load::Float64 = 1.2
 
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 0
+    macrs_bonus_fraction::Float64 = 0.0
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0

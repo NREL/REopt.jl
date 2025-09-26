@@ -477,6 +477,10 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         cooling_cf["GHP"] = ones(length(time_steps))
     end
 
+    if "CST" in techs.all
+        setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -808,7 +812,6 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing
     end
 
     om_cost_per_kw["Boiler"] = s.boiler.om_cost_per_kw
-    production_factor["Boiler", :] = get_production_factor(s.boiler)
     boiler_fuel_cost_per_kwh = s.boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["Boiler"] = per_hour_value_to_time_series(boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Boiler")
     heating_cf["Boiler"]  = ones(8760*s.settings.time_steps_per_hour)
@@ -975,6 +978,32 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
         )
     else
         cap_cost_slope["ElectricHeater"] = s.electric_heater.installed_cost_per_kw
+    end
+
+end
+
+function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+    max_sizes["CST"] = s.cst.max_kw
+    min_sizes["CST"] = s.cst.min_kw
+    om_cost_per_kw["CST"] = s.cst.om_cost_per_kw
+    heating_cop["CST"] = 1000*ones(s.settings.time_steps_per_hour*8760)  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
+    heating_cf["CST"] = s.cst.production_factor
+
+    if s.cst.macrs_option_years in [5, 7]
+        cap_cost_slope["CST"] = effective_cost(;
+            itc_basis = s.cst.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
+            itc = 0.0,
+            macrs_schedule = s.cst.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_fraction = s.cst.macrs_bonus_fraction,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+    else
+        cap_cost_slope["CST"] = s.cst.installed_cost_per_kw
     end
 
 end

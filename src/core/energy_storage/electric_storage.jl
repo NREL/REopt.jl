@@ -186,8 +186,8 @@ end
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025 # Annual O&M cost as a fraction of installed cost
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
@@ -226,8 +226,8 @@ Base.@kwdef struct ElectricStorageDefaults
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
