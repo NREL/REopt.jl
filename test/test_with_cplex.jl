@@ -1,6 +1,6 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 using CPLEX
-
+# using GAMS
 
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
@@ -115,7 +115,7 @@ end
 @testset "TieredRates" begin
     expected_year_one_energy_cost = 2342.88
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
-    results = run_reopt(m, "./scenarios/tiered_rate.json")
+    results = run_reopt(m, "./scenarios/tiered_energy_rate.json")
     @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
 
     urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate

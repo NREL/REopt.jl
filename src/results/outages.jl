@@ -34,16 +34,14 @@
 - `soc_series_fraction` ElectricStorage state of charge series in every outage modeled
 
 !!! warn
-	The output keys for "Outages" are subject to change.
+	The output keys for `Outages` are subject to change.
 
 !!! note 
-	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
-
-!!! note
-	When modeling PV the name of the PV system is used for the output keys to allow for modeling multiple PV systems. The default PV name is `PV`.
+	This `Outages` section is only added to results when outages are modeled via the `ElectricUtility.outage_start_time_steps` and `ElectricUtility.outage_durations` inputs. 
+	If the single outage model is used, the outage is included in all time series outputs. See [`ElectricUtility`](@ref ElectricUtility) for an explanation of these outage modeling options.
 	
 !!! warn
-	The Outage results can be very large when many outages are modeled and can take a long time to generate.
+	The `Outages` results can be very large when many outages are modeled and can take a long time to generate.
 """
 function add_outage_results(m, p, d::Dict)
 	# Adds the `Outages` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
@@ -88,7 +86,7 @@ function add_outage_results(m, p, d::Dict)
     for ts in p.s.electric_utility.outage_time_steps
         for (t, tz) in enumerate(p.s.electric_utility.outage_start_time_steps)
             for s in p.s.electric_utility.scenarios
-                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[tz+ts-1]
+                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]
             end
         end
     end
@@ -146,7 +144,7 @@ function add_outage_results(m, p, d::Dict)
 				sum(
 					(
 						value.(
-							m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
+							m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)] + p.unavailability[t][time_step_wrap_around(tz+ts-1, time_steps_per_hour=p.s.settings.time_steps_per_hour)]) * p.levelization_factor[t]
 							- m[:dvMGCurtail][t, s, tz, ts]
 							- m[:dvMGProductionToStorage][t, s, tz, ts]
 							for s in p.s.electric_utility.scenarios,

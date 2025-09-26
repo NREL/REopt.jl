@@ -3,23 +3,25 @@
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
     om_cost_escalation_rate_fraction::Real = 0.025,
-    elec_cost_escalation_rate_fraction::Real = 0.017,
-    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015, 
-    boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
-    chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
-    generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+    elec_cost_escalation_rate_fraction::Real = 0.0166,
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.0348, 
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.0197,
     offtaker_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
-    offtaker_discount_rate_fraction::Real = 0.0638,
+    offtaker_discount_rate_fraction::Real = 0.0624,
     third_party_ownership::Bool = false,
     owner_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
-    owner_discount_rate_fraction::Real = 0.0638,
+    owner_discount_rate_fraction::Real = 0.0624,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
     microgrid_upgrade_cost_fraction::Real = 0.0
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-    offgrid_other_annual_costs::Real = 0.0 # only applicable when `off_grid_flag` is true. Considered tax deductible for owner. Costs are per year. 
+    offgrid_other_annual_costs::Real = 0.0 # only applicable when `off_grid_flag` is true. Considered tax deductible for owner. Costs are per year.
+    min_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing # minimum up-front capital cost for all technologies, excluding replacement costs and incentives.
+    max_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing # maximum up-front capital cost for all technologies, excluding replacement costs and incentives.
     # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
     CO2_cost_escalation_rate_fraction::Real = 0.042173,
@@ -43,7 +45,7 @@
         end
     ```
 """
-struct Financial
+mutable struct Financial
     om_cost_escalation_rate_fraction::Float64
     elec_cost_escalation_rate_fraction::Float64
     existing_boiler_fuel_cost_escalation_rate_fraction::Float64
@@ -56,12 +58,14 @@ struct Financial
     owner_tax_rate_fraction::Float64
     owner_discount_rate_fraction::Float64
     analysis_years::Int
-    value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
+    value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real}
     microgrid_upgrade_cost_fraction::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
     offgrid_other_capital_costs::Float64
     offgrid_other_annual_costs::Float64
+    min_initial_capital_costs_before_incentives::Union{Nothing,Real}
+    max_initial_capital_costs_before_incentives::Union{Nothing,Real}
     CO2_cost_per_tonne::Float64
     CO2_cost_escalation_rate_fraction::Float64
     NOx_grid_cost_per_tonne::Float64
@@ -77,16 +81,16 @@ struct Financial
     function Financial(;
         off_grid_flag::Bool = false,
         om_cost_escalation_rate_fraction::Real = 0.025,
-        elec_cost_escalation_rate_fraction::Real = 0.017,
-        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015,
-        boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
-        chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
-        generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
-        offtaker_tax_rate_fraction::Real = 0.257,
-        offtaker_discount_rate_fraction::Real = 0.0638,
+        elec_cost_escalation_rate_fraction::Real = 0.0166,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.0348,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.0348,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.0197,
+        offtaker_tax_rate_fraction::Real = 0.26,
+        offtaker_discount_rate_fraction::Real = 0.0624,
         third_party_ownership::Bool = false,
-        owner_tax_rate_fraction::Real = 0.257,
-        owner_discount_rate_fraction::Real = 0.0638,
+        owner_tax_rate_fraction::Real = 0.26,
+        owner_discount_rate_fraction::Real = 0.0624,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
         microgrid_upgrade_cost_fraction::Real = 0.0,
@@ -94,6 +98,8 @@ struct Financial
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Considered tax deductible for owner.
+        min_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing,
+        max_initial_capital_costs_before_incentives::Union{Nothing,Real} = nothing,
         # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
         CO2_cost_escalation_rate_fraction::Real = 0.042173,
@@ -191,6 +197,8 @@ struct Financial
             macrs_seven_year,
             offgrid_other_capital_costs,
             offgrid_other_annual_costs,
+            min_initial_capital_costs_before_incentives,
+            max_initial_capital_costs_before_incentives,
             CO2_cost_per_tonne,
             CO2_cost_escalation_rate_fraction,
             NOx_grid_cost_per_tonne,
@@ -206,7 +214,6 @@ struct Financial
     end
 end
 
-
 function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     # Assumption: grid emissions occur at site at 150m above ground
     # and on-site fuelburn emissions occur at site at 0m above ground
@@ -220,7 +227,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     end
     EASIUR_data = nothing
     try
-        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+        EASIUR_data = get_EASIUR2005(type, pop_year=2024, income_year=2024, dollar_year=2010)
     catch e
         @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
         return nothing
@@ -232,13 +239,13 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
     y = Int(round(coords[2]))
-    # Convert from 2010$ to 2020$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
-    USD_2010_to_2020 = 1.246
+    # Convert from 2010$ to 2024$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
+    USD_2010_to_2024 = 1.432
     try
         costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2020
+            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2024,
+            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2024,
+            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2024
         )
         return costs_per_tonne
     catch
@@ -248,6 +255,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
+    # Calculate escalation rate as nominal compound annual growth rate in marginal emissions costs between 2020 and 2024 for this location.
     EASIUR_150m_yr2020 = nothing
     EASIUR_150m_yr2024 = nothing
     try
@@ -284,7 +292,7 @@ Adapted to Julia from example Python code for EASIUR found at https://barney.ce.
 """
     get_EASIUR2005(
         stack::String, # area, p150, or p300
-        pop_year::Int64=2005, # population year
+        pop_year::Int64=2005, # population year (2000 to 2050)
         income_year::Int64=2005, # income level (1990 to 2024)
         dollar_year::Int64=2010 # dollar year (1980 to 2010)
     )
@@ -388,7 +396,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
+            throw(@error("EASIUR income year is $(income_year) but must be between 1990 to 2024"))
             return nothing
         end
     end
@@ -399,7 +407,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            throw(@error("Dollar year must be between 1980 to 2010"))
+            throw(@error("EASIUR dollar year must be between 1980 to 2010"))
             return nothing
         end
     end

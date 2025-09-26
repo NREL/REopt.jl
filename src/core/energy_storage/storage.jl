@@ -65,6 +65,12 @@ mutable struct StorageTypes
                     else
                         throw(@error("Thermal Storage not labeled as Hot or Cold."))
                     end
+                elseif typeof(v) <: HotThermalStorage || typeof(v) <: HighTempThermalStorage
+                    push!(hot_storage, k)
+                elseif typeof(v) <: ColdThermalStorage
+                    push!(cold_storage, k)
+                else
+                    throw(@error("Storage not labeled as Hot or Cold, or Electric."))
                 end
             end
         end

@@ -5,7 +5,7 @@
     min_kw = 0.0,
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
-    om_cost_per_kw = 36.0,
+    om_cost_per_kw = 42.0,
     production_factor_series = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     size_class = "",
     wind_meters_per_sec = [],
@@ -14,7 +14,7 @@
     pressure_atmospheres = [],
     acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity. (not exposed in API)
     macrs_option_years = 5,
-    macrs_bonus_fraction = 0.6,
+    macrs_bonus_fraction = 1.0,
     macrs_itc_reduction = 0.5,
     federal_itc_fraction = 0.3,
     federal_rebate_per_kw = 0.0,
@@ -26,10 +26,10 @@
     utility_ibi_max = 1.0e10,
     utility_rebate_per_kw = 0.0,
     utility_rebate_max = 1.0e10,
-    production_incentive_per_kwh = 0.0,
-    production_incentive_max_benefit = 1.0e9,
-    production_incentive_years = 1,
-    production_incentive_max_kw = 1.0e9,
+    production_incentive_per_kwh::Float64 = 0.0 # revenue from production incentive per kWh electricity produced, including curtailment
+    production_incentive_max_benefit::Float64 = 1.0e9 # maximum allowable annual revenue from production incentives
+    production_incentive_years::Int = 1 # number of year in which production incentives are paid
+    production_incentive_max_kw::Float64 = 1.0e9 # maximum allowable system size to receive production incentives
     can_net_meter = true,
     can_wholesale = true,
     can_export_beyond_nem_limit = true
@@ -41,10 +41,10 @@
     If no `installed_cost_per_kw` is provided then it is determined from:
     ```julia
     size_class_to_installed_cost = Dict(
-        "residential"=> 6339.0,
-        "commercial"=> 4760.0,
-        "medium"=> 3137.0,
-        "large"=> 2386.0
+        "residential"=> 7692.0,
+        "commercial"=> 5776.0,
+        "medium"=> 3807.0,
+        "large"=> 2896.0
     )
     ```
     If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
@@ -102,7 +102,7 @@ struct Wind <: AbstractTech
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
-        om_cost_per_kw = 36.0,
+        om_cost_per_kw = 42.0,
         production_factor_series = nothing,
         size_class = "",
         wind_meters_per_sec = [],
@@ -111,7 +111,7 @@ struct Wind <: AbstractTech
         pressure_atmospheres = [],
         acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity.
         macrs_option_years = 5,
-        macrs_bonus_fraction = 0.6,
+        macrs_bonus_fraction = 1.0,
         macrs_itc_reduction = 0.5,
         federal_itc_fraction = 0.3,
         federal_rebate_per_kw = 0.0,
@@ -141,10 +141,10 @@ struct Wind <: AbstractTech
             "large"=> 80
         )
         size_class_to_installed_cost = Dict(
-            "residential"=> 6339.0,
-            "commercial"=> 4760.0,
-            "medium"=> 3137.0,
-            "large"=> 2386.0
+            "residential"=> 7692.0,
+            "commercial"=> 5776.0,
+            "medium"=> 3807.0,
+            "large"=> 2896.0
         )
         
         if size_class == ""
