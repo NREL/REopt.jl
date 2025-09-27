@@ -11,7 +11,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
    
     Multinode_Inputs = REopt.MultinodeInputs(; REopt.dictkeys_tosymbols(Multinode_Settings)...)
     
-    if Multinode_Inputs.generate_CSV_of_outputs || Multinode_Inputs.generate_results_plots
+    if Multinode_Inputs.generate_CSV_of_outputs
         cd(Multinode_Inputs.folder_location)
         CreateOutputsFolder(Multinode_Inputs, TimeStamp)
     end
@@ -41,7 +41,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         time_results["Step $(length(keys(time_results))+1): model_solve_time_minutes"] = round(JuMP.solve_time(model)/60, digits = 2)
 
         if Multinode_Inputs.run_outage_simulator
-            Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes = run_outage_simulator(DataDictionaryForEachNode, REopt_inputs_combined, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REoptInputs_Combined)
+            Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes, outage_simulator_results_for_plotting, outage_survival_results_dictionary, outage_start_timesteps_dictionary = run_outage_simulator(DataDictionaryForEachNode, REopt_inputs_combined, Multinode_Inputs, TimeStamp, LineInfo_PMD, line_upgrade_options_each_line, line_upgrade_results, REoptInputs_Combined)
             time_results["Step $(length(keys(time_results))+1): outage_simulator_time_minutes"] = outage_simulator_time_minutes
         else
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
@@ -110,28 +110,33 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                                 ("model_diagnostics_bus_voltage_violations", model_diagnostics_bus_voltage_violations),
                                 ("load_phase_dictionary", load_phase_dictionary),
                                 ("gen_ind_e_to_REopt_node", gen_ind_e_to_REopt_node),
-                                ("REopt_gen_ind_e", REopt_gen_ind_e)
+                                ("REopt_gen_ind_e", REopt_gen_ind_e),
                                 #("transformer_upgrade_options", transformer_upgrade_options_output),
                                 #("transformer_upgrade_results", transformer_upgrade_results_output)
                                 #("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series) 
                                 ])
+        
+        if Multinode_Inputs.generate_dictionary_for_plotting
+            data_dictionary_for_plots = Dict([
+                            ("voltage_plot_time_step", 1),
+                            ("Multinode_Inputs", Multinode_Inputs),
+                            ("outage_survival_results", outage_survival_results_dictionary),
+                            ("outage_start_timesteps_checked", outage_start_timesteps_dictionary),
+                            ("TimeStamp", TimeStamp),
+                            #("OutageLength_TimeSteps_Input", OutageLength_TimeSteps_Input),
+                            #("m_outagesimulator_dictionary", m_outagesimulator_dictionary),
+                            ("DataDictionaryForEachNode", DataDictionaryForEachNode),
+                            ("outage_simulator_results_for_plotting", outage_simulator_results_for_plotting),
+                            ("CompiledResults", CompiledResults),
+                            ("REoptInputs_Combined", REoptInputs_Combined),
+                            ("model", model)
+                        ])
+        else
+            data_dictionary_for_plots = "N/A"
+        end
+        
     end
        
-    Start_time_create_plots = now()
-    if Multinode_Inputs.generate_results_plots == true
-        if Multinode_Inputs.number_of_phases == 1
-            Create_Voltage_Plot(CompiledResults, TimeStamp, Multinode_Inputs.voltage_plot_time_step);
-        else
-            @info "The creation of the voltage plots is currently only applicable for single phase systems"
-        end
-        PlotPowerFlows(CompiledResults, TimeStamp, Multinode_Inputs.time_steps_for_results_dashboard);
-        Aggregated_PowerFlows_Plot(CompiledResults, TimeStamp, Multinode_Inputs, REoptInputs_Combined, model);
-        if Multinode_Inputs.bus_coordinates != ""
-            CreateResultsMap(CompiledResults, Multinode_Inputs, TimeStamp);
-        end
-    end
-    milliseconds, CompiledResults["Computation_Time_Data"]["creating_plots_minutes_NotIncludedInTotalComputationTime"] = CalculateComputationTime(Start_time_create_plots)
-
     # Optional code for saving the outputs from the SOCNLPUBFPowerModel model
     #if (Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel") && (Multinode_Inputs.generate_CSV_of_outputs == true)
     #    FilePathAndName = Multinode_Inputs.folder_location*"/Results.json"
@@ -140,7 +145,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
     #    end
     #end
 
-    return CompiledResults, model, model_BAU, m_outagesimulator
+    return CompiledResults, model, model_BAU, data_dictionary_for_plots
 end
 
 
@@ -404,8 +409,6 @@ function SetTechSizesToZero(Multinode_Settings)
     Multinode_Settings_No_Techs["single_outage_end_time_step"] = 5 # set to same time as outage start time step so a single outage is not modeled
     Multinode_Settings_No_Techs["outages_vector"] = []
     Multinode_Settings_No_Techs["run_outage_simulator"] = false
-    Multinode_Settings_No_Techs["display_results"] = false
-    Multinode_Settings_No_Techs["generate_results_plots"] = false
     Multinode_Settings_No_Techs["generate_CSV_of_outputs"] = false
     Multinode_Settings_No_Techs["model_line_upgrades"] = false
     Multinode_Settings_No_Techs["model_transformer_upgrades"] = false
@@ -1519,8 +1522,8 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
             throw(@error("The input for critical_load_method is not valid"))
         end
 
-        # Checking that critical loads are defined, if running a resilience model
-        if  Multinode_Inputs.model_outages_with_outages_vector || ((Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step) > 0 )
+        # Checking that critical loads are defined, if running a resilience model and/or the outage simulator
+        if Multinode_Inputs.run_outage_simulator || Multinode_Inputs.model_outages_with_outages_vector || Multinode_Inputs.model_outages_with_outages_vector || ((Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step) > 0 )
 
             if Multinode_Inputs.critical_load_method == "Fraction"
                 if string(p.s.site.node) ∉ keys(Multinode_Inputs.critical_load_fraction)
@@ -1566,30 +1569,6 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         @warn("For the community district multinode type, the electricity tariff for the facility meter node should be 0")
     end
 
-    if Multinode_Inputs.generate_results_plots == true
-        if Multinode_Inputs.number_of_plots_from_outage_simulator > Multinode_Inputs.number_of_outages_to_simulate
-           @warn("In the Multinode_Inputs dictionary, the number_of_plots_from_outage_simulator is larger than the number_of_outages_to_simulate, so fewer plots than indicated by number_of_plots_from_outage_simulator will be generated.")
-        end
-
-        # If only using PMD (and not the simple powerflow model), then prevent trying to plot a REopt timestep that does not exist in the PMD model
-        if !(Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD)
-            print("\n applying simple power flow: ")
-            print(Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD)
-            for i in Multinode_Inputs.time_steps_for_results_dashboard
-                if i ∉ Multinode_Inputs.PMD_time_steps
-                    throw(@error("Because the simple powerflow model is not being used, please make this adjustment to the model inputs: every time step for the results dashboard (time_steps_for_results_dashboard) must be in the PMD time steps (PMD_time_steps)."))
-                end
-            end
-        end
-
-        if maximum(Multinode_Inputs.time_steps_for_results_dashboard) > Int(8760*Multinode_Inputs.time_steps_per_hour)
-            throw(@error("The entries in the time_steps_for_results_dashboard array should not exceed the maximum number of timesteps"))
-        elseif minimum(Multinode_Inputs.time_steps_for_results_dashboard) < 1
-            throw(@error("The entries in the time_steps_for_results_dashboard array should not by less than 1"))
-        end
-
-    end
-
     if Multinode_Inputs.critical_load_method == "Fraction"
         for x in values(Multinode_Inputs.critical_load_fraction)
             if x >= 5.0
@@ -1605,12 +1584,6 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
     if Multinode_Inputs.single_outage_end_time_step > (8760 * Multinode_Inputs.time_steps_per_hour)
         TotalNumberOfTimeSteps = Int(8760 * Multinode_Inputs.time_steps_per_hour)
         throw(@error("In the Multinode_Inputs dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
-    end
-
-    if Multinode_Inputs.generate_results_plots
-        if Multinode_Inputs.voltage_plot_time_step > length(Multinode_Inputs.PMD_time_steps)
-            throw(@error("In the Multinode_Inputs dictionary, the voltage_plot_time_step should be less than or equal to the number of timesteps in PMD_time_steps"))
-        end
     end
     
     if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD  &&  (Multinode_Inputs.number_of_phases > 1)

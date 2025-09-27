@@ -45,17 +45,17 @@
     critical_load_fraction::Real=0.0,
     critical_load_timeseries::Array=[],
     number_of_outages_to_simulate::Real=0,
-    number_of_plots_from_outage_simulator::Real=1, 
+    
     time_steps_per_hour::Real=0,
     generator_fuel_gallon_available::Dict=Dict(),
     generators_only_run_during_grid_outage::Bool=false,
     generate_CSV_of_outputs::Bool=false,
-    generate_results_plots::Bool=false,
-    time_steps_for_results_dashboard::Array=[],
-    voltage_plot_time_step::Real=0,
+    generate_dictionary_for_plotting::Bool=false,
+    number_of_plots_from_outage_simulator::Real=0,
+
     generate_same_pv_production_profile_for_each_node::Bool=false,
     pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
-    display_results::Bool=true,
+    
     display_information_during_modeling_run::Bool=false, # This can be helpful for debugging a model
     fault_analysis::Dict=Dict(),
     allow_bus_voltage_violations::Bool=false,
@@ -110,17 +110,14 @@ mutable struct MultinodeInputs <: AbstractMultinode
     critical_load_fraction
     critical_load_timeseries
     number_of_outages_to_simulate
-    number_of_plots_from_outage_simulator
     time_steps_per_hour
     generator_fuel_gallon_available
     generators_only_run_during_grid_outage
     generate_CSV_of_outputs
-    generate_results_plots
-    time_steps_for_results_dashboard
-    voltage_plot_time_step
+    generate_dictionary_for_plotting
+    number_of_plots_from_outage_simulator
     generate_same_pv_production_profile_for_each_node
     pv_inputs_for_standardized_pv_production_profile 
-    display_results
     display_information_during_modeling_run
     fault_analysis
     allow_bus_voltage_violations
@@ -174,17 +171,14 @@ mutable struct MultinodeInputs <: AbstractMultinode
         critical_load_fraction::Dict=Dict(),
         critical_load_timeseries::Dict=Dict(),
         number_of_outages_to_simulate::Real=0,
-        number_of_plots_from_outage_simulator::Real=1, 
         time_steps_per_hour::Real=0,
         generator_fuel_gallon_available::Dict=Dict(),
         generators_only_run_during_grid_outage::Bool=false,
         generate_CSV_of_outputs::Bool=false,
-        generate_results_plots::Bool=false,
-        time_steps_for_results_dashboard::Array=[],
-        voltage_plot_time_step::Real=0,
+        generate_dictionary_for_plotting::Bool=false,
+        number_of_plots_from_outage_simulator::Real=0,
         generate_same_pv_production_profile_for_each_node::Bool=false,
         pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
-        display_results::Bool=true,
         display_information_during_modeling_run::Bool=false,
         fault_analysis::Dict=Dict(),
         allow_bus_voltage_violations::Bool=false,
@@ -273,17 +267,14 @@ mutable struct MultinodeInputs <: AbstractMultinode
         critical_load_fraction,
         critical_load_timeseries,
         number_of_outages_to_simulate,
-        number_of_plots_from_outage_simulator,
         time_steps_per_hour,
         generator_fuel_gallon_available,
         generators_only_run_during_grid_outage,
         generate_CSV_of_outputs,
-        generate_results_plots,
-        time_steps_for_results_dashboard,
-        voltage_plot_time_step,
+        generate_dictionary_for_plotting,
+        number_of_plots_from_outage_simulator,
         generate_same_pv_production_profile_for_each_node,
         pv_inputs_for_standardized_pv_production_profile, 
-        display_results,
         display_information_during_modeling_run,
         fault_analysis,
         allow_bus_voltage_violations,

@@ -4,6 +4,10 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
     
     Outage_Results = Dict([])
     outage_simulator_time_start = now()
+    outage_simulator_results_for_plotting = Dict([])
+    outage_survival_results_dictionary = Dict([])
+    outage_start_timesteps_dictionary = Dict([])
+    m_outagesimulator_dictionary = Dict([])
 
     # TODO: Transfer any transformer upgrades from the main optimization model into the outage simulator
     #transformer_max_kva= "N/A"
@@ -11,7 +15,7 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
     single_model_outage_simulator = "empty"
     for i in 1:length(Multinode_Inputs.length_of_simulated_outages_time_steps)
         OutageLength = Multinode_Inputs.length_of_simulated_outages_time_steps[i]
-        pm, OutageLength_TimeSteps_Input, SuccessfullySolved, TimeStepsNotSolved, RunNumber, PercentOfOutagesSurvived, single_model_outage_simulator, outage_survival_results, outage_start_timesteps, dropped_load_results_summary = Multinode_OutageSimulator(DataDictionaryForEachNode, 
+        pm, OutageLength_TimeSteps_Input, SuccessfullySolved, TimeStepsNotSolved, RunNumber, PercentOfOutagesSurvived, single_model_outage_simulator, outage_survival_results, outage_start_timesteps, dropped_load_results_summary, outage_data_for_plotting = Multinode_OutageSimulator(DataDictionaryForEachNode, 
                                                                                                                                                                                                     REopt_dictionary, 
                                                                                                                                                                                                     Multinode_Inputs, 
                                                                                                                                                                                                     TimeStamp,
@@ -29,9 +33,24 @@ function run_outage_simulator(DataDictionaryForEachNode, REopt_dictionary, Multi
                                                                              "outage_survival_results_each_timestep" => outage_survival_results,
                                                                              "outage_start_timesteps" => outage_start_timesteps,
                                                                              "dropped_load_results" => dropped_load_results_summary ])
+        
+        if Multinode_Inputs.generate_dictionary_for_plotting
+            
+            additional_outage_results_for_plotting = Dict(["outage_survival_results" => outage_survival_results, 
+                                                           "outage_start_timesteps_checked" => outage_start_timesteps, 
+                                                           "TimeStamp"=>TimeStamp, 
+                                                           "OutageLength_TimeSteps_Input"=>OutageLength_TimeSteps_Input])
+            
+            merge!(outage_data_for_plotting, additional_outage_results_for_plotting)
+            outage_simulator_results_for_plotting[OutageLength_TimeSteps_Input] = outage_data_for_plotting
+        end
+
+        outage_survival_results_dictionary[OutageLength] = outage_survival_results
+        outage_start_timesteps_dictionary[OutageLength] = outage_start_timesteps
+
     end
     outage_simulator_time_milliseconds, outage_simulator_time_minutes = CalculateComputationTime(outage_simulator_time_start)
-    return Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes
+    return Outage_Results, single_model_outage_simulator, outage_simulator_time_minutes, outage_simulator_results_for_plotting, outage_survival_results_dictionary, outage_start_timesteps_dictionary
 end
 
 
@@ -49,6 +68,7 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
     outage_survival_results = -1 * ones(RunNumber)
     SuccessfullySolved = 0
     TimeStepsNotSolved = []
+    outage_data_for_plotting = Dict([])
     pm = ""
     data_math_mn = ""
 
@@ -107,7 +127,17 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
                 
         outage_survival_results[x], SuccessfullySolved, TimeStepsNotSolved = InterpretResult(TimeStepsNotSolved, TerminationStatus, SuccessfullySolved, Multinode_Inputs, x, i, pm.model, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList)
         print("\n The result from run #"*string(RunsTested)*" is: "*TerminationStatus*". Outages survived so far: "*string(SuccessfullySolved)*", Outages tested so far: "*string(RunsTested))
-        
+               
+        if Multinode_Inputs.generate_dictionary_for_plotting && (SuccessfullySolved <= Multinode_Inputs.number_of_plots_from_outage_simulator)
+            temp_dict = Dict([])
+            temp_dict["model"] = pm.model
+            temp_dict["x"] = x
+            temp_dict["i"] = i
+            temp_dict["TotalTimeSteps"] = TotalTimeSteps
+            temp_dict["NodeList"] = NodeList
+            outage_data_for_plotting[SuccessfullySolved] = deepcopy(temp_dict)
+        end
+
         if Multinode_Inputs.allow_dropped_load && (TerminationStatus == "OPTIMAL")
             dropped_load_results[x] = ProcessDroppedLoadResults(Multinode_Inputs, pm.model, i, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, NodeList, RunsTested)
         elseif Multinode_Inputs.allow_dropped_load && (TerminationStatus != "OPTIMAL")
@@ -122,11 +152,7 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         dropped_load_results_summary = SummarizeDroppedLoadResults(dropped_load_results)
     end
         
-    if Multinode_Inputs.generate_results_plots          
-        MapOutageSimulatorResultsPlots(Multinode_Inputs, outage_survival_results, outage_start_timesteps_checked, TimeStamp, OutageLength_TimeSteps_Input)
-    end
-
-    return pm, OutageLength_TimeSteps_Input, SuccessfullySolved, TimeStepsNotSolved, RunNumber, PercentOfOutagesSurvived, m_outagesimulator, outage_survival_results, outage_start_timesteps_checked, dropped_load_results_summary
+    return pm, OutageLength_TimeSteps_Input, SuccessfullySolved, TimeStepsNotSolved, RunNumber, PercentOfOutagesSurvived, m_outagesimulator, outage_survival_results, outage_start_timesteps_checked, dropped_load_results_summary, outage_data_for_plotting
 end 
 
 
@@ -631,11 +657,6 @@ function InterpretResult(TimeStepsNotSolved, TerminationStatus, SuccessfullySolv
         
         # TODO: calculate the amount of generator fuel that remains, for example: RemainingFuel = value.(m_outagesimulator[Symbol("FuelLeft_3")]) + value.(m_outagesimulator[Symbol("FuelLeft_10")])
                 
-        if Multinode_Inputs.generate_results_plots
-            if SuccessfullySolved <= Multinode_Inputs.number_of_plots_from_outage_simulator
-                CreatePlotsForOutageSimulatorModel(Multinode_Inputs, m_outagesimulator, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList, x, i)
-            end 
-        end
     else
         push!(TimeStepsNotSolved, i)
         outage_survival_result = 0 # a value of 0 indicates that the outage was not survived
@@ -685,113 +706,6 @@ function DetermineNodesWithPV(DataDictionaryForEachNode, NodeList)
         end
     end 
     return NodesWithPV
-end
-
-
-function CreatePlotsForOutageSimulatorModel(Multinode_Inputs, m_outagesimulator, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList, x, i)
-    # This function makes plots for each of the REopt nodes
-    
-    mkdir(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)")
-    
-    for n in NodeList
-        Plots.plot(value.(m_outagesimulator[Symbol("dvPVToLoad_"*n)]), label = "PV to Load", linewidth = 3)
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvGenToLoad_"*n)]), label = "Gen to Load", linewidth = 3)
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToLoad_"*n)]), label = "Battery to Load", linewidth = 3)
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToLoadWithEfficiency_"*n)]), label = "Battery to Load with Efficiency", linewidth = 3)
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvGridToLoad_"*n)]), label = "Grid to Load", linewidth = 3)
-        Plots.plot!(DataDictionaryForEachNode[n]["loads_kw"][i:(i+OutageLength_TimeSteps_Input-1)], label = "Total Load", linecolor = (:black), line = (:dash), linewidth = 3)
-        Plots.xlabel!("Time Step") 
-        Plots.ylabel!("Power (kW)") 
-        Plots.title!("Node "*n*": Load Balance, outage timestep: "*string(i)*" of "*string(TotalTimeSteps))
-        if Multinode_Inputs.display_results
-            display(Plots.ylabel!("Power (kW)"))
-        end
-        Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Load_Balance_"*TimeStamp*".png")
-    end 
-
-    # Plots results for each node during the outage
-    for n in NodeList
-        # Plot the power export
-        Plots.plot(value.(m_outagesimulator[Symbol("dvPVToGrid_"*n)]), label = "PV to Grid")
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvGenToGrid_"*n)]), label = "Gen to Grid")
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
-        Plots.xlabel!("Time Step")
-        Plots.ylabel!("Power (kW)")
-        Plots.title!("Node "*n*": Power Export, outage timestep "*string(i)*" of "*string(TotalTimeSteps))
-        if Multinode_Inputs.display_results
-            display(Plots.ylabel!("Power (kW)"))
-        end
-        Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Power_Export_"*TimeStamp*".png")
-    
-        # Plot the battery flows
-        Plots.plot(-value.(m_outagesimulator[Symbol("dvBatToLoad_"*n)]), label = "Battery to Load")
-        Plots.plot!(-value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvGridToBat_"*n)]), label = "Grid to Battery")
-        Plots.plot!(value.(m_outagesimulator[Symbol("dvPVToBat_"*n)]), label = "PV to Battery")
-        Plots.xlabel!("Time Step")
-        Plots.ylabel!("Power (kW)")
-        Plots.title!("Node "*n*": Battery Flows, outage "*string(i)*" of "*string(TotalTimeSteps))
-        if Multinode_Inputs.display_results
-            display(Plots.ylabel!("Power (kW)"))
-        end
-        Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Battery_Flows_"*TimeStamp*".png")
-    
-        # Plot the battery charge:
-        Plots.plot(value.(m_outagesimulator[Symbol("BatteryCharge_"*n)]), label = "Battery Charge")
-        Plots.xlabel!("Time Step")
-        Plots.ylabel!("Charge (kWh)")
-        Plots.title!("Node "*n*": Battery Charge, outage "*string(i)*" of "*string(TotalTimeSteps))
-        if Multinode_Inputs.display_results
-            display(Plots.ylabel!("Power (kW)"))
-        end
-        Plots.savefig(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps_Input)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Battery_Charge_"*TimeStamp*".png")
-    end
-end
-
-
-function MapOutageSimulatorResultsPlots(Multinode_Inputs, outage_survival_results, outage_start_timesteps, TimeStamp, OutageLength_TimeSteps_Input)
-    # This function creates plots to summarize the outage simulation results
-
-    indices_outage_survived = findall(x -> x==1, outage_survival_results) # Find indices of survived outages
-    indices_outage_not_survived = findall(x -> x==0, outage_survival_results) # Find indices of non-survived outages
-
-    outage_start_timesteps_survived = outage_start_timesteps[indices_outage_survived]
-    outage_start_timesteps_not_survived = outage_start_timesteps[indices_outage_not_survived]
-
-    time_of_day_survived = zeros(length(outage_start_timesteps_survived))
-    day_of_year_survived = zeros(length(outage_start_timesteps_survived))
-    time_of_day_not_survived = zeros(length(outage_start_timesteps_not_survived))
-    day_of_year_not_survived = zeros(length(outage_start_timesteps_not_survived))
-
-    for x in collect(1:length(outage_start_timesteps_survived))
-        time_of_day_survived[x] = outage_start_timesteps_survived[x] % (24*Multinode_Inputs.time_steps_per_hour)
-        day_of_year_survived[x] = ceil(outage_start_timesteps_survived[x] / (24*Multinode_Inputs.time_steps_per_hour))
-    end
-
-    for x in collect(1:length(outage_start_timesteps_not_survived))
-        time_of_day_not_survived[x] = outage_start_timesteps_not_survived[x] % (24*Multinode_Inputs.time_steps_per_hour)
-        day_of_year_not_survived[x] = ceil(outage_start_timesteps_not_survived[x] / (24*Multinode_Inputs.time_steps_per_hour))
-    end        
-
-    traces = PlotlyJS.GenericTrace[]
-    push!(traces, PlotlyJS.histogram(x=time_of_day_survived, name="Survived", xbins_start=0, xbins_end=24, xbins_size=1))
-    push!(traces, PlotlyJS.histogram(x=time_of_day_not_survived, name="Not Survived", xbins_start=0, xbins_end=24, xbins_size=1)) 
-    layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps_Input) Time Step Outage: Distribution of Survival by time of day", xaxis_title = "Time of Day (hour)", yaxis_title="Count")
-    p1 = PlotlyJS.plot(traces, layout)
-    PlotlyJS.savefig(p1, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Time_Of_Day_$(OutageLength_TimeSteps_Input)_Timestep_Outage.html")
-    if Multinode_Inputs.display_results
-        display(p1)
-    end
-
-    traces = PlotlyJS.GenericTrace[]
-    push!(traces, PlotlyJS.histogram(x=day_of_year_survived, name="Survived", xbins_start=0, xbins_end=371, xbins_size=7))
-    push!(traces, PlotlyJS.histogram(x=day_of_year_not_survived, name="Not Survived", xbins_start=0, xbins_end=371, xbins_size=7)) 
-    layout = PlotlyJS.Layout(barmode="stack", title = "$(OutageLength_TimeSteps_Input) Time Step Outage: Distribution of Survival by day of year", xaxis_title = "Day of Year (binned in weekly intervals)", yaxis_title="Count")
-    p2 = PlotlyJS.plot(traces, layout)
-    PlotlyJS.savefig(p2, Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Outage_Simulation_Plots/Outage_Survival_Histogram_By_Day_Of_Year_$(OutageLength_TimeSteps_Input)_Timestep_Outage.html")
-    if Multinode_Inputs.display_results
-        display(p2)
-    end
 end
 
 
