@@ -299,6 +299,13 @@ Base.@kwdef mutable struct ElectricVehicleDefaults
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     electric_vehicle::ElectricVehicle = ElectricVehicle()
+    optimize_soc_init_fraction::Bool = false
+    min_duration_hours::Real = 0
+    max_duration_hours::Real = 100000.0
+    installed_cost_constant::Real = 222115.0
+    replace_cost_constant::Real = 0.0
+    cost_constant_replacement_year::Int = 10
+    om_cost_fraction_of_installed_cost::Float64 = 0.025
 end
 
 function ElectricVehicleDefaults(d::Dict)
