@@ -485,9 +485,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum(p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
 		sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.nonhydrogen) + 
-		sum(p.s.storage.attr[b].net_present_cost_per_kg * m[:dvStorageEnergy][b] for b in p.s.storage.types.hydrogen) + 
-		sum(p.s.storage.attr[b].net_present_cost_per_kw_charge * m[:dvStorageChargePower][b] for b in p.s.storage.types.hightemp) + 
-		sum(p.s.storage.attr[b].net_present_cost_per_kw_discharge * m[:dvStorageDischargePower][b] for b in p.s.storage.types.hightemp)
+		sum(p.s.storage.attr[b].net_present_cost_per_kg * m[:dvStorageEnergy][b] for b in p.s.storage.types.hydrogen) # + 
+		#sum(p.s.storage.attr[b].net_present_cost_per_kw_charge * m[:dvStorageChargePower][b] for b in p.s.storage.types.hightemp) + 
+		#sum(p.s.storage.attr[b].net_present_cost_per_kw_discharge * m[:dvStorageDischargePower][b] for b in p.s.storage.types.hightemp)
 	))
 
 	for b in p.s.storage.types.elec
