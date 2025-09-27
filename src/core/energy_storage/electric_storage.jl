@@ -165,6 +165,8 @@ end
 `ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
+    name::String = "Electric"
+    off_grid_flag::Bool = false  
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -198,12 +200,14 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    electric_vehicle::Nothing = nothing
     optimize_soc_init_fraction::Bool = false # If true, soc_init_fraction will not apply. Model will optimize initial SOC and constrain initial SOC = final SOC. 
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
+    name::String = ""
     off_grid_flag::Bool = false
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
@@ -238,6 +242,7 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    electric_vehicle::Nothing = nothing
     optimize_soc_init_fraction::Bool = false
     min_duration_hours::Real = 0.0
     max_duration_hours::Real = 100000.0
@@ -251,6 +256,7 @@ Construct ElectricStorage struct from Dict with keys-val pairs from the
 REopt ElectricStorage and Financial inputs.
 """
 struct ElectricStorage <: AbstractElectricStorage
+    name::String
     min_kw::Real
     max_kw::Real
     min_kwh::Real
@@ -287,12 +293,17 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
+    electric_vehicle::Union{ElectricVehicle, Nothing}
     optimize_soc_init_fraction::Bool
     min_duration_hours::Real
     max_duration_hours::Real
 
     function ElectricStorage(d::Dict, f::Financial)  
-        s = ElectricStorageDefaults(;d...)
+        if haskey(d, :electric_vehicle)
+            s = ElectricVehicleDefaults(d)
+        else
+            s = ElectricStorageDefaults(;d...)
+        end
 
         if s.inverter_replacement_year >= f.analysis_years
             @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."
@@ -385,6 +396,7 @@ struct ElectricStorage <: AbstractElectricStorage
         end
     
         return new(
+            s.name,
             s.min_kw,
             s.max_kw,
             s.min_kwh,
@@ -421,6 +433,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
+            s.electric_vehicle,
             s.optimize_soc_init_fraction,
             s.min_duration_hours,
             s.max_duration_hours
