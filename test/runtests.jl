@@ -52,8 +52,28 @@ else  # run HiGHS tests
                 end
             end
 
-            # Federal direct purchase
+            # Federal sector, third party private owned
             input_data["Site"]["sector"] = "federal"
+            input_data["Site"]["federal_procurement_type"] = "privateowned_thirdparty"
+            s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.26
+            @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.00581 #national avg
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
+                    @test getfield(tech_struct, incentive_input_name) != 0 
+                end
+            end
+            for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
+                @test getfield(tech_struct, :total_itc_fraction) != 0
+            end
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) != 0
+                end
+            end
+
+            # Federal direct purchase
             input_data["Site"]["federal_procurement_type"] = "fedowned_dirpurch"
             input_data["Site"]["federal_sector_state"] = "CA"
             s = Scenario(input_data)
@@ -77,28 +97,6 @@ else  # run HiGHS tests
                     @test getfield(stor_struct, incentive_input_name) == 0
                 end
             end
-
-            # Federal sector, third party private owned
-            input_data["Site"]["federal_procurement_type"] = "privateowned_thirdparty"
-            input_data["Site"]["federal_sector_state"] = "MS"
-            s = Scenario(input_data)
-            @test s.financial.owner_tax_rate_fraction == 0.26
-            @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.0112
-            for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
-                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
-                    @test getfield(tech_struct, incentive_input_name) != 0 
-                end
-            end
-            for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
-                @test getfield(tech_struct, :total_itc_fraction) != 0
-            end
-            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
-                stor_struct = s.storage.attr[stor_name]
-                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
-                    @test getfield(stor_struct, incentive_input_name) != 0
-                end
-            end
-
         end
 
     #     @testset "Prevent simultaneous charge and discharge" begin
