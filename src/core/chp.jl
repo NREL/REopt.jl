@@ -92,7 +92,6 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     min_turn_down_fraction::Float64 = NaN
     unavailability_periods::AbstractVector{Dict} = Dict[]
     unavailability_hourly::AbstractVector{Int64} = Int64[]
-    federal_itc_fraction::Float64 = NaN # depends on prime mover and is_electric_only
 
     # Optional inputs:
     prime_mover::Union{String, Nothing} = nothing
@@ -118,6 +117,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
+    federal_itc_fraction::Float64 = 0.0 
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -178,8 +178,7 @@ function CHP(d::Dict;
         :thermal_efficiency_full_load => chp.thermal_efficiency_full_load,
         :min_allowable_kw => chp.min_allowable_kw,
         :cooling_thermal_factor => chp.cooling_thermal_factor,
-        :min_turn_down_fraction => chp.min_turn_down_fraction,
-        :federal_itc_fraction => chp.federal_itc_fraction 
+        :min_turn_down_fraction => chp.min_turn_down_fraction
     )
 
     # Installed cost input validation
@@ -263,12 +262,6 @@ function CHP(d::Dict;
 
     if isnothing(chp.size_class)
         chp.size_class = chp_defaults_response["size_class"]
-    end
-
-    #if chp_defaults not used to update federal_itc_fraction, use default of 0.0
-    if isnan(chp.federal_itc_fraction)
-        @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.0"
-        setproperty!(chp, :federal_itc_fraction, 0.0)
     end
 
     if chp.is_electric_only && (chp.thermal_efficiency_full_load > 0.0)
@@ -501,13 +494,6 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     if !isnothing(chp_max_size_kw) && prime_mover_defaults["min_allowable_kw"] > chp_max_size_kw
         prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw * conflict_res_min_allowable_fraction_of_max
     end
-
-    federal_itc_fraction = 0.0
-    # Add ITC fraction 
-    if is_electric_only && prime_mover in ["recip_engine", "combustion_turbine"]
-        federal_itc_fraction = 0.0
-    end
-    prime_mover_defaults["federal_itc_fraction"] = federal_itc_fraction
 
     response = Dict([
         ("prime_mover", prime_mover),
