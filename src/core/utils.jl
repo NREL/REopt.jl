@@ -760,74 +760,93 @@ function filter_sector_defaults_by_region!(defaults::Dict; federal_escalation_re
         end
     end
 end
-function get_sector_defaults(; sector::String="", federal_procurement_type::String="", federal_sector_state::String="")
+function get_all_sector_defaults()
     sector_defaults_path = joinpath(@__DIR__, "..", "..", "data", "sector_dependent_defaults.json")
     if !isfile(sector_defaults_path)
         throw(ErrorException("sector_dependent_defaults.json not found at path: $sector_defaults_path"))
     end
-
     sector_defaults = JSON.parsefile(sector_defaults_path)
-    if !isempty(sector)
-        if sector=="federal" && !isempty(federal_procurement_type) 
-            sector_defaults = get(get(sector_defaults, sector, Dict{String,Any}()), federal_procurement_type, Dict{String,Any}())
-        else
-            sector_defaults = get(sector_defaults, sector, Dict{String,Any}())
-        end
-    end
-    if sector=="federal"
-        federal_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
-        if isempty(federal_escalation_region)
-            @warn "No or invalid federal_sector_state provided, so national average used for default federal escalation rates."
-            federal_escalation_region = "National"
-        end
-        filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
-    end
     return sector_defaults
 end
-function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
-    return get(get_sector_defaults(;
-                    sector=sector, 
-                    federal_procurement_type=federal_procurement_type
-                ), 
-                "Techs", 
-                Dict{String,Any}()
-            )
+function get_sector_defaults(; sector::String, federal_procurement_type::String="", federal_sector_state::String="", struct_name::String="")
+    sector_defaults = get_all_sector_defaults()
+    
+    if sector=="federal"
+        if isempty(federal_procurement_type) 
+            throw(@error("federal_procurement_type must be provided to get_sector_defaults() when sector is 'federal'"))
+        end
+        sector_defaults = get(get(sector_defaults, sector, Dict{String,Any}()), federal_procurement_type, Dict{String,Any}())
+        federal_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
+        if struct_name == "Financial" || isempty(struct_name)
+            if isempty(federal_escalation_region)
+                @warn "No or invalid federal_sector_state provided, so national average used for default federal escalation rates."
+                federal_escalation_region = "National"
+            end
+            filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
+        end
+    else
+        sector_defaults = get(sector_defaults, sector, Dict{String,Any}())
+    end
+
+    if !isempty(struct_name)
+        sector_defaults = get(sector_defaults, struct_name, Dict{String,Any}())
+    end
+    
+    return sector_defaults
 end
-function set_tech_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
-    sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
+function set_sector_defaults!(d::Dict; struct_name::String, sector::String, federal_procurement_type::String="", federal_sector_state::String="")
+    sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
     for (input_name, input_val) in sector_defaults
         if !(input_name in keys(d))
             d[input_name] = input_val
         end
     end
 end
-function get_sector_defaults_storage(; sector::String, federal_procurement_type::String)
-    return get(get_sector_defaults(;
-                    sector=sector, 
-                    federal_procurement_type=federal_procurement_type
-                ), 
-                "Storage", 
-                Dict{String,Any}()
-            )
-end
-function set_storage_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
-    sector_defaults = get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type)
-    for (input_name, input_val) in sector_defaults
-        if !(input_name in keys(d))
-            d[input_name] = input_val
-        end
-    end
-end
-function get_sector_defaults_financial(; sector::String, federal_procurement_type::String, federal_sector_state::String="")
-    return get(get_sector_defaults(;
-                    sector=sector, 
-                    federal_procurement_type=federal_procurement_type,
-                    federal_sector_state=federal_sector_state
-                ), 
-                "Financial", 
-                Dict{String,Any}()
-            )
-end
+
+# function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
+#     return get(get_sector_defaults(;
+#                     sector=sector, 
+#                     federal_procurement_type=federal_procurement_type
+#                 ), 
+#                 "Techs", 
+#                 Dict{String,Any}()
+#             )
+# end
+# function set_tech_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
+#     sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
+#     for (input_name, input_val) in sector_defaults
+#         if !(input_name in keys(d))
+#             d[input_name] = input_val
+#         end
+#     end
+# end
+# function get_sector_defaults_storage(; sector::String, federal_procurement_type::String)
+#     return get(get_sector_defaults(;
+#                     sector=sector, 
+#                     federal_procurement_type=federal_procurement_type
+#                 ), 
+#                 "Storage", 
+#                 Dict{String,Any}()
+#             )
+# end
+# function set_storage_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
+#     sector_defaults = get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type)
+#     for (input_name, input_val) in sector_defaults
+#         if !(input_name in keys(d))
+#             d[input_name] = input_val
+#         end
+#     end
+# end
+# function get_sector_defaults_financial(; sector::String, federal_procurement_type::String, federal_sector_state::String="")
+#     return get(get_sector_defaults(;
+#                     sector=sector, 
+#                     federal_procurement_type=federal_procurement_type,
+#                     federal_sector_state=federal_sector_state
+#                 ), 
+#                 "Financial", 
+#                 Dict{String,Any}()
+#             )
+# end
 
 function struct_to_dict(obj)
     result = Dict{String, Any}()
