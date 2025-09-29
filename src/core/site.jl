@@ -83,9 +83,6 @@ mutable struct Site
         end
         if sector == "federal"
             federal_sector_state = state_name_to_abbr(federal_sector_state)
-            if isempty(federal_sector_state)
-                push!(invalid_args, "federal_sector_state must be a valid US state name or abbreviation when sector is 'federal'")
-            end
             if !(federal_procurement_type in ("fedowned_dirpurch", "fedowned_thirdparty", "privateowned_thirdparty"))
                 push!(invalid_args, "federal_procurement_type must be one of 'fedowned_dirpurch', 'fedowned_thirdparty', or 'privateowned_thirdparty' when sector is 'federal'")
             end
