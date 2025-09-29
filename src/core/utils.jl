@@ -678,8 +678,7 @@ function state_name_to_abbr(federal_sector_state::String)
             "Massachusetts" => "MA",
             "New Hampshire" => "NH",
             "Maine" => "ME",
-            "Vermont" => "VT",
-            "New Jersey" => "NJ"
+            "Vermont" => "VT"
         )
     if federal_sector_state in values(abbr_lookup)
         return federal_sector_state
@@ -752,8 +751,7 @@ function get_NIST_EERC_rate_region(state::String)
         "MA" => "New England",
         "NH" => "New England",
         "ME" => "New England",
-        "VT" => "New England",
-        "NJ" => "New England"
+        "VT" => "New England"
     )
     return get(abbr_to_region, state_abbr, "")
 end
