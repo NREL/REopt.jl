@@ -186,10 +186,10 @@ end
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025 # Annual O&M cost as a fraction of installed cost
-    macrs_option_years::Int = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_option_years", 5)
-    macrs_bonus_fraction::Float64 = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_bonus_fraction", 1.0)
+    macrs_option_years::Int = get(get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_option_years", 5)
+    macrs_bonus_fraction::Float64 = get(get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type), "macrs_bonus_fraction", 1.0)
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = get(get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type), "federal_itc_fraction", 0.3)
+    total_itc_fraction::Float64 = get(get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type), "total_itc_fraction", 0.3)
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
