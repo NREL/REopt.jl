@@ -14,7 +14,26 @@
         "owner_tax_rate_fraction": 0.0,
         "owner_discount_rate_fraction": 0.042
       },
-      "Techs": {
+      "CHP": {
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "federal_itc_fraction": 0.0
+      },
+      "GHP": {
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "federal_itc_fraction": 0.0
+      },
+      "PV": {
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "federal_itc_fraction": 0.0
+      },
+      "SteamTurbine": {
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0
+      },
+      "Wind": {
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0.0,
         "federal_itc_fraction": 0.0
@@ -35,17 +54,38 @@
         "generator_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
-        "third_party_ownership": true
+        "third_party_ownership": true,
+        "owner_tax_rate_fraction": 0.26,
+        "owner_discount_rate_fraction": 0.0624
       },
-      "Techs": {
-        "macrs_option_years": 0,
-        "macrs_bonus_fraction": 0.0,
+      "CHP": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
         "federal_itc_fraction": 0.0
       },
-      "Storage": {
+      "GHP": {
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0.0,
-        "total_itc_fraction": 0.0
+        "federal_itc_fraction": 0.3
+      },
+      "PV": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "federal_itc_fraction": 0.3
+      },
+      "SteamTurbine": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0
+      },
+      "Wind": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "federal_itc_fraction": 0.3
+      },
+      "Storage": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "total_itc_fraction": 0.3
       }
     },
     "privateowned_thirdparty": {
@@ -58,10 +98,39 @@
         "generator_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
-        "third_party_ownership": true
+        "third_party_ownership": true,
+        "owner_tax_rate_fraction": 0.26,
+        "owner_discount_rate_fraction": 0.0624
       },
-      "Techs": {},
-      "Storage": {}
+      "CHP": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "federal_itc_fraction": 0.0
+      },
+      "GHP": {
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "federal_itc_fraction": 0.3
+      },
+      "PV": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "federal_itc_fraction": 0.3
+      },
+      "SteamTurbine": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0
+      },
+      "Wind": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "federal_itc_fraction": 0.3
+      },
+      "Storage": {
+        "macrs_option_years": 5,
+        "macrs_bonus_fraction": 1.0,
+        "total_itc_fraction": 0.3
+      }
     }
   }
 }
