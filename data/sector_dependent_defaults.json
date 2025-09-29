@@ -3,11 +3,11 @@
     "fedowned_dirpurch": {
       "Financial": {
         "om_cost_escalation_rate_fraction": 0.012,
-        "elec_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "existing_boiler_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "boiler_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "chp_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "generator_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
+        "elec_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "generator_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
         "third_party_ownership": false
@@ -45,11 +45,11 @@
     "fedowned_thirdparty": {
       "Financial": {
         "om_cost_escalation_rate_fraction": 0.012,
-        "elec_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "existing_boiler_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "boiler_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "chp_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "generator_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
+        "elec_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "generator_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
         "third_party_ownership": true,
@@ -89,11 +89,11 @@
     "privateowned_thirdparty": {
       "Financial": {
         "om_cost_escalation_rate_fraction": 0.012,
-        "elec_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "existing_boiler_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "boiler_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "chp_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
-        "generator_fuel_cost_escalation_rate_fraction": {"Pacific": 0.0, "Mountain": 0.0, "West North Central": 0.0, "East North Central": 0.0, "West South Central": 0.0, "East South Central": 0.0, "South Atlantic": 0.0, "Middle Atlantic": 0.0, "New England": 0.0},
+        "elec_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "generator_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
         "third_party_ownership": true,
