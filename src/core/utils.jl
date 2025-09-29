@@ -661,8 +661,6 @@ function state_name_to_abbr(federal_sector_state::String)
             "South Carolina" => "SC",
             "Georgia" => "GA",
             "Florida" => "FL",
-            "Tennessee" => "TN",
-            "Kentucky" => "KY",
             "West Virginia" => "WV",
             "Virginia" => "VA",
             "Maryland" => "MD",
