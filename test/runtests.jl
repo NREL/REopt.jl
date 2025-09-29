@@ -34,8 +34,6 @@ else  # run HiGHS tests
 
             #Commercial
             input_data["Site"]["sector"] = "commercial/industrial"
-            pop!(input_data["Site"], "federal_procurement_type")
-            pop!(input_data["Site"], "federal_sector_state")
             s = Scenario(input_data)
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
