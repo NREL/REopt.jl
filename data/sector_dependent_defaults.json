@@ -3,11 +3,11 @@
     "fedowned_dirpurch": {
       "Financial": {
         "om_cost_escalation_rate_fraction": 0.012,
-        "elec_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "elec_cost_escalation_rate_fraction": {"West": -0.00088, "Midwest": 0.00397, "South": 0.00468, "Northeast": 0.01077},
         "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
         "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
-        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
-        "generator_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184},
+        "generator_fuel_cost_escalation_rate_fraction": {"West": -0.00813, "Midwest": -0.011, "South": -0.0807, "Northeast": -0.0094},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
         "third_party_ownership": false
@@ -45,11 +45,11 @@
     "fedowned_thirdparty": {
       "Financial": {
         "om_cost_escalation_rate_fraction": 0.012,
-        "elec_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "elec_cost_escalation_rate_fraction": {"West": -0.00088, "Midwest": 0.00397, "South": 0.00468, "Northeast": 0.01077},
         "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
         "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
-        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
-        "generator_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184},
+        "generator_fuel_cost_escalation_rate_fraction": {"West": -0.00813, "Midwest": -0.011, "South": -0.0807, "Northeast": -0.0094},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
         "third_party_ownership": true,
@@ -89,11 +89,11 @@
     "privateowned_thirdparty": {
       "Financial": {
         "om_cost_escalation_rate_fraction": 0.012,
-        "elec_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "elec_cost_escalation_rate_fraction": {"West": -0.00088, "Midwest": 0.00397, "South": 0.00468, "Northeast": 0.01077},
         "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
         "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
-        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
-        "generator_fuel_cost_escalation_rate_fraction": {"West": 0.0, "Midwest": 0.0, "South": 0.0, "Northeast": 0.0},
+        "chp_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184},
+        "generator_fuel_cost_escalation_rate_fraction": {"West": -0.00813, "Midwest": -0.011, "South": -0.0807, "Northeast": -0.0094},
         "offtaker_tax_rate_fraction": 0.0,
         "offtaker_discount_rate_fraction": 0.042,
         "third_party_ownership": true,
