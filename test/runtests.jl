@@ -35,6 +35,8 @@ else  # run HiGHS tests
             #Commercial
             input_data["Site"]["sector"] = "commercial/industrial"
             s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.26
+            @test s.financial.elec_cost_escalation_rate_fraction == 0.0166
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
                     @test getfield(tech_struct, incentive_input_name) != 0 
@@ -55,6 +57,8 @@ else  # run HiGHS tests
             input_data["Site"]["federal_procurement_type"] = "fedowned_dirpurch"
             input_data["Site"]["federal_sector_state"] = "CA"
             s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.0
+            @test s.financial.elec_cost_escalation_rate_fraction == -0.00088
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1], s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
                     default = 0
@@ -74,9 +78,12 @@ else  # run HiGHS tests
                 end
             end
 
-            # Federal private owned third party
+            # Federal sector, third party private owned
             input_data["Site"]["federal_procurement_type"] = "privateowned_thirdparty"
+            input_data["Site"]["federal_sector_state"] = "MS"
             s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.26
+            @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.0112
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
                     @test getfield(tech_struct, incentive_input_name) != 0 
