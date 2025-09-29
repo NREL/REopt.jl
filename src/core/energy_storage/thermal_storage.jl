@@ -179,23 +179,23 @@ struct ColdThermalStorage <: AbstractThermalStorage
 
     function ColdThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
         set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
-        s = ColdThermalStorageDefaults(; dictkeys_tosymbols(d)...)
+        stor = ColdThermalStorageDefaults(; dictkeys_tosymbols(d)...)
 
-        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
-        min_kwh = s.min_gal * kwh_per_gal
-        max_kwh = s.max_gal * kwh_per_gal
+        kwh_per_gal = get_kwh_per_gal(stor.hot_water_temp_degF, stor.cool_water_temp_degF)
+        min_kwh = stor.min_gal * kwh_per_gal
+        max_kwh = stor.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
         max_kw = max_kwh * time_steps_per_hour
-        om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
+        om_cost_per_kwh = stor.om_cost_per_gal / kwh_per_gal
     
-        charge_efficiency = s.internal_efficiency_fraction^0.5
-        discharge_efficiency = s.internal_efficiency_fraction^0.5
-        installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
+        charge_efficiency = stor.internal_efficiency_fraction^0.5
+        discharge_efficiency = stor.internal_efficiency_fraction^0.5
+        installed_cost_per_kwh = stor.installed_cost_per_gal / kwh_per_gal
 
         macrs_schedule = [0.0]
-        if s.macrs_option_years == 5 || s.macrs_option_years == 7
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
-        elseif !(s.macrs_option_years == 0)
+        if stor.macrs_option_years == 5 || stor.macrs_option_years == 7
+            macrs_schedule = stor.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
+        elseif !(stor.macrs_option_years == 0)
             throw(@error("ColdThermalStorage macrs_option_years must be 0, 5, or 7."))
         end
       
@@ -205,27 +205,27 @@ struct ColdThermalStorage <: AbstractThermalStorage
             replacement_year = 100,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
-            itc = s.total_itc_fraction,
+            itc = stor.total_itc_fraction,
             macrs_schedule = macrs_schedule,
-            macrs_bonus_fraction = s.macrs_bonus_fraction,
-            macrs_itc_reduction = s.macrs_itc_reduction
-        ) - s.total_rebate_per_kwh
+            macrs_bonus_fraction = stor.macrs_bonus_fraction,
+            macrs_itc_reduction = stor.macrs_itc_reduction
+        ) - stor.total_rebate_per_kwh
     
         return new(
-            s.min_gal,
-            s.max_gal,
-            s.hot_water_temp_degF,
-            s.cool_water_temp_degF,
-            s.internal_efficiency_fraction,
-            s.soc_min_fraction,
-            s.soc_init_fraction,
-            s.installed_cost_per_gal,
-            s.thermal_decay_rate_fraction,
-            s.om_cost_per_gal,
-            s.macrs_option_years,
-            s.macrs_bonus_fraction,
-            s.total_itc_fraction,
-            s.total_rebate_per_kwh,
+            stor.min_gal,
+            stor.max_gal,
+            stor.hot_water_temp_degF,
+            stor.cool_water_temp_degF,
+            stor.internal_efficiency_fraction,
+            stor.soc_min_fraction,
+            stor.soc_init_fraction,
+            stor.installed_cost_per_gal,
+            stor.thermal_decay_rate_fraction,
+            stor.om_cost_per_gal,
+            stor.macrs_option_years,
+            stor.macrs_bonus_fraction,
+            stor.total_itc_fraction,
+            stor.total_rebate_per_kwh,
             min_kw,
             max_kw,
             min_kwh,
@@ -278,23 +278,23 @@ struct HotThermalStorage <: AbstractThermalStorage
 
     function HotThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
         set_storage_sector_defaults!(d; sector=s.sector, federal_procurement_type=s.federal_procurement_type)
-        s = HotThermalStorageDefaults(; dictkeys_tosymbols(d)...)
+        stor = HotThermalStorageDefaults(; dictkeys_tosymbols(d)...)
 
-        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
-        min_kwh = s.min_gal * kwh_per_gal
-        max_kwh = s.max_gal * kwh_per_gal
+        kwh_per_gal = get_kwh_per_gal(stor.hot_water_temp_degF, stor.cool_water_temp_degF)
+        min_kwh = stor.min_gal * kwh_per_gal
+        max_kwh = stor.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
         max_kw = max_kwh * time_steps_per_hour
-        om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
+        om_cost_per_kwh = stor.om_cost_per_gal / kwh_per_gal
     
-        charge_efficiency = s.internal_efficiency_fraction^0.5
-        discharge_efficiency = s.internal_efficiency_fraction^0.5
-        installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
+        charge_efficiency = stor.internal_efficiency_fraction^0.5
+        discharge_efficiency = stor.internal_efficiency_fraction^0.5
+        installed_cost_per_kwh = stor.installed_cost_per_gal / kwh_per_gal
 
         macrs_schedule = [0.0]
-        if s.macrs_option_years == 5 || s.macrs_option_years == 7
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
-        elseif !(s.macrs_option_years == 0)
+        if stor.macrs_option_years == 5 || stor.macrs_option_years == 7
+            macrs_schedule = stor.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year
+        elseif !(stor.macrs_option_years == 0)
             throw(@error("HotThermalStorage macrs_option_years must be 0, 5, or 7."))
         end        
       
@@ -304,27 +304,27 @@ struct HotThermalStorage <: AbstractThermalStorage
             replacement_year = 100,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
-            itc = s.total_itc_fraction,
+            itc = stor.total_itc_fraction,
             macrs_schedule = macrs_schedule,
-            macrs_bonus_fraction = s.macrs_bonus_fraction,
-            macrs_itc_reduction = s.macrs_itc_reduction
-        ) - s.total_rebate_per_kwh
+            macrs_bonus_fraction = stor.macrs_bonus_fraction,
+            macrs_itc_reduction = stor.macrs_itc_reduction
+        ) - stor.total_rebate_per_kwh
     
         return new(
-            s.min_gal,
-            s.max_gal,
-            s.hot_water_temp_degF,
-            s.cool_water_temp_degF,
-            s.internal_efficiency_fraction,
-            s.soc_min_fraction,
-            s.soc_init_fraction,
-            s.installed_cost_per_gal,
-            s.thermal_decay_rate_fraction,
-            s.om_cost_per_gal,
-            s.macrs_option_years,
-            s.macrs_bonus_fraction,
-            s.total_itc_fraction,
-            s.total_rebate_per_kwh,
+            stor.min_gal,
+            stor.max_gal,
+            stor.hot_water_temp_degF,
+            stor.cool_water_temp_degF,
+            stor.internal_efficiency_fraction,
+            stor.soc_min_fraction,
+            stor.soc_init_fraction,
+            stor.installed_cost_per_gal,
+            stor.thermal_decay_rate_fraction,
+            stor.om_cost_per_gal,
+            stor.macrs_option_years,
+            stor.macrs_bonus_fraction,
+            stor.total_itc_fraction,
+            stor.total_rebate_per_kwh,
             min_kw,
             max_kw,
             min_kwh,
@@ -334,11 +334,11 @@ struct HotThermalStorage <: AbstractThermalStorage
             discharge_efficiency,
             net_present_cost_per_kwh,
             om_cost_per_kwh,
-            s.can_supply_steam_turbine,
-            s.can_serve_dhw,
-            s.can_serve_space_heating,
-            s.can_serve_process_heat,
-            s.supply_turbine_only
+            stor.can_supply_steam_turbine,
+            stor.can_serve_dhw,
+            stor.can_serve_space_heating,
+            stor.can_serve_process_heat,
+            stor.supply_turbine_only
         )
     end
 end
@@ -379,54 +379,54 @@ struct HighTempThermalStorage <: AbstractThermalStorage
     num_charge_hours::Float64
     num_discharge_hours::Float64
 
-    function HighTempThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
+    function HighTempThermalStorage(stor::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
         # TODO: develop a storage sizing/costing model using delta-T from hot_temp_degF and cool_temp_degF, as is done in HotThermalStorage 
-        min_kw = s.min_kwh / max(s.num_charge_hours, s.num_discharge_hours)
-        max_kw = s.max_kwh / min(s.num_charge_hours, s.num_discharge_hours)
+        min_kw = stor.min_kwh / max(stor.num_charge_hours, stor.num_discharge_hours)
+        max_kw = stor.max_kwh / min(stor.num_charge_hours, stor.num_discharge_hours)
     
-        charge_efficiency = s.internal_efficiency_fraction^0.5
-        discharge_efficiency = s.internal_efficiency_fraction^0.5
+        charge_efficiency = stor.internal_efficiency_fraction^0.5
+        discharge_efficiency = stor.internal_efficiency_fraction^0.5
       
         net_present_cost_per_kwh = effective_cost(;
-            itc_basis = s.installed_cost_per_kwh,
+            itc_basis = stor.installed_cost_per_kwh,
             replacement_cost = 0.0,
             replacement_year = 100,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
-            itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
-            macrs_bonus_fraction = s.macrs_bonus_fraction,
-            macrs_itc_reduction = s.macrs_itc_reduction
-        ) - s.total_rebate_per_kwh
+            itc = stor.total_itc_fraction,
+            macrs_schedule = stor.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_bonus_fraction = stor.macrs_bonus_fraction,
+            macrs_itc_reduction = stor.macrs_itc_reduction
+        ) - stor.total_rebate_per_kwh
     
         return new(
-            s.fluid,
-            s.hot_temp_degF,
-            s.cool_temp_degF,
-            s.internal_efficiency_fraction,
-            s.soc_min_fraction,
-            s.soc_init_fraction,
-            s.thermal_decay_rate_fraction,
-            s.macrs_option_years,
-            s.macrs_bonus_fraction,
-            s.total_rebate_per_kwh,
+            stor.fluid,
+            stor.hot_temp_degF,
+            stor.cool_temp_degF,
+            stor.internal_efficiency_fraction,
+            stor.soc_min_fraction,
+            stor.soc_init_fraction,
+            stor.thermal_decay_rate_fraction,
+            stor.macrs_option_years,
+            stor.macrs_bonus_fraction,
+            stor.total_rebate_per_kwh,
             min_kw,
             max_kw,
-            s.min_kwh,
-            s.max_kwh,
-            s.installed_cost_per_kwh,
+            stor.min_kwh,
+            stor.max_kwh,
+            stor.installed_cost_per_kwh,
             charge_efficiency,
             discharge_efficiency,
             net_present_cost_per_kwh,
-            s.om_cost_per_kwh,
-            s.can_supply_steam_turbine,
-            s.can_serve_dhw,
-            s.can_serve_space_heating,
-            s.can_serve_process_heat,
-            s.supply_turbine_only,
-            s.one_direction_flow,
-            s.num_charge_hours,
-            s.num_discharge_hours
+            stor.om_cost_per_kwh,
+            stor.can_supply_steam_turbine,
+            stor.can_serve_dhw,
+            stor.can_serve_space_heating,
+            stor.can_serve_process_heat,
+            stor.supply_turbine_only,
+            stor.one_direction_flow,
+            stor.num_charge_hours,
+            stor.num_discharge_hours
         )
     end
 end
