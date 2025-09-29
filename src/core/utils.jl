@@ -761,8 +761,6 @@ function filter_sector_defaults_by_region!(defaults::Dict; federal_escalation_re
     end
 end
 function get_sector_defaults(; sector::String="", federal_procurement_type::String="", federal_sector_state::String="")
-    federal_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
-
     sector_defaults_path = joinpath(@__DIR__, "..", "..", "data", "sector_dependent_defaults.json")
     if !isfile(sector_defaults_path)
         throw(ErrorException("sector_dependent_defaults.json not found at path: $sector_defaults_path"))
@@ -776,7 +774,12 @@ function get_sector_defaults(; sector::String="", federal_procurement_type::Stri
             sector_defaults = get(sector_defaults, sector, Dict{String,Any}())
         end
     end
-    if !isempty(federal_escalation_region)
+    if sector=="federal"
+        federal_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
+        if isempty(federal_escalation_region)
+            @warn "No or invalid federal_sector_state provided, so national average used for default federal escalation rates."
+            federal_escalation_region = "National"
+        end
         filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
     end
     return sector_defaults
