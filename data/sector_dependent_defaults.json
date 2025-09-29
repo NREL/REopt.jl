@@ -57,33 +57,33 @@
         "owner_discount_rate_fraction": 0.0624
       },
       "CHP": {
-        "macrs_option_years": 5,
-        "macrs_bonus_fraction": 1.0,
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
         "federal_itc_fraction": 0.0
       },
       "GHP": {
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0.0,
-        "federal_itc_fraction": 0.3
+        "federal_itc_fraction": 0.0
       },
       "PV": {
-        "macrs_option_years": 5,
-        "macrs_bonus_fraction": 1.0,
-        "federal_itc_fraction": 0.3
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "federal_itc_fraction": 0.0
       },
       "SteamTurbine": {
-        "macrs_option_years": 5,
-        "macrs_bonus_fraction": 1.0
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0
       },
       "Wind": {
-        "macrs_option_years": 5,
-        "macrs_bonus_fraction": 1.0,
-        "federal_itc_fraction": 0.3
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "federal_itc_fraction": 0.0
       },
       "Storage": {
-        "macrs_option_years": 5,
-        "macrs_bonus_fraction": 1.0,
-        "total_itc_fraction": 0.3
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "total_itc_fraction": 0.0
       }
     },
     "privateowned_thirdparty": {
