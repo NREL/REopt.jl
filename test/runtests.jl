@@ -43,7 +43,7 @@ else  # run HiGHS tests
                 end
             end
             for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
-                @test getfield(tech_struct, :total_itc_fraction) != 0
+                @test getfield(tech_struct, :federal_itc_fraction) != 0
             end
             for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
                 stor_struct = s.storage.attr[stor_name]
@@ -64,7 +64,7 @@ else  # run HiGHS tests
                 end
             end
             for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
-                @test getfield(tech_struct, :total_itc_fraction) != 0
+                @test getfield(tech_struct, :federal_itc_fraction) != 0
             end
             for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
                 stor_struct = s.storage.attr[stor_name]
