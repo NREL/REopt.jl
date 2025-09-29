@@ -25,15 +25,38 @@ elseif "CPLEX" in ARGS
     end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
-        @testset "Federal defaults" begin
-            input_data = JSON.parsefile("scenarios/federal_defaults.json")
+        @testset "Sector defaults" begin
+            input_data = JSON.parsefile("scenarios/sector_defaults.json")
             
             # Fill in GHP so don't have to call GHPGHX.jl
             ghp_response = JSON.parsefile("scenarios/ghpghx_response.json")
             input_data["GHP"]["ghpghx_responses"] = [ghp_response]
 
+            #Commercial
+            input_data["Site"]["sector"] = "commercial/industrial"
+            pop!(input_data["Site"], "federal_procurement_type")
+            pop!(input_data["Site"], "federal_sector_state")
             s = Scenario(input_data)
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
+                    @test getfield(tech_struct, incentive_input_name) != 0 
+                end
+            end
+            for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
+                @test getfield(tech_struct, :total_itc_fraction) != 0
+            end
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) != 0
+                end
+            end
 
+            # Federal direct purchase
+            input_data["Site"]["sector"] = "federal"
+            input_data["Site"]["federal_procurement_type"] = "fedowned_dirpurch"
+            input_data["Site"]["federal_sector_state"] = "CA"
+            s = Scenario(input_data)
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1], s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
                     default = 0
@@ -52,6 +75,25 @@ else  # run HiGHS tests
                     @test getfield(stor_struct, incentive_input_name) == 0
                 end
             end
+
+            # Federal private owned third party
+            input_data["Site"]["federal_procurement_type"] = "privateowned_thirdparty"
+            s = Scenario(input_data)
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
+                    @test getfield(tech_struct, incentive_input_name) != 0 
+                end
+            end
+            for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
+                @test getfield(tech_struct, :total_itc_fraction) != 0
+            end
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) != 0
+                end
+            end
+
         end
 
     #     @testset "Prevent simultaneous charge and discharge" begin
