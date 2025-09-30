@@ -360,6 +360,7 @@ struct HighTempThermalStorage <: AbstractThermalStorage
     thermal_decay_rate_fraction::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
+    total_itc_fraction::Float64
     total_rebate_per_kwh::Float64
     min_kw::Float64
     max_kw::Float64
@@ -412,6 +413,7 @@ struct HighTempThermalStorage <: AbstractThermalStorage
             stor.thermal_decay_rate_fraction,
             stor.macrs_option_years,
             stor.macrs_bonus_fraction,
+            stor.total_itc_fraction,
             stor.total_rebate_per_kwh,
             min_kw,
             max_kw,
