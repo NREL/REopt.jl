@@ -2390,6 +2390,35 @@ else  # run HiGHS tests
             empty!(m2)
             GC.gc()
 
+            # Test hybrid GHP functionality
+            input_data_hybrid = JSON.parsefile("scenarios/ghp_inputs_hybrid.json")
+
+            hybrid_inputs = REoptInputs(input_data_hybrid)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            hybrid_results = run_reopt(m1, hybrid_inputs)
+
+            pop!(input_data_hybrid["GHP"], "ghpghx_inputs", nothing)
+            non_hybrid_inputs = REoptInputs(input_data_hybrid)
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            non_hybrid_results = run_reopt(m2, non_hybrid_inputs)
+
+            hybrid_GHP_size = hybrid_results["GHP"]["size_heat_pump_ton"]
+            hybrid_GHX_size = hybrid_results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] 
+            hybrid_solution_nonhybrid_GHX_size = hybrid_results["GHP"]["number_of_boreholes_nonhybrid"]
+            non_hybrid_GHP_size = non_hybrid_results["GHP"]["size_heat_pump_ton"]
+            non_hybrid_GHX_size = non_hybrid_results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] 
+
+            @test hybrid_GHX_size < non_hybrid_GHX_size
+            @test hybrid_GHX_size ≈ 5.0 atol=1.0
+            @test hybrid_GHP_size ≈ non_hybrid_GHP_size atol=0.5
+            @test hybrid_solution_nonhybrid_GHX_size ≈ non_hybrid_GHX_size atol=2.0
+
+            finalize(backend(m1))
+            empty!(m1)
+            finalize(backend(m2))
+            empty!(m2)
+            GC.gc()     
+
             # Check GHP LCC calculation for URBANopt
             ghp_data = JSON.parsefile("scenarios/ghp_urbanopt.json")
             s = Scenario(ghp_data)
@@ -3439,10 +3468,11 @@ else  # run HiGHS tests
             p = REoptInputs(s)
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt(m1, p)
-            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 272.49 atol=0.1
-            @test results["CST"]["size_kw"] ≈ 100.0 atol=0.001
-            @test results["CST"]["size_mmbtu_per_hour"] ≈ 100.0 / REopt.KWH_PER_MMBTU atol=1.0e-3
-            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 717087.86 rtol=1.0e-4
+            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 27255.6 rtol=1.0e-4
+            @test sum(results["CST"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 20391.2 rtol=1.0e-4
+            @test results["CST"]["size_kw"] ≈ 10000.0 atol=0.001
+            @test results["CST"]["size_mmbtu_per_hour"] ≈ 10000.0 / REopt.KWH_PER_MMBTU atol=1.0e-3
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 149.26 rtol=1.0e-4
             @test results["HighTempThermalStorage"]["size_kwh"] ≈ 10000.0 atol=0.1
             @test results["HotThermalStorage"]["size_gal"] ≈ 1000.0 atol=0.1
         end

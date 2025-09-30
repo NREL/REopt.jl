@@ -588,6 +588,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
             
+            start_time = now()
+
             ## Deal with hybrid
             hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
 
@@ -597,33 +599,39 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if hybrid_ghx_sizing_method == "Automatic"
 
-                # Call GhpGhx.jl to size GHP and GHX
-                determine_heat_cool_results_resp_dict = Dict()
+                # Call GhpGhx.jl to size GHP and GHX in non-hybrid mode
+                nonhybrid_results_resp_dict = Dict()
                 try
-                    ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = true
-
+                    ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = false
+                    ghpghx_inputs["hybrid_sizing_flag"] = 1.0
                     # Call GhpGhx.jl to size GHP and GHX
-                    @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                    @info "Starting GhpGhx.jl for non-hybrid GHX sizing"
                     # Call GhpGhx.jl to size GHP and GHX
-                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                    results_nonhybrid, inputs_params_nonhybrid = GhpGhx.ghp_model(ghpghx_inputs)
                     # Create a dictionary of the results data needed for REopt
-                    determine_heat_cool_results_resp_dict = GhpGhx.get_results_for_reopt(results, inputs_params)
-                    @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+                    nonhybrid_results_resp_dict = GhpGhx.get_results_for_reopt(results_nonhybrid, inputs_params_nonhybrid)
+                    @info "Non-hybrid GHX sizing complete using GhpGhx.jl"
                 catch e
                     @info e
                     throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
                         loaded (using GhpGhx) to the active Julia environment"))
                 end
+                d["GHP"]["number_of_boreholes_nonhybrid"] = nonhybrid_results_resp_dict["number_of_boreholes"]
+                d["GHP"]["iterations_nonhybrid"] = nonhybrid_results_resp_dict["ghx_soln_number_of_iterations"]
 
-                temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
-                - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+                # ORIGINAL GUESS
+                temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] - 
+                            nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1]
 
                 hybrid_sizing_flag = 1.0 # non hybrid
+                hybrid_sizing_flag_opposite_guess = 1.0 # non hybrid
                 if temp_diff > 0
                     hybrid_sizing_flag = -2.0 #heating
+                    hybrid_sizing_flag_opposite_guess = -1.0 #cooling
                     is_ghx_hybrid = true
                 elseif temp_diff < 0
                     hybrid_sizing_flag = -1.0 #cooling
+                    hybrid_sizing_flag_opposite_guess = -2.0 #heating
                     is_ghx_hybrid = true
                 else
                     # non hybrid if exactly 0.
@@ -634,7 +642,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
                 hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
-            else
+            elseif hybrid_ghx_sizing_method !== nothing
                 @warn "Unknown hybrid GHX sizing model provided"
             end
 
@@ -656,108 +664,177 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
 
             ghpghx_results = Dict()
+            max_ghx_sizing_interations = 0
 
-            try
-                # Call GhpGhx.jl to size GHP and GHX
-                @info "Starting GhpGhx.jl"
-                # Call GhpGhx.jl to size GHP and GHX
-                # If user provides undersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
-                thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] .* 1/TONNE_PER_MMBTU_HOUR
-                if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                    cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
-                    thermal_load_ton .+= cooling_load_ton
+            # Hybrid GHP results 
+            if is_ghx_hybrid
+
+                # Run hybrid results using the initial guess of whether an auxiliary heater or cooler is required
+                try
+                    # Call GhpGhx.jl to size GHP and GHX
+                    @info "Starting GhpGhx.jl for initial hybrid GHX sizing"
+                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                    max_ghx_sizing_interations = inputs_params.max_sizing_iterations
+    
+                    # Create a dictionary of the results data needed for REopt
+                    ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+                    @info "GhpGhx.jl model solved" #with status $(results["status"])."
+                catch e
+                    @info e
+                    throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                        loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
+                        to the GhpGhx.jl package."))
                 end
-                peak_thermal_load_ton = maximum(thermal_load_ton)
-                if haskey(d["GHP"],"max_ton") && peak_thermal_load_ton > d["GHP"]["max_ton"]
-                    @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
-                    # When user specifies undersized GHP, calculate the load to be served by GHP and send the rest to REopt
-                    if !haskey(d["GHP"], "load_served_by_ghp")
-                        d["GHP"]["load_served_by_ghp"] = "nonpeak"
+
+                d["GHP"]["number_of_boreholes_auto_guess"] = ghpghx_results["number_of_boreholes"]
+                d["GHP"]["iterations_auto_guess"] = ghpghx_results["ghx_soln_number_of_iterations"]
+                
+                # Invalid hybrid results
+                if (ghpghx_results["number_of_boreholes"] >= nonhybrid_results_resp_dict["number_of_boreholes"]) || (ghpghx_results["ghx_soln_number_of_iterations"] == max_ghx_sizing_interations)
+                    new_hybrid_ghpghx_results = Dict()
+                    max_ghx_sizing_interations = 0
+                    try
+                        ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag_opposite_guess
+
+                        # Call GhpGhx.jl to size GHP and GHX
+                        @info "Initial guess for the hybrid GHP auxiliary unit was incorrect. Starting GhpGhx.jl for new hybrid GHX sizing"
+                        # Call GhpGhx.jl to size GHP and GHX
+                        results_new_hybrid, inputs_params_new_hybrid = GhpGhx.ghp_model(ghpghx_inputs)
+                        max_ghx_sizing_interations = inputs_params_new_hybrid.max_sizing_iterations
+                        # Create a dictionary of the results data needed for REopt
+                        new_hybrid_ghpghx_results = GhpGhx.get_results_for_reopt(results_new_hybrid, inputs_params_new_hybrid)
+                        @info "New hybrid GHX sizing complete using GhpGhx.jl"
+                    catch e
+                        @info e
+                        throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                            loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
+                            to the GhpGhx.jl package."))
                     end
-                    # If user choose to scale down total load (load_served_by_ghp="scaled"), calculate the ratio of the udersized GHP size and peak load
-                    if d["GHP"]["load_served_by_ghp"] == "scaled"
-                        @info "GHP served scaled down of total thermal load"
-                        peak_ratio = d["GHP"]["max_ton"] / peak_thermal_load_ton
-                        # Scale the total load profile down by the peak_ratio and use this scaled down load to rerun GhpGhx.jl
-                        heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
-                        heating_load_mmbtu = heating_load_mmbtu .* peak_ratio
-                        ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
-                        if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                            ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton .* peak_ratio
+                    d["GHP"]["number_of_boreholes_flipped_guess"] = new_hybrid_ghpghx_results["number_of_boreholes"]
+                    d["GHP"]["iterations_flipped_guess"] = new_hybrid_ghpghx_results["ghx_soln_number_of_iterations"]
+
+                    if (new_hybrid_ghpghx_results["number_of_boreholes"] >= nonhybrid_results_resp_dict["number_of_boreholes"]) || (new_hybrid_ghpghx_results["ghx_soln_number_of_iterations"] == max_ghx_sizing_interations)
+                        @info "Hybrid GHX results are unavailable for this scenario. Returning non-hybrid results"
+                        is_ghx_hybrid = false
+                        ghpghx_results = nonhybrid_results_resp_dict
+                        d["GHP"]["hybrid_solution_type"] = "nonhybrid_solution"
+                    else
+                        ghpghx_results = new_hybrid_ghpghx_results
+                        d["GHP"]["hybrid_solution_type"] = "flipped_guess"
+                    end
+                else
+                    d["GHP"]["hybrid_solution_type"] = "automatic_guess_correct"
+                end
+
+                if haskey(d["GHP"],"max_ton") || haskey(d["GHP"],"max_number_of_boreholes")
+                    @warn "User specified GHP/GHX size limits are not considered when hybrid sizing is selected. Inputs such as max_ton and max_number_of_boreholes will be ignored."
+                end
+            else
+                try
+                    # If user provides undersized GHP, calculate load to send to GhpGhx.jl, and load to send to REopt for backup
+                    thermal_load_ton = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] .* 1/TONNE_PER_MMBTU_HOUR
+                    if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
+                        cooling_load_ton = ghpghx_inputs["cooling_thermal_load_ton"]
+                        thermal_load_ton .+= cooling_load_ton
+                    end
+                    peak_thermal_load_ton = maximum(thermal_load_ton)
+                    if haskey(d["GHP"],"max_ton") && peak_thermal_load_ton > d["GHP"]["max_ton"]
+                        @info "User entered undersized GHP. Calculating load that can be served by user specified undersized GHP"
+                        # When user specifies undersized GHP, calculate the load to be served by GHP and send the rest to REopt
+                        if !haskey(d["GHP"], "load_served_by_ghp")
+                            d["GHP"]["load_served_by_ghp"] = "nonpeak"
                         end
-                    elseif d["GHP"]["load_served_by_ghp"] == "nonpeak"
-                        @info "GHP serves all thermal load below peak"
-                        heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
-                        # if cooling load is included, cut down total thermal load and send as much heating load to GhpGhx.jl as possible
-                        if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                            # If total thermal load (heating + cooling) is more than user-defined GHP size, 
-                            # first reduce heating load as much as possible while keeping cooling load the same
-                            if peak_thermal_load_ton > d["GHP"]["max_ton"]
-                                thermal_load_ton[thermal_load_ton .>= d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
-                                heating_load_ton = thermal_load_ton .- cooling_load_ton
-                                # Make sure that the reduced heating load is not negative
-                                heating_load_ton[heating_load_ton .< 0] .= 0
-                                # If the updated peak thermal load is still more than user-defined GHP size, 
-                                # reduce cooling load as well
-                                updated_thermal_load_ton = heating_load_ton .+ cooling_load_ton
-                                updated_peak_thermal_load_ton = maximum(updated_thermal_load_ton)
-                                if updated_peak_thermal_load_ton > d["GHP"]["max_ton"]
-                                    updated_thermal_load_ton[updated_thermal_load_ton .>= d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
-                                    cooling_load_ton = updated_thermal_load_ton .- heating_load_ton
-                                    ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton
-                                end
-                                heating_load_mmbtu = heating_load_ton .* TONNE_PER_MMBTU_HOUR
-                                ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
-                            end
-                        # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
-                        else
-                            heating_load_mmbtu[heating_load_mmbtu .>= d["GHP"]["max_ton"] * TONNE_PER_MMBTU_HOUR] .= d["GHP"]["max_ton"] * TONNE_PER_MMBTU_HOUR
+                        # If user choose to scale down total load (load_served_by_ghp="scaled"), calculate the ratio of the udersized GHP size and peak load
+                        if d["GHP"]["load_served_by_ghp"] == "scaled"
+                            @info "GHP served scaled down of total thermal load"
+                            peak_ratio = d["GHP"]["max_ton"] / peak_thermal_load_ton
+                            # Scale the total load profile down by the peak_ratio and use this scaled down load to rerun GhpGhx.jl
+                            heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
+                            heating_load_mmbtu = heating_load_mmbtu .* peak_ratio
                             ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
-                        end                         
-                    end
-                end
-                results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-                # If max_number_of_boreholes is specified, check if number of boreholes sized by GhpGhx.jl greater than user-specified max_number_of_boreholes,
-                # and if max_number_of_boreholes is less, reduce thermal load served by GHP until max_number_of_boreholes = number of boreholses sized by GhpGhx.jl                
-                if haskey(d["GHP"],"max_number_of_boreholes")
-                    optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
-                    if optimal_number_of_boreholes > d["GHP"]["max_number_of_boreholes"]
-                        @info "Max number of boreholes specified is less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
-                        max_iter = 10
-                        for iter = 1:max_iter
-                            borehole_ratio = d["GHP"]["max_number_of_boreholes"] / optimal_number_of_boreholes
-                            heating_load_mmbtu .*= borehole_ratio
                             if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
-                                cooling_load_ton .*= borehole_ratio
-                            # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
+                                ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton .* peak_ratio
                             end
-                            ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu                              
-                            ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton   
-                            
-                            # Rerun GhpGhx.jl
-                            results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-                            optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
-                            # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
-                            # Otherwise, continue solving until reaching max iteration
-                            if -0.5 < optimal_number_of_boreholes - d["GHP"]["max_number_of_boreholes"] < 0.5
-                                break
+                        elseif d["GHP"]["load_served_by_ghp"] == "nonpeak"
+                            @info "GHP serves all thermal load below peak"
+                            heating_load_mmbtu = ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"]
+                            # if cooling load is included, cut down total thermal load and send as much heating load to GhpGhx.jl as possible
+                            if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
+                                # If total thermal load (heating + cooling) is more than user-defined GHP size, 
+                                # first reduce heating load as much as possible while keeping cooling load the same
+                                if peak_thermal_load_ton > d["GHP"]["max_ton"]
+                                    thermal_load_ton[thermal_load_ton .>= d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
+                                    heating_load_ton = thermal_load_ton .- cooling_load_ton
+                                    # Make sure that the reduced heating load is not negative
+                                    heating_load_ton[heating_load_ton .< 0] .= 0
+                                    # If the updated peak thermal load is still more than user-defined GHP size, 
+                                    # reduce cooling load as well
+                                    updated_thermal_load_ton = heating_load_ton .+ cooling_load_ton
+                                    updated_peak_thermal_load_ton = maximum(updated_thermal_load_ton)
+                                    if updated_peak_thermal_load_ton > d["GHP"]["max_ton"]
+                                        updated_thermal_load_ton[updated_thermal_load_ton .>= d["GHP"]["max_ton"]] .= d["GHP"]["max_ton"]
+                                        cooling_load_ton = updated_thermal_load_ton .- heating_load_ton
+                                        ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton
+                                    end
+                                    heating_load_mmbtu = heating_load_ton .* TONNE_PER_MMBTU_HOUR
+                                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
+                                end
+                            # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
                             else
-                                iter += 1
+                                heating_load_mmbtu[heating_load_mmbtu .>= d["GHP"]["max_ton"] * TONNE_PER_MMBTU_HOUR] .= d["GHP"]["max_ton"] * TONNE_PER_MMBTU_HOUR
+                                ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu
+                            end                         
+                        end
+                    end
+                    # Call GhpGhx.jl to size GHP and GHX
+                    @info "Starting GhpGhx.jl"
+                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+
+                    # If max_number_of_boreholes is specified, check if number of boreholes sized by GhpGhx.jl greater than user-specified max_number_of_boreholes,
+                    # and if max_number_of_boreholes is less, reduce thermal load served by GHP until max_number_of_boreholes = number of boreholses sized by GhpGhx.jl                
+                    if haskey(d["GHP"],"max_number_of_boreholes")
+                        optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
+                        if optimal_number_of_boreholes > d["GHP"]["max_number_of_boreholes"]
+                            @info "Max number of boreholes specified is less than number of boreholes sized in GhpGhx.jl, reducing thermal load served by GHP further"
+                            max_iter = 10
+                            for iter = 1:max_iter
+                                borehole_ratio = d["GHP"]["max_number_of_boreholes"] / optimal_number_of_boreholes
+                                heating_load_mmbtu .*= borehole_ratio
+                                if haskey(ghpghx_inputs,"cooling_thermal_load_ton")
+                                    cooling_load_ton .*= borehole_ratio
+                                # if cooling load is not included, cut down heating load only and send to GhpGhx.jl
+                                end
+                                ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = heating_load_mmbtu                              
+                                ghpghx_inputs["cooling_thermal_load_ton"] = cooling_load_ton   
+                                
+                                # Rerun GhpGhx.jl
+                                results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                                optimal_number_of_boreholes = GhpGhx.get_results_for_reopt(results, inputs_params)["number_of_boreholes"]
+                                # Solution is found if the new optimal number of boreholes sized by GhpGhx.jl = user-specified max number of boreholes,
+                                # Otherwise, continue solving until reaching max iteration
+                                if -0.5 < optimal_number_of_boreholes - d["GHP"]["max_number_of_boreholes"] < 0.5
+                                    break
+                                else
+                                    iter += 1
+                                end
                             end
                         end
                     end
-                end
 
-                # Create a dictionary of the results data needed for REopt
-                ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
-                # Return results from GhpGhx.jl without load scaling if user does not provide GHP size or if user entered GHP size is greater than GHP size output
-                @info "GhpGhx.jl model solved" #with status $(results["status"])."
-            catch e
-                @info e
-                throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
-                    to the GhpGhx.jl package."))
+                    # Create a dictionary of the results data needed for REopt
+                    ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+                    # Return results from GhpGhx.jl without load scaling if user does not provide GHP size or if user entered GHP size is greater than GHP size output
+                    @info "GhpGhx.jl model solved" #with status $(results["status"])."
+                catch e
+                    @info e
+                    throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                        loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
+                        to the GhpGhx.jl package."))
+                end
             end
+
+            end_time = now()
+            d["GHP"]["solve_time_min"] = (end_time - start_time).value/1000/60
 
             ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
             ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
