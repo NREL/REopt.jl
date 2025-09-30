@@ -50,9 +50,11 @@
     "CHP": {
         "prime_mover": "recip_engine",
         "max_kw": 100,
-        "fuel_cost_per_mmbtu": 10.0
+        "fuel_cost_per_mmbtu": 10.0,
+        "can_supply_steam_turbine": true
     },
     "SteamTurbine": {
+        "min_kw": 100.0,
         "max_kw": 100.0
     },
     "ElectricStorage": {
