@@ -45,7 +45,7 @@ else  # run HiGHS tests
             for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
                 @test getfield(tech_struct, :federal_itc_fraction) != 0
             end
-            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage", "HighTempThermalStorage")
                 stor_struct = s.storage.attr[stor_name]
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
                     @test getfield(stor_struct, incentive_input_name) != 0
@@ -66,7 +66,7 @@ else  # run HiGHS tests
             for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
                 @test getfield(tech_struct, :federal_itc_fraction) != 0
             end
-            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage", "HighTempThermalStorage")
                 stor_struct = s.storage.attr[stor_name]
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
                     @test getfield(stor_struct, incentive_input_name) != 0
@@ -91,7 +91,7 @@ else  # run HiGHS tests
                     @test default == 0 
                 end
             end
-            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage")
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage", "HighTempThermalStorage")
                 stor_struct = s.storage.attr[stor_name]
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
                     @test getfield(stor_struct, incentive_input_name) == 0

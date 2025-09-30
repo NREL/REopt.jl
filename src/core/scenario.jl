@@ -207,8 +207,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["HotThermalStorage"] = HotThermalStorage(d["HotThermalStorage"], financial, site, settings.time_steps_per_hour)
     end
     if haskey(d, "HighTempThermalStorage")
-        params = HighTempThermalStorageDefaults(; dictkeys_tosymbols(d["HighTempThermalStorage"])...)
-        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(params, financial, settings.time_steps_per_hour)
+        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(d["HighTempThermalStorage"], financial, site, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(d["ColdThermalStorage"], financial, site, settings.time_steps_per_hour)

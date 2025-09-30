@@ -379,7 +379,10 @@ struct HighTempThermalStorage <: AbstractThermalStorage
     num_charge_hours::Float64
     num_discharge_hours::Float64
 
-    function HighTempThermalStorage(stor::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
+    function HighTempThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
+        set_sector_defaults!(d; struct_name="Storage", sector=s.sector, federal_procurement_type=s.federal_procurement_type)
+        stor = HighTempThermalStorageDefaults(; dictkeys_tosymbols(d)...)
+
         # TODO: develop a storage sizing/costing model using delta-T from hot_temp_degF and cool_temp_degF, as is done in HotThermalStorage 
         min_kw = stor.min_kwh / max(stor.num_charge_hours, stor.num_discharge_hours)
         max_kw = stor.max_kwh / min(stor.num_charge_hours, stor.num_discharge_hours)
