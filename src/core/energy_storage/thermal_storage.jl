@@ -345,7 +345,7 @@ end
 
 
 """
-function HighTempThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+function HighTempThermalStorage(d::Dict, f::Financial, s::Site, time_steps_per_hour::Int)
 
 Construct HighTempThermalStorage struct from Dict with keys-val pairs from the 
 REopt HighTempThermalStorage and Financial inputs. 
