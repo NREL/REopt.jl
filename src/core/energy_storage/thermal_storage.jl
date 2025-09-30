@@ -106,10 +106,10 @@ end
     installed_cost_per_kwh::Float64 = 86.0
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_kwh::Float64 = 0.0
-    macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_option_years::Int = 5 #Note: default may change if Site.sector is not "commercial/industrial"
+    macrs_bonus_fraction::Float64 = 1.0 #Note: default may change if Site.sector is not "commercial/industrial"
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.3
+    total_itc_fraction::Float64 = 0.3 #Note: default may change if Site.sector is not "commercial/industrial"
     total_rebate_per_kwh::Float64 = 0.0
     can_supply_steam_turbine::Bool = true
     can_serve_dhw::Bool = false
