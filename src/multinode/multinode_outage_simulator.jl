@@ -122,7 +122,7 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         end
 
         PrepareOptimizer(pm, Multinode_Inputs)
-        results = PMD.optimize_model!(pm) 
+        results = PowerModelsDistribution.optimize_model!(pm) 
         TerminationStatus = string(results["termination_status"])
                 
         outage_survival_results[x], SuccessfullySolved, TimeStepsNotSolved = InterpretResult(TimeStepsNotSolved, TerminationStatus, SuccessfullySolved, Multinode_Inputs, x, i, pm.model, DataDictionaryForEachNode, OutageLength_TimeSteps_Input, TimeStamp, TotalTimeSteps, NodeList)
@@ -403,11 +403,11 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
         number_of_phases_at_load = length(load_phase_dictionary[gen_ind_e_to_REopt_node[e]])
 
         JuMP.@constraint(pm.model, [k in outage_timesteps],  
-                            PMD.var(pm, k, :pg, e).data[1] == (1/number_of_phases_at_load) * (pm.model[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k])   # negative power "generation" is a load
+                            PowerModelsDistribution.var(pm, k, :pg, e).data[1] == (1/number_of_phases_at_load) * (pm.model[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k])   # negative power "generation" is a load
         )
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(pm.model, [k in outage_timesteps],
-                            PMD.var(pm, k, :qg, e).data[1]  == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
+                            PowerModelsDistribution.var(pm, k, :qg, e).data[1]  == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
         )
     end
 
@@ -415,7 +415,7 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
     for PMD_time_step in outage_timesteps
         substation_line_index = LineInfo_PMD[Multinode_Inputs.substation_line]["index"]
         timestep_for_network_data = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-        branch = ref(pm, timestep_for_network_data, :branch, substation_line_index)
+        branch = PowerModelsDistribution.ref(pm, timestep_for_network_data, :branch, substation_line_index)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
         f_connections = branch["f_connections"]
@@ -423,11 +423,11 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
         f_idx = (substation_line_index, f_bus, t_bus)
         t_idx = (substation_line_index, t_bus, f_bus)
 
-        p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-        p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+        p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+        p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
 
-        q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-        q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+        q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+        q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
         JuMP.@constraint(pm.model, p_fr .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
         JuMP.@constraint(pm.model, p_to .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
@@ -451,7 +451,7 @@ function AddConstraintsFromLineUpgrades(pm, OutageLength_TimeSteps_Input, LineIn
 
         # Based off of code in line 470 of PMD's src>core>constraint_template
         timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-        branch = ref(pm, timestep, :branch, i)
+        branch = PowerModelsDistribution.ref(pm, timestep, :branch, i)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
         f_connections = branch["f_connections"]
@@ -460,8 +460,8 @@ function AddConstraintsFromLineUpgrades(pm, OutageLength_TimeSteps_Input, LineIn
         t_idx = (i, t_bus, f_bus)
 
         for PMD_time_step in outage_timesteps            
-            p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-            p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+            p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+            p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
             
             @constraint(pm.model, p_fr[1] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
             @constraint(pm.model, p_fr[1] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])

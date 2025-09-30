@@ -1,7 +1,5 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
-const PMD = PowerModelsDistribution
-
 function CreateOutputsFolder(Multinode_Inputs, TimeStamp)
     # Create a folder for the outputs if saving results
     if Multinode_Inputs.generate_CSV_of_outputs == true || Multinode_Inputs.generate_results_plots == true
@@ -41,7 +39,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     Start_reading_PMD_results = now()
     sol_math = results["solution"]
     # The PMD results are saved to the sol_eng variable
-    sol_eng = transform_solution(sol_math, data_math_mn)
+    sol_eng = PowerModelsDistribution.transform_solution(sol_math, data_math_mn)
     milliseconds, time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"reading_PMD_results_minutes"] = CalculateComputationTime(Start_reading_PMD_results)
 
     # Extract the REopt results

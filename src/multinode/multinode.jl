@@ -1,7 +1,5 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
-const PMD = PowerModelsDistribution
-
 function Multinode_Model(Multinode_Settings::Dict{String, Any})
     # The main function to run all parts of the multinode model
 
@@ -47,6 +45,9 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             Outage_Results = Dict(["NoOutagesTested" => Dict(["Not evaluated" => "Not evaluated"])])
             single_model_outage_simulator = "N/A"
             outage_simulator_time_minutes = "N/A"
+            outage_simulator_results_for_plotting = "N/A"
+            outage_survival_results_dictionary = "N/A"
+            outage_start_timesteps_dictionary = "N/A"
         end 
 
         if Multinode_Inputs.run_BAU_case
@@ -126,7 +127,6 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                             #("OutageLength_TimeSteps_Input", OutageLength_TimeSteps_Input),
                             #("m_outagesimulator_dictionary", m_outagesimulator_dictionary),
                             ("DataDictionaryForEachNode", DataDictionaryForEachNode),
-                            ("outage_simulator_results_for_plotting", outage_simulator_results_for_plotting),
                             ("CompiledResults", CompiledResults),
                             ("REoptInputs_Combined", REoptInputs_Combined),
                             ("model", model)
@@ -320,7 +320,7 @@ function model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)
         
         # Based off of code in line 470 of PMD's src>core>constraint_template
         timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-        branch = ref(pm, timestep, :branch, i)
+        branch = PowerModelsDistribution.ref(pm, timestep, :branch, i)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
         f_connections = branch["f_connections"]
@@ -333,8 +333,8 @@ function model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)
         for timestep in Multinode_Inputs.PMD_time_steps
             PMD_time_step = findall(x -> x==timestep, Multinode_Inputs.PMD_time_steps)[1] #use the [1] to convert the 1-element vector into an integer
             
-            p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-            p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+            p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+            p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
             
             @constraint(pm.model, p_fr[1] <= pm.model[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"])
             @constraint(pm.model, p_fr[1] >= -pm.model[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"])
@@ -429,7 +429,7 @@ function ApplyDataEngSettings(data_eng, Multinode_Inputs)
     data_eng["voltage_source"]["source"]["bus"] = "sourcebus"
     data_eng["settings"]["name"] = "OptimizationModel" 
     
-    PMD.add_bus_absolute_vbounds!(
+    PowerModelsDistribution.add_bus_absolute_vbounds!(
         data_eng,
         phase_lb_pu = Multinode_Inputs.bus_phase_voltage_lower_bound_per_unit,
         phase_ub_pu = Multinode_Inputs.bus_phase_voltage_upper_bound_per_unit, 
@@ -481,10 +481,10 @@ function CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_R
     if Multinode_Inputs.number_of_phases == 1
         for e in REopt_nodes
             data_eng["generator"]["REopt_gen_$(e)"] = Dict{String,Any}(
-                        "status" => PMD.ENABLED,
+                        "status" => PowerModelsDistribution.ENABLED,
                         "bus" => data_eng["load"]["load$(e)"]["bus"],   
                         "connections" => [data_eng["load"]["load$(e)"]["connections"][1], 4], # Note: From PMD tutorial: "create a generator with the same connection setting."
-                        "configuration" => WYE,
+                        "configuration" => PowerModelsDistribution.WYE,
             )
         end
     elseif Multinode_Inputs.number_of_phases in [2,3]
@@ -497,10 +497,10 @@ function CreatePMDGenerators(Multinode_Inputs, data_eng, REopt_nodes; combined_R
                     #print(data_eng["load"]["load$(e)_phase$(phase)"]["connections"])
                     #print("\n")          
                     data_eng["generator"]["REopt_gen_node$(e)_phase$(phase)"] = Dict{String,Any}(
-                            "status" => PMD.ENABLED,
+                            "status" => PowerModelsDistribution.ENABLED,
                             "bus" => data_eng["load"]["load$(e)_phase$(phase)"]["bus"],   
                             "connections" => [data_eng["load"]["load$(e)_phase$(phase)"]["connections"][1], 4],  # data_eng["load"]["load$(e)_phase$(phase)"]["connections"][1] will show the phase connection for that load. Does this only work with single phase loads? Note: From PMD tutorial: "create a generator with the same connection setting."
-                            "configuration" => WYE,
+                            "configuration" => PowerModelsDistribution.WYE,
                     )
                 end
             end
@@ -515,7 +515,7 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     
     print("\n Parsing the network input file \n")
     if typeof(Multinode_Inputs.PMD_network_input) == String 
-        data_eng = PowerModelsDistribution.parse_file(Multinode_Inputs.PMD_network_input)
+        data_eng = PowerModelsDistribution.parse_file(Multinode_Inputs.PMD_network_input, transformations=[PowerModelsDistribution.remove_all_bounds!])
     elseif typeof(Multinode_Inputs.PMD_network_input) == Dict{String, Any}
         data_eng = Multinode_Inputs.PMD_network_input
     else
@@ -538,12 +538,12 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
 
 
     Start_transform_to_math_model = now()
-    data_math_mn = transform_data_model(data_eng, multinetwork=true) # Transforming the engineering model to a mathematical model in PMD 
+    data_math_mn = PowerModelsDistribution.transform_data_model(data_eng, multinetwork=true) # Transforming the engineering model to a mathematical model in PMD 
     
     # Initialize voltage variable values:
     @info "running add_start_vrvi (this may take a few minutes for large models)\n"
     Start_vrvi = now()
-    add_start_vrvi!(data_math_mn)
+    PowerModelsDistribution.add_start_vrvi!(data_math_mn)
    
     milliseconds, PMD_vrvi_time_minutes = CalculateComputationTime(Start_vrvi)
     print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes \n")
@@ -552,17 +552,17 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     Start_instantiate = now()
 
     if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel"
-        pm = instantiate_mc_model(data_math_mn, LPUBFDiagPowerModel, build_mn_mc_opf) # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
+        pm = PowerModelsDistribution.instantiate_mc_model(data_math_mn, PowerModelsDistribution.LPUBFDiagPowerModel, PowerModelsDistribution.build_mn_mc_opf) # Note: instantiate_mc_model automatically converts the "engineering" model into a "mathematical" model
     elseif Multinode_Inputs.model_subtype == "ACPUPowerModel"
-        pm = instantiate_mc_model(data_math_mn, ACPUPowerModel, build_mn_mc_opf)
+        pm = PowerModelsDistribution.instantiate_mc_model(data_math_mn, PowerModelsDistribution.ACPUPowerModel, PowerModelsDistribution.build_mn_mc_opf)
     elseif Multinode_Inputs.model_subtype == "ACRUPowerModel"
-        pm = instantiate_mc_model(data_math_mn, ACRUPowerModel, build_mn_mc_opf)
+        pm = PowerModelsDistribution.instantiate_mc_model(data_math_mn, PowerModelsDistribution.ACRUPowerModel, PowerModelsDistribution.build_mn_mc_opf)
     elseif Multinode_Inputs.model_subtype == "IVRUPowerModel"
-        pm = instantiate_mc_model(data_math_mn, IVRUPowerModel, build_mn_mc_opf)
+        pm = PowerModelsDistribution.instantiate_mc_model(data_math_mn, PowerModelsDistribution.IVRUPowerModel, PowerModelsDistribution.build_mn_mc_opf)
     elseif Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel"                                      
-        pm = instantiate_mc_model(data_math_mn, SOCNLPUBFPowerModel, build_mn_mc_opf)
+        pm = PowerModelsDistribution.instantiate_mc_model(data_math_mn, PowerModelsDistribution.SOCNLPUBFPowerModel, PowerModelsDistribution.build_mn_mc_opf)
     elseif Multinode_Inputs.model_subtype == "SOCConicUBFPowerModel"
-        pm = instantiate_mc_model(data_math_mn, SOCConicUBFPowerModel, build_mn_mc_opf)
+        pm = PowerModelsDistribution.instantiate_mc_model(data_math_mn, PowerModelsDistribution.SOCConicUBFPowerModel, PowerModelsDistribution.build_mn_mc_opf)
     else
         throw(@error("The PMD subtype is not valid"))
     end
@@ -733,12 +733,12 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
 
         # Note: evenly split the total export and import across each phase associated with that load (aka REopt node, aka PMD generator)
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],  
-                            PMD.var(pm, k, :pg, e).data[1] .== round((1/number_of_phases_at_load), digits = 3) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]])   # negative power "generation" is a load
+                            PowerModelsDistribution.var(pm, k, :pg, e).data[1] .== round((1/number_of_phases_at_load), digits = 3) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][PMDTimeSteps_InREoptTimes[k]])   # negative power "generation" is a load
         )
         
         # TODO: add reactive power to the REopt nodes
         JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
-                            PMD.var(pm, k, :qg, e).data[1] .== 0.0 # m[:dvFreeReactivePower][e,k]  # (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
+                            PowerModelsDistribution.var(pm, k, :qg, e).data[1] .== 0.0 # m[:dvFreeReactivePower][e,k]  # (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
         )
     end
 
@@ -1050,9 +1050,9 @@ end
 function create_bus_info_dictionary(pm)
       # Creates a dictionary with the bus names and corresponding indeces for the :w decision variable (which is the voltage squared decision variable)
       BusInfo = Dict([])
-      NumberOfBusses = length(PMD.ref(pm,1,:bus))
+      NumberOfBusses = length(PowerModelsDistribution.ref(pm,1,:bus))
       for i in 1:NumberOfBusses
-          BusData = PMD.ref(pm, 1, :bus, i)
+          BusData = PowerModelsDistribution.ref(pm, 1, :bus, i)
           BusInfo[BusData["name"]] = Dict(["index"=>BusData["index"], "terminals"=>BusData["terminals"], "bus_i"=>BusData["bus_i"], "vbase"=>BusData["vbase"]]) 
       end
       return BusInfo
@@ -1075,7 +1075,7 @@ function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
     for PMD_time_step in PMD_time_steps
         for bus_name in bus_names
             index = BusInfo[bus_name]["index"]
-            voltage_squared = [PMD.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]]
+            voltage_squared = [PowerModelsDistribution.var(pm, PMD_time_step, :w, index)[terminal] for terminal in BusInfo[bus_name]["terminals"]]
             
             if Multinode_Inputs.display_information_during_modeling_run 
                 # print out information to understand the approach in the code:
@@ -1173,7 +1173,7 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
             i = LineInfo[Multinode_Inputs.substation_line]["index"]
                 # Based off of code in line 470 of PMD's src>core>constraint_template
                 timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-                branch = ref(pm, timestep, :branch, i)
+                branch = PowerModelsDistribution.ref(pm, timestep, :branch, i)
                 f_bus = branch["f_bus"]
                 t_bus = branch["t_bus"]
                 f_connections = branch["f_connections"]
@@ -1197,11 +1197,11 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                         
                         PMD_time_step = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
 
-                        p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-                        p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+                        p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+                        p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
                 
-                        q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-                        q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+                        q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+                        q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(p_fr[phase] for phase in f_connections))
                     
@@ -1233,11 +1233,11 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                     if timestep in PMDTimeSteps_InREoptTimes
                         PMD_time_step = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
 
-                        p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-                        p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+                        p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+                        p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
                 
-                        q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-                        q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+                        q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+                        q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
                         @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == sum(p_fr[phase] for phase in f_connections))
                         
@@ -1298,7 +1298,7 @@ end
 function CreateLineInfoDictionary(Multinode_Inputs, pm, data_math_mn)
     # Creates a dictionary with the line names and corresponding indeces for the :p decision variable
     LineInfo = Dict([])
-    NumberOfBranches = length(ref(pm,1,:branch))
+    NumberOfBranches = length(PowerModelsDistribution.ref(pm,1,:branch))
 
     if length(collect(values(data_math_mn["nw"]["1"]["settings"]["vbases_default"]))) != 1
         throw(@error("The length of vbases_default is not 1"))
@@ -1307,7 +1307,7 @@ function CreateLineInfoDictionary(Multinode_Inputs, pm, data_math_mn)
     vbases_default = collect(values(data_math_mn["nw"]["1"]["settings"]["vbases_default"]))[1]
    
     for i in 1:NumberOfBranches
-        LineData = PMD.ref(pm, 1, :branch, i)
+        LineData = PowerModelsDistribution.ref(pm, 1, :branch, i)
         
         branch_vbase = LineData["vbase"]
         line_voltage = round(Multinode_Inputs.base_voltage_kv * (LineData["vbase"]/vbases_default), digits=3)
@@ -1362,7 +1362,7 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     print(length(all_variables(pm.model)))
     print("\n")
     # Note: the "optimize_model!" function is a wrapper from PMD and it includes some organization of the results
-    results = PMD.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=HiGHS.Optimizer) # The default in PMD for relax_integrality is false
+    results = PowerModelsDistribution.optimize_model!(pm) #  Option other fields: relax_intregrality=true, optimizer=HiGHS.Optimizer) # The default in PMD for relax_integrality is false
     print("\n The optimization is complete\n")
     
     TerminationStatus = string(results["termination_status"])
@@ -1397,7 +1397,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
     i = LineInfo[line]["index"]
         # Based off of code in line 470 of PMD's src>core>constraint_template
         timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
-        branch = ref(pm, timestep, :branch, i)
+        branch = PowerModelsDistribution.ref(pm, timestep, :branch, i)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
         f_connections = branch["f_connections"]
@@ -1417,11 +1417,11 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             # Based off of code in line 274 of PMD's src>core>constraints
             PMD_time_step = findall(x -> x==timestep, PMDTimeSteps_InREoptTimes)[1] #use the [1] to convert the 1-element vector into an integer
             
-            p_fr = [PMD.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
-            p_to = [PMD.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
+            p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
+            p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
 
-            q_fr = [PMD.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-            q_to = [PMD.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+            q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+            q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
         elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
             # redefine the timestep variable to be correlated with the timestep variable in the simple powerflow model
             timestep_for_simple_powerflow_model = findall(x -> x==timestep, time_steps_without_PMD)[1]
@@ -1587,7 +1587,7 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
     end
     
     if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD  &&  (Multinode_Inputs.number_of_phases > 1)
-        throw(@error("The simple powerflow model is currently not compatible with multiphase systems. Please set apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD to false to run the model only with PMD."))
+        throw(@error("The simple powerflow model is currently not compatible with multiphase systems. Please set apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD to false to run the model only with PowerModelsDistribution."))
     end
 
     if Multinode_Inputs.substation_export_limit < 0
