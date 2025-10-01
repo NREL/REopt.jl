@@ -4082,5 +4082,5 @@ else  # run HiGHS tests
     #         year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
     #         @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
     #     end
-    # end
+    end
 end

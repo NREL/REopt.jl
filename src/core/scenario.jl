@@ -716,8 +716,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     end
                 end
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-
-                results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                 
                 # If max_number_of_boreholes is specified, check if number of boreholes sized by GhpGhx.jl greater than user-specified max_number_of_boreholes,
                 # and if max_number_of_boreholes is less, reduce thermal load served by GHP until max_number_of_boreholes = number of boreholses sized by GhpGhx.jl                
