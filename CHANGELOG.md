@@ -25,12 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.55.0
+## Develop
 ### Added
 - Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
 - Alternative defaults used when **sector** is "federal"
-### Changed
-- Change hybrid GHP workflow from (1) running a 2-year simulation to guess if an auxiliary heating or cooling unit is required and outputting results to (2) running non-hybrid first in all hybrid runs and comparing to hybrid outputs to guarantee an actual hybrid solution where possible
 
 ## v0.54.1
 ### Added 
