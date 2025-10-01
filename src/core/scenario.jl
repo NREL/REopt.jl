@@ -387,6 +387,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     max_heat_demand_kw = maximum(total_heating_load_series_kw)
     if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
+        # print("\nCREATE EXISTING BOILER\n")
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -618,6 +619,27 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 end
                 d["GHP"]["number_of_boreholes_nonhybrid"] = nonhybrid_results_resp_dict["number_of_boreholes"]
                 d["GHP"]["iterations_nonhybrid"] = nonhybrid_results_resp_dict["ghx_soln_number_of_iterations"]
+
+                # # Call GhpGhx.jl to size GHP and GHX
+                # determine_heat_cool_results_resp_dict = Dict()
+                # try
+                #     ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = true
+
+                #     # Call GhpGhx.jl to size GHP and GHX
+                #     @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                #     # Call GhpGhx.jl to size GHP and GHX
+                #     results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                #     # Create a dictionary of the results data needed for REopt
+                #     determine_heat_cool_results_resp_dict = GhpGhx.get_results_for_reopt(results, inputs_params)
+                #     @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+                # catch e
+                #     @info e
+                #     throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                #         loaded (using GhpGhx) to the active Julia environment"))
+                # end
+
+                # temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
+                # - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
 
                 # ORIGINAL GUESS
                 temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] - 
