@@ -25,6 +25,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## federal-defaults
+### Added
+- Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
+- Alternative defaults used when **sector** is "federal"
+
+## Develop
 ## v0.54.1
 ### Added 
 - Added attribute `can_waste_heat` to CST module, allowing for CST to curtail heat.

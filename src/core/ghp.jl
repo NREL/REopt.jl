@@ -31,7 +31,7 @@ struct with outer constructor:
     macrs_option_years::Int = 0
     macrs_bonus_fraction::Float64 = 0.0
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.3
+    federal_itc_fraction::Float64 = 0.3 #Note: default may change if Site.sector is not "commercial/industrial"
     federal_rebate_per_ton::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
@@ -141,7 +141,9 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
 end
 
 
-function GHP(response::Dict, d::Dict)
+function GHP(response::Dict, d::Dict; sector::String, federal_procurement_type::String)
+    set_sector_defaults!(d; struct_name="GHP", sector=sector, federal_procurement_type=federal_procurement_type)
+
     ghp = GHP(; ghpghx_response = response, dictkeys_tosymbols(d)...)
     
     if !(0 <= ghp.aux_cooler_installed_cost_per_ton <= 1.0e6)
