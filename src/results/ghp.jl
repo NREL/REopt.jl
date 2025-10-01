@@ -30,16 +30,6 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # r["size_wwhp_cooling_pump_ton"] = 0.0
 
     if ghp_option_chosen >= 1
-        
-        r["test_hybrid_case"] = p.s.ghp_option_list[ghp_option_chosen].test_hybrid_case
-        r["number_of_boreholes_nonhybrid"] = p.s.ghp_option_list[ghp_option_chosen].number_of_boreholes_nonhybrid
-        r["number_of_boreholes_auto_guess"] = p.s.ghp_option_list[ghp_option_chosen].number_of_boreholes_auto_guess
-        r["number_of_boreholes_flipped_guess"] = p.s.ghp_option_list[ghp_option_chosen].number_of_boreholes_flipped_guess
-
-        r["iterations_nonhybrid"] = p.s.ghp_option_list[ghp_option_chosen].iterations_nonhybrid
-        r["iterations_auto_guess"] = p.s.ghp_option_list[ghp_option_chosen].iterations_auto_guess
-        r["iterations_flipped_guess"] = p.s.ghp_option_list[ghp_option_chosen].iterations_flipped_guess
-
         r["ghpghx_chosen_outputs"] = p.s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]
 
         if r["ghpghx_chosen_outputs"]["heat_pump_configuration"] == "WSHP"
