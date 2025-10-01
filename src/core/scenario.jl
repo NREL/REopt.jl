@@ -631,14 +631,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 end
                 ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = false
 
-            elseif hybrid_ghx_sizing_method == "Heater"
+            elseif hybrid_ghx_sizing_method == "Auxiliary Heating"
                 is_ghx_hybrid = true
                 hybrid_sizing_flag = -2.0 #heating
-                @info "Sizing an auxiliary heating unit for hybrid GHX"
-            elseif hybrid_ghx_sizing_method == "Cooler"
+            elseif hybrid_ghx_sizing_method == "Auxiliary Cooling"
                 is_ghx_hybrid = true
                 hybrid_sizing_flag = -1.0 #cooling
-                @info "Sizing an auxiliary cooling unit for hybrid GHX"
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
                 hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
