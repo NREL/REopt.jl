@@ -642,11 +642,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
 
                 # ORIGINAL GUESS
-                # temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] \
-                # - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1]
+                temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] \
+                - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1]
 
                 # FLIPPED GUESS
-                temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1] - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])]
+                # temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1] - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])]
 
                 hybrid_sizing_flag = 1.0 # non hybrid
                 hybrid_sizing_flag_opposite_guess = 1.0 # non hybrid
