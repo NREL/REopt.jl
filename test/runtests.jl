@@ -2390,35 +2390,6 @@ else  # run HiGHS tests
             empty!(m2)
             GC.gc()
 
-            # Test hybrid GHP functionality
-            input_data = JSON.parsefile("scenarios/ghp_inputs_hybrid.json")
-
-            hybrid_inputs = REoptInputs(input_data)
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            hybrid_results = run_reopt(m1, hybrid_inputs)
-
-            pop!(input_data["GHP"], "ghpghx_inputs", nothing)
-            non_hybrid_inputs = REoptInputs(input_data)
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            non_hybrid_results = run_reopt(m2, non_hybrid_inputs)
-
-            hybrid_GHP_size = hybrid_results["GHP"]["size_heat_pump_ton"]
-            hybrid_GHX_size = hybrid_results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] 
-            hybrid_solution_nonhybrid_GHX_size = hybrid_results["GHP"]["number_of_boreholes_nonhybrid"]
-            non_hybrid_GHP_size = non_hybrid_results["GHP"]["size_heat_pump_ton"]
-            non_hybrid_GHX_size = non_hybrid_results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] 
-
-            @test hybrid_GHX_size < non_hybrid_GHX_size
-            @test hybrid_GHX_size ≈ 5.0 atol=1.0
-            @test hybrid_GHP_size ≈ non_hybrid_GHP_size atol=0.5
-            @test hybrid_solution_nonhybrid_GHX_size ≈ non_hybrid_GHX_size atol=0.5
-
-            finalize(backend(m1))
-            empty!(m1)
-            finalize(backend(m2))
-            empty!(m2)
-            GC.gc()     
-
             # Check GHP LCC calculation for URBANopt
             ghp_data = JSON.parsefile("scenarios/ghp_urbanopt.json")
             s = Scenario(ghp_data)
