@@ -803,51 +803,6 @@ function set_sector_defaults!(d::Dict; struct_name::String, sector::String, fede
     end
 end
 
-# function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
-#     return get(get_sector_defaults(;
-#                     sector=sector, 
-#                     federal_procurement_type=federal_procurement_type
-#                 ), 
-#                 "Techs", 
-#                 Dict{String,Any}()
-#             )
-# end
-# function set_tech_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
-#     sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
-#     for (input_name, input_val) in sector_defaults
-#         if !(input_name in keys(d))
-#             d[input_name] = input_val
-#         end
-#     end
-# end
-# function get_sector_defaults_storage(; sector::String, federal_procurement_type::String)
-#     return get(get_sector_defaults(;
-#                     sector=sector, 
-#                     federal_procurement_type=federal_procurement_type
-#                 ), 
-#                 "Storage", 
-#                 Dict{String,Any}()
-#             )
-# end
-# function set_storage_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
-#     sector_defaults = get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type)
-#     for (input_name, input_val) in sector_defaults
-#         if !(input_name in keys(d))
-#             d[input_name] = input_val
-#         end
-#     end
-# end
-# function get_sector_defaults_financial(; sector::String, federal_procurement_type::String, federal_sector_state::String="")
-#     return get(get_sector_defaults(;
-#                     sector=sector, 
-#                     federal_procurement_type=federal_procurement_type,
-#                     federal_sector_state=federal_sector_state
-#                 ), 
-#                 "Financial", 
-#                 Dict{String,Any}()
-#             )
-# end
-
 function struct_to_dict(obj)
     result = Dict{String, Any}()
     if obj === nothing
