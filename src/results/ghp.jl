@@ -23,7 +23,7 @@ GHP results:
 function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r = Dict{String, Any}()
     @expression(m, GHPOptionChosen, sum(g * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))
-	ghp_option_chosen = convert(Int64, value(round(GHPOptionChosen, digits=1)) # Added rounding - InexactError with Cbc solver
+	ghp_option_chosen = convert(Int64, value(GHPOptionChosen))
     r["ghp_option_chosen"] = ghp_option_chosen
     # r["size_heat_pump_ton"] = 0.0
     # r["size_wwhp_heating_pump_ton"] = 0.0
