@@ -642,8 +642,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
 
                 # ORIGINAL GUESS
-                temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] - 
-                            nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1]
+                # temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])] \
+                # - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1]
+
+                # FLIPPED GUESS
+                temp_diff = nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][1] - nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"][length(nonhybrid_results_resp_dict["end_of_year_ghx_lft_f"])]
 
                 hybrid_sizing_flag = 1.0 # non hybrid
                 hybrid_sizing_flag_opposite_guess = 1.0 # non hybrid
@@ -739,13 +742,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         @info "Hybrid GHX results are unavailable for this scenario. Returning non-hybrid results"
                         is_ghx_hybrid = false
                         ghpghx_results = nonhybrid_results_resp_dict
-                        d["GHP"]["hybrid_solution_type"] = "nonhybrid_solution"
+                        d["GHP"]["test_hybrid_case"] = "nonhybrid_solution"
                     else
                         ghpghx_results = new_hybrid_ghpghx_results
-                        d["GHP"]["hybrid_solution_type"] = "flipped_guess"
+                        d["GHP"]["test_hybrid_case"] = "flipped_guess"
                     end
                 else
-                    d["GHP"]["hybrid_solution_type"] = "automatic_guess_correct"
+                    d["GHP"]["test_hybrid_case"] = "automatic_guess_correct"
                 end
 
                 if haskey(d["GHP"],"max_ton") || haskey(d["GHP"],"max_number_of_boreholes")
