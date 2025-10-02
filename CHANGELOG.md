@@ -31,8 +31,14 @@ Classify the change according to the following categories:
 - Alternative defaults used when **sector** is "federal"
 
 ## Develop
+## v0.54.1
+### Added 
+- Added attribute `can_waste_heat` to CST module, allowing for CST to curtail heat.
 ### Changed
 - Use ARM version of SAM library file if processor architecture is ARM
+- Fixed some docstrings in the CST source code.
+### Fixed
+- Fix `CHP` and `Boiler` results when there is HighTempThermalStorage
 
 ## v0.54.0
 ### Changed
