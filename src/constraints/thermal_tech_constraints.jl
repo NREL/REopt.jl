@@ -125,11 +125,18 @@ function add_heating_tech_constraints(m, p; _n="")
                 @warn "CST.charge_storage_only is set to True, but no hot storage technologies exist."
             end
         end
+        if !p.s.cst.can_waste_heat
+            for q in p.heating_loads
+                for ts in p.time_steps
+                    fix(m[Symbol("dvProductionToWaste"*_n)]["CST",q,ts], 0.0, force=true)
+                end
+            end
+        end
     end
 
     
     # Enforce no waste heat for any technology that isn't both electricity- and heat-producing
-    for t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp))
+    for t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp, ["CST"]))
         for q in p.heating_loads
             for ts in p.time_steps
                 fix(m[Symbol("dvProductionToWaste"*_n)][t,q,ts], 0.0, force=true)

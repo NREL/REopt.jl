@@ -614,3 +614,270 @@ function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
         throw(@error("All values in the provided $(input_struct_name) $(input_name) must be between 0 and 1."))
     end
 end
+
+# Functions to load sector dependent default data from JSON file
+function state_name_to_abbr(federal_sector_state::String)
+    abbr_lookup = Dict{String,String}(
+            "Washington" => "WA",
+            "Oregon" => "OR",
+            "California" => "CA",
+            "Alaska" => "AK",
+            "Hawaii" => "HI",
+            "Nevada" => "NV",
+            "Idaho" => "ID",
+            "Utah" => "UT",
+            "Arizona" => "AZ",
+            "Montana" => "MT",
+            "Wyoming" => "WY",
+            "Colorado" => "CO",
+            "New Mexico" => "NM",
+
+            "North Dakota" => "ND",
+            "South Dakota" => "SD",
+            "Nebraska" => "NE",
+            "Kansas" => "KS",
+            "Minnesota" => "MN",
+            "Iowa" => "IA",
+            "Missouri" => "MO",
+            "Wisconsin" => "WI",
+            "Illinois" => "IL",
+            "Indiana" => "IN",
+            "Ohio" => "OH",
+            "Michigan" => "MI",
+
+            "Louisiana" => "LA",
+            "Texas" => "TX",
+            "Oklahoma" => "OK",
+            "Arkansas" => "AR",
+            "Kentucky" => "KY",
+            "Tennessee" => "TN",
+            "Alabama" => "AL",
+            "Mississippi" => "MS",
+            "North Carolina" => "NC",
+            "South Carolina" => "SC",
+            "Georgia" => "GA",
+            "Florida" => "FL",
+            "West Virginia" => "WV",
+            "Virginia" => "VA",
+            "Maryland" => "MD",
+            "Delaware" => "DE",
+            "District of Columbia" => "DC",
+
+            "New Jersey" => "NJ",
+            "New York" => "NY",
+            "Pennsylvania" => "PA",
+            "Connecticut" => "CT",
+            "Rhode Island" => "RI",
+            "Massachusetts" => "MA",
+            "New Hampshire" => "NH",
+            "Maine" => "ME",
+            "Vermont" => "VT"
+        )
+    if federal_sector_state in values(abbr_lookup)
+        return federal_sector_state
+    else
+        return get(
+            abbr_lookup,
+            federal_sector_state,
+            ""
+        )
+    end
+end
+function get_NIST_EERC_rate_region(state::String)
+    state_abbr = state_name_to_abbr(state)
+    abbr_to_region = Dict{String,String}(
+        "WA" => "West",
+        "OR" => "West",
+        "CA" => "West",
+        "AK" => "West",
+        "HI" => "West",
+        "NV" => "West",
+        "ID" => "West",
+        "UT" => "West",
+        "AZ" => "West",
+        "MT" => "West",
+        "WY" => "West",
+        "CO" => "West",
+        "NM" => "West",
+
+        "ND" => "Midwest",
+        "SD" => "Midwest",
+        "NE" => "Midwest",
+        "KS" => "Midwest",
+        "MN" => "Midwest",
+        "IA" => "Midwest",
+        "MO" => "Midwest",
+        "WI" => "Midwest",
+        "IL" => "Midwest",
+        "IN" => "Midwest",
+        "OH" => "Midwest",
+        "MI" => "Midwest",
+
+        "LA" => "South",
+        "TX" => "South",
+        "OK" => "South",
+        "AR" => "South",
+        "KY" => "South",
+        "TN" => "South",
+        "AL" => "South",
+        "MS" => "South",
+        "NC" => "South",
+        "SC" => "South",
+        "GA" => "South",
+        "FL" => "South",
+        "WV" => "South",
+        "VA" => "South",
+        "MD" => "South",
+        "DE" => "South",
+        "DC" => "South",
+
+        "NJ" => "Northeast",
+        "NY" => "Northeast",
+        "PA" => "Northeast",
+        "CT" => "Northeast",
+        "RI" => "Northeast",
+        "MA" => "Northeast",
+        "NH" => "Northeast",
+        "ME" => "Northeast",
+        "VT" => "Northeast"
+    )
+    return get(abbr_to_region, state_abbr, "")
+end
+function filter_sector_defaults_by_region!(defaults::Dict; federal_escalation_region::String)
+    if isempty(federal_escalation_region)
+        return
+    else
+        if "Financial" in keys(defaults)
+            for input_key in ["elec_cost_escalation_rate_fraction", "existing_boiler_fuel_cost_escalation_rate_fraction",
+                                "boiler_fuel_cost_escalation_rate_fraction", "chp_fuel_cost_escalation_rate_fraction",
+                                "generator_fuel_cost_escalation_rate_fraction"]
+                defaults["Financial"][input_key] = defaults["Financial"][input_key][federal_escalation_region]
+            end
+        else
+            for key in keys(defaults)
+                filter_sector_defaults_by_region!(defaults[key]; federal_escalation_region=federal_escalation_region)
+            end
+        end
+    end
+end
+function get_all_sector_defaults()
+    sector_defaults_path = joinpath(@__DIR__, "..", "..", "data", "sector_dependent_defaults.json")
+    if !isfile(sector_defaults_path)
+        throw(ErrorException("sector_dependent_defaults.json not found at path: $sector_defaults_path"))
+    end
+    sector_defaults = JSON.parsefile(sector_defaults_path)
+    return sector_defaults
+end
+function get_sector_defaults(; sector::String, federal_procurement_type::String="", federal_sector_state::String="", struct_name::String="")
+    sector_defaults = get_all_sector_defaults()
+    
+    if sector=="federal"
+        if isempty(federal_procurement_type) 
+            throw(@error("federal_procurement_type must be provided to get_sector_defaults() when sector is 'federal'"))
+        end
+        sector_defaults = get(get(sector_defaults, sector, Dict{String,Any}()), federal_procurement_type, Dict{String,Any}())
+        federal_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
+        if struct_name == "Financial" || isempty(struct_name)
+            if isempty(federal_escalation_region)
+                @warn "No or invalid federal_sector_state provided, so national average used for default federal escalation rates."
+                federal_escalation_region = "National"
+            end
+            filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
+        end
+    else
+        sector_defaults = get(sector_defaults, sector, Dict{String,Any}())
+    end
+
+    if !isempty(struct_name)
+        sector_defaults = get(sector_defaults, struct_name, Dict{String,Any}())
+    end
+    
+    return sector_defaults
+end
+function set_sector_defaults!(d::Dict; struct_name::String, sector::String, federal_procurement_type::String="", federal_sector_state::String="")
+    sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
+    for (input_name, input_val) in sector_defaults
+        if !(input_name in keys(d))
+            d[input_name] = input_val
+        end
+    end
+end
+
+# function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
+#     return get(get_sector_defaults(;
+#                     sector=sector, 
+#                     federal_procurement_type=federal_procurement_type
+#                 ), 
+#                 "Techs", 
+#                 Dict{String,Any}()
+#             )
+# end
+# function set_tech_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
+#     sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
+#     for (input_name, input_val) in sector_defaults
+#         if !(input_name in keys(d))
+#             d[input_name] = input_val
+#         end
+#     end
+# end
+# function get_sector_defaults_storage(; sector::String, federal_procurement_type::String)
+#     return get(get_sector_defaults(;
+#                     sector=sector, 
+#                     federal_procurement_type=federal_procurement_type
+#                 ), 
+#                 "Storage", 
+#                 Dict{String,Any}()
+#             )
+# end
+# function set_storage_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
+#     sector_defaults = get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type)
+#     for (input_name, input_val) in sector_defaults
+#         if !(input_name in keys(d))
+#             d[input_name] = input_val
+#         end
+#     end
+# end
+# function get_sector_defaults_financial(; sector::String, federal_procurement_type::String, federal_sector_state::String="")
+#     return get(get_sector_defaults(;
+#                     sector=sector, 
+#                     federal_procurement_type=federal_procurement_type,
+#                     federal_sector_state=federal_sector_state
+#                 ), 
+#                 "Financial", 
+#                 Dict{String,Any}()
+#             )
+# end
+
+function struct_to_dict(obj)
+    result = Dict{String, Any}()
+    if obj === nothing
+        return result
+    end
+
+    field_names = fieldnames(typeof(obj))
+    for field_name in field_names
+        field_value = getfield(obj, field_name)
+        field_name_str = string(field_name)
+        if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
+            continue
+        end
+        if field_value === nothing
+            result[field_name_str] = ""
+        elseif typeof(field_value) <: Vector && !isempty(field_value)
+            # Handle arrays
+            if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
+                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
+            else
+                result[field_name_str] = collect(field_value)
+            end
+        elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
+            # Nested struct
+            result[field_name_str] = struct_to_dict(field_value)
+        else
+            # Primitive types
+            result[field_name_str] = field_value
+        end
+    end
+    
+    return result
+end

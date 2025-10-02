@@ -25,6 +25,22 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Added
+- Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
+- Alternative defaults used when **sector** is "federal"
+- **GHPOutputs** field **number_of_boreholes_flipped_guess**
+### Changed
+- Change hybrid GHP workflow from (1) running a 2-year simulation to guess if an auxiliary heating or cooling unit is required and outputting results to (2) running non-hybrid first in all hybrid runs and comparing to hybrid outputs to guarantee an actual hybrid solution where possible
+
+## v0.54.1
+### Added 
+- Added attribute `can_waste_heat` to CST module, allowing for CST to curtail heat.
+### Changed
+- Use ARM version of SAM library file if processor architecture is ARM
+- Fixed some docstrings in the CST source code.
+### Fixed
+- Fix `CHP` and `Boiler` results when there is HighTempThermalStorage
 
 ## v0.54.0
 ### Changed
