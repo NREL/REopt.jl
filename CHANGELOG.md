@@ -29,6 +29,9 @@ Classify the change according to the following categories:
 ### Added
 - Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
 - Alternative defaults used when **sector** is "federal"
+- **GHPOutputs** fields **hybrid_solution_type**, **solve_time_min**, **number_of_boreholes_nonhybrid**, **number_of_boreholes_auto_guess**, **number_of_boreholes_flipped_guess**, **iterations_nonhybrid**, **iterations_auto_guess**, **iterations_flipped_guess**
+### Changed
+- Change hybrid GHP workflow from (1) running a 2-year simulation to guess if an auxiliary heating or cooling unit is required and outputting results to (2) running non-hybrid first in all hybrid runs and comparing to hybrid outputs to guarantee an actual hybrid solution where possible
 
 ## v0.54.1
 ### Added 
@@ -38,6 +41,18 @@ Classify the change according to the following categories:
 - Fixed some docstrings in the CST source code.
 ### Fixed
 - Fix `CHP` and `Boiler` results when there is HighTempThermalStorage
+
+## fix-tes-results
+### Fixed
+- Fix `CHP` and `Boiler` results when there is HighTempThermalStorage
+
+## allow-cst-waste-heat-option
+### Added 
+- Added attribute `can_waste_heat` to CST module, allowing for CST to curtail heat.
+
+### Changed
+- Fixed some docstrings in the CST source code.
+
 
 ## v0.54.0
 ### Changed
