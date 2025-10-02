@@ -248,7 +248,7 @@ function add_tou_peak_constraint(m, p; _n="")
         b = m[Symbol(dv)]
          
         bigM_tou_demand_tier_limits = get_electric_demand_tiers_bigM(p, true) 
-        
+
         # Upper bound on peak electrical power demand by tier, by ratchet, if tier is selected (0 o.w.)
         @constraint(m, [r in p.ratchets, tier in 1:ntiers],
             m[Symbol("dvPeakDemandTOU"*_n)][r, tier] <= bigM_tou_demand_tier_limits[r, tier] * b[r, tier]
@@ -462,6 +462,20 @@ function add_elec_utility_expressions(m, p; _n="")
     nothing
 end
 
+"""
+    get_electric_demand_tiers_bigM(p::REoptInputs, tou::Bool)
+
+  Used to generate reasonable big-M values for demand constraints
+  
+  Arguments
+  =========
+  p::REoptInputs -- inputs object containing electric tariff and timestep information
+  tou::Bool -- uses TOU rate information if true, monthly information if false
+
+  Returns
+  =========
+  bigM_demand_tier_limits::Array{Float64,2} -- big-M tier limits for demand constraints
+"""
 function get_electric_demand_tiers_bigM(p::REoptInputs, tou::Bool)
     added_power = !isempty(p.s.storage.types.elec) ? sum(p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec) : 1.0e-3
     bigM = 2 * maximum(100*p.s.electric_load.loads_kw  .+   #2 multiplier for heating/cooling loads in case of a low COP tech, like ASHP in cold temps
@@ -489,6 +503,19 @@ function get_electric_demand_tiers_bigM(p::REoptInputs, tou::Bool)
     return bigM_demand_tier_limits
 end
 
+"""
+    get_electric_energy_tiers_bigM(p::REoptInputs)
+
+  Used to generate reasonable big-M values for energy tier constraints; used when mulitple tiers are present.
+  
+  Arguments
+  =========
+  p::REoptInputs -- inputs object containing electric tariff and timestep information
+
+  Returns
+  =========
+  bigM_energy_tier_limits::Array{Float64,2} -- big-M tier limits for energy constraints
+"""
 function get_electric_energy_tiers_bigM(p::REoptInputs)
     bigM = zeros(length(p.months))
     added_energy = !isempty(p.s.storage.types.elec) ? sum(p.s.storage.attr[b].max_kwh for b in p.s.storage.types.elec) : 1.0e-3
