@@ -27,7 +27,8 @@ export
     get_existing_chiller_default_cop,
     get_electric_heater_defaults,
     get_ashp_defaults,
-    get_pv_cost_params
+    get_pv_cost_params,
+    get_sector_defaults
 
 import HTTP
 import JSON
