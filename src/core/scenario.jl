@@ -615,8 +615,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                         loaded (using GhpGhx) to the active Julia environment"))
                 end
 
-                temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
-                - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+                temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] -
+                    determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
 
                 hybrid_sizing_flag = 1.0 # non hybrid
                 if temp_diff > 0
