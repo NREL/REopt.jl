@@ -77,8 +77,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     # TODO if there are duplicative DER types or incompatible DER types, throw an error
 
     # Analysis period
-    algo_name = first(keys(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"]))
-    lifetime_str = get(mgravens["AlgorithmProperties"]["DesignAlgorithmProperties"][algo_name], "AlgorithmProperties.analysisPeriod", nothing)
+    algo_name = first(keys(mgravens["ApplicationSettings"]))
+    lifetime_str = get(mgravens["ApplicationSettings"][algo_name], "DesignAlgorithmProperties.analysisPeriod", nothing)
     if !isnothing(lifetime_str)
         reopt_inputs["Financial"]["analysis_years"] = parse(Int64, split(split(lifetime_str, "P")[2], "Y")[1])
     end
@@ -97,7 +97,8 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     subregion_name = ""
     economic_props_name = ""
     lmp_name = ""
-    capacity_prices_name = "" 
+    capacity_prices_name = ""
+    updated_battery_cost_with_existing = false 
     for (i, name) in enumerate(tech_names)
         @info "Processing $name"
         tech_data = mgravens["ProposedAssetOption"]["ProposedEnergyProducerOption"][name]
@@ -329,7 +330,10 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 duration_str = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedDuration"]
                 append!(duration, [parse(Int64, split(split(duration_str, "P")[2], "H")[1])])
                 # This will be ignored if there is a critical_loads_kw input, as defined by the list of mg_energy_consumers
-                append!(critical_load_fraction, [mgravens["Document"]["Outage"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
+                # Hand if OutageScenario.loadFractionCritical is not a key and avoid assigning reopt_inputs["ElectricLoad"]["critical_load_fraction"]
+                if haskey(mgravens["Document"]["Outage"][outage], "OutageScenario.loadFractionCritical")
+                    append!(critical_load_fraction, [mgravens["Document"]["Outage"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
+                end
                 start_date_str = get(mgravens["Document"]["Outage"][outage], "OutageScenario.anticipatedStartDay", nothing)
                 # Optional to input start date and hour, and otherwise REopt will use default 4 seasonal peak outages
                 if !isnothing(start_date_str)
@@ -341,13 +345,16 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 end
             end
             duration_avg = convert(Int64, round(sum(duration) / length(duration), digits=0))
-            critical_load_fraction_avg = sum(critical_load_fraction) / length(critical_load_fraction)
+            # If no critical load fraction, we rely on the list of EnergyConsumers in the microgrid for the critical load
+            if !isempty(critical_load_fraction)
+                critical_load_fraction_avg = sum(critical_load_fraction) / length(critical_load_fraction)
+                reopt_inputs["ElectricLoad"]["critical_load_fraction"] = critical_load_fraction_avg
+            end
             reopt_inputs["ElectricUtility"]["outage_durations"] = [duration_avg]
             reopt_inputs["Site"]["min_resil_time_steps"] = duration_avg
             if !isempty(outage_start_time_steps)
                 reopt_inputs["ElectricUtility"]["outage_start_time_steps"] = outage_start_time_steps
             end
-            reopt_inputs["ElectricLoad"]["critical_load_fraction"] = critical_load_fraction_avg
 
             # Technology specific input parameters
             # Current approach: only include *microgrid* PV + Battery in "existing", 
@@ -515,6 +522,7 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             existing_battery_kwh = 0.0
             cost(kw, kwh) = kw * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] + kwh * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
             if "BatteryUnit" in existing_mg_asset_types
+                updated_battery_cost_with_existing = true
                 @info "Found existing BatteryUnit in microgrid, so including by zeroing out the cost for the first X amount of capacity"
                 push!(techs_to_include, "ElectricStorage")
                 # Update ElectricStorage.installed_cost_constant to make the existing BatteryUnit power and energy capacity zero-cost
@@ -629,17 +637,19 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             if "BatteryUnit" in existing_mg_asset_types
                 reopt_inputs["ElectricStorage"]["min_kw"] = max(existing_battery_kw, get(reopt_inputs["ElectricStorage"], "min_kw", 0.0))
                 reopt_inputs["ElectricStorage"]["min_kwh"] = max(existing_battery_kwh, get(reopt_inputs["ElectricStorage"], "min_kwh", 0.0))
-                lumped_const_power_fraction = 0.5
-                lumped_const_ref_kw = 1800.0
-                lumped_const_ref_kwh = 7200.0                
-                installed_cost_per_kw = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kw"])
-                installed_cost_per_kwh = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"])
-                # TODO this might already be negative from existing battery calc above, so we are actually reducing the per_kw and per_kwh costs here
-                installed_cost_constant = copy(reopt_inputs["ElectricStorage"]["installed_cost_constant"])
-                reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] = (installed_cost_per_kw * lumped_const_ref_kw + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kw
-                reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = (installed_cost_per_kwh * lumped_const_ref_kwh + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kwh                
-                cost_update(kw, kwh) = kw * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] + kwh * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
-                reopt_inputs["ElectricStorage"]["installed_cost_constant"] = -cost_update(existing_battery_kw, existing_battery_kwh)
+                if !(updated_battery_cost_with_existing)
+                    lumped_const_power_fraction = 0.5
+                    lumped_const_ref_kw = 1800.0
+                    lumped_const_ref_kwh = 7200.0                
+                    installed_cost_per_kw = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kw"])
+                    installed_cost_per_kwh = copy(reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"])
+                    # TODO this might already be negative from existing battery calc above, so we are actually reducing the per_kw and per_kwh costs here
+                    installed_cost_constant = copy(reopt_inputs["ElectricStorage"]["installed_cost_constant"])
+                    reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] = (installed_cost_per_kw * lumped_const_ref_kw + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kw
+                    reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"] = (installed_cost_per_kwh * lumped_const_ref_kwh + lumped_const_power_fraction * installed_cost_constant) / lumped_const_ref_kwh                
+                    cost_update(kw, kwh) = kw * reopt_inputs["ElectricStorage"]["installed_cost_per_kw"] + kwh * reopt_inputs["ElectricStorage"]["installed_cost_per_kwh"]
+                    reopt_inputs["ElectricStorage"]["installed_cost_constant"] = -cost_update(existing_battery_kw, existing_battery_kwh)
+                end
             end
         end
     end
