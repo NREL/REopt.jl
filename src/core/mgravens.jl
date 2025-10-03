@@ -326,36 +326,39 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             duration = []  # Only a list to take average at the end (assuming different)
             critical_load_fraction = []  # Only a list to take average at the end (assuming different)
             outage_start_time_steps = []
-            for outage in keys(get(mgravens["Document"], "Outage", []))
-                duration_str = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedDuration"]
-                append!(duration, [parse(Int64, split(split(duration_str, "P")[2], "H")[1])])
-                # This will be ignored if there is a critical_loads_kw input, as defined by the list of mg_energy_consumers
-                # Hand if OutageScenario.loadFractionCritical is not a key and avoid assigning reopt_inputs["ElectricLoad"]["critical_load_fraction"]
-                if haskey(mgravens["Document"]["Outage"][outage], "OutageScenario.loadFractionCritical")
-                    append!(critical_load_fraction, [mgravens["Document"]["Outage"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
+            if haskey(mgravens, "Document")
+                for outage in keys(get(mgravens["Document"], "Outage", []))
+                    duration_str = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedDuration"]
+                    append!(duration, [parse(Int64, split(split(duration_str, "P")[2], "H")[1])])
+                    # This will be ignored if there is a critical_loads_kw input, as defined by the list of mg_energy_consumers
+                    # Hand if OutageScenario.loadFractionCritical is not a key and avoid assigning reopt_inputs["ElectricLoad"]["critical_load_fraction"]
+                    if haskey(mgravens["Document"]["Outage"][outage], "OutageScenario.loadFractionCritical")
+                        append!(critical_load_fraction, [mgravens["Document"]["Outage"][outage]["OutageScenario.loadFractionCritical"] / 100.0])
+                    end
+                    start_date_str = get(mgravens["Document"]["Outage"][outage], "OutageScenario.anticipatedStartDay", nothing)
+                    # Optional to input start date and hour, and otherwise REopt will use default 4 seasonal peak outages
+                    if !isnothing(start_date_str)
+                        monthly_time_steps = get_monthly_time_steps(reopt_inputs["ElectricLoad"]["year"]; time_steps_per_hour = convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
+                        start_month = parse(Int64, split(start_date_str, "-")[3])
+                        start_day_of_month = parse(Int64, split(start_date_str, "-")[4])
+                        start_hour_of_day = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedStartHour"]
+                        append!(outage_start_time_steps, [monthly_time_steps[start_month][(start_day_of_month - 1) * 24 + start_hour_of_day]])
+                    end
                 end
-                start_date_str = get(mgravens["Document"]["Outage"][outage], "OutageScenario.anticipatedStartDay", nothing)
-                # Optional to input start date and hour, and otherwise REopt will use default 4 seasonal peak outages
-                if !isnothing(start_date_str)
-                    monthly_time_steps = get_monthly_time_steps(reopt_inputs["ElectricLoad"]["year"]; time_steps_per_hour = convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                    start_month = parse(Int64, split(start_date_str, "-")[3])
-                    start_day_of_month = parse(Int64, split(start_date_str, "-")[4])
-                    start_hour_of_day = mgravens["Document"]["Outage"][outage]["OutageScenario.anticipatedStartHour"]
-                    append!(outage_start_time_steps, [monthly_time_steps[start_month][(start_day_of_month - 1) * 24 + start_hour_of_day]])
+                if !isempty(duration) && sum(duration) > 0.0
+                    duration_avg = convert(Int64, round(sum(duration) / length(duration), digits=0))
+                    reopt_inputs["ElectricUtility"]["outage_durations"] = [duration_avg]
+                    reopt_inputs["Site"]["min_resil_time_steps"] = duration_avg
+                    if !isempty(outage_start_time_steps)
+                        reopt_inputs["ElectricUtility"]["outage_start_time_steps"] = outage_start_time_steps
+                    end
                 end
+                # If no critical load fraction, we rely on the list of EnergyConsumers in the microgrid for the critical load
+                if !isempty(critical_load_fraction)
+                    critical_load_fraction_avg = sum(critical_load_fraction) / length(critical_load_fraction)
+                    reopt_inputs["ElectricLoad"]["critical_load_fraction"] = critical_load_fraction_avg
+                end                
             end
-            duration_avg = convert(Int64, round(sum(duration) / length(duration), digits=0))
-            # If no critical load fraction, we rely on the list of EnergyConsumers in the microgrid for the critical load
-            if !isempty(critical_load_fraction)
-                critical_load_fraction_avg = sum(critical_load_fraction) / length(critical_load_fraction)
-                reopt_inputs["ElectricLoad"]["critical_load_fraction"] = critical_load_fraction_avg
-            end
-            reopt_inputs["ElectricUtility"]["outage_durations"] = [duration_avg]
-            reopt_inputs["Site"]["min_resil_time_steps"] = duration_avg
-            if !isempty(outage_start_time_steps)
-                reopt_inputs["ElectricUtility"]["outage_start_time_steps"] = outage_start_time_steps
-            end
-
             # Technology specific input parameters
             # Current approach: only include *microgrid* PV + Battery in "existing", 
             #   where existing battery will only be accounted for by zeroing out the first X amount of capacity, and
