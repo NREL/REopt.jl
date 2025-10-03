@@ -233,13 +233,13 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 end
             end
             reopt_inputs["ElectricLoad"]["loads_kw"] = total_loads_kw
-            println("Min gross load (kW): ", minimum(total_loads_kw))
-            println("Max gross load (kW): ", maximum(total_loads_kw))
+            println("Min gross load (kW): ", round(minimum(total_loads_kw), digits=0))
+            println("Max gross load (kW): ", round(maximum(total_loads_kw), digits=0))
             if sum(microgrid_loads_kw) > 0.0
                 reopt_inputs["ElectricLoad"]["critical_loads_kw"] = microgrid_loads_kw
             end
-            println("Min critical load (kW): ", minimum(microgrid_loads_kw))
-            println("Max critical load (kW): ", maximum(microgrid_loads_kw))
+            println("Min critical load (kW): ", round(minimum(microgrid_loads_kw), digits=0))
+            println("Max critical load (kW): ", round(maximum(microgrid_loads_kw), digits=0))
 
             # A bunch of financial/prices stuff depends on the Region name, but this is all assumed to apply for all/aggregate loads
             subregion_name = replace(split(mgravens["ProposedSiteLocation"][site_name]["ProposedSiteLocation.Region"], "::")[2], "'" => "")
@@ -573,14 +573,23 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             # If there is existing PV identified above, the PV.production_factor_series would currently be assigned to that Curve GenerationProfile
             if !isnothing(get(tech_data, "ProposedPhotoVoltaicUnitOption.GenerationProfile", nothing))
                 pv_profile_name = replace(split(tech_data["ProposedPhotoVoltaicUnitOption.GenerationProfile"], "::")[2], "'" => "")
-                # Note, the Curve profile must be normalized to DC-capacity; otherwise will throw a REopt error
-                pv_profile_list_of_dict = mgravens["Curve"][pv_profile_name]["Curve.CurveDatas"]
+                # Note, the Curve profile for PV is assumed to be in units of AC or normalized
+                pv_curve_data = mgravens["Curve"][pv_profile_name]
+                has_units = !isnothing(get(pv_curve_data, "Curve.y1Unit", nothing)) ? true : false
+                fixed_size = get(reopt_inputs["PV"], "min_kw", 0.0) == get(reopt_inputs["PV"], "max_kw", 1e9) && get(reopt_inputs["PV"], "max_kw", 0.0) > 0.0
+                pv_profile_list_of_dict = pv_curve_data["Curve.CurveDatas"]
                 if !(length(pv_profile_list_of_dict) == 8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
                     throw(@error("PV profile $pv_profile_name Curve.CurveDatas must be the same length as the load profile"))
+                elseif has_units && !fixed_size
+                    # If the PV system size is not fixed, we cannot normalize the W/kW production profile because we don't know the size
+                    throw(@error("PV profile $pv_profile_name Curve.CurveDatas must be normalized if the PV size is not fixed"))
+                elseif has_units && fixed_size
+                    # Assume Watts if it has units, and multiplier of 1000 for kW if it has a value1Multiplier
+                    units_multiplier = !isnothing(get(pv_curve_data, "Curve.y1Multiplier", nothing)) ? 1.0 : 1000.0
+                    reopt_inputs["PV"]["production_factor_series"] = build_timeseries_array(pv_profile_list_of_dict, "CurveData.y1value", timestep_sec) / reopt_inputs["PV"]["min_kw"] / units_multiplier
                 else
-                    # TODO this may be absolute values instead of normalized, as it is for HCE example
                     # If existing PV, especially large PV, could instead just use that production profile that's already written to reopt_inputs["PV"]["production_factor_series"] above
-                    @info "Using ProposedPhotoVoltaicUnitOption.GenerationProfile for PV production_factor_series, instead of possibly large existing PV generation profile"
+                    @info "Using ProposedPhotoVoltaicUnitOption.GenerationProfile for PV production_factor_series (normalized), instead of possibly large existing PV generation profile"
                     reopt_inputs["PV"]["production_factor_series"] = build_timeseries_array(pv_profile_list_of_dict, "CurveData.y1value", timestep_sec)
                 end
             end
@@ -820,20 +829,20 @@ function update_mgravens_with_reopt_results!(reopt_results::Dict, mgravens::Dict
             proposed_asset_template["Ravens.cimObjectType"] = "ProposedEnergyProducerAsset"
             proposed_asset_template["ProposedAsset.ProposedAssetOption"] = "ProposedPhotoVoltaicUnitOption::'"*tech_name_map["PV"]*"'"
 
-            if isnothing(get(mgravens["Curve"], "PVProfile_REOPT", nothing))
-                mgravens["Curve"]["PVProfile_REOPT"] = Dict{String, Any}(
-                    "IdentifiedObject.name" => "PVProfile_REOPT",
+            if isnothing(get(mgravens["Curve"], "PVProfile_REopt", nothing))
+                mgravens["Curve"]["PVProfile_REopt"] = Dict{String, Any}(
+                    "IdentifiedObject.name" => "PVProfile_REopt",
                     "IdentifiedObject.mRID" => string(uuid4()),
                     "Ravens.cimObjectType" => "Curve",
                     "Curve.xUnit" => "UnitSymbol.h",
                     "Curve.CurveDatas" => []
                     )
                 for ts in 1:(8760 * convert(Int64, reopt_inputs["Settings"]["time_steps_per_hour"]))
-                    append!(mgravens["Curve"]["PVProfile_REOPT"]["Curve.CurveDatas"], 
+                    append!(mgravens["Curve"]["PVProfile_REopt"]["Curve.CurveDatas"], 
                         [Dict("CurveData.xvalue" => ts-1, "CurveData.y1value" => reopt_results["PV"]["production_factor_series"][ts])])
                 end
             end
-            # TODO add reference to Curve::PVProfile_REOPT that was just created above
+            # TODO add reference to Curve::PVProfile_REopt that was just created above
         elseif occursin("ESS", name)
             # Add Battery stuff
             append!(mgravens["Group"]["ProposedAssetSet"][scenario_names[2]]["ProposedAssetSet.ProposedAssets"], ["ProposedBatteryUnit::'$name'"])
