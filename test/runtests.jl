@@ -28,6 +28,7 @@ else  # run HiGHS tests
         @testset "debug no GHP" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/debug_no_ghp.json")
+            @info results["GHP"]
             open("debug_no_ghp_results.json", "w") do f
                 JSON.print(f, results, 4)
             end
