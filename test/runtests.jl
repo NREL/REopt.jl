@@ -15,8 +15,8 @@ Random.seed!(42)
 
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
-        @test true  #skipping Xpress while import to HiGHS takes place
-        # include("test_with_xpress.jl")
+        # @test true  #skipping Xpress while import to HiGHS takes place
+        include("test_with_xpress.jl")
     end
 
 elseif "CPLEX" in ARGS
@@ -25,6 +25,80 @@ elseif "CPLEX" in ARGS
     end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
+        @testset "Sector defaults" begin
+            input_data = JSON.parsefile("scenarios/sector_defaults.json")
+            
+            # Fill in GHP so don't have to call GHPGHX.jl
+            ghp_response = JSON.parsefile("scenarios/ghpghx_response.json")
+            input_data["GHP"]["ghpghx_responses"] = [ghp_response]
+
+            #Commercial
+            input_data["Site"]["sector"] = "commercial/industrial"
+            s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.26
+            @test s.financial.elec_cost_escalation_rate_fraction == 0.0166
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
+                    @test getfield(tech_struct, incentive_input_name) != 0 
+                end
+            end
+            for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
+                @test getfield(tech_struct, :federal_itc_fraction) != 0
+            end
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage", "HighTempThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) != 0
+                end
+            end
+
+            # Federal sector, third party private owned
+            input_data["Site"]["sector"] = "federal"
+            input_data["Site"]["federal_procurement_type"] = "privateowned_thirdparty"
+            s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.26
+            @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.00581 #national avg
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
+                    @test getfield(tech_struct, incentive_input_name) != 0 
+                end
+            end
+            for tech_struct in (s.pvs[1], s.wind, s.ghp_option_list[1])
+                @test getfield(tech_struct, :federal_itc_fraction) != 0
+            end
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage", "HighTempThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) != 0
+                end
+            end
+
+            # Federal direct purchase
+            input_data["Site"]["federal_procurement_type"] = "fedowned_dirpurch"
+            input_data["Site"]["federal_sector_state"] = "CA"
+            s = Scenario(input_data)
+            @test s.financial.owner_tax_rate_fraction == 0.0
+            @test s.financial.elec_cost_escalation_rate_fraction == -0.00088
+            for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1], s.steam_turbine)
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
+                    default = 0
+                    try
+                        #need try catch b/c SteamTurbine does not have federal_itc_fraction input
+                        default = getfield(tech_struct, incentive_input_name)
+                    catch
+                        continue
+                    end
+                    @test default == 0 
+                end
+            end
+            for stor_name in ("ElectricStorage", "ColdThermalStorage", "HotThermalStorage", "HighTempThermalStorage")
+                stor_struct = s.storage.attr[stor_name]
+                for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :total_itc_fraction)
+                    @test getfield(stor_struct, incentive_input_name) == 0
+                end
+            end
+        end
+
         @testset "Prevent simultaneous charge and discharge" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
@@ -2316,6 +2390,35 @@ else  # run HiGHS tests
             empty!(m2)
             GC.gc()
 
+            # Test hybrid GHP functionality
+            input_data_hybrid = JSON.parsefile("scenarios/ghp_inputs_hybrid.json")
+
+            hybrid_inputs = REoptInputs(input_data_hybrid)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            hybrid_results = run_reopt(m1, hybrid_inputs)
+
+            pop!(input_data_hybrid["GHP"], "ghpghx_inputs", nothing)
+            non_hybrid_inputs = REoptInputs(input_data_hybrid)
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            non_hybrid_results = run_reopt(m2, non_hybrid_inputs)
+
+            hybrid_GHP_size = hybrid_results["GHP"]["size_heat_pump_ton"]
+            hybrid_GHX_size = hybrid_results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] 
+            hybrid_solution_nonhybrid_GHX_size = hybrid_results["GHP"]["number_of_boreholes_nonhybrid"]
+            non_hybrid_GHP_size = non_hybrid_results["GHP"]["size_heat_pump_ton"]
+            non_hybrid_GHX_size = non_hybrid_results["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] 
+
+            @test hybrid_GHX_size < non_hybrid_GHX_size
+            @test hybrid_GHX_size ≈ 5.0 atol=1.0
+            @test hybrid_GHP_size ≈ non_hybrid_GHP_size atol=0.5
+            @test hybrid_solution_nonhybrid_GHX_size ≈ non_hybrid_GHX_size atol=2.0
+
+            finalize(backend(m1))
+            empty!(m1)
+            finalize(backend(m2))
+            empty!(m2)
+            GC.gc()     
+
             # Check GHP LCC calculation for URBANopt
             ghp_data = JSON.parsefile("scenarios/ghp_urbanopt.json")
             s = Scenario(ghp_data)
@@ -2456,7 +2559,7 @@ else  # run HiGHS tests
 
             pop!(input_data["GHP"], "ghpghx_inputs", nothing)
             pop!(input_data["GHP"], "ghpghx_responses", nothing)
-            ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
+            ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"]; sector="commercial/industrial", federal_procurement_type="")
 
             calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
             (
