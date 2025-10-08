@@ -543,8 +543,12 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     # Initialize voltage variable values:
     @info "running add_start_vrvi (this may take a few minutes for large models)\n"
     Start_vrvi = now()
-    PowerModelsDistribution.add_start_vrvi!(data_math_mn)
-   
+    if Multinode_Inputs.number_of_phases == 1
+        PowerModelsDistribution.add_start_vrvi!(data_math_mn)
+    else
+        @warn "Not using the add_start_vrvi function from PMD because the system is multiphase and the add_start_vrvi function appears not to work with multi-phase systems in this code"
+    end
+
     milliseconds, PMD_vrvi_time_minutes = CalculateComputationTime(Start_vrvi)
     print("\n The PMD_vrvi_time was: $(PMD_vrvi_time_minutes) minutes \n")
 
@@ -1466,8 +1470,8 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
                 JuMP.@constraint(m, [phase in t_connections], p_to[phase] .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
-                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .== 0)
-                JuMP.@constraint(m, [phase in t_connections], q_to[phase] .== 0)
+                JuMP.@constraint(m, [phase in f_connections], -0.1 .<= q_fr[phase] .<= 0.1)
+                JuMP.@constraint(m, [phase in t_connections], -0.1 .<= q_to[phase] .<= 0.1)
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 @constraint(m, m[:dvPline][line, timestep_for_simple_powerflow_model] .== 0)               
             elseif Switches_Open==false
