@@ -429,10 +429,16 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
         q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
         q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
 
-        JuMP.@constraint(pm.model, p_fr .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
-        JuMP.@constraint(pm.model, p_to .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
-        JuMP.@constraint(pm.model, q_fr .== 0)
-        JuMP.@constraint(pm.model, q_to .== 0)
+        JuMP.@constraint(pm.model, [phase in f_connections], p_fr[phase] .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
+        JuMP.@constraint(pm.model, [phase in t_connections], p_to[phase] .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
+        if Multinode_Inputs.number_of_phases == 1        
+            JuMP.@constraint(pm.model, [phase in f_connections], q_fr[phase] .== 0)
+            JuMP.@constraint(pm.model, [phase in t_connections], q_to[phase] .== 0)
+        else
+            JuMP.@constraint(m, [phase in f_connections], -0.1 .<= q_fr[phase] .<= 0.1)
+            JuMP.@constraint(m, [phase in t_connections], -0.1 .<= q_to[phase] .<= 0.1)    
+        end
+    
     end
 end
 
@@ -463,12 +469,15 @@ function AddConstraintsFromLineUpgrades(pm, OutageLength_TimeSteps_Input, LineIn
             p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
             p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
             
-            @constraint(pm.model, p_fr[1] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
-            @constraint(pm.model, p_fr[1] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
+            for phase in f_connections
+                @constraint(pm.model, p_fr[phase] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
+                @constraint(pm.model, p_fr[phase] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"])
+            end
 
-            @constraint(pm.model, p_to[1] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"]) 
-            @constraint(pm.model, p_to[1] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"]) 
-            
+            for phase in t_connections
+                @constraint(pm.model, p_to[phase] <=  max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"]) 
+                @constraint(pm.model, p_to[phase] >= -max_amps[line] * line_upgrade_options_each_line[line]["voltage_kv"]) 
+            end
         end
     end
 end
