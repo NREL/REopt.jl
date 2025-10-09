@@ -536,8 +536,8 @@ end
 
 function combine_PMD_and_simple_powerflow_results(Multinode_Inputs, m, data_eng, PMD_Dictionary_LineFlow_Power_Series, simple_powerflow_model_results)
     # This function combines the powerflow results from the PMD model and the simple powerflow model
-
-    simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD = determine_timestep_information(Multinode_Inputs, m, data_eng)
+    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD = determine_timestep_information(Multinode_Inputs, m, data_eng, phases_for_each_line)
     
     lines = collect(keys(data_eng["line"]))
     
@@ -627,10 +627,12 @@ function combine_PMD_and_simple_powerflow_results(Multinode_Inputs, m, data_eng,
 end
 
 
-function determine_timestep_information(Multinode_Inputs, m, data_eng)
+function determine_timestep_information(Multinode_Inputs, m, data_eng, phases_for_each_line)
     
     if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
-        simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][collect(keys(data_eng["line"]))[1],:].data))) # pull the total number of timesteps from the first line in the simplified powerflow model
+        line_to_use_to_collect_timesteps = collect(keys(data_eng["line"]))[1]
+        phase_to_use_to_collect_timesteps = phases_for_each_line[line_to_use_to_collect_timesteps][1]
+        simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][line_to_use_to_collect_timesteps, phase_to_use_to_collect_timesteps, :].data))) # the phase 1 might not always work # pull the total number of timesteps from the first line in the simplified powerflow model
     else
         simplified_powerflow_model_timesteps = "the simplified powerflow model was not used"
     end
@@ -646,7 +648,10 @@ end
 function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connections, connections_upstream, connections_downstream)
    # Process the results from the simple powerflow model, which is applied to the time steps that the PMD model isn't applied to
 
-    simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD = determine_timestep_information(Multinode_Inputs, m, data_eng)
+    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    phases_for_each_bus = create_dictionary_of_phases_for_each_bus(data_eng) 
+
+    simplified_powerflow_model_timesteps, REoptTimeSteps, time_steps_without_PMD, time_steps_with_PMD = determine_timestep_information(Multinode_Inputs, m, data_eng, phases_for_each_line)
 
     if length(time_steps_without_PMD) != length(simplified_powerflow_model_timesteps)
         throw(@error("The lengths of the time step arrays should be the same. This indicates that there is an issue with how the simple powerflow model and/or PMD model was formulated."))
@@ -655,23 +660,35 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
     simple_powerflow_line_results = Dict()
     lines = collect(keys(data_eng["line"]))   
     for line in lines
-        simple_powerflow_line_results[line] = Dict("line_power_flow_series" => value.(m[:dvPline][line,:].data),
-                                                   "line_maximum_power_flow" => maximum(value.(m[:dvPline][line,:].data)),
-                                                   "line_average_power_flow" => mean(value.(m[:dvPline][line,:].data)),
-                                                   "line_minimum_power_flow" => minimum(value.(m[:dvPline][line,:].data)),
+        line_power_flow_series = sum(value.(m[:dvPline][line,phase,:].data) for phase in phases_for_each_line[line])
+        simple_powerflow_line_results[line] = Dict("line_power_flow_series" => line_power_flow_series,
+                                                   "line_maximum_power_flow" => maximum(line_power_flow_series),
+                                                   "line_average_power_flow" => mean(line_power_flow_series),
+                                                   "line_minimum_power_flow" => minimum(line_power_flow_series),
                                                    "associated_REopt_timesteps" => time_steps_without_PMD,
                                                    "simplified_powerflow_model_timesteps" => simplified_powerflow_model_timesteps
-
                                                     )
+        # Add power flow results for individual phases
+        individual_phase_results=Dict([])
+        for phase in phases_for_each_line[line]
+            individual_phase_results["phase_$(phase)"] = value.(m[:dvPline][line,phase,:].data) 
+        end
+        simple_powerflow_line_results[line]["individual_phase_results"] = individual_phase_results
     end
 
     simple_powerflow_bus_results = Dict()
-    busses = axes(m[:dvP][:,1])[1]   
+    busses = axes(m[:dvP][:,:,1])[1]   # collect(keys(phases_for_each_bus)) 
     for bus in busses
-        simple_powerflow_bus_results[bus] = Dict("bus_power_series" => value.(m[:dvP][bus,:].data),
-                                                   "bus_maximum_power" => maximum(value.(m[:dvP][bus,:].data)),
-                                                   "bus_average_power" => mean(value.(m[:dvP][bus,:].data)),
-                                                   "bus_minimum_power" => minimum(value.(m[:dvP][bus,:].data)),
+        print("\n For bus $(bus)")
+        print("\n   phases are: ")
+        print(phases_for_each_bus[string(bus)])
+        #print("\n   m[:dvP] is")
+        #print(m[:dvP])
+        bus_power_series = sum(value.(m[:dvP][bus, phase, :].data) for phase in phases_for_each_bus[string(bus)])
+        simple_powerflow_bus_results[bus] = Dict("bus_power_series" => bus_power_series,
+                                                   "bus_maximum_power" => maximum(bus_power_series),
+                                                   "bus_average_power" => mean(bus_power_series),
+                                                   "bus_minimum_power" => minimum(bus_power_series),
                                                    "associated_REopt_timesteps" => time_steps_without_PMD,
                                                    "simplified_powerflow_model_timesteps" => simplified_powerflow_model_timesteps
                                                     )
@@ -974,15 +991,15 @@ end
 function modified_calc_connected_components_eng(data; edges::Vector{<:String}=String["line", "switch", "transformer"], type::Union{Missing,String}=missing, check_enabled::Bool=true) #::Set{Set{String}}
     # Acknowledgement: This function is based on code from the julia package PowerModelsDistribution
     
-    @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
+    @assert get(data, "data_model", PowerModelsDistribution.MATHEMATICAL) == PowerModelsDistribution.ENGINEERING
 
-    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == PowerModelsDistribution.ENABLED || !check_enabled)
     active_bus_ids = Set{String}([i for (i,bus) in active_bus])
 
     neighbors = Dict{String,Vector{String}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
-            if edge_obj["status"] == ENABLED || !check_enabled
+            if edge_obj["status"] == PowerModelsDistribution.ENABLED || !check_enabled
                 if edge_type == "transformer" && haskey(edge_obj, "bus")
                     for f_bus in edge_obj["bus"]
                         for t_bus in edge_obj["bus"]
@@ -995,12 +1012,12 @@ function modified_calc_connected_components_eng(data; edges::Vector{<:String}=St
                 else
                     if edge_type == "switch" && !ismissing(type)
                         if type == "load_blocks"
-                            if edge_obj["dispatchable"] == NO && edge_obj["state"] == CLOSED
+                            if edge_obj["dispatchable"] == PowerModelsDistribution.NO && edge_obj["state"] == PowerModelsDistribution.CLOSED
                                 push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                                 push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                             end
                         elseif type == "blocks"
-                            if edge_obj["state"] == CLOSED
+                            if edge_obj["state"] == PowerModelsDistribution.CLOSED
                                 push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                                 push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                             end

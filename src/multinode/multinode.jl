@@ -757,7 +757,7 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
 
     lines = collect(keys(data_eng["line"]))
 
-    summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors = DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
+    summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors = REopt.DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
 
     # Create a new dictionary based on the paths (which will include the transformer path)
     line_names_to_sourcebus_dict_including_transformers = Dict()
@@ -855,6 +855,28 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
 end
 
 
+function create_dictionary_of_phases_for_each_line(data_eng)
+    data = Dict([])
+
+    for line in keys(data_eng["line"])
+        data[line] = data_eng["line"][line]["t_connections"]
+    end
+    
+    return data
+end
+
+
+function create_dictionary_of_phases_for_each_bus(data_eng)
+    data = Dict([])
+
+    for bus in keys(data_eng["bus"])
+        data[bus] = filter(x -> x != 4, data_eng["bus"][bus]["terminals"])  # remove the 4 from the list of terminals to get the phase numbers
+    end
+
+    return data
+end
+
+
 function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
     print("\n Adding Simple Powerflow Constraints to Non-PMD Timesteps")
     
@@ -877,38 +899,78 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
         print("\n")
     end
 
-    @variable(m, dvP[REopt_nodes, indeces] >= -1000000)
+    if Multinode_Inputs.number_of_phases == 3
+        phases = [1,2,3]
+    elseif Multinode_Inputs.number_of_phases == 2
+        phases = [1,2]
+    elseif Multinode_Inputs.number_of_phases == 1
+        phases = [1]
+    else
+        throw(@error("The input for the number of phases is invalid"))
+    end
+
+    @variable(m, dvP[REopt_nodes, phases, indeces] >= -1000000)
     #@variable(m, Q[REopt_nodes] >= -10000000)
     
-    @variable(m, dvPline[lines, indeces] >= -1000000)
+    @variable(m, dvPline[lines, phases, indeces] >= -1000000)
     #@variable(m, dvQline[lines, indeces])
     
+    # Create a dictionary such that, for instance, phases_for_each_line["line_name"] = [1,2,3] for three phase, or [3] for single phase on phase #3, or [2,3] for two phase
+    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    phases_for_each_bus = create_dictionary_of_phases_for_each_bus(data_eng) 
+
     # Add constraints for maximum power through each line
     if Multinode_Inputs.model_line_upgrades
         print("Adding simple powerflow constraints to allow for line upgrades")
         line_upgrade_options_each_line = CreateDictionaryOfLineUpgradeOptions(Multinode_Inputs)
         for line in lines
+            if line in collect(keys(phases_for_each_line)) # prevent looking for a line if it is a virtual line part of a transformer
+                if length(phases_for_each_line[line]) == 3 
+                    multiphase_multiplier = sqrt(3) # Use the sqrt(3) factor for three-phase lines
+                else
+                    # Don't use the sqrt(3) factor for single phase or two phase lines. This assumes that a two-phase system is a 4-wire two phase system where each phase has its own nuetral (instead of a 3-wire two phase system)
+                    multiphase_multiplier = 1
+                end
+            else
+                multiphase_multiplier = 1
+            end
+
             if line in keys(line_upgrade_options_each_line)
-                @constraint(m, [t in indeces], dvPline[line, t] <= m[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"])
-                @constraint(m, [t in indeces], dvPline[line, t] >= -m[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"])
+              
+                # Note: line amperage ratings are for each conductor in a multiphase system
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], dvPline[line, phase, t] <= m[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"] * multiphase_multiplier)
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], dvPline[line, phase, t] >= -m[:line_max_amps][line] * line_upgrade_options_each_line[line]["voltage_kv"] * multiphase_multiplier)
 
             elseif line in keys(transformer_busses)
-                @constraint(m, [t in indeces], m[:dvPline][line, t] <= 100000000) # TODO: add maximum transformer voltage
-                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -100000000)
+                # Note: transformer power ratings are for power going through all phases combined, but for simplicity
+                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] <= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
+                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] >= -100000000 / 1)
             else
-                @constraint(m, [t in indeces], m[:dvPline][line, t] <= LineInfo[line]["maximum_power_kw"]) # Defines the maximum real power flow through the line
-                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -LineInfo[line]["maximum_power_kw"])
+                if LineInfo[line]["maximum_power_kw"] == Inf
+                    line_max_power = 1000000000 #LineInfo[line]["maximum_power_kw"]
+                    print("\n Line max power for line $(line) is infinite, setting the line_max_power for $(line) to $(line_max_power)")
+                else
+                    line_max_power = LineInfo[line]["maximum_power_kw"] * multiphase_multiplier
+                end
+                
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] <= line_max_power) # Defines the maximum real power flow through the line
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] >= -line_max_power)
             end
         end
     else
         
         for line in lines
             if line in keys(transformer_busses)
-                @constraint(m, [t in indeces], m[:dvPline][line, t] <= 100000000) # TODO: add maximum transformer voltage
-                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -100000000)
+                @constraint(m, [t in indeces, phase in [1]], m[:dvPline][line, phase, t] <= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
+                @constraint(m, [t in indeces, phase in [1]], m[:dvPline][line, phase, t] >= -100000000 / 1)
             else
-                @constraint(m, [t in indeces], m[:dvPline][line, t] <= LineInfo[line]["maximum_power_kw"]) # Defines the maximum real power flow through the line
-                @constraint(m, [t in indeces], m[:dvPline][line, t] >= -LineInfo[line]["maximum_power_kw"])
+                if LineInfo[line]["maximum_power_kw"] == Inf
+                    line_max_power = 1000000000 #LineInfo[line]["maximum_power_kw"]
+                else
+                    line_max_power = LineInfo[line]["maximum_power_kw"] * multiphase_multiplier
+                end
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] <= line_max_power) # LineInfo[line]["maximum_power_kw"] * multiphase_multiplier) # Defines the maximum real power flow through the line
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] >= -line_max_power) # LineInfo[line]["maximum_power_kw"] * multiphase_multiplier)
                 #@constraint(m, m[:dvQline][line, t] <= )
                 #@constraint(m, m[:dvQline][line, t] >= 0)
             end
@@ -929,7 +991,10 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
                             print("\n Connecting node $(node) to the simple powerflow model")
                         end
                     end
-                    @constraint(m, m[:dvP][node,index] .== (m[Symbol("TotalExport_"*string(node))][t]) .- (m[Symbol("dvGridPurchase_"*string(node))][t]) ) # check that these variable names are correct
+                    for phase in phases_for_each_bus[string(node)]
+                        # This constraint assumes that multiphase nodes with loads (or generators) consume (or distribute) power evenly across each phase
+                        @constraint(m, m[:dvP][node, phase, index] .== (1/length(phases_for_each_bus[string(node)])) * (m[Symbol("TotalExport_"*string(node))][t]) .- (m[Symbol("dvGridPurchase_"*string(node))][t]) ) # check that these variable names are correct
+                    end
                 else
                     # I don't think this is necessary because the substation node isn't part of REopt nodes
                     #if counter < 3
@@ -954,21 +1019,31 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             if bus in keys(connections_downstream)
                 Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
                 # For nodes that have upstream and downstream lines
-                @constraint(m, [t in indeces], m[:dvP][parse(Int, bus), t] + sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
+                    # This code assumes that the network has been defined correctly such that the phases on the lines are connected correctly to the phases on each bus
+                for phase in phases
+                    @constraint(m, [t in indeces], m[:dvP][parse(Int, bus), phase, t] + sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, phase, t] for line in connections_downstream[string(bus)]) == 0)
+                end
             else
                 Multinode_Inputs.display_information_during_modeling_run ? print(" at the end of a branch") : nothing
                 # For nodes that are at the end of branch
-                @constraint(m, [t in indeces], m[:dvP][parse(Int,bus), t] + sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) == 0)
+                    # This code assumes that the network has been defined correctly such that the phases on the lines are connected correctly to the phases on each bus
+                for phase in phases
+                    @constraint(m, [t in indeces], m[:dvP][parse(Int,bus), phase, t] + sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) == 0)
+                end
             end
             
         else # for buses in the model without a REopt node
             Multinode_Inputs.display_information_during_modeling_run ? print("\n Adding constraint for non-REopt bus $(bus):") : nothing
             if bus in keys(connections_downstream)
                 Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
-                @constraint(m, [t in indeces], sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
+                for phase in phases_for_each_bus[bus]
+                    @constraint(m, [t in indeces], sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, phase, t] for line in connections_downstream[string(bus)]) == 0)
+                end
             else
                 Multinode_Inputs.display_information_during_modeling_run ? print(" at the end of a branch") : nothing
-                @constraint(m, [t in indeces], sum(m[:dvPline][line, t] for line in connections_upstream[string(bus)]) == 0)
+                for phase in phases_for_each_bus[bus]
+                    @constraint(m, [t in indeces], sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) == 0)
+                end
             end
         end
     end
@@ -1014,9 +1089,9 @@ function Build_REopt_and_Link_To_PMD(pm, Multinode_Inputs, REopt_inputs_combined
         connections_downstream = "N/A"
     end
 
-    ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
+    ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps, data_eng)
     
-    LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn)
+    LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn, data_eng)
     
     if Multinode_Inputs.generators_only_run_during_grid_outage == true
         LimitGeneratorOperatingTimes(m, Multinode_Inputs, REoptInputs_Combined)
@@ -1108,12 +1183,12 @@ function add_bus_voltage_violation_to_the_model(pm, Multinode_Inputs)
 end
 
 
-function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps)
+function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, OutageSimulator, OutageLength_Timesteps, data_eng)
     # Apply a variety of grid import and/or export constraints:
     
     # Restrict power flow from the substation if the multinode type is offgrid
     if Multinode_Inputs.multinode_type == "Offgrid" 
-        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Off_Grid=true)
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo, data_eng; Off_Grid=true)
     end
     
     # Define limits on grid import and export
@@ -1122,12 +1197,12 @@ function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combi
         #RestrictLinePowerFlow(Multinode_Inputs, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Prevent_Export=true) # This constraint is handled by other constraints below
     elseif Multinode_Inputs.substation_export_limit != ""
         print("\n Applying a limit to the power export at the substation")
-        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Substation_Export_Limit = Multinode_Inputs.substation_export_limit)
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo, data_eng; Substation_Export_Limit = Multinode_Inputs.substation_export_limit)
     end 
     
     if Multinode_Inputs.substation_import_limit != ""
         print("\n Applying a limit to the power import from the substation")
-        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo; Substation_Import_Limit = Multinode_Inputs.substation_import_limit)
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo, data_eng; Substation_Import_Limit = Multinode_Inputs.substation_import_limit)
     end 
     
     # Apply a grid outage to the model
@@ -1135,11 +1210,11 @@ function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combi
         if Multinode_Inputs.outages_vector != []
             print("\n Applying a grid outages on the following timesteps: ")
             print(Multinode_Inputs.model_outages_with_outages_vector)
-            RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, Multinode_Inputs.outages_vector, LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
+            RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, Multinode_Inputs.outages_vector, LineInfo, data_eng; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
         end    
     elseif Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step > 0
         print("\n Applying a grid outage from time step $(Multinode_Inputs.single_outage_start_time_step) to $(Multinode_Inputs.single_outage_end_time_step) ")
-        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, collect(Multinode_Inputs.single_outage_start_time_step:Multinode_Inputs.single_outage_end_time_step), LineInfo; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
+        RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, collect(Multinode_Inputs.single_outage_start_time_step:Multinode_Inputs.single_outage_end_time_step), LineInfo, data_eng; Grid_Outage=true, OutageSimulator = OutageSimulator, OutageLength_Timesteps = OutageLength_Timesteps)
     end
     
     # Open switches if defined by the user
@@ -1148,14 +1223,14 @@ function ApplyGridImportAndExportConstraints(Multinode_Inputs, REoptInputs_Combi
         print("\n Switches are included in the model")
         for i in keys(Multinode_Inputs.switch_open_timesteps)
             #print("\n   Opening the switch on line $(i) from timesteps $(minimum(Multinode_Inputs.switch_open_timesteps[i])) to $(maximum(Multinode_Inputs.switch_open_timesteps[i])) \n")
-            RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, i, Multinode_Inputs.switch_open_timesteps[i], LineInfo; Switches_Open=true)
+            RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, i, Multinode_Inputs.switch_open_timesteps[i], LineInfo, data_eng; Switches_Open=true)
         end
     end
     
 end
 
 
-function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn)
+function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptInputs_Combined, LineInfo, REopt_gen_ind_e, REoptTimeSteps, REopt_nodes, data_math_mn, data_eng)
     # Link export through the substation to the utility tariff on the facility meter node
     
     PMDTimeSteps_InREoptTimes = Multinode_Inputs.PMD_time_steps
@@ -1168,6 +1243,8 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
     else
         time_steps_without_PMD = 0
     end
+
+    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng)
 
     for p in REoptInputs_Combined
         if string(p.s.site.node) == p.s.settings.facilitymeter_node
@@ -1211,7 +1288,7 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                     
                     elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD      
                         simple_powerflow_timestep = findall(x -> x==timestep, time_steps_without_PMD)[1]
-                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == m[:dvPline][Multinode_Inputs.substation_line, simple_powerflow_timestep] )
+                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(m[:dvPline][Multinode_Inputs.substation_line, phase, simple_powerflow_timestep] for phase in phases_for_each_line[Multinode_Inputs.substation_line]))
                         
                     else
                         # Instead of using the line flow from PMD or the simple powerflow model, consider the total system inflow/outflow to be based on a lumped-element model, which sums all power inflows and outflows for each node
@@ -1378,7 +1455,7 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
 end
 
 
-function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
+function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo, data_eng; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit="", Substation_Import_Limit="", OutageSimulator = false, OutageLength_Timesteps = 0)
     # Function used for restricting power flow for grid outages, times when switches are opened, and substation import and export limits
     
     # Save the REopt Inputs for the site not to a variable
@@ -1409,6 +1486,8 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
         f_idx = (i, f_bus, t_bus)
         t_idx = (i, t_bus, f_bus)
 
+    phases_for_each_line = create_dictionary_of_phases_for_each_line(data_eng) 
+    
     if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD    
         time_steps_without_PMD = setdiff(REoptTimeSteps, Multinode_Inputs.PMD_time_steps)
     else
@@ -1448,7 +1527,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .>= -Substation_Export_Limit) 
                 JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Substation_Export_Limit) # TODO apply power factor to the export limit for Q
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
-                @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, timestep_for_simple_powerflow_model] .>= -Substation_Export_Limit)
+                @constraint(m, sum(m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] for phase in phases_for_each_line[line]) .>= -Substation_Export_Limit)
             else
                 @constraint(m, sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) <= Substation_Export_Limit)
             end
@@ -1459,7 +1538,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .<= Substation_Import_Limit)
                 JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .<= Substation_Import_Limit) # TODO apply power factor to the import limit for Q
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
-                @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, timestep_for_simple_powerflow_model] .<= Substation_Import_Limit)
+                @constraint(m, sum(m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] for phase in phases_for_each_line[line]) .<= Substation_Import_Limit)
             else
                 @constraint(m, sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facilitymeter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) <= Substation_Import_Limit)
             end
@@ -1470,15 +1549,18 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
                 JuMP.@constraint(m, [phase in t_connections], p_to[phase] .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
-                if Microgrid_Inputs.number_of_phases == 1                
+                if Multinode_Inputs.number_of_phases == 1                
                     JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .== 0.0)
                     JuMP.@constraint(m, [phase in t_connections], q_to[phase] .== 0.0)
                 else
+                    # Add small amount of reactive power support for multi-phase systems
                     JuMP.@constraint(m, [phase in f_connections], -0.1 .<= q_fr[phase] .<= 0.1)
                     JuMP.@constraint(m, [phase in t_connections], -0.1 .<= q_to[phase] .<= 0.1)
                 end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
-                @constraint(m, m[:dvPline][line, timestep_for_simple_powerflow_model] .== 0)               
+                for phase in phases_for_each_line[line]
+                    @constraint(m, m[:dvPline][line, phase, timestep_for_simple_powerflow_model] .== 0)
+                end               
             elseif Switches_Open==false
                 @constraint(m, sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facilitymeter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) == 0)
                 @constraint(m, sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
@@ -1595,9 +1677,9 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         throw(@error("In the Multinode_Inputs dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
     end
     
-    if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD  &&  (Multinode_Inputs.number_of_phases > 1)
-        throw(@error("The simple powerflow model is currently not compatible with multiphase systems. Please set apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD to false to run the model only with PowerModelsDistribution."))
-    end
+    #if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD  &&  (Multinode_Inputs.number_of_phases > 1)
+        #throw(@error("The simple powerflow model is currently not compatible with multiphase systems. Please set apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD to false to run the model only with PowerModelsDistribution."))
+    #end
 
     if Multinode_Inputs.substation_export_limit < 0
         throw(@error("The substation_export_limit input cannot be negative."))
