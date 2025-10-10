@@ -10,6 +10,11 @@
 - `offgrid_annual_oper_res_required_series_kwh` # total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
 - `offgrid_annual_oper_res_provided_series_kwh` # total operating reserves provided on an annual basis, for off-grid scenarios only
 
+!!! note "Multiple Load Components"
+    When using the `load_components` feature, additional results are available:
+    - `components` # dictionary with component-level data (loads_kw, annual_kwh, peak_kw, metadata)
+    - `load_alignment_summary` # alignment metadata (reference_year, total_components, alignment_method)
+
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
@@ -41,6 +46,31 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         
         r["offgrid_annual_oper_res_required_series_kwh"] = round.(value.(m[:OpResRequired][ts] for ts in p.time_steps_without_grid), digits=3)
         r["offgrid_annual_oper_res_provided_series_kwh"] = round.(value.(m[:OpResProvided][ts] for ts in p.time_steps_without_grid), digits=3)
+    end
+    
+    # NEW: Add component-level results if using load_components
+    if p.s.electric_load.has_components && !isnothing(p.s.electric_load.component_loads)
+        r["components"] = Dict{String, Any}()
+        
+        for (component_name, component_loads) in p.s.electric_load.component_loads
+            r["components"][component_name] = Dict(
+                "load_series_kw" => round.(component_loads, digits=3),
+                "annual_kwh" => round(sum(component_loads) * p.hours_per_time_step, digits=2),
+                "peak_kw" => round(maximum(component_loads), digits=3),
+                "min_kw" => round(minimum(component_loads), digits=3),
+                "average_kw" => round(sum(component_loads) / length(component_loads), digits=3)
+            )
+            
+            # Add metadata if available
+            if !isnothing(p.s.electric_load.component_metadata) && haskey(p.s.electric_load.component_metadata, component_name)
+                r["components"][component_name]["metadata"] = p.s.electric_load.component_metadata[component_name]
+            end
+        end
+        
+        # Add summary information
+        if !isnothing(p.s.electric_load.component_metadata) && haskey(p.s.electric_load.component_metadata, "_summary")
+            r["load_alignment_summary"] = p.s.electric_load.component_metadata["_summary"]
+        end
     end
     
     d["ElectricLoad"] = r

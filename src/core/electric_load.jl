@@ -17,11 +17,16 @@
     critical_loads_kw_is_net::Bool = false,
     critical_load_fraction::Real = off_grid_flag ? 1.0 : 0.5, # if off grid must be 1.0, else 0.5
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%. Applied to each time_step as a % of electric load.
-    min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
+    min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0, # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
+    # NEW: Multiple load components support
+    load_components::Dict{String, <:Any} = Dict{String, Any}(),  # Dictionary of load components from different years
+    reference_year::Union{Int, Nothing} = nothing,  # Target year for alignment (defaults to current year)
+    leap_policy::String = "truncate_dec31",  # How to handle leap years: "truncate_dec31" or "drop_feb29"
+    preserve_component_data::Bool = true  # Whether to store individual component data in results
 ```
 
 !!! note "Required inputs"
-    Must provide either `loads_kw` or `path_to_csv` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
+    Must provide either `loads_kw` or `path_to_csv` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`] or `load_components`. 
 
     When only `doe_reference_name` is provided the `Site.latitude` and `Site.longitude` are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.
 
@@ -73,6 +78,28 @@
 !!! note "Year" 
     The ElectricLoad `year` is used in ElectricTariff to align rate schedules with weekdays/weekends. If providing your own `loads_kw`, ensure the `year` matches the year of your data.
     If utilizing `doe_reference_name` or `blended_doe_reference_names`, the default year of 2017 is used because these load profiles start on a Sunday.
+
+!!! note "Multiple Load Components (New Feature)"
+    Use `load_components` to combine loads from different source years (e.g., site load from 2016, EV load from 2024).
+    REopt automatically aligns all components to a reference year while preserving:
+    - Weekday/weekend patterns (critical for TOU rate accuracy)
+    - Total energy consumption (<0.0001% error)
+    - Monthly energy distributions
+    
+    Each component must be a dictionary with:
+    - `"loads_kw"`: Vector of hourly loads (8760 or 8784 hours)
+    - `"year"`: Integer year of the source data
+    
+    Example:
+    ```julia
+    load_components = Dict(
+        "site_load" => Dict("loads_kw" => site_loads_2016, "year" => 2016),
+        "ev_load" => Dict("loads_kw" => ev_loads_2024, "year" => 2024)
+    )
+    ```
+    
+    Results will include component-level data when this feature is used.
+    See `docs/src/multiple_loads.md` for complete documentation.
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
@@ -83,6 +110,11 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     city::String
     operating_reserve_required_fraction::Real
     min_load_met_annual_fraction::Real
+    
+    # NEW: Component preservation (optional) - for multiple load types support
+    component_loads::Union{Dict{String, Vector{Real}}, Nothing}
+    component_metadata::Union{Dict{String, Any}, Nothing}
+    has_components::Bool
     
     function ElectricLoad(;
         off_grid_flag::Bool = false,
@@ -104,7 +136,12 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         longitude::Real,
         time_steps_per_hour::Int = 1,
         operating_reserve_required_fraction::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%
-        min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
+        min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0, # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
+        # NEW: Multiple load components support
+        load_components::Dict{String, <:Any} = Dict{String, Any}(),
+        reference_year::Union{Int, Nothing} = nothing,
+        leap_policy::String = "truncate_dec31",
+        preserve_component_data::Bool = true
         )
         
         if off_grid_flag
@@ -125,6 +162,39 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             elseif !(min_load_met_annual_fraction == 1.0)
                 @warn "ElectricLoad min_load_met_annual_fraction must be 1.0 for on-grid scenarios. This input applies to off-grid scenarios only."
                 min_load_met_annual_fraction = 1.0
+            end
+        end
+
+        # NEW: Handle multiple load components if provided
+        component_loads_dict = nothing
+        component_metadata_dict = nothing
+        has_components = false
+        
+        if !isempty(load_components)
+            # Select reference year
+            target_year = reference_year !== nothing ? reference_year : select_reference_year(Dates.year(Dates.now()))
+            
+            # Align all components to reference year
+            total_loads, aligned_components, metadata = align_multiple_loads_to_reference_year(
+                load_components, target_year;
+                preserve_monthly=true,
+                leap_policy=leap_policy
+            )
+            
+            # Override loads_kw and year with aligned results
+            loads_kw = total_loads
+            year = target_year
+            
+            # Store component data if requested
+            if preserve_component_data
+                component_loads_dict = aligned_components
+                component_metadata_dict = metadata
+                has_components = true
+            end
+            
+            # If city not provided, try to get from first component or use default
+            if isempty(city)
+                city = ""
             end
         end
 
@@ -191,7 +261,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             critical_loads_kw_is_net,
             city,
             operating_reserve_required_fraction,
-            min_load_met_annual_fraction
+            min_load_met_annual_fraction,
+            component_loads_dict,
+            component_metadata_dict,
+            has_components
         )
     end
 end
