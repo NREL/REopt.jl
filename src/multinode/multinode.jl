@@ -1476,7 +1476,6 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     return results, TerminationStatus;
 end
 
-        #RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, Multinode_Inputs.substation_line, REoptTimeSteps, LineInfo, data_eng; Substation_Export_Limit = Multinode_Inputs.substation_export_limit)
 
 function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo, data_eng; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit=1E10, Substation_Import_Limit=1E10, OutageSimulator = false, OutageLength_Timesteps = 0)
     # Function used for restricting power flow for grid outages, times when switches are opened, and substation import and export limits
@@ -1537,7 +1536,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             # If the timesteps are part of the PMD model, then apply the constraints to the lines in PMD
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .>= 0)
-                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -100000) # no restrictions on reactive power
+                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) # no restrictions on reactive power
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
                     @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] .>= 0)
@@ -1550,7 +1549,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
         if Substation_Export_Limit != ""
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .>= -Substation_Export_Limit) 
-                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Substation_Export_Limit) # TODO apply power factor to the export limit for Q
+                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
                     @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] .>= (1/length(phases_for_each_line[line])) * -Substation_Export_Limit) # Assume that the maximum export limit is evenly divided by each of the phases
@@ -1563,7 +1562,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
         if Substation_Import_Limit != ""
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .<= Substation_Import_Limit)
-                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .<= Substation_Import_Limit) # TODO apply power factor to the import limit for Q
+                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
                     @constraint(m, sum(m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model]) .<= (1/length(phases_for_each_line[line])) * Substation_Import_Limit) # Assume that the maximum import limit is evenly divided by each of the phases
@@ -1583,8 +1582,8 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                     JuMP.@constraint(m, [phase in t_connections], q_to[phase] .== 0.0)
                 else
                     # Add small amount of reactive power support for multi-phase systems
-                    JuMP.@constraint(m, [phase in f_connections], -100000 .<= q_fr[phase] .<= 100000) 
-                    JuMP.@constraint(m, [phase in t_connections], -100000 .<= q_to[phase] .<= 100000) # no restrictions on reactive power
+                    JuMP.@constraint(m, [phase in f_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) 
+                    JuMP.@constraint(m, [phase in t_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_to[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) # no restrictions on reactive power
                 end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
@@ -1718,6 +1717,23 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         throw(@error("The substation_import_limit input cannot be negative."))
     end
 
+    # Currently the simple powerflow model does not work with outages and multiphase systems, so an error is caused if the user runs a multi-phase model where the outages do not occur during PMD timesteps
+    if Multinode_Inputs.number_of_phases != 1
+        if Multinode_Inputs.single_outage_end_time_step - Multinode_Inputs.single_outage_start_time_step > 0
+            for timestep in collect(Multinode_Inputs.single_outage_start_time_step:Multinode_Inputs.single_outage_end_time_step)
+                if !(timestep in Multinode_Inputs.PMD_time_steps)
+                    throw(@error("For multi-phase systems, the outages in the optimization must be modeled during timesteps that are modeled using PMD"))
+                end
+            end
+        end
+        if Multinode_Inputs.model_outages_with_outages_vector == true
+            for timestep in Multinode_Inputs.outages_vector
+                if !(timestep in Multinode_Inputs.PMD_time_steps)
+                    throw(@error("For multi-phase systems, the outages in the optimization must be modeled during timesteps that are modeled using PMD"))
+                end
+            end
+        end
+    end
 end
 
 

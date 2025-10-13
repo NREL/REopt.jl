@@ -16,6 +16,7 @@
     PMD_time_steps::Any=[1:24], # By default, apply the PMD model to the first 24 timesteps of the model
     apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD::Bool=true,
     REopt_inputs_list::Array=[],
+    
     number_of_phases::Real=1,
     bus_phase_voltage_lower_bound_per_unit::Float64=0.95,
     bus_phase_voltage_upper_bound_per_unit::Float64=1.05,
@@ -27,12 +28,15 @@
     substation_export_limit::Real=0,
     substation_import_limit::Real=0,
     base_voltage_kv::Real=0, # This must be redefined based on the base voltage defined in the dss inputs file in units of kV
+    external_reactive_power_support_per_phase_maximum_kvar::Real=1000000, # Because multi-node does not model reactive power, but reactive power may be needed for the power systems modeling, this value enables reactive power to flow from the substation to all parts of the network, regardless of if there is a grid outage or a switch is open
+
     model_switches::Bool=false,
     model_line_upgrades::Bool=false,
     line_upgrade_options::Dict=Dict(), 
     model_transformer_upgrades::Bool=false,
     transformer_upgrade_options::Dict=Dict(),
     switch_open_timesteps::Dict=Dict(),
+    
     single_outage_start_time_step::Real=0,
     single_outage_end_time_step::Real=0,
     model_outages_with_outages_vector::Bool=false,
@@ -92,6 +96,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     substation_export_limit
     substation_import_limit
     base_voltage_kv
+    external_reactive_power_support_per_phase_maximum_kvar
     model_switches
     model_line_upgrades
     line_upgrade_options 
@@ -153,6 +158,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         substation_export_limit::Real=0,
         substation_import_limit::Real=0,
         base_voltage_kv::Real=0,
+        external_reactive_power_support_per_phase_maximum_kvar::Real=1000000,
         model_switches::Bool=false,
         model_line_upgrades::Bool=false,
         line_upgrade_options::Dict=Dict(), 
@@ -249,6 +255,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         substation_export_limit,
         substation_import_limit,
         base_voltage_kv,
+        external_reactive_power_support_per_phase_maximum_kvar,
         model_switches,
         model_line_upgrades,
         line_upgrade_options, 
