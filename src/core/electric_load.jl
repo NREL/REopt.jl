@@ -20,9 +20,9 @@
     min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0, # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
     # NEW: Multiple load components support
     load_components::Dict{String, <:Any} = Dict{String, Any}(),  # Dictionary of load components from different years
-    reference_year::Union{Int, Nothing} = nothing,  # Target year for alignment (defaults to current year)
-    leap_policy::String = "truncate_dec31",  # How to handle leap years: "truncate_dec31" or "drop_feb29"
-    preserve_component_data::Bool = true  # Whether to store individual component data in results
+    reference_year::Union{Int, Nothing} = nothing,  # Target year for alignment (defaults to current year if not specified)
+    leap_policy::String = "truncate_dec31",  # How to handle leap years: "truncate_dec31" (default) or "drop_feb29"
+    preserve_component_data::Bool = true  # Whether to store component breakdown in results (default: true)
 ```
 
 !!! note "Required inputs"
@@ -174,9 +174,24 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             # Select reference year
             target_year = reference_year !== nothing ? reference_year : select_reference_year(Dates.year(Dates.now()))
             
+            # Preprocess each component to ensure it has loads_kw
+            processed_components = Dict{String, Any}()
+            for (component_name, component_data) in load_components
+                try
+                    # println("Preprocessing component: $component_name")
+                    processed_components[component_name] = preprocess_load_component(
+                        component_data, latitude, longitude
+                    )
+                    # println("  ✓ Successfully preprocessed $component_name")
+                catch e
+                    println("  ✗ Error preprocessing $component_name: $e")
+                    rethrow(e)
+                end
+            end
+            
             # Align all components to reference year
             total_loads, aligned_components, metadata = align_multiple_loads_to_reference_year(
-                load_components, target_year;
+                processed_components, target_year;
                 preserve_monthly=true,
                 leap_policy=leap_policy
             )
@@ -267,6 +282,98 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             has_components
         )
     end
+end
+
+"""
+    preprocess_load_component(component_data::Dict, latitude::Real, longitude::Real)
+
+Preprocess a load component to ensure it has loads_kw and year fields.
+This function mirrors the logic from the ElectricLoad constructor for generating load profiles.
+
+# Component Input Options
+1. Direct loads with loads_kw array and year
+2. DOE reference building with doe_reference_name, city, annual_kwh (optional), and year
+3. CSV file with path_to_csv and year
+4. Blended DOE profiles with blended_doe_reference_names, blended_doe_reference_percents, and year
+
+# Returns
+- Dict with loads_kw (Vector{Float64}) and year (Int) fields
+"""
+function preprocess_load_component(component_data::Dict, 
+                                   latitude::Real, 
+                                   longitude::Real)::Dict{String, Any}
+    
+    processed = Dict{String, Any}(component_data)
+    
+    # If already has loads_kw, just validate year is present
+    if haskey(processed, "loads_kw")
+        if !haskey(processed, "year")
+            throw(ArgumentError("Component with 'loads_kw' must also specify 'year'"))
+        end
+        return processed
+    end
+    
+    # Extract common parameters (with same defaults as ElectricLoad constructor)
+    year = get(processed, "year", 2017)
+    annual_kwh = get(processed, "annual_kwh", nothing)
+    city = get(processed, "city", "")
+    
+    # Convert monthly_totals_kwh to concrete type (matching ElectricLoad behavior)
+    monthly_totals_kwh_raw = get(processed, "monthly_totals_kwh", Real[])
+    monthly_totals_kwh = isempty(monthly_totals_kwh_raw) ? Float64[] : Float64.(monthly_totals_kwh_raw)
+    
+    # Generate loads_kw based on input method (matching ElectricLoad constructor order)
+    local loads_kw::Vector{Float64}
+    
+    # Option 1: CSV file path
+    if haskey(processed, "path_to_csv") && !isempty(processed["path_to_csv"])
+        path = processed["path_to_csv"]
+        try
+            loads_kw = vec(readdlm(path, ',', Float64, '\n'))
+        catch e
+            throw(ArgumentError("Unable to read electric load profile from $path. Please provide a valid path to a csv with no header."))
+        end
+        if !haskey(processed, "year")
+            throw(ArgumentError("Component with 'path_to_csv' must also specify 'year'"))
+        end
+    
+    # Option 2: DOE reference building
+    elseif haskey(processed, "doe_reference_name") && !isempty(processed["doe_reference_name"])
+        doe_reference_name = processed["doe_reference_name"]
+        loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, 
+                                       year, annual_kwh, monthly_totals_kwh)
+    
+    # Option 3: Blended DOE profiles
+    elseif haskey(processed, "blended_doe_reference_names") && 
+           !isempty(processed["blended_doe_reference_names"])
+        
+        # Convert to concrete types (matching ElectricLoad behavior)
+        blended_names = String.(processed["blended_doe_reference_names"])
+        blended_percents_raw = get(processed, "blended_doe_reference_percents", Real[])
+        blended_percents = Float64.(blended_percents_raw)
+        
+        # Validate inputs
+        if isempty(blended_percents) || length(blended_names) != length(blended_percents)
+            throw(ArgumentError("blended_doe_reference_names and blended_doe_reference_percents must have same length"))
+        end
+        if !isapprox(sum(blended_percents), 1.0, atol=0.001)
+            throw(ArgumentError("blended_doe_reference_percents must sum to 1.0"))
+        end
+        
+        # Call blend_and_scale_doe_profiles (matching ElectricLoad constructor signature)
+        loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, 
+                                                year, blended_names, blended_percents, city,
+                                                annual_kwh, monthly_totals_kwh)
+    
+    else
+        throw(ArgumentError("Component must provide either 'loads_kw', 'doe_reference_name', 'blended_doe_reference_names', or 'path_to_csv'"))
+    end
+    
+    # Set loads_kw and year in processed dict
+    processed["loads_kw"] = loads_kw
+    processed["year"] = year
+    
+    return processed
 end
 
 

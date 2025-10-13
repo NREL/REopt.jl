@@ -12,8 +12,12 @@
 
 !!! note "Multiple Load Components"
     When using the `load_components` feature, additional results are available:
-    - `components` # dictionary with component-level data (loads_kw, annual_kwh, peak_kw, metadata)
-    - `load_alignment_summary` # alignment metadata (reference_year, total_components, alignment_method)
+    - `components[component_name]["annual_kwh"]` # Annual energy for this component
+    - `components[component_name]["peak_kw"]` # Peak load for this component  
+    - `components[component_name]["average_kw"]` # Average load for this component
+    - `components[component_name]["source_year"]` # Original year of component data
+    - `load_alignment_summary["reference_year"]` # Year loads were aligned to
+    - `load_alignment_summary["total_components"]` # Number of load components
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -53,23 +57,29 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         r["components"] = Dict{String, Any}()
         
         for (component_name, component_loads) in p.s.electric_load.component_loads
+            # Streamlined component data - only essential metrics
             r["components"][component_name] = Dict(
-                "load_series_kw" => round.(component_loads, digits=3),
                 "annual_kwh" => round(sum(component_loads) * p.hours_per_time_step, digits=2),
                 "peak_kw" => round(maximum(component_loads), digits=3),
-                "min_kw" => round(minimum(component_loads), digits=3),
                 "average_kw" => round(sum(component_loads) / length(component_loads), digits=3)
             )
             
-            # Add metadata if available
+            # Add only critical metadata: source year
             if !isnothing(p.s.electric_load.component_metadata) && haskey(p.s.electric_load.component_metadata, component_name)
-                r["components"][component_name]["metadata"] = p.s.electric_load.component_metadata[component_name]
+                metadata = p.s.electric_load.component_metadata[component_name]
+                if haskey(metadata, "original_year")
+                    r["components"][component_name]["source_year"] = metadata["original_year"]
+                end
             end
         end
         
-        # Add summary information
+        # Add minimal alignment summary
         if !isnothing(p.s.electric_load.component_metadata) && haskey(p.s.electric_load.component_metadata, "_summary")
-            r["load_alignment_summary"] = p.s.electric_load.component_metadata["_summary"]
+            summary = p.s.electric_load.component_metadata["_summary"]
+            r["load_alignment_summary"] = Dict(
+                "reference_year" => summary["reference_year"],
+                "total_components" => summary["total_components"]
+            )
         end
     end
     
