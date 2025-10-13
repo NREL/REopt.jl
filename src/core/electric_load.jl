@@ -19,8 +19,7 @@
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%. Applied to each time_step as a % of electric load.
     min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0, # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
     # NEW: Multiple load components support
-    load_components::Dict{String, <:Any} = Dict{String, Any}(),  # Dictionary of load components from different years
-    reference_year::Union{Int, Nothing} = nothing,  # Target year for alignment (defaults to current year if not specified)
+    load_components::Dict{String, <:Any} = Dict{String, Any}(),  # Dictionary of load components from different years to align
     leap_policy::String = "truncate_dec31",  # How to handle leap years: "truncate_dec31" (default) or "drop_feb29"
     preserve_component_data::Bool = true  # Whether to store component breakdown in results (default: true)
 ```
@@ -78,16 +77,17 @@
 !!! note "Year" 
     The ElectricLoad `year` is used in ElectricTariff to align rate schedules with weekdays/weekends. If providing your own `loads_kw`, ensure the `year` matches the year of your data.
     If utilizing `doe_reference_name` or `blended_doe_reference_names`, the default year of 2017 is used because these load profiles start on a Sunday.
+    When using `load_components`, the `year` parameter specifies the target year for alignment (defaults to current year if not specified).
 
 !!! note "Multiple Load Components (New Feature)"
     Use `load_components` to combine loads from different source years (e.g., site load from 2016, EV load from 2024).
-    REopt automatically aligns all components to a reference year while preserving:
+    REopt automatically aligns all components to the `year` parameter while preserving:
     - Weekday/weekend patterns (critical for TOU rate accuracy)
     - Total energy consumption (<0.0001% error)
     - Monthly energy distributions
     
     Each component must be a dictionary with:
-    - `"loads_kw"`: Vector of hourly loads (8760 or 8784 hours)
+    - `"loads_kw"`: Vector of hourly loads (8760 or 8784 hours) OR `"doe_reference_name"` with optional `"annual_kwh"`
     - `"year"`: Integer year of the source data
     
     Example:
@@ -96,10 +96,8 @@
         "site_load" => Dict("loads_kw" => site_loads_2016, "year" => 2016),
         "ev_load" => Dict("loads_kw" => ev_loads_2024, "year" => 2024)
     )
+    year = 2025  # Target alignment year
     ```
-    
-    Results will include component-level data when this feature is used.
-    See `docs/src/multiple_loads.md` for complete documentation.
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
@@ -139,7 +137,6 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0, # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
         # NEW: Multiple load components support
         load_components::Dict{String, <:Any} = Dict{String, Any}(),
-        reference_year::Union{Int, Nothing} = nothing,
         leap_policy::String = "truncate_dec31",
         preserve_component_data::Bool = true
         )
@@ -171,8 +168,25 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         has_components = false
         
         if !isempty(load_components)
-            # Select reference year
-            target_year = reference_year !== nothing ? reference_year : select_reference_year(Dates.year(Dates.now()))
+            # Validate: load_components is mutually exclusive with old-style parameters
+            if length(loads_kw) > 0
+                @warn "ElectricLoad has both 'load_components' and 'loads_kw'. Using 'load_components' and ignoring 'loads_kw'."
+            end
+            if doe_reference_name != ""
+                @warn "ElectricLoad has both 'load_components' and 'doe_reference_name'. Using 'load_components' and ignoring 'doe_reference_name'."
+            end
+            if !isempty(blended_doe_reference_names)
+                @warn "ElectricLoad has both 'load_components' and 'blended_doe_reference_names'. Using 'load_components' and ignoring 'blended_doe_reference_names'."
+            end
+            
+            # Determine target alignment year for load_components
+            # If year not specified with load_components, default to current year
+            if isnothing(year)
+                year = Dates.year(Dates.now())
+                @info "ElectricLoad: No year specified with load_components. Defaulting to $(year) for alignment."
+            end
+            
+            target_year = year
             
             # Preprocess each component to ensure it has loads_kw
             processed_components = Dict{String, Any}()
