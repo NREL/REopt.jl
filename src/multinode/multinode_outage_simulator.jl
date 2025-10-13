@@ -149,7 +149,7 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
     PercentOfOutagesSurvived = DisplayResultsSummary(SuccessfullySolved, RunNumber, OutageLength_TimeSteps_Input)
     
     if Multinode_Inputs.allow_dropped_load
-        dropped_load_results_summary = SummarizeDroppedLoadResults(dropped_load_results)
+        dropped_load_results_summary = SummarizeDroppedLoadResults(Multinode_Inputs, dropped_load_results)
     end
         
     return pm, OutageLength_TimeSteps_Input, SuccessfullySolved, TimeStepsNotSolved, RunNumber, PercentOfOutagesSurvived, m_outagesimulator, outage_survival_results, outage_start_timesteps_checked, dropped_load_results_summary, outage_data_for_plotting
@@ -188,7 +188,7 @@ function ProcessDroppedLoadResults(Multinode_Inputs, model, i, DataDictionaryFor
 end
 
 
-function SummarizeDroppedLoadResults(dropped_load_results)
+function SummarizeDroppedLoadResults(Multinode_Inputs, dropped_load_results)
 
     load_met_fraction_list = []
     minimum_value = "N/A"
@@ -435,8 +435,8 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
             JuMP.@constraint(pm.model, [phase in f_connections], q_fr[phase] .== 0)
             JuMP.@constraint(pm.model, [phase in t_connections], q_to[phase] .== 0)
         else
-            JuMP.@constraint(m, [phase in f_connections], -0.1 .<= q_fr[phase] .<= 0.1)
-            JuMP.@constraint(m, [phase in t_connections], -0.1 .<= q_to[phase] .<= 0.1)    
+            JuMP.@constraint(pm.model, [phase in f_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
+            JuMP.@constraint(pm.model, [phase in t_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_to[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)    
         end
     
     end

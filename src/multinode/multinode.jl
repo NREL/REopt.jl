@@ -129,7 +129,8 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                             ("DataDictionaryForEachNode", DataDictionaryForEachNode),
                             ("CompiledResults", CompiledResults),
                             ("REoptInputs_Combined", REoptInputs_Combined),
-                            ("model", model)
+                            ("model", model),
+                            ("outage_simulator_results_for_plotting", outage_simulator_results_for_plotting)
                         ])
         else
             data_dictionary_for_plots = "N/A"
