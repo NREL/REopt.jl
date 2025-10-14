@@ -12,6 +12,8 @@ using Logging
 using CSV
 using DataFrames
 Random.seed!(42)
+using Dates
+using Statistics
 
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
@@ -4110,6 +4112,179 @@ else  # run HiGHS tests
             init_capital_costs =  results["Financial"]["initial_capital_costs"]
             year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
             @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
+        end
+        
+        @testset "Multiple Loads Feature" begin
+            """
+            Test the load_components feature which allows combining loads from 
+            different source years and aligning them to a reference year (default is current year).
+            Critical for scenarios with multiple loads, site loads from different years, and
+            ensuring proper weekday/weekend alignment for loads from different years and leap years for TOU rates.
+            """
+            
+            @testset "Basic two-component alignment" begin
+                """
+                Verify that loads from different years (2016, 2024) correctly align to 2025
+                """
+                input_data = Dict{String, Any}(
+                    "Site" => Dict("latitude" => 39.74, "longitude" => -104.99),
+                    "ElectricLoad" => Dict(
+                        "load_components" => Dict(
+                            "site_load" => Dict(
+                                "loads_kw" => fill(100.0, 8760),
+                                "year" => 2016
+                            ),
+                            "ev_load" => Dict(
+                                "loads_kw" => fill(50.0, 8760),
+                                "year" => 2024
+                            )
+                        ),
+                        "year" => 2025,
+                        "preserve_component_data" => true
+                    ),
+                    "ElectricTariff" => Dict("blended_annual_energy_rate" => 0.10),
+                    "PV" => Dict("max_kw" => 0),
+                    "Storage" => Dict("max_kw" => 0, "max_kwh" => 0)
+                )
+                
+                s = Scenario(input_data)
+                
+                # Verify alignment worked correctly
+                @test length(s.electric_load.loads_kw) == 8760
+                @test s.electric_load.year == 2025
+                @test s.electric_load.has_components == true
+                
+                # Total energy should equal sum of components
+                expected_total = 100.0 * 8760 + 50.0 * 8760
+                @test sum(s.electric_load.loads_kw) ≈ expected_total rtol=1e-6
+                
+                # Verify component data is preserved
+                @test !isnothing(s.electric_load.component_loads)
+                @test haskey(s.electric_load.component_loads, "site_load")
+                @test haskey(s.electric_load.component_loads, "ev_load")
+                
+                # Component energies should sum correctly
+                site_total = sum(s.electric_load.component_loads["site_load"])
+                ev_total = sum(s.electric_load.component_loads["ev_load"])
+                @test site_total + ev_total ≈ sum(s.electric_load.loads_kw) rtol=1e-6
+            end
+            
+            @testset "DOE reference building components" begin
+                """
+                Test that load_components work with doe_reference_name
+                """
+                input_data = Dict{String, Any}(
+                    "Site" => Dict("latitude" => 39.74, "longitude" => -104.99),
+                    "ElectricLoad" => Dict(
+                        "load_components" => Dict(
+                            "hospital" => Dict(
+                                "doe_reference_name" => "Hospital",
+                                "annual_kwh" => 1000000.0,
+                                "year" => 2017
+                            ),
+                            "hotel" => Dict(
+                                "doe_reference_name" => "LargeHotel",
+                                "annual_kwh" => 500000.0,
+                                "year" => 2017
+                            )
+                        ),
+                        "year" => 2025
+                    ),
+                    "ElectricTariff" => Dict("blended_annual_energy_rate" => 0.10),
+                    "PV" => Dict(
+                        "max_kw" => 1000.0,
+                        "installed_cost_per_kw" => 1600.0,
+                        "min_kw" => 0.0
+                    ),
+                    "Storage" => Dict("max_kw" => 0, "max_kwh" => 0)
+                )
+                
+                s = Scenario(input_data)
+                
+                @test length(s.electric_load.loads_kw) == 8760
+                @test s.electric_load.year == 2025
+                @test s.electric_load.has_components == true
+                @test sum(s.electric_load.loads_kw) ≈ 1500000.0 rtol=0.01
+                
+                # Run optimization with multiple load components
+                inputs = REoptInputs(s)
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt([m1,m2], inputs)
+                
+                # Verify results are valid with multiple load components
+                @test results["PV"]["size_kw"] >= 0
+                @test results["PV"]["size_kw"] <= 1000.0
+                @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 1500000.0 rtol=0.01
+                
+                # Verify optimization ran successfully with aligned loads
+                @test haskey(results, "ElectricLoad")
+                @test haskey(results, "Financial")
+                @test haskey(results, "PV")
+                @test results["Financial"]["lcc"] > 0  # Life cycle cost should be positive
+            end
+            
+            @testset "Weekday pattern preservation" begin
+                """
+                Verify weekday/weekend patterns are maintained after alignment (critical for TOU rates)
+                """
+                # Create load with distinct weekday/weekend pattern
+                function create_weekday_pattern_load(year::Int)
+                    loads = Float64[]
+                    for day in 1:365
+                        dow = Dates.dayofweek(Date(year, 1, 1) + Day(day - 1))
+                        is_weekday = dow < 6
+                        for hour in 0:23
+                            load = is_weekday ? 150.0 : 50.0  # Weekday: 150 kW, Weekend: 50 kW
+                            push!(loads, load)
+                        end
+                    end
+                    return loads
+                end
+                
+                original_load = create_weekday_pattern_load(2016)
+                
+                input_data = Dict{String, Any}(
+                    "Site" => Dict("latitude" => 39.74, "longitude" => -104.99),
+                    "ElectricLoad" => Dict(
+                        "load_components" => Dict(
+                            "weekday_pattern" => Dict("loads_kw" => original_load, "year" => 2016)
+                        ),
+                        "year" => 2025
+                    ),
+                    "ElectricTariff" => Dict("blended_annual_energy_rate" => 0.10),
+                    "PV" => Dict("max_kw" => 0),
+                    "Storage" => Dict("max_kw" => 0, "max_kwh" => 0)
+                )
+                
+                s = Scenario(input_data)
+                aligned_loads = s.electric_load.loads_kw
+                
+                # Count days with high loads (weekdays) vs low loads (weekends)
+                high_load_days = 0
+                low_load_days = 0
+                
+                for day in 1:365
+                    day_start = (day - 1) * 24 + 1
+                    day_end = day * 24
+                    avg_daily_load = Statistics.mean(aligned_loads[day_start:day_end])
+                    
+                    if avg_daily_load > 100.0
+                        high_load_days += 1
+                    else
+                        low_load_days += 1
+                    end
+                end
+                
+                # Should have roughly 260 weekdays and 105 weekend days
+                @test high_load_days > 250
+                @test high_load_days < 270
+                @test low_load_days > 95
+                @test low_load_days < 115
+                
+                # Total energy must be preserved
+                @test sum(aligned_loads) ≈ sum(original_load) rtol=1e-6
+            end
         end
     end
 end
