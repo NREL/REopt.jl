@@ -116,7 +116,7 @@ function Multinode_OutageSimulator(DataDictionaryForEachNode, REopt_dictionary, 
         if !(Multinode_Inputs.allow_dropped_load)
             @objective(pm.model, FEASIBILITY_SENSE, 0)
         elseif Multinode_Inputs.allow_dropped_load
-            @objective(pm.model, Max, (100 * sum(sum(pm.model[Symbol("dvLoadMetMultiplier_"*n)] for n in NodeList)))) # If allowing dropped load, the objective is to maximize the non-dropped load
+            @objective(pm.model, Max, (sum(sum(pm.model[Symbol("dvLoadMetMultiplier_"*n)] for n in NodeList)))) # If allowing dropped load, the objective is to maximize the non-dropped load
         else
             throw(@error("The input for allow_dropped_load is invalid. It must be true or false."))
         end
@@ -267,7 +267,7 @@ function AddVariablesOutageSimulator(Multinode_Inputs, m_outagesimulator, TimeSt
 
     if Multinode_Inputs.allow_dropped_load
         dv = "dvLoadMetMultiplier_"*n
-        m_outagesimulator[Symbol(dv)] = @variable(m_outagesimulator, [1:TimeSteps], base_name = dv)
+        m_outagesimulator[Symbol(dv)] = @variable(m_outagesimulator, [1:TimeSteps], base_name = dv) #, lower_bound = 0, upper_bound = 1)
     end
 
 end
@@ -341,9 +341,11 @@ function AddConstraintsOutageSimulator(Multinode_Inputs, m_outagesimulator, Time
     else
         @warn "The battery may charge and discharge at the same time in the outage simulator because the solver is not compatible with indicator constraints."
     end
-    
+    #print("\n OutageLength_TimeSteps_Input are: $(OutageLength_TimeSteps_Input)")
+    #print("\n Timesteps are: $(TimeSteps)")
     # Constraints for meeting the electric load at each node
     if !(Multinode_Inputs.allow_dropped_load)
+        #print("\n Adding constraints for not allowing dropped load")
         @constraint(m_outagesimulator, [ts in [1:OutageLength_TimeSteps_Input]], m_outagesimulator[Symbol("dvPVToLoad_"*n)][ts] + 
                                     m_outagesimulator[Symbol("dvGridToLoad_"*n)][ts] +
                                     m_outagesimulator[Symbol("dvBatToLoadWithEfficiency_"*n)][ts] + 
@@ -351,8 +353,8 @@ function AddConstraintsOutageSimulator(Multinode_Inputs, m_outagesimulator, Time
 
     elseif Multinode_Inputs.allow_dropped_load
         @info("Allowing dropped load in the outage simulator")
-        @constraint(m_outagesimulator, [ts in [1:TimeSteps]], m_outagesimulator[Symbol("dvLoadMetMultiplier_"*n)][ts] .>= 0.0) 
-        @constraint(m_outagesimulator, [ts in [1:TimeSteps]], m_outagesimulator[Symbol("dvLoadMetMultiplier_"*n)][ts] .<= 1.0) 
+        @constraint(m_outagesimulator, [ts in [1:OutageLength_TimeSteps_Input]], m_outagesimulator[Symbol("dvLoadMetMultiplier_"*n)][ts] .>= 0.0) 
+        @constraint(m_outagesimulator, [ts in [1:OutageLength_TimeSteps_Input]], m_outagesimulator[Symbol("dvLoadMetMultiplier_"*n)][ts] .<= 1.0) 
         @constraint(m_outagesimulator, [ts in [1:OutageLength_TimeSteps_Input]], m_outagesimulator[Symbol("dvPVToLoad_"*n)][ts] + 
                                     m_outagesimulator[Symbol("dvGridToLoad_"*n)][ts] +
                                     m_outagesimulator[Symbol("dvBatToLoadWithEfficiency_"*n)][ts] + 

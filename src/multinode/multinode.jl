@@ -968,8 +968,8 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
 
             elseif line in keys(transformer_busses)
                 # Note: transformer power ratings are for power going through all phases combined, but for simplicity
-                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] <= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
-                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] >= -100000000 / 1)
+                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] .<= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
+                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] .>= -100000000 / 1)
             else
                 if LineInfo[line]["maximum_power_kw"] == Inf
                     line_max_power = 1000000000 #LineInfo[line]["maximum_power_kw"]
@@ -1730,6 +1730,10 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
 
     if Multinode_Inputs.substation_import_limit < 0
         throw(@error("The substation_import_limit input cannot be negative."))
+    end
+
+    if (Multinode_Inputs.allow_dropped_load) && (Multinode_Inputs.number_of_phases != 1)
+        throw(@error("When modeling a three-phase system, allowing dropped load in the outage simulator is not allowed. Please set the allowed_dropped_load input to false."))
     end
 
     # Currently the simple powerflow model does not work with outages and multiphase systems, so an error is caused if the user runs a multi-phase model where the outages do not occur during PMD timesteps
