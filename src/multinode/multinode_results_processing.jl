@@ -565,14 +565,6 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                     line_phase_name = line_data*"_"*OptionalNameAddition*data_subtype
                     
                     if length(PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]) > 0
-                        print("\n For: $(line_phase_name) and $(data_subtype)")
-                        print("\n")
-                        print(length(PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]))
-                        print("\n")
-                        print(length(line_powerflow_data[!,"REopt_time_steps"]))
-                        print("\n")
-                        print(length(line_powerflow_data[!,"PMD_time_steps"]))
-                        print("\n")
                         line_powerflow_data[!,line_phase_name] = PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]
                     else
                         line_powerflow_data[!,line_phase_name] = zeros(length(Multinode_Inputs.PMD_time_steps))
