@@ -406,9 +406,11 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
                             PowerModelsDistribution.var(pm, k, :pg, e).data[1] == (1/number_of_phases_at_load) * (pm.model[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - pm.model[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k])   # negative power "generation" is a load
         )
         # TODO: add reactive power to the REopt nodes
-        JuMP.@constraint(pm.model, [k in outage_timesteps],
-                            PowerModelsDistribution.var(pm, k, :qg, e).data[1]  == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
-        )
+        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+            JuMP.@constraint(pm.model, [k in outage_timesteps],
+                                PowerModelsDistribution.var(pm, k, :qg, e).data[1]  == 0.0 #(1/number_of_phases_at_load) * (m[Symbol("TotalExport_"*string(gen_ind_e_to_REopt_node[e]))][k] - m[Symbol("dvGridPurchase_"*string(gen_ind_e_to_REopt_node[e]))][k]) 
+            )
+        end
     end
 
     # Prevent power from entering the multinode to simulate a power outage
@@ -426,19 +428,22 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
         p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
         p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
 
-        q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-        q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+            q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+            q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+        end
 
         JuMP.@constraint(pm.model, [phase in f_connections], p_fr[phase] .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
         JuMP.@constraint(pm.model, [phase in t_connections], p_to[phase] .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
-        if Multinode_Inputs.number_of_phases == 1        
-            JuMP.@constraint(pm.model, [phase in f_connections], q_fr[phase] .== 0)
-            JuMP.@constraint(pm.model, [phase in t_connections], q_to[phase] .== 0)
-        else
-            JuMP.@constraint(pm.model, [phase in f_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
-            JuMP.@constraint(pm.model, [phase in t_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_to[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)    
+        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+            if Multinode_Inputs.number_of_phases == 1        
+                JuMP.@constraint(pm.model, [phase in f_connections], q_fr[phase] .== 0)
+                JuMP.@constraint(pm.model, [phase in t_connections], q_to[phase] .== 0)
+            else
+                JuMP.@constraint(pm.model, [phase in f_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
+                JuMP.@constraint(pm.model, [phase in t_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_to[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)    
+            end
         end
-    
     end
 end
 

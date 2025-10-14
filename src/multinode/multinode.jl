@@ -119,7 +119,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
         
         if Multinode_Inputs.generate_dictionary_for_plotting
             data_dictionary_for_plots = Dict([
-                            ("voltage_plot_time_step", 1), # TODO: export a dictionary with the voltage results for all PMD timesteps
+                            ("voltage_plot_time_step", 1), # The default is 1, but the user can update this value after this dictionary is returned from the Multinode_Model function
                             ("Multinode_Inputs", Multinode_Inputs),
                             ("outage_survival_results", outage_survival_results_dictionary),
                             ("outage_start_timesteps_checked", outage_start_timesteps_dictionary),
@@ -744,9 +744,11 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
         )
         
         # TODO: add reactive power to the REopt nodes
-        JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
-                            PowerModelsDistribution.var(pm, k, :qg, e).data[1] .== 0.0 # m[:dvFreeReactivePower][e,k]  # (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
-        )
+        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+            JuMP.@constraint(m, [k in PMDTimeSteps_Indeces],
+                                PowerModelsDistribution.var(pm, k, :qg, e).data[1] .== 0.0 # m[:dvFreeReactivePower][e,k]  # (1/number_of_phases_at_load) * m[Symbol("TotalExport_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] - m[Symbol("dvGridPurchase_"*string(buses[e]))][PMDTimeSteps_InREoptTimes[k]] 
+            )
+        end
     end
 
     return REopt_gen_ind_e, load_phase_dictionary, gen_ind_e_to_REopt_node
@@ -1303,9 +1305,11 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
 
                         p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
                         p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
-                
-                        q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-                        q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+                        
+                        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                            q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+                            q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+                        end
 
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(p_fr[phase] for phase in f_connections))
                     
@@ -1339,9 +1343,11 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
 
                         p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
                         p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
-                
-                        q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-                        q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+                        
+                        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                            q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+                            q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+                        end
 
                         @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == sum(p_fr[phase] for phase in f_connections))
                         
@@ -1462,7 +1468,7 @@ function Run_REopt_PMD_Model(pm, Multinode_Inputs)
     end
     
     print("\n The optimization is starting")
-    print("\n     The number of varibles in the model is: ")
+    print("\n     The number of variables in the model is: ")
     print(length(all_variables(pm.model)))
     print("\n")
     # Note: the "optimize_model!" function is a wrapper from PMD and it includes some organization of the results
@@ -1525,9 +1531,11 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             
             p_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :p, f_idx)[c] for c in f_connections]
             p_to = [PowerModelsDistribution.var(pm, PMD_time_step, :p, t_idx)[c] for c in t_connections]
-
-            q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
-            q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+            
+            if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                q_fr = [PowerModelsDistribution.var(pm, PMD_time_step, :q, f_idx)[c] for c in f_connections]
+                q_to = [PowerModelsDistribution.var(pm, PMD_time_step, :q, t_idx)[c] for c in t_connections]
+            end
         elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
             # redefine the timestep variable to be correlated with the timestep variable in the simple powerflow model
             timestep_for_simple_powerflow_model = findall(x -> x==timestep, time_steps_without_PMD)[1]
@@ -1550,7 +1558,9 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
         if Substation_Export_Limit != ""
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .>= -Substation_Export_Limit) 
-                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
+                if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                    JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
+                end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
                     @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] .>= (1/length(phases_for_each_line[line])) * -Substation_Export_Limit) # Assume that the maximum export limit is evenly divided by each of the phases
@@ -1563,7 +1573,9 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
         if Substation_Import_Limit != ""
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .<= Substation_Import_Limit)
-                JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
+                if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                    JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar)
+                end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
                     @constraint(m, sum(m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model]) .<= (1/length(phases_for_each_line[line])) * Substation_Import_Limit) # Assume that the maximum import limit is evenly divided by each of the phases
@@ -1578,13 +1590,15 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
             if timestep in PMDTimeSteps_InREoptTimes
                 JuMP.@constraint(m, [phase in f_connections], p_fr[phase] .== 0)  # The _fr and _to variables are just indicating power flow in either direction on the line. In PMD, there is a constraint that requires  p_to = -p_fr 
                 JuMP.@constraint(m, [phase in t_connections], p_to[phase] .== 0)  # TODO test removing the "fr" constraints here in order to reduce the # of constraints in the model
-                if Multinode_Inputs.number_of_phases == 1                
-                    JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .== 0.0)
-                    JuMP.@constraint(m, [phase in t_connections], q_to[phase] .== 0.0)
-                else
-                    # Add small amount of reactive power support for multi-phase systems
-                    JuMP.@constraint(m, [phase in f_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) 
-                    JuMP.@constraint(m, [phase in t_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_to[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) # no restrictions on reactive power
+                if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                    if Multinode_Inputs.number_of_phases == 1                
+                        JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .== 0.0)
+                        JuMP.@constraint(m, [phase in t_connections], q_to[phase] .== 0.0)
+                    else
+                        # Add small amount of reactive power support for multi-phase systems
+                        JuMP.@constraint(m, [phase in f_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_fr[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) 
+                        JuMP.@constraint(m, [phase in t_connections], -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar .<= q_to[phase] .<= Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) # no restrictions on reactive power
+                    end
                 end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]

@@ -61,16 +61,16 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         DataDictionaryForEachNodeForOutageSimulator = "N/A"
     end
 
-    if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel" 
-        pf_name = "pf"
-        qf_name = "qf"
-    elseif Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel" 
+    if Multinode_Inputs.model_subtype == "SOCNLPUBFPowerModel" 
         pf_name = "Pf"
         qf_name = "Qf"
+    else # if Multinode_Inputs.model_subtype == "LPUBFDiagPowerModel" 
+        pf_name = "pf"
+        qf_name = "qf"
     end
 
     # Compute values for each line and store line power flows in a dataframe and dictionary 
-    DataLineFlow = zeros(7)
+    DataLineFlow = Vector{Any}(zeros(7))
     DataFrame_LineFlow = DataFrame(fill(Any[],7), [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR ])
     PMD_Dictionary_LineFlow_Power_Series = Dict([])
 
@@ -87,7 +87,11 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
 
         for i in 1:length(sol_eng["nw"])
             push!(ActivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][pf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][pf_name])) ) # The "for Phase in keys(..." sums the power across the phases
-            push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][qf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][qf_name])) )
+            if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                push!(ReactivePowerFlow_line_temp, sum(sol_eng["nw"][string(i)]["line"][line][qf_name][Phase] for Phase in keys(sol_eng["nw"][string(i)]["line"][line][qf_name])) )
+            else
+                push!(ReactivePowerFlow_line_temp, "N/A")
+            end
         end
 
         # Pull data from the first time step
@@ -95,17 +99,29 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
             if phase == 1
                 for i in 1:length(sol_eng["nw"])
                     push!(ActivePowerFlow_line_Phase1_temp, sol_eng["nw"][string(i)]["line"][line][pf_name][phase])
-                    push!(ReactivePowerFlow_line_Phase1_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                    if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                        push!(ReactivePowerFlow_line_Phase1_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                    else
+                        push!(ReactivePowerFlow_line_Phase1_temp, "N/A")
+                    end
                 end
             elseif phase == 2
                 for i in 1:length(sol_eng["nw"])
                     push!(ActivePowerFlow_line_Phase2_temp, sol_eng["nw"][string(i)]["line"][line][pf_name][phase])
-                    push!(ReactivePowerFlow_line_Phase2_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                    if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                        push!(ReactivePowerFlow_line_Phase2_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                    else
+                        push!(ReactivePowerFlow_line_Phase2_temp, "N/A")
+                    end
                 end
             elseif phase ==3
                 for i in 1:length(sol_eng["nw"])
                     push!(ActivePowerFlow_line_Phase3_temp, sol_eng["nw"][string(i)]["line"][line][pf_name][phase])
-                    push!(ReactivePowerFlow_line_Phase3_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                    if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                        push!(ReactivePowerFlow_line_Phase3_temp, sol_eng["nw"][string(i)]["line"][line][qf_name][phase])
+                    else
+                        push!(ReactivePowerFlow_line_Phase3_temp, "N/A")
+                    end
                 end
             else
                 throw(@error("The phase number, $(phase), is invalid"))
@@ -115,9 +131,16 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         DataLineFlow[1] = round(minimum(ActivePowerFlow_line_temp[:]), digits = 5)
         DataLineFlow[2] = round(maximum(ActivePowerFlow_line_temp[:]), digits = 5)
         DataLineFlow[3] = round(mean(ActivePowerFlow_line_temp[:]), digits = 5)
-        DataLineFlow[4] = round(minimum(ReactivePowerFlow_line_temp[:]), digits = 5)
-        DataLineFlow[5] = round(maximum(ReactivePowerFlow_line_temp[:]), digits = 5)
-        DataLineFlow[6] = round(mean(ReactivePowerFlow_line_temp[:]), digits = 5)
+        
+        if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+            DataLineFlow[4] = round(minimum(ReactivePowerFlow_line_temp[:]), digits = 5)
+            DataLineFlow[5] = round(maximum(ReactivePowerFlow_line_temp[:]), digits = 5)
+            DataLineFlow[6] = round(mean(ReactivePowerFlow_line_temp[:]), digits = 5)
+        else
+            DataLineFlow[4] = "N/A"
+            DataLineFlow[5] = "N/A"
+            DataLineFlow[6] = "N/A"
+        end
 
         DataFrame_LineFlow_temp = DataFrame([("Line "*string(line)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR])
         DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
@@ -242,7 +265,9 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
         system_results["net_present_value"] = "Not calculated"
     end
 
-    DataFrame_BusVoltages_Summary, per_unit_voltages, minimum_voltage, average_voltage, maximum_voltage = VoltageResultsSummary(PMD_Results)
+    if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+        DataFrame_BusVoltages_Summary, per_unit_voltages, minimum_voltage, average_voltage, maximum_voltage = VoltageResultsSummary(PMD_Results)
+    end
 
     # Generate a csv file with outputs from the model if the "generate_CSV_of_outputs" field is set to true
     if system_results_BAU != ""
@@ -259,23 +284,33 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                 PMD_MinimumPowerOnsubstation_line_ActivePower = (round(minimum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 1))
                 PMD_AveragePowerOnsubstation_line_ActivePower = (round(mean(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"]), digits = 1))
 
-                PMD_MaximumPowerOnsubstation_line_ReactivePower = (round(maximum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 6))
-                PMD_MinimumPowerOnsubstation_line_ReactivePower = (round(minimum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 6))
-                PMD_AveragePowerOnsubstation_line_ReactivePower = (round(mean(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 6))
-            end
+                warning_PMD_MaximumPowerOnsubstation_line_ReactivePower = ""
+                warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = ""
+           
+                if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                    PMD_MaximumPowerOnsubstation_line_ReactivePower = (round(maximum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 6))
+                    PMD_MinimumPowerOnsubstation_line_ReactivePower = (round(minimum(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 6))
+                    PMD_AveragePowerOnsubstation_line_ReactivePower = (round(mean(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ReactiveLineFlow"]), digits = 6))
+                    
+                    # Generate warnings if the reactive power support from the substation is larger than 1 kW or smaller than -1 kW, because this is power that is not generated by REopt nodes (which is more relevant if the system is off-grid or the reactive power support occurs during a grid outage)
+                    if PMD_MaximumPowerOnsubstation_line_ReactivePower >= 1
+                        warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = "Warning: greater than 1kW (multi-node does not model meeting reactive power demand)"
+                        @warn("The maximum reactive power support from the substation is greater than 1 kW")
+                    end
+                    
+                    if PMD_MinimumPowerOnsubstation_line_ReactivePower <= -1
+                        warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = "Warning: less than -1kW (multi-node does not model meeting reactive power demand)"
+                        @warn("The maximum reactive power support from the substation is less than -1 kW")
+                    end   
 
-            # Generate warnings if the reactive power support from the substation is larger than 1 kW or smaller than -1 kW, because this is power that is not generated by REopt nodes (which is more relevant if the system is off-grid or the reactive power support occurs during a grid outage)
-            warning_PMD_MaximumPowerOnsubstation_line_ReactivePower = ""
-            if PMD_MaximumPowerOnsubstation_line_ReactivePower >= 1
-                warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = "Warning: greater than 1kW (multi-node does not model meeting reactive power demand)"
-                @warn("The maximum reactive power support from the substation is greater than 1 kW")
+                else
+                    #number_of_values = length(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"])
+                    PMD_MaximumPowerOnsubstation_line_ReactivePower = "N/A" # fill("N/A", number_of_values)
+                    PMD_MinimumPowerOnsubstation_line_ReactivePower = "N/A" # fill("N/A", number_of_values)
+                    PMD_AveragePowerOnsubstation_line_ReactivePower = "N/A" # fill("N/A", number_of_values)
+                end
+            
             end
-
-            warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = ""
-            if PMD_MinimumPowerOnsubstation_line_ReactivePower <= -1
-                warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = "Warning: less than -1kW (multi-node does not model meeting reactive power demand)"
-                @warn("The maximum reactive power support from the substation is less than -1 kW")
-            end   
 
             # Add system-level results
 
@@ -505,8 +540,10 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PMD_Results_Line_Powerflow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
             
             # Save the bus voltage summary to a different csv
-            CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PMD_Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
-            
+            if Multinode_Inputs.model_subtype != "NFAUPowerModel"
+                CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/PMD_Results_Bus_Voltages_Summary_"*TimeStamp*".csv", DataFrame_BusVoltages_Summary)
+            end
+
             # Save the transformer upgrade results to a csv
             if Multinode_Inputs.model_transformer_upgrades
                 CSV.write(Multinode_Inputs.folder_location*"/results_"*TimeStamp*"/Results_Transformer_Upgrade_Summary_"*TimeStamp*".csv", dataframe_transformer_upgrade_summary)
@@ -528,6 +565,14 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                     line_phase_name = line_data*"_"*OptionalNameAddition*data_subtype
                     
                     if length(PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]) > 0
+                        print("\n For: $(line_phase_name) and $(data_subtype)")
+                        print("\n")
+                        print(length(PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]))
+                        print("\n")
+                        print(length(line_powerflow_data[!,"REopt_time_steps"]))
+                        print("\n")
+                        print(length(line_powerflow_data[!,"PMD_time_steps"]))
+                        print("\n")
                         line_powerflow_data[!,line_phase_name] = PMD_Dictionary_LineFlow_Power_Series[line_data][data_subtype]
                     else
                         line_powerflow_data[!,line_phase_name] = zeros(length(Multinode_Inputs.PMD_time_steps))
