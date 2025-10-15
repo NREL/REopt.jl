@@ -7,10 +7,15 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         fuel_higher_heating_value_kwh_per_unit=1
     )
 
-    # Fuel cost
-    m[:TotalCHPFuelCosts] = @expression(m, 
-        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
-    )      
+    # Fuel cost - build expression efficiently using add_to_expression! for better performance with subhourly time steps
+    fuel_expr = JuMP.AffExpr()
+    for t in p.techs.chp, ts in p.time_steps
+        JuMP.add_to_expression!(fuel_expr, 
+            p.pwf_fuel[t] * p.fuel_cost_per_kwh[t][ts],
+            m[:dvFuelUsage][t, ts])
+    end
+    m[:TotalCHPFuelCosts] = @expression(m, fuel_expr)
+    
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if abs(fuel_burn_intercept) > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
@@ -162,8 +167,14 @@ function add_chp_hourly_om_charges(m, p; _n="")
             >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
     
-    m[:TotalHourlyCHPOMCosts] = @expression(m, p.third_party_factor * p.pwf_om * 
-    sum(m[Symbol(dv)][t, ts] * p.hours_per_time_step for t in p.techs.chp, ts in p.time_steps))
+    # Build hourly OM costs efficiently using add_to_expression! for better performance with subhourly time steps
+    hourly_om_expr = JuMP.AffExpr()
+    for t in p.techs.chp, ts in p.time_steps
+        JuMP.add_to_expression!(hourly_om_expr,
+            p.third_party_factor * p.pwf_om * p.hours_per_time_step,
+            m[Symbol(dv)][t, ts])
+    end
+    m[:TotalHourlyCHPOMCosts] = @expression(m, hourly_om_expr)
     nothing
 end
 
@@ -184,10 +195,15 @@ function add_chp_constraints(m, p; _n="")
     
     m[:TotalHourlyCHPOMCosts] = 0
     m[:TotalCHPFuelCosts] = 0
-    m[:TotalCHPPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-        sum(p.s.chp.om_cost_per_kwh * p.hours_per_time_step *
-        m[:dvRatedProduction][t, ts] for t in p.techs.chp, ts in p.time_steps)
-    )
+    
+    # Build per-unit production OM costs efficiently using add_to_expression! for better performance with subhourly time steps
+    chp_om_expr = JuMP.AffExpr()
+    for t in p.techs.chp, ts in p.time_steps
+        JuMP.add_to_expression!(chp_om_expr,
+            p.third_party_factor * p.pwf_om * p.s.chp.om_cost_per_kwh * p.hours_per_time_step,
+            m[:dvRatedProduction][t, ts])
+    end
+    m[:TotalCHPPerUnitProdOMCosts] = @expression(m, chp_om_expr)
 
     if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
         add_chp_hourly_om_charges(m, p)

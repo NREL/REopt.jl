@@ -70,11 +70,21 @@ function add_gen_constraints(m, p)
     add_gen_can_run_constraints(m,p)
     add_gen_rated_prod_constraint(m,p)
 
-    m[:TotalGenPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-        sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
-        m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
-    )
-    m[:TotalGenFuelCosts] = @expression(m,
-        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
-    )
+    # Build OM costs expression efficiently using add_to_expression! for better performance with subhourly time steps
+    om_expr = JuMP.AffExpr()
+    for t in p.techs.gen, ts in p.time_steps
+        JuMP.add_to_expression!(om_expr, 
+            p.third_party_factor * p.pwf_om * p.s.generator.om_cost_per_kwh * p.hours_per_time_step,
+            m[:dvRatedProduction][t, ts])
+    end
+    m[:TotalGenPerUnitProdOMCosts] = @expression(m, om_expr)
+    
+    # Build fuel costs expression efficiently
+    fuel_expr = JuMP.AffExpr()
+    for t in p.techs.gen, ts in p.time_steps
+        JuMP.add_to_expression!(fuel_expr, 
+            p.pwf_fuel[t] * p.fuel_cost_per_kwh[t][ts],
+            m[:dvFuelUsage][t,ts])
+    end
+    m[:TotalGenFuelCosts] = @expression(m, fuel_expr)
 end
