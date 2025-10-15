@@ -25,6 +25,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 10-15-2025
+### Added
+- Added **ElectricLoad** support for **load_components** to combine multiple load profiles from different source years (e.g., site load from 2016, EV load from 2024)
+- Added `src/core/load_alignment.jl` module with centralized weekday alignment and leap year normalization functions
+- Added **ElectricLoad** inputs **leap_policy** ("truncate_dec31" or "drop_feb29") and **preserve_component_data** for controlling alignment behavior
+- Added sub-hourly time resolution support (30-min, 15-min, 5-min) for multiple load components alignment
+### Changed
+- Refactored day-of-week shifting logic in `doe_commercial_reference_building_loads.jl` and `electric_utility.jl` to use centralized `align_series_to_year()` function
+- Consolidated leap year normalization logic to eliminate code duplication across load processing functions
+
 ## v0.55.0
 ### Added
 - Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**

@@ -206,6 +206,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             # Align all components to reference year
             total_loads, aligned_components, metadata = align_multiple_loads_to_reference_year(
                 processed_components, target_year;
+                time_steps_per_hour=time_steps_per_hour,
                 preserve_monthly=true,
                 leap_policy=leap_policy
             )
@@ -246,7 +247,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
             # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
             normalized_profile = loads_kw ./ sum(loads_kw)
-            loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile)            
+            loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile, leap_policy)            
 
         elseif !isempty(path_to_csv)
             try
@@ -260,13 +261,13 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
     
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh, Real[], leap_policy)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
-                                                    annual_kwh, monthly_totals_kwh)
+                                                    annual_kwh, monthly_totals_kwh, 1.0, nothing, "", leap_policy)
         else
             throw(@error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
@@ -399,7 +400,8 @@ function BuiltInElectricLoad(
     year::Int,
     annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
-    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[],
+    leap_policy::String="truncate_dec31"
     )
     
     electric_annual_kwh = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "total_electric_annual_kwh.json"))
@@ -421,5 +423,5 @@ function BuiltInElectricLoad(
         end
     end
 
-    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile)
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile, leap_policy)
 end

@@ -4285,6 +4285,91 @@ else  # run HiGHS tests
                 # Total energy must be preserved
                 @test sum(aligned_loads) ≈ sum(original_load) rtol=1e-6
             end
+
+            @testset "Sub-hourly Multiple Loads" begin
+                """
+                Verify that optimization runs successfully with 30-minute sub-hourly data.
+                """
+                time_steps_per_hour = 2
+                n_steps = 8760 * time_steps_per_hour
+                
+                # Create realistic load patterns
+                site_loads = repeat([120.0, 100.0], Int(n_steps/2))  
+                ev_loads = repeat([30.0, 20.0], Int(n_steps/2))
+                
+                input_data = Dict{String, Any}(
+                    "Site" => Dict(
+                        "latitude" => 39.74,
+                        "longitude" => -104.99
+                    ),
+                    "ElectricLoad" => Dict(
+                        "load_components" => Dict(
+                            "site" => Dict(
+                                "loads_kw" => site_loads,
+                                "year" => 2016
+                            ),
+                            "ev" => Dict(
+                                "loads_kw" => ev_loads,
+                                "year" => 2024
+                            )
+                        ),
+                        "year" => 2025,
+                        "preserve_component_data" => true
+                    ),
+                    "Settings" => Dict(
+                        "time_steps_per_hour" => time_steps_per_hour
+                    ),
+                    "ElectricTariff" => Dict(
+                        "blended_annual_energy_rate" => 0.12,
+                        "blended_annual_demand_rate" => 0.0
+                    ),
+                    "PV" => Dict(
+                        "max_kw" => 500.0,
+                        "installed_cost_per_kw" => 1600.0,
+                        "min_kw" => 0.0
+                    ),
+                    "Storage" => Dict(
+                        "max_kw" => 100.0,
+                        "max_kwh" => 200.0,
+                        "min_kw" => 0.0,
+                        "min_kwh" => 0.0
+                    )
+                )
+                
+                # Create scenario
+                s = Scenario(input_data)
+                
+                # Verify scenario creation
+                @test length(s.electric_load.loads_kw) == n_steps
+                @test s.settings.time_steps_per_hour == time_steps_per_hour
+                
+                # Run full optimization
+                inputs = REoptInputs(s)
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt([m1,m2], inputs)
+                
+                # Verify optimization results
+                @test results["PV"]["size_kw"] >= 0
+                @test results["PV"]["size_kw"] <= 500.0
+                
+                # Storage results (if included in output)
+                if haskey(results, "Storage")
+                    @test results["Storage"]["size_kw"] >= 0
+                    @test results["Storage"]["size_kw"] <= 100.0
+                    @test results["Storage"]["size_kwh"] >= 0
+                    @test results["Storage"]["size_kwh"] <= 200.0
+                end
+                
+                # Verify load results
+                expected_annual_kwh = (sum(site_loads) + sum(ev_loads)) / time_steps_per_hour
+                @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ expected_annual_kwh rtol=0.01
+                
+                # Verify financial results exist
+                @test haskey(results, "Financial")
+                @test haskey(results["Financial"], "lcc")
+                @test results["Financial"]["lcc"] > 0
+            end
         end
     end
 end
