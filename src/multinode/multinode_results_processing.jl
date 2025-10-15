@@ -899,7 +899,7 @@ function CollectResultsByNode(results, busses)
         if i in keys(results["REopt_results"])
             if "PV" in keys(results["REopt_results"][i])
                 if results["REopt_results"][i]["PV"]["size_kw"] > 0
-                    PV = "PV: "*string(round(results["REopt_results"][i]["PV"]["size_kw"], digits=0))
+                    PV = "PV: "*string(round(results["REopt_results"][i]["PV"]["size_kw"], digits=0))*"kW "
                 else
                     PV = ""  
                 end
@@ -909,7 +909,7 @@ function CollectResultsByNode(results, busses)
 
             if "Generator" in keys(results["REopt_results"][i])
                 if results["REopt_results"][i]["Generator"]["size_kw"] > 0
-                    Generator = "Gen: "*string(round(results["REopt_results"][i]["Generator"]["size_kw"], digits=0))
+                    Generator = "Gen: "*string(round(results["REopt_results"][i]["Generator"]["size_kw"], digits=0))*"kW "
                 else
                     Generator = ""
                 end
@@ -919,7 +919,7 @@ function CollectResultsByNode(results, busses)
 
             if "ElectricStorage" in keys(results["REopt_results"][i])
                 if results["REopt_results"][i]["ElectricStorage"]["size_kw"] > 0
-                    Battery =  "Bat: "*string(round(results["REopt_results"][i]["ElectricStorage"]["size_kw"],digits=1))*"kW"*","*string(round(results["REopt_results"][i]["ElectricStorage"]["size_kwh"],digits=1))*"kWh"
+                    Battery =  "Bat: "*string(round(results["REopt_results"][i]["ElectricStorage"]["size_kw"],digits=1))*"kW"*","*string(round(results["REopt_results"][i]["ElectricStorage"]["size_kwh"],digits=1))*"kWh "
                 else
                     Battery = ""
                 end
