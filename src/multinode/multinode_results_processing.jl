@@ -734,6 +734,18 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
         print(phases_for_each_bus[string(bus)])
         #print("\n   m[:dvP] is")
         #print(m[:dvP])
+
+        # Adjust the phases associated with the sourcebus because in the PMD model the sourcebus will have three phases, even if the rest of the components on the system are single phase
+        if Multinode_Inputs.number_of_phases == 3
+            # Do nothing because the phases_for_each_bus["sourcebus"] should already be [1,2,3] by default
+        elseif Multinode_Inputs.number_of_phases == 2
+            phases_for_each_bus["sourcebus"] = [1,2]
+        elseif Multinode_Inputs.number_of_phases == 1
+            phases_for_each_bus["sourcebus"] = [1]
+        else
+            throw(@error("The input for the number_of_phases is invalid."))
+        end
+
         bus_power_series = sum(value.(m[:dvP][bus, phase, :].data) for phase in phases_for_each_bus[string(bus)])
         simple_powerflow_bus_results[bus] = Dict("bus_power_series" => bus_power_series,
                                                    "bus_maximum_power" => maximum(bus_power_series),
