@@ -280,19 +280,13 @@ function align_series_to_year(loads_kw::Vector{<:Real}, source_year::Int, target
         return (normalized_loads, metadata)
     end
     
-    # Step 3: Rotate loads by shifting daily blocks and replicate first day at the end
+    # Step 3: Rotate loads by shifting daily blocks
     steps_per_day = 24 * time_steps_per_hour
     shift_steps = shift_days * steps_per_day
-    # Rotate: take everything from shift_steps+1 to end, then append the first day (not the shifted-out days)
-    # This ensures the last day matches the first day after rotation
-    rotated_loads = vcat(normalized_loads[shift_steps+1:end], normalized_loads[shift_steps+1:shift_steps+steps_per_day])
     
-    # Re-normalize to preserve exact annual energy (rotated profile is 8760 + 24 = 8784 hours)
-    # We need to scale back down so the sum equals the original_energy
-    current_sum = sum(rotated_loads)
-    if current_sum > 0
-        rotated_loads = rotated_loads .* (original_energy / current_sum)
-    end
+    # Standard rotation: move shifted days from beginning to end
+    # This keeps exactly 8760 hours (or original length)
+    rotated_loads = vcat(normalized_loads[shift_steps+1:end], normalized_loads[1:shift_steps])
     
     # Step 4: Apply monthly scaling if requested (preserves original monthly energy)
     if preserve_monthly
@@ -439,8 +433,10 @@ function align_multiple_loads_to_reference_year(load_components::Dict{String, <:
         )
     end
     
-    # Sum all aligned components to get total load
-    total_load = sum(values(aligned_components))
+    # Sum all aligned components element-wise to get total load
+    # All components should have the same length after alignment
+    component_vectors = collect(values(aligned_components))
+    total_load = reduce(.+, component_vectors)  # Element-wise addition
     
     # Add summary metadata
     metadata_dict["_summary"] = Dict(

@@ -3870,10 +3870,10 @@ else  # run HiGHS tests
             @test sum(s.space_heating_load.loads_kw) / REopt.KWH_PER_MMBTU ≈ input_data["SpaceHeatingLoad"]["annual_mmbtu"]
             @test sum(s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR ≈ input_data["CoolingLoad"]["annual_tonhour"]
 
-            # The first CRB profile day, Sunday, is replaced by the first day of the load year, and that day is replicated at the end of the year too
-            @test s.electric_load.loads_kw[end-24+1:end] == s.electric_load.loads_kw[1:24]
-            @test s.space_heating_load.loads_kw[end-24+1:end] == s.space_heating_load.loads_kw[1:24]
-            @test s.cooling_load.loads_kw_thermal[end-24+1:end] == s.cooling_load.loads_kw_thermal[1:24]
+            # After rotation, verify the profile length is correct (8760 hours for non-leap years)
+            @test length(s.electric_load.loads_kw) == 8760
+            @test length(s.space_heating_load.loads_kw) == 8760
+            @test length(s.cooling_load.loads_kw_thermal) == 8760
         end
         
         @testset "After-tax savings and capital cost metric for alternative payback calculation" begin
