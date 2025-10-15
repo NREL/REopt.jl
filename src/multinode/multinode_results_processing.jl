@@ -727,13 +727,12 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
     end
 
     simple_powerflow_bus_results = Dict()
-    busses = axes(m[:dvP][:,:,1])[1]   # collect(keys(phases_for_each_bus)) 
+    busses = axes(m[:dvP][:,:,1])[1]  
     for bus in busses
-        print("\n For bus $(bus)")
-        print("\n   phases are: ")
-        print(phases_for_each_bus[string(bus)])
-        #print("\n   m[:dvP] is")
-        #print(m[:dvP])
+        if Multinode_Inputs.display_information_during_modeling_run
+            print("\n For bus $(bus), the phases are: ")
+            print(phases_for_each_bus[string(bus)])
+        end
 
         # Adjust the phases associated with the sourcebus because in the PMD model the sourcebus will have three phases, even if the rest of the components on the system are single phase
         if Multinode_Inputs.number_of_phases == 3
@@ -761,11 +760,6 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
                                     "all_bus_line_connections" => connections,
                                     "downstream_bus_line_connections" => connections_downstream,
                                     "upstream_bus_line_connections" => connections_upstream)
-
-    # For the original test model: At time step 12, all of these values are the same, as expected:
-        #LineFlowOnline4_5 = value.(m[:dvPline]["line4_5",12])
-        #ExportFromNode5_SolarPV = value.(m[:dvP][5,12])
-        #PowerDemandNode4 = results["REopt_results"][4]["ElectricLoad"]["load_series_kw"][12]
                                         
     return simple_powerflow_results
 end

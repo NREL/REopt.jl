@@ -328,8 +328,11 @@ function model_line_upgrades(pm, Multinode_Inputs, LineInfo, data_eng)
         t_connections = branch["t_connections"]
         f_idx = (i, f_bus, t_bus)
         t_idx = (i, t_bus, f_bus)
-        print("\n The f_idx for line $(line) is $(f_idx)")
-        print("\n The t_idx for line $(line) is $(t_idx)")
+        
+        if Multinode_Inputs.display_information_during_modeling_run
+            print("\n The f_idx for line $(line) is $(f_idx)")
+            print("\n The t_idx for line $(line) is $(t_idx)")
+        end
 
         for timestep in Multinode_Inputs.PMD_time_steps
             PMD_time_step = findall(x -> x==timestep, Multinode_Inputs.PMD_time_steps)[1] #use the [1] to convert the 1-element vector into an integer
@@ -973,7 +976,9 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             else
                 if LineInfo[line]["maximum_power_kw"] == Inf
                     line_max_power = 1000000000 #LineInfo[line]["maximum_power_kw"]
-                    print("\n Line max power for line $(line) is infinite, setting the line_max_power for $(line) to $(line_max_power)")
+                    if Multinode_Inputs.display_information_during_modeling_run
+                        print("\n Line max power for line $(line) is infinite, setting the line_max_power for $(line) to $(line_max_power)")
+                    end
                 else
                     line_max_power = LineInfo[line]["maximum_power_kw"] * multiphase_multiplier
                 end
