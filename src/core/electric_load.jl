@@ -10,12 +10,13 @@
     blended_doe_reference_percents::Array{<:Real,1} = Real[], # Values should be between 0-1 and sum to 1.0
     year::Union{Int, Nothing} = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : nothing, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles defaults to using 2017. If providing load data, specify year of data.
     city::String = "",
-    annual_kwh::Union{Real, Nothing} = nothing,
-    monthly_totals_kwh::Array{<:Real,1} = Real[],
+    annual_kwh::Union{Real, Nothing} = nothing, # scales the load profile to this annual energy. Can apply to either loads_kw (if normalize_and_scale_load_profile_input=true) or doe_reference loads
+    monthly_totals_kwh::Array{<:Real,1} = Real[], # scales the load profile to these monthly energy totals. Must provide 12 values. Can apply to either loads_kw (if normalize_and_scale_load_profile_input=true) or doe_reference loads
+    monthly_peaks_kw::Array{<:Real,1} = Real[], # scales the load profile to these monthly peak loads. Can apply to either loads_kw (if normalize_and_scale_load_profile_input=true) or doe_reference loads
     critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing,
-    loads_kw_is_net::Bool = true,
-    critical_loads_kw_is_net::Bool = false,
-    critical_load_fraction::Real = off_grid_flag ? 1.0 : 0.5, # if off grid must be 1.0, else 0.5
+    loads_kw_is_net::Bool = true, # set to true if loads_kw is already net of on-site electricity generation.
+    critical_loads_kw_is_net::Bool = false, # set to true if critical_loads_kw is already net of on-site electricity generation.
+    critical_load_fraction::Real = off_grid_flag ? 1.0 : 0.5, # fractional input is applied to the typical load profile to determine critical loads.
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%. Applied to each time_step as a % of electric load.
     min_load_met_annual_fraction::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
 ```
@@ -96,6 +97,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
+        monthly_peaks_kw::Array{<:Real,1} = Real[],
         critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
@@ -130,34 +132,38 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
 
         if isnothing(year)
             throw(@error("Must provide the year when using loads_kw input."))
-        end 
+        end
 
-        if length(loads_kw) > 0 && !normalize_and_scale_load_profile_input
-
-            if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided electric load does not match the time_steps_per_hour."))
-            end
-        
-        elseif length(loads_kw) > 0 && normalize_and_scale_load_profile_input
-            if !isempty(doe_reference_name)
-                @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and building type inputs, and only using the year and annual or monthly energy inputs with the load profile"
-            end
-            if isnothing(annual_kwh) && isempty(monthly_totals_kwh)
-                throw(@error("Provided loads_kw with normalize_and_scale_load_profile_input=true, but no annual_kwh or monthly_totals_kwh was provided"))
-            end
-            # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
-            normalized_profile = loads_kw ./ sum(loads_kw)
-            loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile)            
-
-        elseif !isempty(path_to_csv)
+        if !isempty(path_to_csv)
             try
                 loads_kw = vec(readdlm(path_to_csv, ',', Float64, '\n'))
             catch e
                 throw(@error("Unable to read in electric load profile from $path_to_csv. Please provide a valid path to a csv with no header."))
             end
+        end
 
-            if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided electric load does not match the time_steps_per_hour."))
+        # Timestep checks for custom loads
+        if length(loads_kw) > 0 && length(loads_kw) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
+            if length(loads_kw) < 8760 * time_steps_per_hour && length(loads_kw) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
+                loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
+                @warn "Repeating electric loads in each hour to match the time_steps_per_hour."
+            else # loads_kw is higher resolution than time_steps_per_hour or not an integer multiple of 8760
+                throw(@error("Provided electric load does not match the Settings.time_steps_per_hour."))
+            end
+        end
+
+        # Energy scaling
+        if length(loads_kw) > 0 && normalize_and_scale_load_profile_input
+            if !isempty(doe_reference_name)
+                @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and doe_reference_name inputs, and only using the year and annual or monthly energy inputs with loads_kw"
+            end
+            if isnothing(annual_kwh) && isempty(monthly_totals_kwh) && isempty(monthly_peaks_kw)
+                throw(@error("Provided loads_kw with normalize_and_scale_load_profile_input=true, but no annual_kwh, monthly_totals_kwh, or monthly_peaks_kw was provided"))
+            end
+            if !isnothing(annual_kwh) || !isempty(monthly_totals_kwh)
+                # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
+                normalized_profile = loads_kw ./ sum(loads_kw)
+                loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile)
             end
     
         elseif !isempty(doe_reference_name)
@@ -174,9 +180,16 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                   or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude."))
         end
 
-        if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @warn "Repeating electric loads in each hour to match the time_steps_per_hour."
+        # Scale to monthly peak loads 
+        if !isempty(monthly_peaks_kw)
+            if length(monthly_peaks_kw) != 12
+                throw(@error("If providing monthly_peaks_kw, must provide 12 values."))
+            elseif occursin("FlatLoad", doe_reference_name)
+                @warn "Not scaling electric load to monthly_peaks_kw because doe_reference_name is a FlatLoad."
+            elseif normalize_and_scale_load_profile_input
+            end
+
+
         end
 
         if isnothing(critical_loads_kw)
