@@ -1762,7 +1762,7 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         if Multinode_Inputs.model_outages_with_outages_vector == true
             for timestep in Multinode_Inputs.outages_vector
                 if !(timestep in Multinode_Inputs.PMD_time_steps)
-                    throw(@error("For multi-phase systems, the outages in the optimization must be modeled during timesteps that are modeled using PMD"))
+                    throw(@error("For multi-phase systems, modeling outages using the outages vector is not working. Please use the single outage functionality instead."))
                 end
             end
         end
