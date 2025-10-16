@@ -356,7 +356,7 @@ struct CoolingLoad
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             if isnothing(annual_tonhour) && isempty(monthly_tonhour)
-                loads_kw = zeros(Int(8760/time_steps_per_hour))
+                loads_kw = zeros(Int(8760*time_steps_per_hour))
                 for (i, building) in enumerate(blended_doe_reference_names)
                     default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, year)
                     modified_fraction = default_fraction * blended_doe_reference_percents[i]

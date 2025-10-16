@@ -170,7 +170,7 @@ function built_in_load(
         for month in 1:12
             start_idx = monthly_timesteps[month][1]
             end_idx = monthly_timesteps[month][end]
-            month_total = sum(normalized_profile[start_idx:end_idx])
+            month_total = sum(normalized_profile[start_idx:end_idx]) / time_steps_per_hour
             if month_total == 0.0  # avoid division by zero
                 monthly_scalers[month] = 0.0
             else
@@ -331,19 +331,19 @@ Get monthly energy from an hourly load profile.
 """
 function get_monthly_energy(power_profile::AbstractArray{<:Real,1}; 
                             year::Int64=2017)
-    t0 = 1
+    if length(power_profile) != 8760
+        throw(@error("get_monthly_energy can only be used for hourly profiles"))
+    end
+    monthly_timesteps = get_monthly_time_steps(year)
     monthly_energy_total = zeros(12)
     for month in 1:12
-        plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-        if month == 12 && isleapyear(year)
-            plus_hours -= 24
-        end
+        start_idx = monthly_timesteps[month][1]
+        end_idx = monthly_timesteps[month][end]
         if !isempty(power_profile)
-            monthly_energy_total[month] = sum(power_profile[t0:t0+plus_hours-1])
+            monthly_energy_total[month] = sum(power_profile[start_idx:end_idx])
         else
             throw(@error("Must provide power_profile"))
         end
-        t0 += plus_hours
     end
 
     return monthly_energy_total
