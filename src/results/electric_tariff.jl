@@ -219,6 +219,21 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         end
     end
 
+    # need to review!!!
+    # p.s.electric_tariff.urdb_metadata
+    r["urdb_label"] = p.s.electric_tariff.urdb_metadata[:label]
+    r["urdb_rate_name"] = p.s.electric_tariff.urdb_metadata[:rate_name]
+    r["urdb_utility"] = p.s.electric_tariff.urdb_metadata[:utility]
+    r["urdb_rate_effective_date"] = p.s.electric_tariff.urdb_metadata[:rate_effective_date]
+    r["urdb_voltage_level"] = p.s.electric_tariff.urdb_metadata[:voltage_level]
+    r["urdb_rate_description"] = p.s.electric_tariff.urdb_metadata[:rate_description]
+    r["urdb_peak_kw_capacity_min"] = p.s.electric_tariff.urdb_metadata[:peak_kw_capacity_min]
+    r["urdb_peak_kw_capacity_max"] = p.s.electric_tariff.urdb_metadata[:peak_kw_capacity_max]
+    r["urdb_rate_additional_info"] = p.s.electric_tariff.urdb_metadata[:rate_additional_info]
+    r["urdb_energy_comments"] = p.s.electric_tariff.urdb_metadata[:energy_comments]
+    r["urdb_demand_comments"] = p.s.electric_tariff.urdb_metadata[:demand_comments]
+    r["urdb_url_link"] = p.s.electric_tariff.urdb_metadata[:url_link]
+
     d["ElectricTariff"] = r
     nothing
 end

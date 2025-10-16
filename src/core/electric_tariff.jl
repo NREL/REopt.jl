@@ -35,6 +35,9 @@ struct ElectricTariff
     coincident_peak_load_active_time_steps::AbstractVector{AbstractVector{Int64}}
     coincident_peak_load_charge_per_kw::AbstractVector{Float64}
     coincpeak_periods::AbstractVector{Int64}
+
+    urdb_metadata::Dict{Symbol, Any}
+
 end
 
 
@@ -238,6 +241,22 @@ function ElectricTariff(;
         tou_demand_tier_limits = u.tou_demand_tier_limits
         n_tou_demand_tiers = u.n_tou_demand_tiers
 
+        # need to review!!!!
+        urdb_metadata = Dict{Symbol, Any}(
+            :label => u.label,
+            :rate_name => u.rate_name,
+            :utility => u.utility,
+            :rate_effective_date => u.rate_effective_date,
+            :voltage_level => u.voltage_level,
+            :rate_description => u.rate_description,
+            :peak_kw_capacity_min => u.peak_kw_capacity_min,
+            :peak_kw_capacity_max => u.peak_kw_capacity_max,
+            :rate_additional_info => u.rate_additional_info,
+            :energy_comments => u.energy_comments,
+            :demand_comments => u.demand_comments,
+            :url_link => u.url_link
+        ) 
+
         if remove_tiers
             energy_rates, monthly_demand_rates, tou_demand_rates = remove_tiers_from_urdb_rate(u)
             energy_tier_limits, monthly_demand_tier_limits, tou_demand_tier_limits = 
@@ -349,7 +368,8 @@ function ElectricTariff(;
         export_bins,
         coincident_peak_load_active_time_steps,
         coincident_peak_load_charge_per_kw,
-        coincpeak_periods
+        coincpeak_periods,
+        urdb_metadata
     )
 end
 
