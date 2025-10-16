@@ -166,18 +166,16 @@ function built_in_load(
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
         t0 = 1
-        for month in 1:12 ## TODO: use get_monthly_indices here 
-            plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-            if month == 12 && isleapyear(year)  # for a leap year, the last day is assumed to be truncated
-                plus_hours -= 24
-            end
-            month_total = sum(normalized_profile[t0:t0+plus_hours-1])
+        monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
+        for month in 1:12
+            start_idx = monthly_timesteps[month][1]
+            end_idx = monthly_timesteps[month][end]
+            month_total = sum(normalized_profile[start_idx:end_idx])
             if month_total == 0.0  # avoid division by zero
                 monthly_scalers[month] = 0.0
             else
                 monthly_scalers[month] = monthly_energies[month] / month_total
             end
-            t0 += plus_hours
         end
     end
 

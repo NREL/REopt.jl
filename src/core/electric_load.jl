@@ -168,8 +168,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
     
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_
-            totals_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
@@ -182,7 +181,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                   or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude."))
         end
 
-        # TODO: 
+        # TODO: upsample CRB if needed (as done before)
 
         # Scale to monthly peak loads 
         if !isempty(monthly_peaks_kw)
@@ -280,11 +279,11 @@ function scale_load_to_monthly_peaks(
         month_load_series = initial_loads_kw[start_idx:end_idx]
         initial_peak = maximum(month_load_series)
         target_peak = target_monthly_peaks_kw[month]
-        total_consumption = sum(month_load_series) # units don't matter here
+        total_consumption_kwh = sum(month_load_series) / time_steps_per_hour
         if initial_peak > target_peak
-            scaled_month = apply_linear_flattening(month_load_series, total_consumption, target_peak)
+            scaled_month = apply_linear_flattening(month_load_series, total_consumption_kwh, target_peak)
         else
-            scaled_month = apply_exponential_stretching(month_load_series, total_consumption, initial_peak, target_peak)
+            scaled_month = apply_exponential_stretching(month_load_series, total_consumption_kwh, initial_peak, target_peak)
         end
         scaled_load[start_idx:end_idx] = scaled_month
     end
@@ -306,17 +305,16 @@ Args:
 Returns:
     Profile for given month, scaled to peak
 """
-function apply_linear_flattening(initial_load::Vector{Float64}, total_consumption::Float64, target_peak::Float64)
+function apply_linear_flattening(initial_load_series_kw::Vector{Float64}, total_consumption_kwh::Float64, target_peak_kw::Float64)
 
-    n = length(initial_load)
-    flat_load = total_consumption / n
+    flat_load_kw = total_consumption_kwh / 8760
     function objective(x)
-        scaled = initial_load .* x .+ flat_load .* (1 - x)
-        return abs(maximum(scaled) - target_peak)
+        scaled = initial_load_series_kw .* x .+ flat_load_kw .* (1 - x)
+        return abs(maximum(scaled) - target_peak_kw)
     end
     x_optimal = (findmin([objective(x) for x in 0:0.001:1])[2] - 1 ) * 0.001 # convert from index to x value
-    scaled_load = initial_load .* x_optimal .+ flat_load .* (1 - x_optimal)
-    return scaled_load
+    scaled_load_series_kw = initial_load_series_kw .* x_optimal .+ flat_load_kw .* (1 - x_optimal)
+    return scaled_load_series_kw
 end
 
 """
@@ -336,15 +334,15 @@ Args:
 Returns:
     Profile for given month, scaled to peak
 """
-function apply_exponential_stretching(initial_load::Vector{Float64}, total_consumption::Float64, initial_peak::Float64, target_peak::Float64)
-    transformed_load = initial_load .* (target_peak / initial_peak)
+function apply_exponential_stretching(initial_load_series_kw::Vector{Float64}, total_consumption_kwh::Float64, initial_peak_kw::Float64, target_peak_kw::Float64)
+    transformed_load_series_kw = initial_load_series_kw .* (target_peak_kw / initial_peak_kw)
     function objective(x)
-        decay_factor = exp.(-x .* (1 .- transformed_load ./ target_peak))
-        scaled = transformed_load .* decay_factor
-        return abs(sum(scaled) - total_consumption)
+        decay_factor = exp.(-x .* (1 .- transformed_load_series_kw ./ target_peak_kw))
+        scaled_load_series_kw = transformed_load_series_kw .* decay_factor
+        return abs(sum(scaled_load_series_kw)/time_steps_per_hour - total_consumption_kwh)
     end
     x_optimal = (findmin([objective(x) for x in 0:0.01:10])[2] - 1 ) * 0.01 # convert from index to x value
-    decay_factor = exp.(-x_optimal .* (1 .- transformed_load ./ target_peak))
-    scaled_load = transformed_load .* decay_factor
-    return scaled_load
+    decay_factor = exp.(-x_optimal .* (1 .- transformed_load_series_kw ./ target_peak_kw))
+    scaled_load_series_kw = transformed_load_series_kw .* decay_factor
+    return scaled_load_series_kw
 end
