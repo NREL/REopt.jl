@@ -198,7 +198,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                     )
                     # println("  ✓ Successfully preprocessed $component_name")
                 catch e
-                    println("  ✗ Error preprocessing $component_name: $e")
+                    @error "  ✗ Error preprocessing $component_name" exception=e
                     rethrow(e)
                 end
             end
