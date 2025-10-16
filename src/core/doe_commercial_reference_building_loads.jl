@@ -163,7 +163,7 @@ function built_in_load(
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
         t0 = 1
-        for month in 1:12
+        for month in 1:12 ## TODO: use get_monthly_indices here 
             plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
             if month == 12 && isleapyear(year)  # for a leap year, the last day is assumed to be truncated
                 plus_hours -= 24

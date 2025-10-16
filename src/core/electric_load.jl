@@ -118,9 +118,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 @warn "ElectricLoad critical_load_fraction must be 1.0 (100%) for off-grid scenarios. Any other value will be overriden when `off_grid_flag` is true. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_fraction."
                 critical_load_fraction = 1.0
             end
-        end
-
-        if !(off_grid_flag)
+        else # not off-grid
             if !(operating_reserve_required_fraction == 0.0)
                 @warn "ElectricLoad operating_reserve_required_fraction must be 0 for on-grid scenarios. Operating reserve requirements apply to off-grid scenarios only."
                 operating_reserve_required_fraction = 0.0
@@ -131,7 +129,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         end
 
         if isnothing(year)
-            throw(@error("Must provide the year when using loads_kw input."))
+            throw(@error("Must provide ElectricLoad.year when using loads_kw input."))
         end
 
         if !isempty(path_to_csv)
@@ -153,6 +151,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         end
 
         # Energy scaling
+        if length(loads_kw) > 0 && ( !isnothing(annual_kwh) || !isempty(monthly_totals_kwh) || !isempty(monthly_peaks_kw) ) && !normalize_and_scale_load_profile_input
+            throw(@error("If providing loads_kw and annual_kwh or monthly_totals_kwh or monthly_peaks_kw, must set normalize_and_scale_load_profile_input=true."))
+        end
         if length(loads_kw) > 0 && normalize_and_scale_load_profile_input
             if !isempty(doe_reference_name)
                 @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and doe_reference_name inputs, and only using the year and annual or monthly energy inputs with loads_kw"
@@ -182,14 +183,11 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
 
         # Scale to monthly peak loads 
         if !isempty(monthly_peaks_kw)
-            if length(monthly_peaks_kw) != 12
-                throw(@error("If providing monthly_peaks_kw, must provide 12 values."))
-            elseif occursin("FlatLoad", doe_reference_name)
+            if occursin("FlatLoad", doe_reference_name) # TODO: check that we shouldn't scale these
                 @warn "Not scaling electric load to monthly_peaks_kw because doe_reference_name is a FlatLoad."
-            elseif normalize_and_scale_load_profile_input
+            else
+                loads_kw = scale_load_to_monthly_peaks(loads_kw, monthly_peaks_kw, time_steps_per_hour, year)
             end
-
-
         end
 
         if isnothing(critical_loads_kw)
@@ -241,4 +239,126 @@ function BuiltInElectricLoad(
     end
 
     built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile)
+end
+
+"""
+    scale_load_to_monthly_peaks(
+        loads_kw::Vector{Float64}, 
+        monthly_peaks_kw::Vector{Float64}, 
+        time_steps_per_hour::Int, 
+        year::Int   
+    )
+"""
+function scale_load_to_monthly_peaks(
+    initial_loads_kw::Vector{Float64}, 
+    target_monthly_peaks_kw::Vector{Float64}, 
+    time_steps_per_hour::Int, 
+    year::Int
+    )
+
+    # Error checking
+    expected_length = 8760 * time_steps_per_hour
+    if length(initial_loads_kw) != expected_length # TODO: remove this one? 
+        error("Load profile must have $expected_length intervals for $time_steps_per_hour time_steps_per_hour")
+    end
+    if length(target_monthly_peaks_kw) != 12
+        error("monthly_peaks_kw must have exactly 12 values")
+    end
+    if any(x -> x <= 0, target_monthly_peaks_kw)
+        error("All monthly_peaks_kw values must be positive")
+    end
+
+    month_indices = get_monthly_indices(time_steps_per_hour, year)
+    scaled_load = zeros(Float64, length(initial_loads_kw))
+    for month in 1:12
+        start_idx, end_idx = month_indices[month]
+        month_load_series = initial_loads_kw[start_idx:end_idx]
+        initial_peak = maximum(month_load_series)
+        target_peak = target_monthly_peaks_kw[month]
+        total_consumption = sum(month_load_series) # units don't matter here
+        if initial_peak > target_peak
+            scaled_month = apply_linear_flattening(month_load_series, total_consumption, target_peak)
+        else
+            scaled_month = apply_exponential_stretching(month_load_series, total_consumption, initial_peak, target_peak)
+        end
+        scaled_load[start_idx:end_idx] = scaled_month
+    end
+    return scaled_load
+
+end
+
+function get_monthly_indices(time_steps_per_hour::Int, year::Int)
+    # Returns vector of (start_idx, end_idx) tuples for each month (indexed 1-12)
+
+    days_per_month = [Dates.daysinmonth(Date(year, m, 1)) for m in 1:12]
+    if Dates.isleapyear(year)
+        days_per_month[12] -= 1
+    end
+    intervals_per_day = 24 * time_steps_per_hour
+    month_indices = Tuple{Int,Int}[]
+    start_idx = 1
+    for days in days_per_month
+        end_idx = start_idx + (days * intervals_per_day) - 1
+        push!(month_indices, (start_idx, end_idx))
+        start_idx = end_idx + 1
+    end
+
+    return month_indices 
+end
+
+"""
+Apply linear flattening when initial peak > actual peak (Condition 1).
+
+Formula: Scaled_Load = initial_Load × x + Flat_Load × (1 - x)
+where Flat_Load = Total_Consumption / n
+
+Args:
+    initial_load: Array of initial load values for the period
+    total_consumption: Total energy consumption for the period (kWh)
+    target_peak: Target peak demand (kW)
+
+Returns:
+    Profile for given month, scaled to peak
+"""
+function apply_linear_flattening(initial_load::Vector{Float64}, total_consumption::Float64, target_peak::Float64)
+
+    n = length(initial_load)
+    flat_load = total_consumption / n
+    function objective(x)
+        scaled = initial_load .* x .+ flat_load .* (1 - x)
+        return abs(maximum(scaled) - target_peak)
+    end
+    x_optimal = (findmin([objective(x) for x in 0:0.001:1])[2] - 1 ) * 0.001 # convert from index to x value
+    scaled_load = initial_load .* x_optimal .+ flat_load .* (1 - x_optimal)
+    return scaled_load
+end
+
+"""
+Apply exponential stretching when initial peak < actual peak (Condition 2).
+
+Steps:
+1. Normalize: Transformed_Load = Initial_Load × (Actual_Peak / Initial_Peak)
+2. Apply decay: Scaled_Load = Transformed_Load × e^(-x(1 - Transformed_Load/Actual_Peak))
+3. Goal seek x to match total consumption
+
+Args:
+    initial_load: Array of initial load values for the period
+    total_consumption: Total energy consumption for the period (kWh)
+    initial_peak: Peak of initial load (kW)
+    target_peak: Target peak demand (kW)
+
+Returns:
+    Profile for given month, scaled to peak
+"""
+function apply_exponential_stretching(initial_load::Vector{Float64}, total_consumption::Float64, initial_peak::Float64, target_peak::Float64)
+    transformed_load = initial_load .* (target_peak / initial_peak)
+    function objective(x)
+        decay_factor = exp.(-x .* (1 .- transformed_load ./ target_peak))
+        scaled = transformed_load .* decay_factor
+        return abs(sum(scaled) - total_consumption)
+    end
+    x_optimal = (findmin([objective(x) for x in 0:0.01:10])[2] - 1 ) * 0.01 # convert from index to x value
+    decay_factor = exp.(-x_optimal .* (1 .- transformed_load ./ target_peak))
+    scaled_load = transformed_load .* decay_factor
+    return scaled_load
 end
