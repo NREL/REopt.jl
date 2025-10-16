@@ -1012,7 +1012,7 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
     # Link this simple powerflow model to the REopt nodes
     for t in REoptTimeSteps
         if t in time_steps_without_PMD
-            index = findall(x->x==t, time_steps_without_PMD)
+            index = findall(x->x==t, time_steps_without_PMD)[1]
             counter = counter + 1
             for node in REopt_nodes  # only link the REopt nodes to PMD busses
                 if string(node) != Multinode_Inputs.substation_node
@@ -1023,7 +1023,16 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
                     end
                     for phase in phases_for_each_bus[string(node)]
                         # This constraint assumes that multiphase nodes with loads (or generators) consume (or distribute) power evenly across each phase
-                        @constraint(m, m[:dvP][string(node), phase, index] .== (1/length(phases_for_each_bus[string(node)])) * (m[Symbol("TotalExport_"*string(node))][t]) .- (m[Symbol("dvGridPurchase_"*string(node))][t]) ) # check that these variable names are correct
+                        @constraint(m, m[:dvP][string(node), phase, index] .== (1/length(phases_for_each_bus[string(node)])) .* ((m[Symbol("TotalExport_"*string(node))][t]) .- (m[Symbol("dvGridPurchase_"*string(node))][t])) ) # To do: double check that these variable names are correct
+                        
+                        if Multinode_Inputs.display_information_during_modeling_run 
+                            if t in [1,2] # print out some information for the first couple timesteps
+                                print("\n For node $(node), the phases_for_each_bus are: $(phases_for_each_bus[string(node)]), with a length of $(length(phases_for_each_bus[string(node)]))")
+                                print("\n    The index is $(index), and the t i $(t), and the phase is $(phase)")
+                                print("\n    (1/length(phases_for_each_bus[string(node)])) is $((1/length(phases_for_each_bus[string(node)])))")
+                            end
+                        end
+                    
                     end
                 else
                     # I don't think this is necessary because the substation node isn't part of REopt nodes

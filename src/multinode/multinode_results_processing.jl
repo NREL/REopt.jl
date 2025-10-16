@@ -629,12 +629,12 @@ function combine_PMD_and_simple_powerflow_results(Multinode_Inputs, m, data_eng,
                 push!(ActivePowerFlow_line_temp, simple_powerflow_model_results["lines"][line]["line_power_flow_series"][timestep_in_simple_powerflow_model])
                 push!(ReactivePowerFlow_line_temp, "No reactive power in the simple powerflow model")
                 
-                push!(ActivePowerFlow_line_Phase1_temp, "No phases in the simple powerflow model")
-                push!(ActivePowerFlow_line_Phase2_temp, "No phases in the simple powerflow model")
-                push!(ActivePowerFlow_line_Phase3_temp, "No phases in the simple powerflow model")
-                push!(ReactivePowerFlow_line_Phase1_temp, "No phases in the simple powerflow model")
-                push!(ReactivePowerFlow_line_Phase2_temp, "No phases in the simple powerflow model")
-                push!(ReactivePowerFlow_line_Phase3_temp, "No phases in the simple powerflow model")
+                push!(ActivePowerFlow_line_Phase1_temp, "To do: add individual phase reporting for the simple powerflow model")
+                push!(ActivePowerFlow_line_Phase2_temp, "To do: add individual phase reporting for the simple powerflow model")
+                push!(ActivePowerFlow_line_Phase3_temp, "To do: add individual phase reporting for the simple powerflow model")
+                push!(ReactivePowerFlow_line_Phase1_temp, "No reactive power in the simple powerflow model")
+                push!(ReactivePowerFlow_line_Phase2_temp, "No reactive power in the simple powerflow model")
+                push!(ReactivePowerFlow_line_Phase3_temp, "No reactive power in the simple powerflow model")
 
                 push!(power_flow_model_at_timesteps, "simplified_powerflow_model")
             else
