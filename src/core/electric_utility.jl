@@ -628,19 +628,28 @@ function cambium_profile(; scenario::String,
     end
 end
 
-function align_profile_with_load_year(; load_year::Int, profile_year::Int, profile_data::Array{<:Real,1})
-    
-    ef_start_day = dayofweek(Date(profile_year,1,1)) # Monday = 1; Sunday = 7
-    load_start_day = dayofweek(Date(load_year,1,1)) 
-    
-    if ef_start_day == load_start_day
-        profile_data_adj = profile_data
-    else
-        # Example: Emissions year = 2017; ef_start_day = 7 (Sunday). Load year = 2021; load_start_day = 5 (Fri)
-        cut_days = 7+(load_start_day-ef_start_day) # Ex: = 7+(5-7) = 5 --> cut Sun, Mon, Tues, Wed, Thurs
-        wrap_ts = profile_data[25:24+24*cut_days] # Ex: = profile_data[25:144] wrap Mon-Fri to end
-        profile_data_adj = append!(profile_data[24*cut_days+1:end],wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
-    end
+"""
+Align an emissions or other profile with load year using centralized alignment logic.
 
-    return profile_data_adj
+This function wraps the centralized `align_series_to_year` from `load_alignment.jl`.
+
+# Arguments
+- `load_year::Int`: Target year to align to
+- `profile_year::Int`: Source year of the profile data
+- `profile_data::Array{<:Real,1}`: Profile data to align (8760 hours)
+
+# Returns
+- `Vector{Float64}`: Aligned profile data
+"""
+function align_profile_with_load_year(; load_year::Int, profile_year::Int, profile_data::Array{<:Real,1})
+    # Use centralized alignment function for consistency
+    aligned_data, _ = align_series_to_year(
+        profile_data, profile_year, load_year;
+        time_steps_per_hour=1,
+        method="weekday_rotation",
+        preserve_monthly=true,  # Preserve monthly patterns for emissions profiles
+        leap_policy="truncate_dec31"
+    )
+    
+    return aligned_data
 end

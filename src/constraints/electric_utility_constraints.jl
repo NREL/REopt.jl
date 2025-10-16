@@ -309,21 +309,30 @@ function add_energy_tier_constraints(m, p; _n="")
     dv = "binEnergyTier" * _n
     m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, base_name = dv)
     b = m[Symbol(dv)]
+    
     ##Constraint (10a): Usage limits by pricing tier, by month
-    @constraint(m, [mth in p.months, tier in 1:p.s.electric_tariff.n_energy_tiers],
-        p.hours_per_time_step * sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.s.electric_tariff.time_steps_monthly[mth] ) 
-        <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier]
-    )
+    # Build expressions efficiently for better performance with subhourly time steps
+    for mth in p.months, tier in 1:p.s.electric_tariff.n_energy_tiers
+        expr = JuMP.AffExpr()
+        for ts in p.s.electric_tariff.time_steps_monthly[mth]
+            JuMP.add_to_expression!(expr, p.hours_per_time_step, m[Symbol("dvGridPurchase"*_n)][ts, tier])
+        end
+        @constraint(m, expr <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier])
+    end
+    
     ##Constraint (10b): Ordering of pricing tiers
     @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
         b[mth, tier] - b[mth, tier-1] <= 0
     )
+    
     ## Constraint (10c): One tier must be full before any usage in next tier
-    @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
-        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier-1] - 
-        sum( m[Symbol("dvGridPurchase"*_n)][ts, tier-1] for ts in p.s.electric_tariff.time_steps_monthly[mth]) 
-        <= 0
-    )
+    for mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers
+        expr = JuMP.AffExpr()
+        for ts in p.s.electric_tariff.time_steps_monthly[mth]
+            JuMP.add_to_expression!(expr, -1.0, m[Symbol("dvGridPurchase"*_n)][ts, tier-1])
+        end
+        @constraint(m, b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier-1] + expr <= 0)
+    end
     # TODO implement NewMaxUsageInTier
 end
 

@@ -126,6 +126,7 @@ function built_in_load(
     monthly_energies::AbstractArray{<:Real,1},
     boiler_efficiency_input::Union{Real,Nothing}=nothing,
     normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[],
+    leap_policy::String="truncate_dec31"
     )
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
@@ -146,28 +147,30 @@ function built_in_load(
         input_normalized = true
     end
 
-    # The normalized_profile for CRBs (not FlatLoads, which use the year input) is based on year 2017 which starts on a Sunday. 
-    # If the year is not 2017 and we're using a CRB, we shift the 2017 CRB profile to match the weekday/weekend profile of the input year.
-    # We remove the CRB start day Sunday, and shift the CRB profile to the left until reaching the start day of the input year (e.g. Friday for 2021), and 
-    #  the shifted days (but not Sunday) get wrapped around to the end of the year, and the year's start day gets duplicated at the end of the year to match the year's ending day of the week.
-    # We then re-normalize the profile because we've removed the previously-normalized year's first day Sunday and duplicated the year's start day profile
-    if !(year == 2017) && shift_possible
-        crb_start_day = Dates.dayofweek(DateTime(2017,1,1))
-        load_start_day = Dates.dayofweek(DateTime(year,1,1))
-        cut_days = 7 - (crb_start_day - load_start_day) # Ex: = 7-(7-5) = 5 --> cut Sun, Mon, Tues, Wed, Thurs for 2021 load year
-        wrap_ts = normalized_profile[25:24+24*cut_days] # Ex: = crb_profile[25:144] wrap Mon-Fri to end for 2021
-        normalized_profile = append!(normalized_profile[24*cut_days+1:end], wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
-        normalized_profile = normalized_profile ./ sum(normalized_profile)
-    end
-
+    # Apply monthly scaling to the pre-aligned profile if monthly_energies are specified
+    # This must be done BEFORE alignment/rotation to ensure proper month boundaries
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
+        
+        # Determine the year to use for month boundaries based on profile length
+        # For CRB profiles: always use 2017 (the CRB base year)
+        # For custom profiles: use a year that matches the profile length (8760 or 8784 hours)
+        if shift_possible
+            profile_year = 2017
+        else
+            # Use year that matches profile length: 8784 hours = leap year, 8760 hours = non-leap year
+            if length(normalized_profile) == 8784
+                # Find a leap year to use for month boundaries (2020 is convenient)
+                profile_year = 2020
+            else
+                # Use a non-leap year for 8760-hour profiles (2017 is convenient)
+                profile_year = 2017
+            end
+        end
+        
         t0 = 1
         for month in 1:12
-            plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-            if month == 12 && isleapyear(year)  # for a leap year, the last day is assumed to be truncated
-                plus_hours -= 24
-            end
+            plus_hours = daysinmonth(Date(string(profile_year) * "-" * string(month))) * 24
             month_total = sum(normalized_profile[t0:t0+plus_hours-1])
             if month_total == 0.0  # avoid division by zero
                 monthly_scalers[month] = 0.0
@@ -175,6 +178,33 @@ function built_in_load(
                 monthly_scalers[month] = monthly_energies[month] / month_total
             end
             t0 += plus_hours
+        end
+        
+        # Apply the monthly scaling to the profile before alignment
+        t0 = 1
+        for month in 1:12
+            plus_hours = daysinmonth(Date(string(profile_year) * "-" * string(month))) * 24
+            normalized_profile[t0:t0+plus_hours-1] .*= monthly_scalers[month]
+            t0 += plus_hours
+        end
+    end
+
+    # The normalized_profile for CRBs (not FlatLoads, which use the year input) is based on year 2017 which starts on a Sunday. 
+    # If the year is not 2017 and we're using a CRB, align the 2017 profile to the input year using the centralized alignment function
+    if shift_possible && year != 2017
+        # Use centralized alignment function that handles weekday rotation properly
+        # Set preserve_monthly=true to preserve the monthly energies we just applied
+        normalized_profile, _ = align_series_to_year(
+            normalized_profile, 2017, year;
+            time_steps_per_hour=1,
+            method="weekday_rotation",
+            preserve_monthly=(length(monthly_energies) == 12),  # Preserve monthly if we scaled by monthly energies
+            leap_policy=leap_policy
+        )
+    else
+        # Even if not shifting, still need to normalize leap years
+        if isleapyear(year) && length(normalized_profile) == 8784
+            normalized_profile = normalize_to_regular_year(normalized_profile, year, 1; leap_policy=leap_policy)
         end
     end
 
@@ -188,11 +218,17 @@ function built_in_load(
     else
         boiler_efficiency = 1.0
     end
-    datetime = DateTime(year, 1, 1, 1)
-    for ld in normalized_profile
-        month = Month(datetime).value
-        push!(scaled_load, ld * annual_energy * monthly_scalers[month] * boiler_efficiency * used_kwh_per_mmbtu)
-        datetime += Dates.Hour(1)
+    
+    # Apply annual energy scaling (if monthly scaling wasn't already applied)
+    if length(monthly_energies) != 12
+        for ld in normalized_profile
+            push!(scaled_load, ld * annual_energy * boiler_efficiency * used_kwh_per_mmbtu)
+        end
+    else
+        # Monthly scaling was already applied, just apply boiler efficiency and unit conversion
+        for ld in normalized_profile
+            push!(scaled_load, ld * boiler_efficiency * used_kwh_per_mmbtu)
+        end
     end
 
     return scaled_load
@@ -232,7 +268,8 @@ function blend_and_scale_doe_profiles(
     monthly_energies::Array{<:Real,1} = Real[],
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,
     boiler_efficiency_input::Union{Real,Nothing}=nothing,
-    heating_load_type::String=""
+    heating_load_type::String="",
+    leap_policy::String="truncate_dec31"
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
@@ -250,9 +287,14 @@ function blend_and_scale_doe_profiles(
         for name in blended_doe_reference_names
             push!(profiles, constructor(heating_load_type, city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
         end
-    else
+    else  # BuiltInElectricLoad or BuiltInCoolingLoad
         for name in blended_doe_reference_names
-            push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+            # Pass leap_policy if constructor is BuiltInElectricLoad (which supports it)
+            if constructor == BuiltInElectricLoad
+                push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies, Real[], leap_policy))
+            else
+                push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+            end
         end
     end
     if isnothing(annual_energy) # then annual_energy should be the sum of all the profiles' annual kwhs

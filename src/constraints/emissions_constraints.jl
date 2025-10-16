@@ -65,17 +65,23 @@ Function to calculate annual emissions from onsite fuel consumption.
 	account for expected operations during modeled outages (time_steps_without_grid is empty)
 """
 function calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burning) # also run this with p.techs.boiler
-	yr1_emissions_onsite_fuel_lbs_CO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_CO2[t] for t in tech_array, ts in p.time_steps))
-
-	yr1_emissions_onsite_fuel_lbs_NOx = @expression(m,p.hours_per_time_step*
-		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_NOx[t] for t in tech_array, ts in p.time_steps))
-
-	yr1_emissions_onsite_fuel_lbs_SO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_SO2[t] for t in tech_array, ts in p.time_steps))
-
-	yr1_emissions_onsite_fuel_lbs_PM25 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_PM25[t] for t in tech_array, ts in p.time_steps))
+	# Build expressions efficiently using add_to_expression! for better performance with subhourly time steps
+	expr_CO2 = JuMP.AffExpr()
+	expr_NOx = JuMP.AffExpr()
+	expr_SO2 = JuMP.AffExpr()
+	expr_PM25 = JuMP.AffExpr()
+	
+	for t in tech_array, ts in p.time_steps
+		JuMP.add_to_expression!(expr_CO2, p.hours_per_time_step * p.tech_emissions_factors_CO2[t], m[:dvFuelUsage][t,ts])
+		JuMP.add_to_expression!(expr_NOx, p.hours_per_time_step * p.tech_emissions_factors_NOx[t], m[:dvFuelUsage][t,ts])
+		JuMP.add_to_expression!(expr_SO2, p.hours_per_time_step * p.tech_emissions_factors_SO2[t], m[:dvFuelUsage][t,ts])
+		JuMP.add_to_expression!(expr_PM25, p.hours_per_time_step * p.tech_emissions_factors_PM25[t], m[:dvFuelUsage][t,ts])
+	end
+	
+	yr1_emissions_onsite_fuel_lbs_CO2 = @expression(m, expr_CO2)
+	yr1_emissions_onsite_fuel_lbs_NOx = @expression(m, expr_NOx)
+	yr1_emissions_onsite_fuel_lbs_SO2 = @expression(m, expr_SO2)
+	yr1_emissions_onsite_fuel_lbs_PM25 = @expression(m, expr_PM25)
 
 	return yr1_emissions_onsite_fuel_lbs_CO2, 
 		   yr1_emissions_onsite_fuel_lbs_NOx, 
@@ -96,17 +102,23 @@ Function to calculate annual emissions from grid electricity consumption.
 	account for expected operations during modeled outages (time_steps_without_grid is empty)
 """
 function calc_yr1_emissions_from_elec_grid_purchase(m,p)
-	yr1_emissions_from_elec_grid_lbs_CO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
-		 
-	yr1_emissions_from_elec_grid_lbs_NOx = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
-
-	yr1_emissions_from_elec_grid_lbs_SO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
-
-	yr1_emissions_from_elec_grid_lbs_PM25 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
+	# Build expressions efficiently using add_to_expression! for better performance with subhourly time steps
+	expr_CO2 = JuMP.AffExpr()
+	expr_NOx = JuMP.AffExpr()
+	expr_SO2 = JuMP.AffExpr()
+	expr_PM25 = JuMP.AffExpr()
+	
+	for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers
+		JuMP.add_to_expression!(expr_CO2, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts], m[:dvGridPurchase][ts, tier])
+		JuMP.add_to_expression!(expr_NOx, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts], m[:dvGridPurchase][ts, tier])
+		JuMP.add_to_expression!(expr_SO2, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts], m[:dvGridPurchase][ts, tier])
+		JuMP.add_to_expression!(expr_PM25, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts], m[:dvGridPurchase][ts, tier])
+	end
+	
+	yr1_emissions_from_elec_grid_lbs_CO2 = @expression(m, expr_CO2)
+	yr1_emissions_from_elec_grid_lbs_NOx = @expression(m, expr_NOx)
+	yr1_emissions_from_elec_grid_lbs_SO2 = @expression(m, expr_SO2)
+	yr1_emissions_from_elec_grid_lbs_PM25 = @expression(m, expr_PM25)
 
 	return yr1_emissions_from_elec_grid_lbs_CO2, 
 		   yr1_emissions_from_elec_grid_lbs_NOx, 
@@ -119,26 +131,26 @@ function calc_yr1_emissions_offset_from_elec_exports(m, p)
 	if !(p.s.site.include_exported_elec_emissions_in_total)
 		return 0.0, 0.0, 0.0, 0.0
 	end
-	yr1_emissions_offset_from_elec_exports_lbs_CO2 = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
-	)
+	
+	# Build expressions efficiently using add_to_expression! for better performance with subhourly time steps
+	expr_CO2 = JuMP.AffExpr()
+	expr_NOx = JuMP.AffExpr()
+	expr_SO2 = JuMP.AffExpr()
+	expr_PM25 = JuMP.AffExpr()
+	
+	for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t]
+		JuMP.add_to_expression!(expr_CO2, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts], m[:dvProductionToGrid][t,u,ts])
+		JuMP.add_to_expression!(expr_NOx, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts], m[:dvProductionToGrid][t,u,ts])
+		JuMP.add_to_expression!(expr_SO2, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts], m[:dvProductionToGrid][t,u,ts])
+		JuMP.add_to_expression!(expr_PM25, p.hours_per_time_step * p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts], m[:dvProductionToGrid][t,u,ts])
+	end
+	
+	yr1_emissions_offset_from_elec_exports_lbs_CO2 = @expression(m, expr_CO2)
 		# if battery ends up being able to discharge to grid, need to incorporate here- might require complex tracking of what's charging battery
 
-	yr1_emissions_offset_from_elec_exports_lbs_NOx = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
-	)
-
-	yr1_emissions_offset_from_elec_exports_lbs_SO2 = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
-	)
-
-	yr1_emissions_offset_from_elec_exports_lbs_PM25 = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
-	)
+	yr1_emissions_offset_from_elec_exports_lbs_NOx = @expression(m, expr_NOx)
+	yr1_emissions_offset_from_elec_exports_lbs_SO2 = @expression(m, expr_SO2)
+	yr1_emissions_offset_from_elec_exports_lbs_PM25 = @expression(m, expr_PM25)
 
 	return yr1_emissions_offset_from_elec_exports_lbs_CO2, 
 		   yr1_emissions_offset_from_elec_exports_lbs_NOx, 

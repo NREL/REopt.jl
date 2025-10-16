@@ -15,10 +15,15 @@ function add_prod_incent_vars_and_constraints(m, p)
 		m[:dvProdIncent][t] <= m[:binProdIncent][t] * p.pbi_max_benefit[t] * p.pbi_pwf[t] * p.third_party_factor)
 
 	##Constraint (6a)-2: Production Incentive According to Production
-	@constraint(m, IncentByProductionCon[t in p.techs.pbi],
-		m[:dvProdIncent][t] <= p.hours_per_time_step * p.pbi_benefit_per_kwh[t] * p.pbi_pwf[t] * p.third_party_factor *
-			sum(p.production_factor[t, ts] * m[:dvRatedProduction][t,ts] for ts in p.time_steps)
-	)
+	# Build production sum efficiently using add_to_expression! for better performance with subhourly time steps
+	for t in p.techs.pbi
+		prod_expr = JuMP.AffExpr()
+		for ts in p.time_steps
+			JuMP.add_to_expression!(prod_expr, p.hours_per_time_step * p.production_factor[t, ts], m[:dvRatedProduction][t,ts])
+		end
+		@constraint(m, m[:dvProdIncent][t] <= p.pbi_benefit_per_kwh[t] * p.pbi_pwf[t] * p.third_party_factor * prod_expr)
+	end
+	
 	##Constraint (6b): System size max to achieve production incentive
 	@constraint(m, IncentBySystemSizeCon[t in p.techs.pbi],
 		m[:dvSize][t]  <= p.pbi_max_kw[t] + p.max_sizes[t] * (1 - m[:binProdIncent][t])

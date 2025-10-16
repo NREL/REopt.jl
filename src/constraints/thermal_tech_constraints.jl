@@ -2,10 +2,16 @@
 
 function add_boiler_tech_constraints(m, p; _n="")
     
-    m[:TotalBoilerFuelCosts] = @expression(m, sum(p.pwf_fuel[t] *
-        sum(m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for ts in p.time_steps)
-        for t in p.techs.boiler)
-    )
+    # Build boiler fuel costs efficiently using add_to_expression! for better performance with subhourly time steps
+    boiler_fuel_expr = JuMP.AffExpr()
+    for t in p.techs.boiler
+        for ts in p.time_steps
+            JuMP.add_to_expression!(boiler_fuel_expr,
+                p.pwf_fuel[t] * p.fuel_cost_per_kwh[t][ts],
+                m[:dvFuelUsage][t, ts])
+        end
+    end
+    m[:TotalBoilerFuelCosts] = @expression(m, boiler_fuel_expr)
 
     # Constraint (1e): Total Fuel burn for Boiler
     @constraint(m, BoilerFuelTrackingCon[t in p.techs.boiler, ts in p.time_steps],
@@ -14,10 +20,14 @@ function add_boiler_tech_constraints(m, p; _n="")
         )
     )
     if "Boiler" in p.techs.boiler  # ExistingBoiler does not have om_cost_per_kwh
-        m[:TotalBoilerPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-            sum(p.s.boiler.om_cost_per_kwh * p.hours_per_time_step *
-            m[Symbol("dvHeatingProduction"*_n)]["Boiler",q,ts] for q in p.heating_loads, ts in p.time_steps)
-        )
+        # Build boiler OM costs efficiently
+        boiler_om_expr = JuMP.AffExpr()
+        for q in p.heating_loads, ts in p.time_steps
+            JuMP.add_to_expression!(boiler_om_expr,
+                p.third_party_factor * p.pwf_om * p.s.boiler.om_cost_per_kwh * p.hours_per_time_step,
+                m[Symbol("dvHeatingProduction"*_n)]["Boiler",q,ts])
+        end
+        m[:TotalBoilerPerUnitProdOMCosts] = @expression(m, boiler_om_expr)
     else
         m[:TotalBoilerPerUnitProdOMCosts] = 0.0
     end

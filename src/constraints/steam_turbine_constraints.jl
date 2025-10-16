@@ -61,8 +61,12 @@ function add_steam_turbine_constraints(m, p; _n="")
     steam_turbine_production_constraints(m, p; _n)
     steam_turbine_thermal_input(m, p; _n)
 
-    m[:TotalSteamTurbinePerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-        sum(p.s.steam_turbine.om_cost_per_kwh * p.hours_per_time_step *
-        m[:dvRatedProduction][t, ts] for t in p.techs.steam_turbine, ts in p.time_steps)
-    )
+    # Build steam turbine OM costs efficiently using add_to_expression! for better performance with subhourly time steps
+    st_om_expr = JuMP.AffExpr()
+    for t in p.techs.steam_turbine, ts in p.time_steps
+        JuMP.add_to_expression!(st_om_expr,
+            p.third_party_factor * p.pwf_om * p.s.steam_turbine.om_cost_per_kwh * p.hours_per_time_step,
+            m[:dvRatedProduction][t, ts])
+    end
+    m[:TotalSteamTurbinePerUnitProdOMCosts] = @expression(m, st_om_expr)
 end

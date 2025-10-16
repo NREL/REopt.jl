@@ -131,8 +131,12 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	end
 
     if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
-        avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
-                   (8760. / p.hours_per_time_step)
+        # Build average SOC efficiently using add_to_expression! for better performance with subhourly time steps
+        avg_soc_expr = JuMP.AffExpr()
+        for ts in p.time_steps
+            JuMP.add_to_expression!(avg_soc_expr, m[Symbol("dvStoredEnergy"*_n)][b, ts])
+        end
+        avg_soc = avg_soc_expr / (8760. / p.hours_per_time_step)
         @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )

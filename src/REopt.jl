@@ -125,6 +125,7 @@ include("core/energy_storage/storage.jl")
 include("core/energy_storage/electric_storage.jl")
 include("core/energy_storage/thermal_storage.jl")
 include("core/generator.jl")
+include("core/load_alignment.jl")  # NEW: Load alignment for multiple load types
 include("core/doe_commercial_reference_building_loads.jl")
 include("core/electric_load.jl")
 include("core/existing_boiler.jl")

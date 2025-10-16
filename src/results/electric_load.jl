@@ -10,6 +10,15 @@
 - `offgrid_annual_oper_res_required_series_kwh` # total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
 - `offgrid_annual_oper_res_provided_series_kwh` # total operating reserves provided on an annual basis, for off-grid scenarios only
 
+!!! note "Multiple Load Components"
+    When using the `load_components` feature, additional results are available:
+    - `components[component_name]["annual_kwh"]` # Annual energy for this component
+    - `components[component_name]["peak_kw"]` # Peak load for this component  
+    - `components[component_name]["average_kw"]` # Average load for this component
+    - `components[component_name]["source_year"]` # Original year of component data
+    - `load_alignment_summary["reference_year"]` # Year loads were aligned to
+    - `load_alignment_summary["total_components"]` # Number of load components
+
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
@@ -41,6 +50,37 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         
         r["offgrid_annual_oper_res_required_series_kwh"] = round.(value.(m[:OpResRequired][ts] for ts in p.time_steps_without_grid), digits=3)
         r["offgrid_annual_oper_res_provided_series_kwh"] = round.(value.(m[:OpResProvided][ts] for ts in p.time_steps_without_grid), digits=3)
+    end
+    
+    # NEW: Add component-level results if using load_components
+    if p.s.electric_load.has_components && !isnothing(p.s.electric_load.component_loads)
+        r["components"] = Dict{String, Any}()
+        
+        for (component_name, component_loads) in p.s.electric_load.component_loads
+            # Streamlined component data - only essential metrics
+            r["components"][component_name] = Dict(
+                "annual_kwh" => round(sum(component_loads) * p.hours_per_time_step, digits=2),
+                "peak_kw" => round(maximum(component_loads), digits=3),
+                "average_kw" => round(sum(component_loads) / length(component_loads), digits=3)
+            )
+            
+            # Add only critical metadata: source year
+            if !isnothing(p.s.electric_load.component_metadata) && haskey(p.s.electric_load.component_metadata, component_name)
+                metadata = p.s.electric_load.component_metadata[component_name]
+                if haskey(metadata, "original_year")
+                    r["components"][component_name]["source_year"] = metadata["original_year"]
+                end
+            end
+        end
+        
+        # Add minimal alignment summary
+        if !isnothing(p.s.electric_load.component_metadata) && haskey(p.s.electric_load.component_metadata, "_summary")
+            summary = p.s.electric_load.component_metadata["_summary"]
+            r["load_alignment_summary"] = Dict(
+                "reference_year" => summary["reference_year"],
+                "total_components" => summary["total_components"]
+            )
+        end
     end
     
     d["ElectricLoad"] = r

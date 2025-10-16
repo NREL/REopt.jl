@@ -78,9 +78,13 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
         )
     end
 
-    dvComfortLimitViolationCost = @expression(m,  
-        1e9 * sum(lower_comfort_slack[ts] + upper_comfort_slack[ts] for ts in p.time_steps)
-    )
+    # Build comfort limit violation cost efficiently using add_to_expression! for better performance with subhourly time steps
+    violation_cost_expr = JuMP.AffExpr()
+    for ts in p.time_steps
+        JuMP.add_to_expression!(violation_cost_expr, 1e9, lower_comfort_slack[ts])
+        JuMP.add_to_expression!(violation_cost_expr, 1e9, upper_comfort_slack[ts])
+    end
+    dvComfortLimitViolationCost = @expression(m, violation_cost_expr)
     # TODO convert dvHeatingProduction and dvCoolingProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
     ## TODO check eigen values / stability of system matrix?
 

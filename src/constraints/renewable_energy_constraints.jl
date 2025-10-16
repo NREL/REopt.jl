@@ -60,47 +60,102 @@ function add_re_elec_calcs(m,p)
 
 	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
 	# 		onsite is counted so battery doesn't become a back door for RE to grid.
-	m[:AnnualOnsiteREEleckWh] = @expression(m, p.hours_per_time_step * (
-			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
-				p.tech_renewable_energy_fraction[t] for t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
-			) - #total RE elec generation, excl steam turbine
-			sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(
-				1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) 
-				for t in setdiff(p.techs.elec, p.techs.steam_turbine), b in p.s.storage.types.elec, ts in p.time_steps
-			) - #minus battery efficiency losses
-			sum(m[:dvCurtail][t,ts] * p.tech_renewable_energy_fraction[t] 
-				for t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
-			) - # minus curtailment
-			(1 - p.s.site.include_exported_renewable_electricity_in_total) *
-			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_fraction[t] 
-				for t in setdiff(p.techs.elec, p.techs.steam_turbine), u in p.export_bins_by_tech[t], ts in p.time_steps
-			) # minus exported RE, if RE accounting method = 0.
-		)
+	
+	# Build AnnualOnsiteREEleckWh efficiently using add_to_expression! for better performance with subhourly time steps
+	onsite_re_expr = JuMP.AffExpr()
+	tech_set = setdiff(p.techs.elec, p.techs.steam_turbine)
+	
+	# Add total RE elec generation, excl steam turbine
+	for t in tech_set, ts in p.time_steps
+		JuMP.add_to_expression!(onsite_re_expr, 
+			p.hours_per_time_step * p.production_factor[t,ts] * p.levelization_factor[t] * p.tech_renewable_energy_fraction[t],
+			m[:dvRatedProduction][t,ts])
+	end
+	
+	# Subtract battery efficiency losses
+	for t in tech_set, b in p.s.storage.types.elec, ts in p.time_steps
+		JuMP.add_to_expression!(onsite_re_expr,
+			-p.hours_per_time_step * p.tech_renewable_energy_fraction[t] * (1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency),
+			m[:dvProductionToStorage][b,t,ts])
+	end
+	
+	# Subtract curtailment
+	for t in tech_set, ts in p.time_steps
+		JuMP.add_to_expression!(onsite_re_expr,
+			-p.hours_per_time_step * p.tech_renewable_energy_fraction[t],
+			m[:dvCurtail][t,ts])
+	end
+	
+	# Subtract exported RE, if RE accounting method = 0
+	if (1 - p.s.site.include_exported_renewable_electricity_in_total) != 0
+		for t in tech_set, u in p.export_bins_by_tech[t], ts in p.time_steps
+			JuMP.add_to_expression!(onsite_re_expr,
+				-p.hours_per_time_step * (1 - p.s.site.include_exported_renewable_electricity_in_total) * p.tech_renewable_energy_fraction[t],
+				m[:dvProductionToGrid][t,u,ts])
+		end
+	end
+	
+	m[:AnnualOnsiteREEleckWh] = @expression(m, onsite_re_expr)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
-	)		
-
+	
 	# Note: when we add capability for battery to discharge to grid, need to subtract out *grid RE* discharged from battery 
 	# 		back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
-	m[:AnnualGridREEleckWh] = @expression(m, p.hours_per_time_step * (
-			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
-				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 
-			- sum(m[:dvGridToStorage][b, ts] * p.s.electric_utility.renewable_energy_fraction_series[ts] *
-				(1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency)
-				for ts in p.time_steps, b in p.s.storage.types.elec
-			) # minus battery efficiency losses from grid charging storage (assumes all that is charged is discharged)
-		) 
-	)
+	
+	# Build AnnualGridREEleckWh efficiently
+	grid_re_expr = JuMP.AffExpr()
+	
+	# Add renewable energy from grid
+	for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers
+		JuMP.add_to_expression!(grid_re_expr,
+			p.hours_per_time_step * p.s.electric_utility.renewable_energy_fraction_series[ts],
+			m[:dvGridPurchase][ts, tier])
+	end
+	
+	# Subtract battery efficiency losses from grid charging storage
+	for ts in p.time_steps, b in p.s.storage.types.elec
+		JuMP.add_to_expression!(grid_re_expr,
+			-p.hours_per_time_step * p.s.electric_utility.renewable_energy_fraction_series[ts] * (1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency),
+			m[:dvGridToStorage][b, ts])
+	end
+	
+	m[:AnnualGridREEleckWh] = @expression(m, grid_re_expr)
 
-	m[:AnnualEleckWh] = @expression(m,p.hours_per_time_step * (
-		 	# input electric load
-			sum(p.s.electric_load.loads_kw[ts] for ts in p.time_steps_with_grid) 
-			+ sum(p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid)
-			- sum( p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cop["ExistingChiller"][ts] for ts in p.time_steps)
-			# tech electric loads from thermal techs
-            + sum(m[:dvCoolingProduction][t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp), ts in p.time_steps)
-            + sum(m[:dvHeatingProduction][t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater, ts in p.time_steps)
-			+ sum(p.ghp_electric_consumption_kw[g,ts] * m[:binGHP][g] for g in p.ghp_options, ts in p.time_steps)
-		)
-	)
+	# Build AnnualEleckWh efficiently
+	annual_elec_expr = JuMP.AffExpr()
+	
+	# Add input electric load
+	for ts in p.time_steps_with_grid
+		annual_elec_expr += p.hours_per_time_step * p.s.electric_load.loads_kw[ts]
+	end
+	for ts in p.time_steps_without_grid
+		annual_elec_expr += p.hours_per_time_step * p.s.electric_load.critical_loads_kw[ts]
+	end
+	
+	# Subtract existing chiller load
+	for ts in p.time_steps
+		annual_elec_expr -= p.hours_per_time_step * p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cop["ExistingChiller"][ts]
+	end
+	
+	# Add tech electric loads from thermal techs
+	for t in setdiff(p.techs.cooling, p.techs.ghp), ts in p.time_steps
+		JuMP.add_to_expression!(annual_elec_expr,
+			p.hours_per_time_step / p.cooling_cop[t][ts],
+			m[:dvCoolingProduction][t, ts])
+	end
+	
+	for q in p.heating_loads, t in p.techs.electric_heater, ts in p.time_steps
+		JuMP.add_to_expression!(annual_elec_expr,
+			p.hours_per_time_step / p.heating_cop[t][ts],
+			m[:dvHeatingProduction][t, q, ts])
+	end
+	
+	for g in p.ghp_options, ts in p.time_steps
+		JuMP.add_to_expression!(annual_elec_expr,
+			p.hours_per_time_step * p.ghp_electric_consumption_kw[g,ts],
+			m[:binGHP][g])
+	end
+	
+	m[:AnnualEleckWh] = @expression(m, annual_elec_expr)
+	
 	nothing
 end
