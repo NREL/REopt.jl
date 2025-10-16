@@ -112,7 +112,9 @@ end
         year::Int, 
         annual_energy::Real, 
         monthly_energies::AbstractArray{<:Real,1},
-        boiler_efficiency_input::Union{Real,Nothing}=nothing        
+        boiler_efficiency_input::Union{Real,Nothing}=nothing,
+        normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[];
+        time_steps_per_hour::Int = 1 # only used with normalized_profile      
     )
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
@@ -125,7 +127,8 @@ function built_in_load(
     annual_energy::Real, 
     monthly_energies::AbstractArray{<:Real,1},
     boiler_efficiency_input::Union{Real,Nothing}=nothing,
-    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[],
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]; # provided as function input for customer loads, not CRBs
+    time_steps_per_hour::Int = isempty(normalized_profile) ? 1 : nothing # only used with user-provided normalized_profile. CRB loads are always hourly when this function is called.
     )
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
@@ -135,7 +138,7 @@ function built_in_load(
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
     input_normalized = false
     shift_possible = false
-    if isempty(normalized_profile)
+    if isempty(normalized_profile) # Not user-provided
         if occursin("FlatLoad", buildingtype)
             normalized_profile = custom_normalized_flatload(buildingtype, year)
         else 
@@ -155,8 +158,8 @@ function built_in_load(
         crb_start_day = Dates.dayofweek(DateTime(2017,1,1))
         load_start_day = Dates.dayofweek(DateTime(year,1,1))
         cut_days = 7 - (crb_start_day - load_start_day) # Ex: = 7-(7-5) = 5 --> cut Sun, Mon, Tues, Wed, Thurs for 2021 load year
-        wrap_ts = normalized_profile[25:24+24*cut_days] # Ex: = crb_profile[25:144] wrap Mon-Fri to end for 2021
-        normalized_profile = append!(normalized_profile[24*cut_days+1:end], wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
+        wrap_ts = normalized_profile[25*time_steps_per_hour: (24+24*cut_days)*time_steps_per_hour] # Ex: = crb_profile[25:144] wrap Mon-Fri to end for 2021
+        normalized_profile = append!(normalized_profile[(24*cut_days+1)*time_steps_per_hour:end], wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
         normalized_profile = normalized_profile ./ sum(normalized_profile)
     end
 

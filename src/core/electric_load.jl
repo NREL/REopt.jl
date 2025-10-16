@@ -164,11 +164,12 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             if !isnothing(annual_kwh) || !isempty(monthly_totals_kwh)
                 # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
                 normalized_profile = loads_kw ./ sum(loads_kw)
-                loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile)
+                loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile; time_steps_per_hour = time_steps_per_hour)
             end
     
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_
+            totals_kwh)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
@@ -180,6 +181,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                   [doe_reference_name, latitude, longitude], 
                   or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude."))
         end
+
+        # TODO: 
 
         # Scale to monthly peak loads 
         if !isempty(monthly_peaks_kw)
@@ -216,7 +219,8 @@ function BuiltInElectricLoad(
     year::Int,
     annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
-    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]; # for custom loads, not CRBs
+    time_steps_per_hour::Int = 1 # only used with normalized_profile
     )
     
     electric_annual_kwh = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "load_profiles", "total_electric_annual_kwh.json"))
@@ -238,7 +242,7 @@ function BuiltInElectricLoad(
         end
     end
 
-    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile)
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile; time_steps_per_hour)
 end
 
 """
@@ -268,10 +272,11 @@ function scale_load_to_monthly_peaks(
         error("All monthly_peaks_kw values must be positive")
     end
 
-    month_indices = get_monthly_indices(time_steps_per_hour, year)
+    monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
     scaled_load = zeros(Float64, length(initial_loads_kw))
     for month in 1:12
-        start_idx, end_idx = month_indices[month]
+        start_idx = monthly_timesteps[month][1]
+        end_idx = monthly_timesteps[month][end]
         month_load_series = initial_loads_kw[start_idx:end_idx]
         initial_peak = maximum(month_load_series)
         target_peak = target_monthly_peaks_kw[month]
@@ -285,25 +290,6 @@ function scale_load_to_monthly_peaks(
     end
     return scaled_load
 
-end
-
-function get_monthly_indices(time_steps_per_hour::Int, year::Int)
-    # Returns vector of (start_idx, end_idx) tuples for each month (indexed 1-12)
-
-    days_per_month = [Dates.daysinmonth(Date(year, m, 1)) for m in 1:12]
-    if Dates.isleapyear(year)
-        days_per_month[12] -= 1
-    end
-    intervals_per_day = 24 * time_steps_per_hour
-    month_indices = Tuple{Int,Int}[]
-    start_idx = 1
-    for days in days_per_month
-        end_idx = start_idx + (days * intervals_per_day) - 1
-        push!(month_indices, (start_idx, end_idx))
-        start_idx = end_idx + 1
-    end
-
-    return month_indices 
 end
 
 """
