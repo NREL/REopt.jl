@@ -3475,6 +3475,15 @@ else  # run HiGHS tests
             @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 149.26 rtol=1.0e-4
             @test results["HighTempThermalStorage"]["size_kwh"] ≈ 10000.0 atol=0.1
             @test results["HotThermalStorage"]["size_gal"] ≈ 1000.0 atol=0.1
+
+            # Test that CST and HighTempThermalStorage capital costs are included in initial_capital_costs
+            expected_cst_cost = results["CST"]["size_kw"] * 2200.0  # CST installed_cost_per_kw from defaults
+            expected_httes_cost = results["HighTempThermalStorage"]["size_kwh"] * 86.0  # HighTempThermalStorage installed_cost_per_kwh from scenario
+            @test results["Financial"]["initial_capital_costs"] ≈ expected_cst_cost + expected_httes_cost rtol=1.0e-3
+            
+            finalize(backend(m1))
+            empty!(m1)
+            GC.gc()
         end
 
         @testset "Custom REopt logger" begin
