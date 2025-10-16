@@ -154,7 +154,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         if length(loads_kw) > 0 && ( !isnothing(annual_kwh) || !isempty(monthly_totals_kwh) || !isempty(monthly_peaks_kw) ) && !normalize_and_scale_load_profile_input
             throw(@error("If providing loads_kw and annual_kwh or monthly_totals_kwh or monthly_peaks_kw, must set normalize_and_scale_load_profile_input=true."))
         end
-        if length(loads_kw) > 0 && normalize_and_scale_load_profile_input
+        if length(loads_kw) > 0 && !normalize_and_scale_load_profile_input
+            nothing
+            
+        elseif length(loads_kw) > 0 && normalize_and_scale_load_profile_input
             if !isempty(doe_reference_name)
                 @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and doe_reference_name inputs, and only using the year and annual or monthly energy inputs with loads_kw"
             end

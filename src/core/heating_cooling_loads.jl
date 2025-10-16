@@ -400,7 +400,7 @@ struct CoolingLoad
                                         max_load_kw_thermal=maximum(loads_kw_thermal))
         end
 
-        if length(loads_kw_thermal) < 8760*time_steps_per_hour
+        if length(loads_kw_thermal) < 8760*time_steps_per_hour && length(loads_kw_thermal) % 8760 == 0
             loads_kw_thermal = repeat(loads_kw_thermal, inner=Int(time_steps_per_hour / 
                                (length(loads_kw_thermal)/8760)))
             @warn "Repeating cooling loads in each hour to match the time_steps_per_hour."
