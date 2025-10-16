@@ -34,15 +34,7 @@ Classify the change according to the following categories:
 ### Changed
 - Refactored day-of-week shifting logic in `doe_commercial_reference_building_loads.jl` and `electric_utility.jl` to use centralized `align_series_to_year()` function
 - Consolidated leap year normalization logic to eliminate code duplication across load processing functions
-- When using subhourly time steps (e.g., 15-minute intervals = 35,040 time steps per year), JuMP would display warnings:
-```
-┌ Warning: The addition operator has been used on JuMP expressions a large number of times. 
-This warning is safe to ignore but may indicate that model generation is slower than necessary. 
-For performance reasons, you should not add expressions in a loop. Instead of x += y, use 
-add_to_expression!(x,y) to modify x in place.
-└ @ JuMP
-```
-**Solution**: Replace large `sum()` comprehensions over time steps with efficient expression building using `JuMP.AffExpr()` and `JuMP.add_to_expression!()`.
+- When using subhourly time steps (e.g., 15-minute intervals = 35,040 time steps per year), JuMP would display warnings. Solution: Replaced large `sum()` comprehensions over time steps with efficient expression building using `JuMP.AffExpr()` and `JuMP.add_to_expression!()`.
 
 
 ## v0.55.0
