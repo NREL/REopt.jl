@@ -237,11 +237,12 @@ function BuiltInHeatingLoad(
         else
             annual_mmbtu = default_annual_mmbtu[city][buildingtype]
         end
+    else
+        # if user provides normalized_profile and monthly values, monthly will be used instead of this annual value
+        annual_mmbtu *= addressable_load_fraction 
     end
 
-    if length(addressable_load_fraction) == 1
-        annual_mmbtu *= addressable_load_fraction
-    elseif length(addressable_load_fraction) == 12
+    if length(monthly_mmbtu) == 12
         monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
 
