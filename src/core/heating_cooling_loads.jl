@@ -182,7 +182,7 @@ function BuiltInHeatingLoad(
     annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
     existing_boiler_efficiency::Union{Real, Nothing}=nothing,
-    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]
+    normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[] # for user-provided load profile
     )
 
     # Load the appropriate default annual energy data based on load_type
@@ -227,7 +227,7 @@ function BuiltInHeatingLoad(
         monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
     built_in_load(load_type, city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
-                    existing_boiler_efficiency, normalized_profile)
+                    existing_boiler_efficiency, normalized_profile) # TODO: add time_steps_per_hour here
 end
 
 """

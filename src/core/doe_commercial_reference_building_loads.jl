@@ -128,7 +128,7 @@ function built_in_load(
     monthly_energies::AbstractArray{<:Real,1},
     boiler_efficiency_input::Union{Real,Nothing}=nothing,
     normalized_profile::Union{Vector{Float64}, Vector{<:Real}}=Real[]; # provided as function input for customer loads, not CRBs
-    time_steps_per_hour::Int = isempty(normalized_profile) ? 1 : nothing # only used with user-provided normalized_profile. CRB loads are always hourly when this function is called.
+    time_steps_per_hour::Int = 1 # only used with user-provided normalized_profile. CRB loads are always hourly when this function is called.
     )
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
