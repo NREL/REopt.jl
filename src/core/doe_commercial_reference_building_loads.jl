@@ -138,6 +138,8 @@ function built_in_load(
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
     input_normalized = false
     shift_possible = false
+    monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
+
     if isempty(normalized_profile) # Not user-provided
         if occursin("FlatLoad", buildingtype)
             normalized_profile = custom_normalized_flatload(buildingtype, year)
@@ -165,8 +167,6 @@ function built_in_load(
 
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
-        t0 = 1
-        monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
         for month in 1:12
             start_idx = monthly_timesteps[month][1]
             end_idx = monthly_timesteps[month][end]
@@ -189,11 +189,11 @@ function built_in_load(
     else
         boiler_efficiency = 1.0
     end
-    datetime = DateTime(year, 1, 1, 1)
-    for ld in normalized_profile
-        month = Month(datetime).value
-        push!(scaled_load, ld * annual_energy * monthly_scalers[month] * boiler_efficiency * used_kwh_per_mmbtu)
-        datetime += Dates.Hour(1)
+
+    for (month, timesteps) in enumerate(monthly_timesteps)
+        for t in timesteps
+            push!(scaled_load, normalized_profile[t] * annual_energy * monthly_scalers[month] * boiler_efficiency * used_kwh_per_mmbtu)
+        end
     end
 
     return scaled_load

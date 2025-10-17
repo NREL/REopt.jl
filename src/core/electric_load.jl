@@ -74,6 +74,11 @@
 !!! note "Year" 
     The ElectricLoad `year` is used in ElectricTariff to align rate schedules with weekdays/weekends. If providing your own `loads_kw`, ensure the `year` matches the year of your data.
     If utilizing `doe_reference_name` or `blended_doe_reference_names`, the default year of 2017 is used because these load profiles start on a Sunday.
+
+!!! note "Net Load and Load Scaling Considerations" 
+    If `loads_kw` is already net of on-site generation and you are modeling an existing generation source in REopt (e.g., PV), set `loads_kw_is_net=true` (default). 
+    If `loads_kw` is net and you are additionally using `normalize_and_scale_load_profile_input` along with `annual_kwh` or `monthly_totals_kwh`, the scaling will be applied 
+    to the net loads and the annual or monthly values you supply should also be net. 
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
@@ -140,23 +145,16 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
         end
 
-        # Timestep checks for custom loads
-        if length(loads_kw) > 0 && length(loads_kw) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
-            if length(loads_kw) < 8760 * time_steps_per_hour && length(loads_kw) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
-                loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-                @warn "Repeating electric loads in each hour to match the time_steps_per_hour."
-            else # loads_kw is higher resolution than time_steps_per_hour or not an integer multiple of 8760
-                throw(@error("Provided electric load does not match the Settings.time_steps_per_hour."))
-            end
-        end
+        loads_kw = check_and_adjust_load_length!(loads_kw, time_steps_per_hour, "ElectricLoad")
 
-        # Energy scaling
+        if !isnothing(annual_kwh) && !isempty(monthly_totals_kwh)
+            throw(@error("Cannot provide both annual_kwh and monthly_totals_kwh to scale the electric load profile."))
+        end
         if length(loads_kw) > 0 && ( !isnothing(annual_kwh) || !isempty(monthly_totals_kwh) || !isempty(monthly_peaks_kw) ) && !normalize_and_scale_load_profile_input
             throw(@error("If providing loads_kw and annual_kwh or monthly_totals_kwh or monthly_peaks_kw, must set normalize_and_scale_load_profile_input=true."))
         end
         if length(loads_kw) > 0 && !normalize_and_scale_load_profile_input
             nothing
-            
         elseif length(loads_kw) > 0 && normalize_and_scale_load_profile_input
             if !isempty(doe_reference_name)
                 @warn "loads_kw provided with normalize_and_scale_load_profile_input = true, so ignoring location and doe_reference_name inputs, and only using the year and annual or monthly energy inputs with loads_kw"
@@ -184,7 +182,11 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                   or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude."))
         end
 
-        # TODO: upsample CRB if needed (as done before)
+        # Adjust load length for CRBs, which are always 8760, if needed (after energy scaling and blending)
+        if length(loads_kw) < 8760*time_steps_per_hour
+            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
+            @warn "Repeating $load in each hour to match the time_steps_per_hour."
+        end
 
         # Scale to monthly peak loads 
         if !isempty(monthly_peaks_kw)
@@ -244,7 +246,7 @@ function BuiltInElectricLoad(
         end
     end
 
-    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile; time_steps_per_hour)
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh, nothing, normalized_profile; time_steps_per_hour=time_steps_per_hour)
 end
 
 """
@@ -264,7 +266,7 @@ function scale_load_to_monthly_peaks(
 
     # Error checking
     expected_length = 8760 * time_steps_per_hour
-    if length(initial_loads_kw) != expected_length # TODO: remove this one? 
+    if length(initial_loads_kw) != expected_length
         error("Load profile must have $expected_length intervals for $time_steps_per_hour time_steps_per_hour")
     end
     if length(target_monthly_peaks_kw) != 12
