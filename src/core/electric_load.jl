@@ -145,7 +145,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
         end
 
-        loads_kw = check_and_adjust_load_length!(loads_kw, time_steps_per_hour, "ElectricLoad")
+        loads_kw = check_and_adjust_load_length(loads_kw, time_steps_per_hour, "ElectricLoad")
 
         if !isnothing(annual_kwh) && !isempty(monthly_totals_kwh)
             throw(@error("Cannot provide both annual_kwh and monthly_totals_kwh to scale the electric load profile."))
@@ -185,7 +185,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         # Adjust load length for CRBs, which are always 8760, if needed (after energy scaling and blending)
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @warn "Repeating $load in each hour to match the time_steps_per_hour."
+            @warn "Repeating electric load in each hour to match the time_steps_per_hour."
         end
 
         # Scale to monthly peak loads 

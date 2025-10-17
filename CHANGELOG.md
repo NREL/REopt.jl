@@ -27,8 +27,8 @@ Classify the change according to the following categories:
 
 ## peak-scaling
 ### Added
-- **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaing monthly energy.
-- Ability to use to monthly energy and peak scaling with timesteps_per_hour > 1
+- **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
+- Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
 
 ## v0.55.0
 ### Added

@@ -90,7 +90,7 @@ function HeatingLoad(;
         throw(@error("monthly_mmbtu must be length 12 if provided."))
     end
 
-    fuel_loads_mmbtu_per_hour = check_and_adjust_load_length!(fuel_loads_mmbtu_per_hour, time_steps_per_hour, "$load")
+    fuel_loads_mmbtu_per_hour = check_and_adjust_load_length(fuel_loads_mmbtu_per_hour, time_steps_per_hour, "$load")
 
     if length(addressable_load_fraction) > 1
         if normalize_and_scale_load_profile_input && length(addressable_load_fraction) == length(fuel_loads_mmbtu_per_hour)

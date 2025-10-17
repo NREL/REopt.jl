@@ -838,13 +838,13 @@ function struct_to_dict(obj)
 end
 
 """
-    check_and_adjust_load_length!(load_series::Array{<:Real,1}, time_steps_per_hour::Int)
+    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int)
     Takes a user-provided load series and checks that its length matches the expected length based on time_steps_per_hour.
     Modifies the load series by repeating values if the load series is lower resolution than time_steps_per_hour and is an 
         integer multiple of 8760
     Returns the original load series if it is the correct length or not provided (length 0) or modified series if modified.
 """
-function check_and_adjust_load_length!(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
+function check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
             # Timestep checks for custom loads
         if length(load_series) > 0 && length(load_series) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
             if length(load_series) < 8760 * time_steps_per_hour && length(load_series) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
