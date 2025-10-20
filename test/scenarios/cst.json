@@ -21,12 +21,13 @@
         "max_gal": 1000,
         "can_serve_dhw": false,
         "can_serve_space_heating":false,
-        "can_serve_process_heat":true
+        "can_serve_process_heat":true,
+        "installed_cost_per_gal": 0.0
     },
     "HighTempThermalStorage": {
          "min_kwh": 10000.0,
          "max_kwh": 10000.0,
-         "installed_cost_per_kwh": 15.0,
+         "installed_cost_per_kwh": 84.0,
          "thermal_decay_rate_fraction": 0.0001,
          "can_supply_steam_turbine": false,
          "can_serve_dhw": false,
@@ -52,6 +53,7 @@
         "can_serve_space_heating": false,
         "can_serve_process_heat": true,
         "charge_storage_only": true,
+        "installed_cost_per_kw": 2200.0,
         "SSC_Inputs": {
             "Fluid": 21, 
             "q_pb_design": 29.36, 

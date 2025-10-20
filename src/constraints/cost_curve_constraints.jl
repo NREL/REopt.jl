@@ -240,6 +240,12 @@ function initial_capex_no_incentives(m::JuMP.AbstractModel, p::REoptInputs; _n="
         )
     end
 
+    if "CST" in p.techs.all
+        add_to_expression!(m[:InitialCapexNoIncentives], 
+            p.s.cst.installed_cost_per_kw * m[Symbol("dvPurchaseSize"*_n)]["CST"]
+        )
+    end    
+
     # ExistingBoiler and ExistingChiller costs are never discounted by incentives or tax deductions
     if "ExistingBoiler" in p.techs.all
         add_to_expression!(m[:InitialCapexNoIncentives],
