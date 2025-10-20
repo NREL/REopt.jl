@@ -288,7 +288,7 @@ function scale_load_to_monthly_peaks(
         if initial_peak > target_peak
             scaled_month = apply_linear_flattening(month_load_series, total_consumption_kwh, target_peak)
         else
-            scaled_month = apply_exponential_stretching(month_load_series, total_consumption_kwh, initial_peak, target_peak)
+            scaled_month = apply_exponential_stretching(month_load_series, total_consumption_kwh, initial_peak, target_peak, time_steps_per_hour)
         end
         scaled_load[start_idx:end_idx] = scaled_month
     end
@@ -339,7 +339,7 @@ Args:
 Returns:
     Profile for given month, scaled to peak
 """
-function apply_exponential_stretching(initial_load_series_kw::Vector{Float64}, total_consumption_kwh::Float64, initial_peak_kw::Float64, target_peak_kw::Float64)
+function apply_exponential_stretching(initial_load_series_kw::Vector{Float64}, total_consumption_kwh::Float64, initial_peak_kw::Float64, target_peak_kw::Float64, time_steps_per_hour::Int)
     transformed_load_series_kw = initial_load_series_kw .* (target_peak_kw / initial_peak_kw)
     function objective(x)
         decay_factor = exp.(-x .* (1 .- transformed_load_series_kw ./ target_peak_kw))
