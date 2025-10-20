@@ -838,11 +838,17 @@ function struct_to_dict(obj)
 end
 
 """
-    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int)
-    Takes a user-provided load series and checks that its length matches the expected length based on time_steps_per_hour.
-    Modifies the load series by repeating values if the load series is lower resolution than time_steps_per_hour and is an 
-        integer multiple of 8760
-    Returns the original load series if it is the correct length or not provided (length 0) or modified series if modified.
+    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String) -> Array{<:Real,1}
+
+Checks and adjusts the length of a user-provided load series to ensure it matches the expected length based on the `time_steps_per_hour` setting.
+
+# Arguments
+- `load_series::Array{<:Real,1}`: The input load series (e.g., electric load, thermal load) provided by the user.
+- `time_steps_per_hour::Int`: The number of time steps per hour (e.g., 1 for hourly, 4 for 15-minute intervals).
+- `load_type::String`: A descriptive name for the load type (e.g., "electric load", "thermal load") used in error or warning messages.
+
+# Returns
+- `Array{<:Real,1}`: The adjusted load series if modifications are required, or the original load series if it already matches the expected length.
 """
 function check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
             # Timestep checks for custom loads

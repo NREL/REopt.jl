@@ -251,11 +251,22 @@ end
 
 """
     scale_load_to_monthly_peaks(
-        loads_kw::Vector{Float64}, 
-        monthly_peaks_kw::Vector{Float64}, 
+        initial_loads_kw::Vector{Float64}, 
+        target_monthly_peaks_kw::Vector{Float64}, 
         time_steps_per_hour::Int, 
-        year::Int   
-    )
+        year::Int
+    ) -> Vector{Float64}
+
+Scales an electric load profile to match specified monthly peak demands while preserving the overall shape of the load profile.
+
+# Arguments
+- `initial_loads_kw::Vector{Float64}`: The original load profile (kW) for the entire year, with a length of `8760 * time_steps_per_hour`.
+- `target_monthly_peaks_kw::Vector{Float64}`: A vector of 12 values representing the desired peak demand (kW) for each month.
+- `time_steps_per_hour::Int`: The number of time steps per hour (e.g., 1 for hourly data, 4 for 15-minute intervals).
+- `year::Int`: The year of the load profile, used to determine the number of days in each month (e.g., leap years).
+
+# Returns
+- `Vector{Float64}`: A scaled load profile (kW) with the same length as `initial_loads_kw`, adjusted to meet the specified monthly peak demands.
 """
 function scale_load_to_monthly_peaks(
     initial_loads_kw::Vector{Float64}, 
