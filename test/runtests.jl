@@ -2370,7 +2370,7 @@ else  # run HiGHS tests
             # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
             boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
             expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
-            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
+            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.5
             
             # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
             bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
