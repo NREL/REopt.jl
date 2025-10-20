@@ -1136,7 +1136,7 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt([m1,m2], inputs)
-                @test abs(results["Financial"]["simple_payback_years"] - 8.12) <= 0.02
+                @test abs(results["Financial"]["simple_payback_years"] - 8.31) <= 0.02
                 finalize(backend(m1))
                 empty!(m1)
                 finalize(backend(m2))

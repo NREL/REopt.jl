@@ -237,7 +237,7 @@ function BuiltInHeatingLoad(
         else
             annual_mmbtu = default_annual_mmbtu[city][buildingtype]
         end
-    else
+    else # cannot use addressable_load_fraction with default CRB loads
         # if user provides normalized_profile and monthly values, monthly will be used instead of this annual value
         annual_mmbtu *= addressable_load_fraction 
     end
