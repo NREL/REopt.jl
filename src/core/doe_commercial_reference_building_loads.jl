@@ -170,7 +170,7 @@ function built_in_load(
         for month in 1:12
             start_idx = monthly_timesteps[month][1]
             end_idx = monthly_timesteps[month][end]
-            month_total = sum(normalized_profile[start_idx:end_idx]) / time_steps_per_hour
+            month_total = sum(normalized_profile[start_idx:end_idx])
             if month_total == 0.0  # avoid division by zero
                 monthly_scalers[month] = 0.0
             else
