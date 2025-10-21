@@ -4120,5 +4120,23 @@ else  # run HiGHS tests
             year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
             @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
         end
+
+        @testset "Peak load scaling with custom loads_kw profile" begin
+            input_data = JSON.parsefile("./scenarios/no_techs_load_scale.json")
+            input_data["ElectricLoad"] = Dict()
+            input_data["ElectricLoad"]["loads_kw"] = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
+            input_data["ElectricLoad"]["year"] = 2023
+            input_data["ElectricLoad"]["normalize_and_scale_load_profile_input"] = true
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = ones(12) .* 5.0e6/12
+            monthly_peak_kw = 900.0
+            input_data["ElectricLoad"]["monthly_peaks_kw"] = ones(12) .* monthly_peak_kw
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+            @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ sum(input_data["ElectricLoad"]["monthly_totals_kwh"]) atol=10.0
+            demand_charge = input_data["ElectricTariff"]["blended_annual_demand_rate"]
+            @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 12.0 * monthly_peak_kw * demand_charge rtol=1.0e-4
+        end
     end
 end
