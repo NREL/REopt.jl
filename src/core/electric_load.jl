@@ -167,8 +167,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 normalized_profile = loads_kw ./ sum(loads_kw)
                 loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile; time_steps_per_hour = time_steps_per_hour)
             elseif !isempty(monthly_peaks_kw)
-                # Handle case where only monthly_peaks_kw is provided with normalize_and_scale_load_profile_input=true
-                loads_kw = loads_kw ./ sum(loads_kw)  # Normalize the user-provided profile
+                # We preserve the loads_kw as-is but make sure it's the right type for later processing
+                loads_kw = Vector{Float64}(loads_kw)
                 # The monthly peak scaling will happen later in the constructor
             end
     
