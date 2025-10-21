@@ -299,11 +299,10 @@ function scale_load_to_monthly_peaks(
         month_load_series = initial_loads_kw[start_idx:end_idx]
         initial_peak = maximum(month_load_series)
         target_peak = target_monthly_peaks_kw[month]
-        total_consumption_kwh = sum(month_load_series) / time_steps_per_hour
         if initial_peak > target_peak
-            scaled_month = apply_linear_flattening(month_load_series, total_consumption_kwh, target_peak)
+            scaled_month = apply_linear_flattening(month_load_series, target_peak)
         else
-            scaled_month = apply_exponential_stretching(month_load_series, total_consumption_kwh, initial_peak, target_peak, time_steps_per_hour)
+            scaled_month = apply_exponential_stretching(month_load_series, target_peak, time_steps_per_hour)
         end
         scaled_load[start_idx:end_idx] = scaled_month
     end
@@ -315,19 +314,20 @@ end
 Apply linear flattening when initial peak > actual peak (Condition 1).
 
 Formula: Scaled_Load = initial_Load × x + Flat_Load × (1 - x)
-where Flat_Load = Total_Consumption / n
+where Flat_Load = average load that preserves total energy
 
 Args:
-    initial_load: Array of initial load values for the period
-    total_consumption: Total energy consumption for the period (kWh)
-    target_peak: Target peak demand (kW)
+    initial_load_series_kw: Array of initial load values for the period (kW)
+    target_peak_kw: Target peak demand (kW)
 
 Returns:
     Profile for given month, scaled to peak
 """
-function apply_linear_flattening(initial_load_series_kw::Vector{Float64}, total_consumption_kwh::Float64, target_peak_kw::Float64)
+function apply_linear_flattening(initial_load_series_kw::Vector{Float64}, target_peak_kw::Float64)
 
-    flat_load_kw = total_consumption_kwh / 8760
+    # The flat load is the average power (kW) that sums to the same total energy over the time period
+    flat_load_kw = sum(initial_load_series_kw) / length(initial_load_series_kw)
+    
     function objective(x)
         scaled = initial_load_series_kw .* x .+ flat_load_kw .* (1 - x)
         return abs(maximum(scaled) - target_peak_kw)
@@ -341,25 +341,28 @@ end
 Apply exponential stretching when initial peak < actual peak (Condition 2).
 
 Steps:
-1. Normalize: Transformed_Load = Initial_Load × (Actual_Peak / Initial_Peak)
-2. Apply decay: Scaled_Load = Transformed_Load × e^(-x(1 - Transformed_Load/Actual_Peak))
-3. Goal seek x to match total consumption
+1. Normalize: Transformed_Load = Initial_Load × (Target_Peak / Initial_Peak)
+2. Apply decay: Scaled_Load = Transformed_Load × e^(-x(1 - Transformed_Load/Target_Peak))
+3. Goal seek x to match total energy
 
 Args:
-    initial_load: Array of initial load values for the period
-    total_consumption: Total energy consumption for the period (kWh)
-    initial_peak: Peak of initial load (kW)
-    target_peak: Target peak demand (kW)
+    initial_load_series_kw: Array of initial load values for the period (kW)
+    target_peak_kw: Target peak demand (kW)
+    time_steps_per_hour: Number of time steps per hour for power-to-energy conversion
 
 Returns:
     Profile for given month, scaled to peak
 """
-function apply_exponential_stretching(initial_load_series_kw::Vector{Float64}, total_consumption_kwh::Float64, initial_peak_kw::Float64, target_peak_kw::Float64, time_steps_per_hour::Int)
+function apply_exponential_stretching(initial_load_series_kw::Vector{Float64}, target_peak_kw::Float64, time_steps_per_hour::Int)
+    initial_peak_kw = maximum(initial_load_series_kw)
     transformed_load_series_kw = initial_load_series_kw .* (target_peak_kw / initial_peak_kw)
+    target_total_energy_kwh = sum(initial_load_series_kw) / time_steps_per_hour
+    
     function objective(x)
         decay_factor = exp.(-x .* (1 .- transformed_load_series_kw ./ target_peak_kw))
         scaled_load_series_kw = transformed_load_series_kw .* decay_factor
-        return abs(sum(scaled_load_series_kw)/time_steps_per_hour - total_consumption_kwh)
+        scaled_total_energy_kwh = sum(scaled_load_series_kw) / time_steps_per_hour
+        return abs(scaled_total_energy_kwh - target_total_energy_kwh)
     end
     x_optimal = (findmin([objective(x) for x in 0:0.01:10])[2] - 1 ) * 0.01 # convert from index to x value
     decay_factor = exp.(-x_optimal .* (1 .- transformed_load_series_kw ./ target_peak_kw))
