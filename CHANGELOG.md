@@ -30,6 +30,13 @@ Classify the change according to the following categories:
 - **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
 - Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
 
+## v0.55.1
+### Fixed
+- Updated from the deprecated NSRDB API call to the suggested new URL which uses the GOES dataset
+- Added `CST` to `Financial.initial_capital_costs` output
+### Changed
+- The solar resource data for CST changed with the new API call for the GOES dataset
+
 ## v0.55.0
 ### Added
 - Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
@@ -38,9 +45,6 @@ Classify the change according to the following categories:
 **number_of_boreholes_flipped_guess**, **iterations_nonhybrid**, **iterations_auto_guess**, **iterations_flipped_guess**
 ### Changed
 - Change hybrid GHP workflow from (1) running a 2-year simulation to guess if an auxiliary heating or cooling unit is required and outputting results to (2) running non-hybrid first in all hybrid runs and comparing to hybrid outputs to guarantee an actual hybrid solution where possible
-### Fixed
-- Added `CST` to `Financial.initial_capital_costs` output
-
 
 ## v0.54.1
 ### Added 
