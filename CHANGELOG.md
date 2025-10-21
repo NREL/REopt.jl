@@ -25,6 +25,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fix-cst-nsrdb
+### Fixed
+- Updated from the deprecated NSRDB API call to the suggested new URL which uses the GOES dataset
+### Changed
+- The solar resource data for CST changed with the new API call for the GOES dataset
+
 ## v0.55.0
 ### Added
 - Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
