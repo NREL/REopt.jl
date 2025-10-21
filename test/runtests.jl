@@ -4127,7 +4127,7 @@ else  # run HiGHS tests
             input_data["ElectricLoad"]["loads_kw"] = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
             input_data["ElectricLoad"]["year"] = 2023
             input_data["ElectricLoad"]["normalize_and_scale_load_profile_input"] = true
-            input_data["ElectricLoad"]["monthly_totals_kwh"] = ones(12) .* 5.0e6/12
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = ones(12) .* 7.0e6/12
             monthly_peak_kw = 900.0
             input_data["ElectricLoad"]["monthly_peaks_kw"] = ones(12) .* monthly_peak_kw
             s = Scenario(input_data)
