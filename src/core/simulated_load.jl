@@ -17,6 +17,7 @@ function simulated_load(d::Dict)
     # Latitude and longitude are required if not normalizing and scaling load profile input
     normalize_and_scale_load_profile_input = get(d, "normalize_and_scale_load_profile_input", false)
     year = get(d, "year", 2017)
+    time_steps_per_hour = get(d, "time_steps_per_hour", 1)
     latitude = get(d, "latitude", 0.0)
     longitude = get(d, "longitude", 0.0)
     if (isnothing(latitude) || isnothing(longitude)) && !normalize_and_scale_load_profile_input
@@ -174,6 +175,7 @@ function simulated_load(d::Dict)
         else
             elec_load_inputs[:normalize_and_scale_load_profile_input] = normalize_and_scale_load_profile_input
             elec_load_inputs[:loads_kw] = load_profile
+            elec_load_inputs[:time_steps_per_hour] = time_steps_per_hour
         end
         elec_load_inputs[:year] = year
 
