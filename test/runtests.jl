@@ -4119,6 +4119,11 @@ else  # run HiGHS tests
             init_capital_costs =  results["Financial"]["initial_capital_costs"]
             year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
             @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
+            finalize(backend(m1))
+            empty!(m1)
+            finalize(backend(m2))
+            empty!(m2)
+            GC.gc()
         end
 
         @testset "Peak load scaling with custom loads_kw profile" begin
@@ -4137,6 +4142,44 @@ else  # run HiGHS tests
             @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ sum(input_data["ElectricLoad"]["monthly_totals_kwh"]) atol=10.0
             demand_charge = input_data["ElectricTariff"]["blended_annual_demand_rate"]
             @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 12.0 * monthly_peak_kw * demand_charge rtol=1.0e-4
+            finalize(backend(m))
+            empty!(m)
+            GC.gc()            
         end
+
+        @testset "Peak load scaling in simulated_load with CRB" begin
+            monthly_peak_kw = 900.0
+            annual_kwh = 7.0e6
+            sim_input = Dict(
+                "load_type" => "electric",
+                "doe_reference_name" => "LargeOffice",
+                "latitude" => 39.7391536,
+                "longitude" => -104.9847034,
+                "year" => 2017,
+                "monthly_peaks_kw" => ones(12) .* monthly_peak_kw,
+                "monthly_totals_kwh" => ones(12) .* annual_kwh / 12.0
+            )
+
+            # Run simulated_load()
+            result = simulated_load(sim_input)
+            loads_kw = result["loads_kw"]
+            
+            # Check monthly peaks
+            monthly_timesteps = REopt.get_monthly_time_steps(2017)
+            actual_energies = Float64[]
+            actual_peaks = Float64[]
+           
+            for month in 1:12
+                start_idx = monthly_timesteps[month][1]
+                end_idx = monthly_timesteps[month][end]
+                push!(actual_energies, sum(loads_kw[start_idx:end_idx]))
+                push!(actual_peaks, maximum(loads_kw[start_idx:end_idx]))
+            end
+            
+            # Test array consistency
+            @test actual_energies ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-4
+            @test actual_peaks ≈ sim_input["monthly_peaks_kw"] rtol=0.01
+
+        end   
     end
 end
