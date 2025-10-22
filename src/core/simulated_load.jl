@@ -145,6 +145,22 @@ function simulated_load(d::Dict)
                 throw(@error("monthly_totals_kwh must contain a value for each month, and it is null for these months: $bad_index"))
             end
         end
+        # Monthly peak loads (default is empty list)
+        monthly_peaks_kw = get(d, "monthly_peaks_kw", Real[])
+        if !isempty(monthly_peaks_kw)
+            if !(length(monthly_peaks_kw) == 12)
+                throw(@error("monthly_peaks_kw must contain a value for each of the 12 months"))
+            end
+            bad_index = []
+            for (i, peak) in enumerate(monthly_peaks_kw)
+                if isnothing(peak) || peak <= 0
+                    append!(bad_index, i)
+                end
+            end
+            if !isempty(bad_index)
+                throw(@error("monthly_peaks_kw must contain a positive value for each month, and it is null or non-positive for these months: $bad_index"))
+            end
+        end
 
         # Build dependent inputs for electric load
         elec_load_inputs = Dict{Symbol, Any}()
@@ -165,7 +181,8 @@ function simulated_load(d::Dict)
                                 latitude=latitude,
                                 longitude=longitude,
                                 annual_kwh=annual_kwh,
-                                monthly_totals_kwh=monthly_totals_kwh
+                                monthly_totals_kwh=monthly_totals_kwh,
+                                monthly_peaks_kw=monthly_peaks_kw
                             )
 
         # Get the default cooling portion of the total electric load (used when we want cooling load without annual_tonhour input)
