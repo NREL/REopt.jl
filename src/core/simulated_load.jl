@@ -232,13 +232,26 @@ function simulated_load(d::Dict)
 
         electric_loads_kw = round.(electric_load.loads_kw, digits=3)
 
+        # Calculate actual/scaled monthly energy and peaks which may not match inputs perfectly
+        monthly_timesteps = REopt.get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
+        actual_energies = Float64[]
+        actual_peaks = Float64[]
+        for month in 1:12
+            start_idx = monthly_timesteps[month][1]
+            end_idx = monthly_timesteps[month][end]
+            push!(actual_energies, sum(electric_loads_kw[start_idx:end_idx]))
+            push!(actual_peaks, maximum(electric_loads_kw[start_idx:end_idx]))
+        end
+
         response = Dict([
                         ("loads_kw", electric_loads_kw),
                         ("annual_kwh", sum(electric_loads_kw)),
                         ("min_kw", minimum(electric_loads_kw)),
                         ("mean_kw", sum(electric_loads_kw) / length(electric_loads_kw)),
                         ("max_kw", maximum(electric_loads_kw)),
-                        ("cooling_defaults", cooling_defaults_dict)
+                        ("cooling_defaults", cooling_defaults_dict),
+                        ("monthly_calc_kwh", actual_energies),
+                        ("monthly_peaks_calc_kw", actual_peaks)
                         ])
 
         return response
