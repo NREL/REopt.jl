@@ -4148,6 +4148,7 @@ else  # run HiGHS tests
         end
 
         @testset "Peak load scaling in simulated_load with CRB" begin
+            # CRB (hourly) with monthly energy and peak load scaling
             monthly_peak_kw = 900.0
             annual_kwh = 7.0e6
             sim_input = Dict(
@@ -4179,6 +4180,43 @@ else  # run HiGHS tests
             # Test array consistency
             @test actual_energies ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-4
             @test actual_peaks ≈ sim_input["monthly_peaks_kw"] rtol=0.01
+
+            # Custom load profile scaled to monthly energy and peak load
+            hourly = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
+            fifteen = repeat(hourly, inner=4)
+            monthly_peak_kw = 900.0
+            annual_kwh = 7.0e6
+            sim_input = Dict(
+                "load_type" => "electric",
+                "load_profile" => fifteen,
+                "normalize_and_scale_load_profile_input" => true,
+                "time_steps_per_hour" => 4,
+                "latitude" => 39.7391536,
+                "longitude" => -104.9847034,
+                "year" => 2023,
+                "monthly_peaks_kw" => ones(12) .* monthly_peak_kw,
+                "monthly_totals_kwh" => ones(12) .* annual_kwh / 12.0
+            )
+
+            # Run simulated_load()
+            result = simulated_load(sim_input)
+            loads_kw = result["loads_kw"]
+
+            # Check monthly peaks
+            monthly_timesteps = REopt.get_monthly_time_steps(2023; time_steps_per_hour=4)
+            actual_energies = Float64[]
+            actual_peaks = Float64[]
+
+            for month in 1:12
+                start_idx = monthly_timesteps[month][1]
+                end_idx = monthly_timesteps[month][end]
+                push!(actual_energies, sum(loads_kw[start_idx:end_idx]))
+                push!(actual_peaks, maximum(loads_kw[start_idx:end_idx]))
+            end
+
+            # Test array consistency
+            @test actual_energies ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
+            @test actual_peaks ≈ sim_input["monthly_peaks_kw"] rtol=0.01            
 
         end   
     end
