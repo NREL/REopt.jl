@@ -194,8 +194,21 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
 
         # Scale to monthly peak loads 
         if !isempty(monthly_peaks_kw)
-            if occursin("FlatLoad", doe_reference_name) # TODO: check that we shouldn't scale these
-                @warn "Not scaling electric load to monthly_peaks_kw because doe_reference_name is a FlatLoad."
+            # Check if any reference name contains "FlatLoad" to avoid scaling if load is all/mostly flat
+            is_flat_load = false
+            if !isempty(doe_reference_name) && occursin("FlatLoad", doe_reference_name)
+                is_flat_load = true
+            elseif !isempty(blended_doe_reference_names) && any(name -> occursin("FlatLoad", name), blended_doe_reference_names)
+                # If the fraction of the FlatLoad type is >75%, consider it a flat load for avoiding scaling to peaks
+                for (i, name) in enumerate(blended_doe_reference_names)
+                    if occursin("FlatLoad", name) && blended_doe_reference_percents[i] > 0.75
+                        is_flat_load = true
+                    end
+                end
+            end
+            
+            if is_flat_load
+                @warn "Not scaling electric load to monthly_peaks_kw because doe_reference_name contains a FlatLoad."
             else
                 loads_kw = scale_load_to_monthly_peaks(loads_kw, monthly_peaks_kw, time_steps_per_hour, year)
             end
