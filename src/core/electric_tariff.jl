@@ -292,6 +292,7 @@ function ElectricTariff(;
         end
     else
         # need to reshape cost vectors to arrays (2nd dim is for tiers)
+        urdb_metadata = Dict()
         energy_rates = reshape(energy_rates, :, 1)
         monthly_demand_rates = reshape(monthly_demand_rates, :, 1)
         tou_demand_rates = reshape(tou_demand_rates, :, 1)

@@ -37,7 +37,7 @@ Outputs related to eventual costs of electricity:
 - `tou_demand_metrics` -> demand_charge_before_tax`: calculated demand charge [\$]
 - `monthly_gross_tou_demand_cost_series_before_tax`
 
-Prefix NEM, WHL, or EXC (export categories) for following outputs, all can be in results if relevant inputs are provided.
+Prefix net_metering, wholesale, or net_metering_excess (export categories) for following outputs, all can be in results if relevant inputs are provided.
 - `_export_rate_series` export rate timeseries for type of export category
 - `_electric_to_grid_series_kw` exported electricity timeseries for type of export category
 - `_monthly_export_series_kwh` monthly exported energy totals by export category
@@ -218,21 +218,6 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
             end
         end
     end
-
-    # need to review!!!
-    # p.s.electric_tariff.urdb_metadata
-    r["urdb_label"] = p.s.electric_tariff.urdb_metadata[:label]
-    r["urdb_rate_name"] = p.s.electric_tariff.urdb_metadata[:rate_name]
-    r["urdb_utility"] = p.s.electric_tariff.urdb_metadata[:utility]
-    r["urdb_rate_effective_date"] = p.s.electric_tariff.urdb_metadata[:rate_effective_date]
-    r["urdb_voltage_level"] = p.s.electric_tariff.urdb_metadata[:voltage_level]
-    r["urdb_rate_description"] = p.s.electric_tariff.urdb_metadata[:rate_description]
-    r["urdb_peak_kw_capacity_min"] = p.s.electric_tariff.urdb_metadata[:peak_kw_capacity_min]
-    r["urdb_peak_kw_capacity_max"] = p.s.electric_tariff.urdb_metadata[:peak_kw_capacity_max]
-    r["urdb_rate_additional_info"] = p.s.electric_tariff.urdb_metadata[:rate_additional_info]
-    r["urdb_energy_comments"] = p.s.electric_tariff.urdb_metadata[:energy_comments]
-    r["urdb_demand_comments"] = p.s.electric_tariff.urdb_metadata[:demand_comments]
-    r["urdb_url_link"] = p.s.electric_tariff.urdb_metadata[:url_link]
 
     d["ElectricTariff"] = r
     nothing
