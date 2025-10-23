@@ -26,7 +26,7 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## Develop
+## v0.55.2
 ### Fixed 
 - fixed a bug in which demand and energy charges are applied to incorrect tiers in instances where tiered rates decrease as consumption increases, and the limits on the last tier are very large.
 
