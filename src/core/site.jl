@@ -10,7 +10,7 @@ Inputs related to the physical location:
     roof_squarefeet::Union{Real, Nothing} = nothing,
     min_resil_time_steps::Int=0, # The minimum number consecutive timesteps that load must be fully met once an outage begins. Only applies to multiple outage modeling using inputs outage_start_time_steps and outage_durations.
     mg_tech_sizes_equal_grid_sizes::Bool = true,
-    sector::String = "commercial/industrial",
+    sector::String = "commercial/industrial", # available options: ["commercial/industrial", "federal"]
     federal_sector_state::String = "",
     federal_procurement_type::String = "",
     CO2_emissions_reduction_min_fraction::Union{Float64, Nothing} = nothing,
