@@ -506,7 +506,7 @@ end
 """
     get_electric_energy_tiers_bigM(p::REoptInputs)
 
-  Used to generate reasonable big-M values for energy tier constraints; used when mulitple tiers are present.
+  Used to generate reasonable big-M values for energy tier constraints; used when multiple tiers are present.
   
   Arguments
   =========
