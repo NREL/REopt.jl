@@ -3,7 +3,7 @@
 `ElectricLoad` is a required REopt input with the following keys and default values:
 ```julia
     loads_kw::Array{<:Real,1} = Real[],
-    normalize_and_scale_load_profile_input::Bool = false,  # Takes loads_kw and normalizes and scales it to annual_kwh or monthly_totals_kwh
+    normalize_and_scale_load_profile_input::Bool = false,  # Takes loads_kw and normalizes and scales it to annual_kwh, monthly_totals_kwh, or monthly_peaks_kw
     path_to_csv::String = "", # for csv containing loads_kw
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
