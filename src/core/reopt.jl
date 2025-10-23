@@ -204,7 +204,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             end
         end
 	end
-
 	for b in p.s.storage.types.all
 		if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
@@ -216,22 +215,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			elseif b in p.s.storage.types.hot
-				@constraint(m, [q in q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
-				if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
-					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_dhw), ts in p.time_steps], m[:dvHeatToStorage][b,t,"DomesticHotWater",ts] == 0)
-				else
-					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,t,"DomesticHotWater",ts] == 0)
-				end
-				if "SpaceHeating" in p.heating_loads_served_by_tes[b]
-					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_space_heating), ts in p.time_steps], m[:dvHeatToStorage][b,t,"SpaceHeating",ts] == 0)
-				else
-					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,t,"SpaceHeating",ts] == 0)
-				end
-				if "ProcessHeat" in p.heating_loads_served_by_tes[b]
-					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_process_heat), ts in p.time_steps], m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0)
-				else
-					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0)
-				end
+				@constraint(m, [q in p.heating_loads, ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
+				@constraint(m, [t in union(p.techs.heating, p.techs.chp), q in p.heating_loads, ts in p.time_steps], m[:dvHeatToStorage][b,t,q,ts] == 0)
 			end
 		else
 			add_storage_size_constraints(m, p, b)
