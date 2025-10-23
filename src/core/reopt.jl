@@ -229,6 +229,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				end
 			elseif b in p.s.storage.types.hot
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
+				add_hot_tes_flow_restrictions!(m, p, b)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
