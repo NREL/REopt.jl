@@ -120,7 +120,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
        r["year_one_electric_to_load_energy_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvGridPurchase"*_n)][:,idx])).* p.hours_per_time_step
     end # TODO validate this works for EVs.
     
-    if isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm. TODO handle extra day for leap year, remove ts_shift.
+    if Dates.isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm. TODO handle extra day for leap year, remove ts_shift.
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,30,23,59)
     else
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,31,23,59)
@@ -131,7 +131,11 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["monthly_electric_to_load_energy_cost_series_before_tax"] = []
     for mth in 1:12
         idx = findall(x -> Dates.month(x) == mth, dr)
-        push!(r["monthly_electric_to_load_energy_cost_series_before_tax"], sum(r["year_one_electric_to_load_energy_cost_series_before_tax"][idx]))
+        monthly_sum = 0.0
+        for k in keys(r["year_one_electric_to_load_energy_cost_series_before_tax"])
+            monthly_sum += sum(r["year_one_electric_to_load_energy_cost_series_before_tax"][k][idx])
+        end
+        push!(r["monthly_electric_to_load_energy_cost_series_before_tax"], monthly_sum)
     end
 
     # grid to storage
@@ -199,24 +203,27 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         end
     end
 
-    binmap = Dict()
-    binmap[Symbol("WHL")] = "wholesale"
-    binmap[Symbol("NEM")] = "net_metering"
-    binmap[Symbol("EXC")] = "net_metering_excess"
-    if !isempty(p.techs.elec)
-        for bin in p.s.electric_tariff.export_bins
-            cost_series = string(binmap[bin], "_export_rate_series")
-            export_series = string(binmap[bin], "_electric_to_grid_series_kw")
+    if p.s.settings.include_export_cost_series_in_results
+        @info "Including electricity export compensation timeseries in ElectricTariff results."
+        binmap = Dict()
+        binmap[Symbol("WHL")] = "wholesale"
+        binmap[Symbol("NEM")] = "net_metering"
+        binmap[Symbol("EXC")] = "net_metering_excess"
+        if !isempty(p.techs.elec)
+            for bin in p.s.electric_tariff.export_bins
+                cost_series = string(binmap[bin], "_export_rate_series")
+                export_series = string(binmap[bin], "_electric_to_grid_series_kw")
 
-            r[cost_series] = collect(p.s.electric_tariff.export_rates[bin])
-            r[export_series] = collect(value.(sum(m[Symbol("dvProductionToGrid"*_n)][t, bin, :] for t in p.techs.elec)))
+                r[cost_series] = collect(p.s.electric_tariff.export_rates[bin])
+                r[export_series] = collect(value.(sum(m[Symbol("dvProductionToGrid"*_n)][t, bin, :] for t in p.techs.elec)))
 
-            r[string(binmap[bin], "_monthly_export_series_kwh")] = []
-            r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")] = []
-            for mth in 1:12
-                idx = findall(x -> Dates.month(x) == mth, dr)
-                push!(r[string(binmap[bin], "_monthly_export_series_kwh")], sum(r[export_series][idx]))
-                push!(r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")], sum((r[cost_series].*r[export_series])[idx]))
+                r[string(binmap[bin], "_monthly_export_series_kwh")] = []
+                r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")] = []
+                for mth in 1:12
+                    idx = findall(x -> Dates.month(x) == mth, dr)
+                    push!(r[string(binmap[bin], "_monthly_export_series_kwh")], sum(r[export_series][idx]))
+                    push!(r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")], sum((r[cost_series].*r[export_series])[idx]))
+                end
             end
         end
     end
