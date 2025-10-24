@@ -240,7 +240,7 @@ function get_electric_load_metrics(loads_vector; time_steps_per_hour=1, year=202
 
     # Initialize empty arrays
     monthly_usage_kwh = []
-    monthly_peak_kw = []
+    monthly_peaks_kw = []
     annual_usage_kwh = []
     annual_peak_kw = []    
 
@@ -264,22 +264,22 @@ function get_electric_load_metrics(loads_vector; time_steps_per_hour=1, year=202
         push!(monthly_usage_kwh, monthly_usage_kwh1)
 
         # Calculate monthly peak load kW
-        monthly_peak_kw1 = maximum(loads_vector[month_timesteps])
-        push!(monthly_peak_kw, monthly_peak_kw1)
+        monthly_peaks_kw1 = maximum(loads_vector[month_timesteps])
+        push!(monthly_peaks_kw, monthly_peaks_kw1)
     end
 
     # Calculate annual sums and peak loads
     annual_usage_kwh = sum(monthly_usage_kwh)
-    annual_peak_kw = maximum(monthly_peak_kw)
+    annual_peak_kw = maximum(monthly_peaks_kw)
 
     if print_to_console
         println("Monthly Usage (kWh): ", monthly_usage_kwh)
-        println("Monthly Peak Load (kW): ", monthly_peak_kw)
+        println("Monthly Peak Load (kW): ", monthly_peaks_kw)
         println("Annual Usage (kWh): ", annual_usage_kwh)
         println("Annual Peak Load (kW): ",annual_peak_kw)
     end
 
     # Return specified results and their associated names
-    return monthly_usage_kwh, monthly_peak_kw, annual_usage_kwh, annual_peak_kw
+    return monthly_usage_kwh, monthly_peaks_kw, annual_usage_kwh, annual_peak_kw
 
 end

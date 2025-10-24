@@ -27,7 +27,7 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         sum(r["load_series_kw"]) * p.hours_per_time_step, digits=2
     )
 
-    r["monthly_calculated_kwh"], r["monthly_peak_kw"], annual_usage_kwh, r["annual_peak_kw"] = get_electric_load_metrics(
+    r["monthly_calculated_kwh"], r["monthly_peaks_kw"], annual_usage_kwh, r["annual_peak_kw"] = get_electric_load_metrics(
         r["load_series_kw"];
         time_steps_per_hour=Int(1/p.hours_per_time_step),
         year=p.s.electric_load.year,
