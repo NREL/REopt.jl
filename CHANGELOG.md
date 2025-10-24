@@ -25,6 +25,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+## elec_util_usage
+### Added
+- `ElectricTariff` and `ElectricLoad` inputs and outputs; mostly outputs related to monthly and per-timestep series rates and costs, and `urdb_metadata` which contains additional information about the URDB rate.
+
 ## v0.55.1
 ### Fixed
 - Updated from the deprecated NSRDB API call to the suggested new URL which uses the GOES dataset
