@@ -252,8 +252,8 @@ function simulated_load(d::Dict)
                         ("mean_kw", sum(electric_loads_kw) / length(electric_loads_kw)),
                         ("max_kw", maximum(electric_loads_kw)),
                         ("cooling_defaults", cooling_defaults_dict),
-                        ("monthly_calc_kwh", actual_energies),
-                        ("monthly_peaks_calc_kw", actual_peaks)
+                        ("monthly_totals_kwh", actual_energies),
+                        ("monthly_peaks_kw", actual_peaks)
                         ])
 
         return response

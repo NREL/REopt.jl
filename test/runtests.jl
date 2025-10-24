@@ -4161,25 +4161,12 @@ else  # run HiGHS tests
                 "monthly_totals_kwh" => ones(12) .* annual_kwh / 12.0
             )
 
-            # Run simulated_load()
-            result = simulated_load(sim_input)
-            loads_kw = result["loads_kw"]
-            
-            # Check monthly peaks
-            monthly_timesteps = REopt.get_monthly_time_steps(2017)
-            actual_energies = Float64[]
-            actual_peaks = Float64[]
-           
-            for month in 1:12
-                start_idx = monthly_timesteps[month][1]
-                end_idx = monthly_timesteps[month][end]
-                push!(actual_energies, sum(loads_kw[start_idx:end_idx]))
-                push!(actual_peaks, maximum(loads_kw[start_idx:end_idx]))
-            end
+            # Run simulated_load() to check energy and peaks of scaled load
+            sim_result = simulated_load(sim_input)
             
             # Test array consistency
-            @test actual_energies ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-4
-            @test actual_peaks ≈ sim_input["monthly_peaks_kw"] rtol=0.01
+            @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-4
+            @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
 
             # Custom load profile scaled to monthly energy and peak load
             hourly = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
@@ -4198,25 +4185,12 @@ else  # run HiGHS tests
                 "monthly_totals_kwh" => ones(12) .* annual_kwh / 12.0
             )
 
-            # Run simulated_load()
-            result = simulated_load(sim_input)
-            loads_kw = result["loads_kw"]
-
-            # Check monthly peaks
-            monthly_timesteps = REopt.get_monthly_time_steps(2023; time_steps_per_hour=4)
-            actual_energies = Float64[]
-            actual_peaks = Float64[]
-
-            for month in 1:12
-                start_idx = monthly_timesteps[month][1]
-                end_idx = monthly_timesteps[month][end]
-                push!(actual_energies, sum(loads_kw[start_idx:end_idx]))
-                push!(actual_peaks, maximum(loads_kw[start_idx:end_idx]))
-            end
+            # Run simulated_load() to check energy and peaks of scaled load
+            sim_result = simulated_load(sim_input)
 
             # Test array consistency
-            @test actual_energies ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
-            @test actual_peaks ≈ sim_input["monthly_peaks_kw"] rtol=0.01            
+            @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
+            @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
 
         end   
     end
