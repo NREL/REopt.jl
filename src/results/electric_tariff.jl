@@ -115,9 +115,10 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     end
 
     # grid to load.
-    r["year_one_electric_to_load_energy_cost_series_before_tax"] = sum(
-        Array(p.s.electric_tariff.energy_rates.*collect(value.(m[Symbol("dvGridPurchase"*_n)])).* p.hours_per_time_step), dims=2
-    ) # TODO validate this works for EVs.
+    r["year_one_electric_to_load_energy_cost_series_before_tax"] = Dict()
+    for (idx,col) in enumerate(eachcol(p.s.electric_tariff.energy_rates))
+       r["year_one_electric_to_load_energy_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvGridPurchase"*_n)][:,idx])).* p.hours_per_time_step
+    end # TODO validate this works for EVs.
     
     if isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm. TODO handle extra day for leap year, remove ts_shift.
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,30,23,59)
@@ -154,10 +155,11 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
 
     # monthly demand charges paid to utility.
-    if isempty(p.s.electric_tariff.monthly_demand_rates)
-        r["monthly_facility_demand_cost_series_before_tax"] = repeat([0], 12)
-    else
-        r["monthly_facility_demand_cost_series_before_tax"] = Matrix(p.s.electric_tariff.monthly_demand_rates.*value.(m[Symbol("dvPeakDemandMonth"*_n)]))
+    r["monthly_facility_demand_cost_series_before_tax"] = Dict()
+    if !isempty(p.s.electric_tariff.monthly_demand_rates)
+        for (idx,col) in enumerate(eachcol(p.s.electric_tariff.monthly_demand_rates))
+            r["monthly_facility_demand_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvPeakDemandMonth"*_n)][:,idx]))
+        end
     end
 
     # Create list, each row contains 
