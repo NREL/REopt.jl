@@ -327,7 +327,6 @@ function add_hot_tes_flow_restrictions!(m, p, b)
         if ("ProcessHeat" in p.heating_loads_served_by_tes[b] && !(t in p.techs.can_serve_process_heat)) 
             push!(incompatible_loads_served, "ProcessHeat")
         end
-        println(b, "  ", t, "  ", incompatible_loads_served)
         if !isempty(incompatible_loads_served)
             @warn "Technology "*t*" is ineligible to serve storage system "*b*" due to the following incompatible loads served "*string(incompatible_loads_served) 
             for q in p.heating_loads_served_by_tes[b]
@@ -343,7 +342,7 @@ function add_hot_tes_flow_restrictions!(m, p, b)
         @constraint(m, [t in union(p.techs.heating, p.techs.chp), 
             q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), 
             ts in p.time_steps], 
-             m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0
+             m[:dvHeatToStorage][b,t,q,ts] == 0
         )
         @constraint(m, [q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), 
             ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0
