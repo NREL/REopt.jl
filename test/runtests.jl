@@ -4147,7 +4147,7 @@ else  # run HiGHS tests
             GC.gc()            
         end
 
-        @testset "Peak load scaling in simulated_load with CRB" begin
+        @testset "Peak load scaling in simulated_load" begin
             # CRB (hourly) with monthly energy and peak load scaling
             monthly_peak_kw = 1700.0
             annual_kwh = 7.0e6
@@ -4205,7 +4205,7 @@ else  # run HiGHS tests
             # Test array consistency
             @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
             @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
-
+            @test sum(sim_result["loads_kw"])/sim_input["time_steps_per_hour"] ≈ sum(sim_input["monthly_totals_kwh"]) rtol=1.0e-2
         end   
     end
 end
