@@ -4126,7 +4126,27 @@ else  # run HiGHS tests
             GC.gc()
         end
 
-        @testset "Peak load scaling with custom loads_kw profile" begin
+        @testset "Peak load scaling" begin
+            # With reference building
+            input_data = JSON.parsefile("./scenarios/no_techs_load_scale.json")
+            input_data["ElectricLoad"] = Dict()
+            input_data["ElectricLoad"]["year"] = 2024
+            input_data["ElectricLoad"]["doe_reference_name"] = "MediumOffice"
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = ones(12) .* 7.0e6/12
+            monthly_peak_kw = 1700.0
+            input_data["ElectricLoad"]["monthly_peaks_kw"] = ones(12) .* monthly_peak_kw
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+            @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ sum(input_data["ElectricLoad"]["monthly_totals_kwh"]) rtol=1.0e-4
+            demand_charge = input_data["ElectricTariff"]["blended_annual_demand_rate"]
+            @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 12.0 * monthly_peak_kw * demand_charge rtol=5.0e-4
+            finalize(backend(m))
+            empty!(m)
+            GC.gc()
+
+            # With custom load profile
             input_data = JSON.parsefile("./scenarios/no_techs_load_scale.json")
             input_data["ElectricLoad"] = Dict()
             input_data["ElectricLoad"]["loads_kw"] = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
@@ -4144,7 +4164,7 @@ else  # run HiGHS tests
             @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 12.0 * monthly_peak_kw * demand_charge rtol=1.0e-4
             finalize(backend(m))
             empty!(m)
-            GC.gc()            
+            GC.gc()
         end
 
         @testset "Peak load scaling in simulated_load" begin
@@ -4170,6 +4190,7 @@ else  # run HiGHS tests
 
             # Custom load profile scaled to monthly energy and peak load
             hourly = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
+            # The data below is from an external spreadsheet and is used to validate REopt.jl implementation consistency with that
             hourly_peak_scaled = readdlm("./data/loads_kw_largeoffice_sanfran_peak_scaled.csv", ',')[:,1]
             monthly_peak_kw = 1700.0
             annual_kwh = 7.0e6
