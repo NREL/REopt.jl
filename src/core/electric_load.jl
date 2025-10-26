@@ -164,7 +164,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
             if !isnothing(annual_kwh) || !isempty(monthly_totals_kwh)
                 # Using dummy values for all unneeded location and building type arguments for normalizing and scaling load profile input
-                normalized_profile = loads_kw ./ sum(loads_kw)
+                # For sub-hourly data, convert power to energy first, then normalize by total energy
+                energy_per_timestep = loads_kw ./ time_steps_per_hour  # Convert power (kW) to energy (kWh) per timestep
+                total_energy = sum(energy_per_timestep)
+                normalized_profile = energy_per_timestep ./ total_energy
                 loads_kw = BuiltInElectricLoad("Chicago", "LargeOffice", 41.8333, -88.0616, year, annual_kwh, monthly_totals_kwh, normalized_profile; time_steps_per_hour = time_steps_per_hour)
             elseif !isempty(monthly_peaks_kw)
                 # We preserve the loads_kw as-is but make sure it's the right type for later processing
@@ -253,7 +256,7 @@ function BuiltInElectricLoad(
     if isempty(city)
         city = find_ashrae_zone_city(latitude, longitude)
     end
-
+    # If monthly energy is input, that will be used first in built_in_load() and overwrite this annual_kwh assignment
     if isnothing(annual_kwh)
         # Use FlatLoad annual_kwh from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
         if occursin("FlatLoad", buildingtype)
