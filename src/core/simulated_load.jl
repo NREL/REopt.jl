@@ -241,13 +241,13 @@ function simulated_load(d::Dict)
         for month in 1:12
             start_idx = monthly_timesteps[month][1]
             end_idx = monthly_timesteps[month][end]
-            push!(actual_energies, sum(electric_loads_kw[start_idx:end_idx]))
+            push!(actual_energies, sum(electric_loads_kw[start_idx:end_idx]) / time_steps_per_hour)
             push!(actual_peaks, maximum(electric_loads_kw[start_idx:end_idx]))
         end
 
         response = Dict([
                         ("loads_kw", electric_loads_kw),
-                        ("annual_kwh", sum(electric_loads_kw)),
+                        ("annual_kwh", sum(electric_loads_kw) / time_steps_per_hour),
                         ("min_kw", minimum(electric_loads_kw)),
                         ("mean_kw", sum(electric_loads_kw) / length(electric_loads_kw)),
                         ("max_kw", maximum(electric_loads_kw)),

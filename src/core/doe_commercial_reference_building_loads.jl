@@ -192,7 +192,7 @@ function built_in_load(
 
     for (month, timesteps) in enumerate(monthly_timesteps)
         for t in timesteps
-            push!(scaled_load, normalized_profile[t] * annual_energy * monthly_scalers[month] * boiler_efficiency * used_kwh_per_mmbtu)
+            push!(scaled_load, normalized_profile[t] * annual_energy * monthly_scalers[month] * time_steps_per_hour * boiler_efficiency * used_kwh_per_mmbtu)
         end
     end
 
