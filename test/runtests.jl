@@ -1708,6 +1708,18 @@ else  # run HiGHS tests
                 GC.gc()
             end
 
+            @testset "Demand and Energy Tier Limits Big-M Setup" begin
+                d = JSON.parsefile("./scenarios/tiered_energy_demand.json")
+                s = Scenario(d)
+                p = REoptInputs(s)
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => true, "log_to_console" => true, "mip_rel_gap" => 1e-5))
+                results = run_reopt(m1, p)
+                # demand tier 1 limit = flat load = 100, so no demand charge should be present in Tier 2
+                @test sum(value.(m1[Symbol(:dvPeakDemandTOU)][:,2])) ≈ 0.0 atol=1e-6
+                @test sum(value.(m1[Symbol(:dvGridPurchase)][:,2])) ≈ 0.0 atol=1e-6
+                @test (results["Financial"]["lcc"]) ≈ 1.092312443e6 rtol=1e-6
+            end
+
         end
 
         @testset "EASIUR" begin

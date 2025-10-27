@@ -25,6 +25,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+## v0.55.2
+### Fixed 
+- fixed a bug in which demand and energy charges are applied to incorrect tiers in instances where tiered rates decrease as consumption increases, and the limits on the last tier are very large.
+
 ## v0.55.1
 ### Fixed
 - Updated from the deprecated NSRDB API call to the suggested new URL which uses the GOES dataset
