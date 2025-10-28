@@ -35,7 +35,7 @@ Outputs related to eventual costs of electricity:
 - `tou_demand_metrics` -> demand_rate: \$/kW TOU demand charge
 - `tou_demand_metrics` -> measured_tou_peak_demand: measured peak kW load in TOU period [kW]
 - `tou_demand_metrics` -> demand_charge_before_tax`: calculated demand charge [\$]
-- `monthly_gross_tou_demand_cost_series_before_tax`
+- `monthly_tou_demand_cost_series_before_tax`
 
 Prefix net_metering, wholesale, or net_metering_excess (export categories) for following outputs, all can be in results if relevant inputs are provided.
 - `_export_rate_series` export rate timeseries for type of export category
@@ -159,10 +159,10 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
 
     # monthly demand charges paid to utility.
-    r["monthly_facility_demand_cost_series_before_tax"] = Dict()
+    r["monthly_facility_demand_cost_series_before_tax"] = zeros(12)
     if !isempty(p.s.electric_tariff.monthly_demand_rates)
         for (idx,col) in enumerate(eachcol(p.s.electric_tariff.monthly_demand_rates))
-            r["monthly_facility_demand_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvPeakDemandMonth"*_n)][:,idx]))
+            r["monthly_facility_demand_cost_series_before_tax"] .+= col.*collect(value.(m[Symbol("dvPeakDemandMonth"*_n)][:,idx]))
         end
     end
 
