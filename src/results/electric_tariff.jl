@@ -15,20 +15,20 @@
 - `lifecycle_coincident_peak_cost_after_tax` lifecycle coincident peak charge in present value, after tax
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
 
-Outputs related to electric tariff:
-- `year_one_monthly_fixed_cost` the fixed monthly cost of electrcity for each month per chosen electric tariff
-- `year_one_billed_energy_rate_series` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
-- `year_one_billed_energy_rate_tier_limits` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
-- `year_one_billed_facilitydemand_monthly_rate_series` matrix for facility demand charges (rows = months, columns = # of tiers)
-- `year_one_billed_facilitydemand_monthly_rate_tier_limits` matrix for facility demand charges (rows = months, columns = # of tiers)
-- `year_one_billed_demand_rate_series` is a dictionary with TOU demand charges as timeseries for each timestep
-- `year_one_billed_tou_demand_rate_tier_limits`
+Outputs related to electric tariff (year-one rates and costs; not escalated):
+- `monthly_fixed_cost` the fixed monthly cost of electricity for each month per chosen electric tariff
+- `energy_rate_series` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
+- `energy_rate_tier_limits` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
+- `energy_rate_average_series` average energy rate across all tiers as \$/kWh timeseries
+- `facility_demand_monthly_rate_series` facility demand charges (rows = months, columns = # of tiers)
+- `facility_demand_monthly_rate_tier_limits` facility demand charges (rows = months, columns = # of tiers)
+- `tou_demand_rate_series` is a dictionary with TOU demand charges as timeseries for each timestep
+- `demand_rate_average_series` average TOU demand rate across all tiers as \$/kW timeseries
+- `tou_demand_rate_tier_limits`
 
-Outputs related to eventual costs of electricity:
-- `year_one_electric_to_load_energy_cost_series_before_tax` timeseries of cost of electricity purchases from the grid (grid to load, grid to battery)
-- `monthly_electric_to_load_energy_cost_series_before_tax`
-- `year_one_electric_to_storage_energy_cost_series_before_tax` the cost of energy purchased from the grid to charge batteries in each timestep
-- `monthly_electric_to_storage_energy_cost_series_before_tax` monthly totals of `grid_to_storage_cost_series`
+Outputs related to eventual costs of electricity (year-one rates and costs; not escalated):
+- `energy_cost_series_before_tax` timeseries of cost of electricity purchases from the grid (grid to total net load)
+- `monthly_energy_cost_series_before_tax`
 - `monthly_facility_demand_cost_series_before_tax`
 - `tou_demand_metrics` -> month: Month this TOU period applies to
 - `tou_demand_metrics` -> tier: Tier of TOU period
@@ -36,6 +36,7 @@ Outputs related to eventual costs of electricity:
 - `tou_demand_metrics` -> measured_tou_peak_demand: measured peak kW load in TOU period [kW]
 - `tou_demand_metrics` -> demand_charge_before_tax`: calculated demand charge [\$]
 - `monthly_tou_demand_cost_series_before_tax`
+- `monthly_demand_cost_series_before_tax` sum of monthly facility and TOU demand costs, across all Tiers
 
 Prefix net_metering, wholesale, or net_metering_excess (export categories) for following outputs, all can be in results if relevant inputs are provided.
 - `_export_rate_series` export rate timeseries for type of export category
@@ -44,6 +45,8 @@ Prefix net_metering, wholesale, or net_metering_excess (export categories) for f
 - `_monthly_export_cost_benefit_before_tax` monthly export benefit by export category
 
 """
+# TODO add tests
+
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricTariff` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
@@ -77,48 +80,68 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["year_one_bill_after_tax"] = r["year_one_bill_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
 
-    r["year_one_monthly_fixed_cost"] = repeat([p.s.electric_tariff.fixed_monthly_charge], 12)
+    r["monthly_fixed_cost"] = repeat([p.s.electric_tariff.fixed_monthly_charge], 12)
     
     # energy cost dictionary and tier limits.
-    r["year_one_billed_energy_rate_series"] = Dict()
+    r["energy_rate_series"] = Dict()
     for (idx,col) in enumerate(eachcol(p.s.electric_tariff.energy_rates))
-       r["year_one_billed_energy_rate_series"][string("Tier_", idx)] = col
+       r["energy_rate_series"][string("Tier_", idx)] = col
     end
-    r["year_one_billed_energy_rate_tier_limits"] = Dict()
+    r["energy_rate_tier_limits"] = Dict()
     for (idx,col) in enumerate(eachcol(p.s.electric_tariff.energy_tier_limits))
-       r["year_one_billed_energy_rate_tier_limits"][string("Tier_", idx)] = col
+       r["energy_rate_tier_limits"][string("Tier_", idx)] = col
     end
+    
+    # Average energy rate across all tiers
+    if !isempty(r["energy_rate_series"])
+        tier_values = collect(values(r["energy_rate_series"]))
+        # Calculate element-wise average across all tiers
+        r["energy_rate_average_series"] = sum(tier_values) / length(tier_values)
+    else
+        r["energy_rate_average_series"] = Float64[]
+    end
+
     # monthly facility demand charge and tier limits.
-    r["year_one_billed_facilitydemand_monthly_rate_series"] = Dict()
+    r["facility_demand_monthly_rate_series"] = Dict()
     for (idx,col) in enumerate(eachcol(p.s.electric_tariff.monthly_demand_rates))
-       r["year_one_billed_facilitydemand_monthly_rate_series"][string("Tier_", idx)] = col
+       r["facility_demand_monthly_rate_series"][string("Tier_", idx)] = col
     end
-    r["year_one_billed_facilitydemand_monthly_rate_tier_limits"] = Dict()
+    r["facility_demand_monthly_rate_tier_limits"] = Dict()
     for (idx,col) in enumerate(eachcol(p.s.electric_tariff.monthly_demand_tier_limits))
-       r["year_one_billed_facilitydemand_monthly_rate_tier_limits"][string("Tier_", idx)] = col
+       r["facility_demand_monthly_rate_tier_limits"][string("Tier_", idx)] = col
     end
     
     # demand charge timeseries (tou)
-    r["year_one_billed_demand_rate_series"] = Dict()
+    r["tou_demand_rate_series"] = Dict()
     if !isempty(p.s.electric_tariff.tou_demand_rates)
         for (idx,col) in enumerate(eachcol(p.s.electric_tariff.tou_demand_rates))
-            r["year_one_billed_demand_rate_series"][string("TOU_tier_", idx)] = zeros(p.time_steps[end])
+            r["tou_demand_rate_series"][string("Tier_", idx)] = zeros(p.time_steps[end])
             for (ts, rate) in zip(p.s.electric_tariff.tou_demand_ratchet_time_steps, p.s.electric_tariff.tou_demand_rates[:,idx])
-                r["year_one_billed_demand_rate_series"][string("TOU_tier_", idx)][ts] .= rate
+                r["tou_demand_rate_series"][string("Tier_", idx)][ts] .= rate
             end
         end
     end
-    # tou tier limits
-    r["year_one_billed_tou_demand_rate_tier_limits"] = Dict()
-    for (idx,col) in enumerate(eachcol(p.s.electric_tariff.tou_demand_tier_limits))
-       r["year_one_billed_tou_demand_rate_tier_limits"][string("Tier_", idx)] = col
+    
+    # Average TOU demand rate across all tiers
+    if !isempty(r["tou_demand_rate_series"])
+        tier_values = collect(values(r["tou_demand_rate_series"]))
+        # Calculate element-wise average across all TOU tiers
+        r["demand_rate_average_series"] = sum(tier_values) / length(tier_values)
+    else
+        r["demand_rate_average_series"] = Float64[]
     end
 
-    # grid to load.
-    r["year_one_electric_to_load_energy_cost_series_before_tax"] = Dict()
+    # TOU tier limits
+    r["tou_demand_rate_tier_limits"] = Dict()
+    for (idx,col) in enumerate(eachcol(p.s.electric_tariff.tou_demand_tier_limits))
+       r["tou_demand_rate_tier_limits"][string("Tier_", idx)] = col
+    end
+
+    # Grid to load.
+    r["energy_cost_series_before_tax"] = Dict()
     for (idx,col) in enumerate(eachcol(p.s.electric_tariff.energy_rates))
-       r["year_one_electric_to_load_energy_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvGridPurchase"*_n)][:,idx])).* p.hours_per_time_step
-    end # TODO validate this works for EVs.
+       r["energy_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvGridPurchase"*_n)][:,idx])).* p.hours_per_time_step
+    end
     
     if Dates.isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm. TODO handle extra day for leap year, remove ts_shift.
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,30,23,59)
@@ -128,35 +151,15 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     # Shift required to capture months identification in leap year.
     ts_shift = Int(24/p.hours_per_time_step)
     
-    r["monthly_electric_to_load_energy_cost_series_before_tax"] = []
+    r["monthly_energy_cost_series_before_tax"] = []
     for mth in 1:12
         idx = findall(x -> Dates.month(x) == mth, dr)
         monthly_sum = 0.0
-        for k in keys(r["year_one_electric_to_load_energy_cost_series_before_tax"])
-            monthly_sum += sum(r["year_one_electric_to_load_energy_cost_series_before_tax"][k][idx])
+        for k in keys(r["energy_cost_series_before_tax"])
+            monthly_sum += sum(r["energy_cost_series_before_tax"][k][idx])
         end
-        push!(r["monthly_electric_to_load_energy_cost_series_before_tax"], monthly_sum)
+        push!(r["monthly_energy_cost_series_before_tax"], monthly_sum)
     end
-
-    # grid to storage
-    # TODO right now we cannot track the tier under which energy is purchased in a given ts for charging battery. 
-    # Hence cannot calculate cost of energy supplied to BESS when energy tiers > 1
-    if size(p.s.electric_tariff.energy_tier_limits)[2] <= 1
-        r["year_one_electric_to_storage_energy_cost_series_before_tax"] = zeros(p.time_steps[end])
-        for b in p.s.storage.types.elec
-            r["year_one_electric_to_storage_energy_cost_series_before_tax"] .+= p.s.electric_tariff.energy_rates[:,1] .* collect(value.(m[Symbol("dvGridToStorage"*_n)][b,:])) .* p.hours_per_time_step
-        end
-
-        r["monthly_electric_to_storage_energy_cost_series_before_tax"] = []
-        for mth in 1:12
-            idx = findall(x -> Dates.month(x) == mth, dr)
-            push!(r["monthly_electric_to_storage_energy_cost_series_before_tax"], sum(r["year_one_electric_to_storage_energy_cost_series_before_tax"][idx]))
-        end
-    else
-        r["year_one_electric_to_storage_energy_cost_series_before_tax"] = zeros(p.time_steps[end])
-        r["monthly_electric_to_storage_energy_cost_series_before_tax"] = []
-    end
-
 
     # monthly demand charges paid to utility.
     r["monthly_facility_demand_cost_series_before_tax"] = zeros(12)
@@ -201,7 +204,14 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         for mth in 1:12
             push!(r["monthly_tou_demand_cost_series_before_tax"], tou_demand_charges[mth])
         end
+    else
+        for mth in 1:12
+            push!(r["monthly_tou_demand_cost_series_before_tax"], 0.0)
+        end
     end
+
+    # Total monthly demand costs (facility + TOU)
+    r["monthly_demand_cost_series_before_tax"] = r["monthly_facility_demand_cost_series_before_tax"] .+ r["monthly_tou_demand_cost_series_before_tax"]
 
     if p.s.settings.include_export_cost_series_in_results
         @info "Including electricity export compensation timeseries in ElectricTariff results."
