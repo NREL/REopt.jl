@@ -4120,5 +4120,19 @@ else  # run HiGHS tests
             year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
             @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
         end
+
+        @testset "Monthly ElectricTariff Results" begin
+            input_data = JSON.parsefile("./scenarios/urdb_rate.json")
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+
+            @test length(results["ElectricTariff"]["monthly_energy_cost_series_before_tax"]) == 12
+            @test sum(results["ElectricTariff"]["monthly_energy_cost_series_before_tax"]) > 100.0
+            @test length(results["ElectricTariff"]["monthly_demand_cost_series_before_tax"]) == 12
+            @test sum(results["ElectricTariff"]["monthly_demand_cost_series_before_tax"]) > 100.0
+        end
+
     end
 end
