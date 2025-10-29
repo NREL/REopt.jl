@@ -608,7 +608,14 @@ function get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_
     annual_energy = sum(monthly_energy)
     annual_peak = maximum(monthly_peaks)
 
-    return monthly_energy, monthly_peaks, annual_energy, annual_peak
+    return_dict = Dict(
+        "monthly_energy" => monthly_energy,
+        "monthly_peaks" => monthly_peaks,
+        "annual_energy" => annual_energy,
+        "annual_peak" => annual_peak
+    )
+
+    return return_dict
 end
 
 """

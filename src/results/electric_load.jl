@@ -24,15 +24,17 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     r["load_series_kw"] = p.s.electric_load.loads_kw
     r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
     r["annual_calculated_kwh"] = round(
-        sum(r["load_series_kw"]) * p.hours_per_time_step, digits=2
+        sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
     )
 
-    r["monthly_calculated_kwh"], r["monthly_peaks_kw"], annual_usage_kwh, r["annual_peak_kw"] = get_load_metrics(
+    load_dict = get_load_metrics(
         r["load_series_kw"];
-        time_steps_per_hour=Int(1/p.hours_per_time_step),
-        year=p.s.electric_load.year,
-        print_to_console=false
+        time_steps_per_hour=p.s.settings.time_steps_per_hour,
+        year=p.s.electric_load.year
     )
+    r["monthly_calculated_kwh"] = load_dict["monthly_energy"]
+    r["monthly_peaks_kw"] = load_dict["monthly_peaks"]
+    r["annual_peak_kw"] = load_dict["annual_peak"]
 
     if _n==""
         # Aggregation of all end-use electrical loads (including electrified heating and cooling).
