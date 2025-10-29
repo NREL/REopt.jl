@@ -170,7 +170,7 @@ end
     soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag || dc_coupled ? false : true
-    installed_cost_per_kw::Real = 910.0
+    installed_cost_per_kw::Real = 910.0 # Note: default is based on an AC-coupled system and accounts for inverter cost. If setting PV.dc_coupled_with_storage=true, then this value should be adjusted accordingly to represent hybrid inverter cost.
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
     replace_cost_per_kwh::Real = 318.0

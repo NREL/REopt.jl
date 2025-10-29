@@ -14,8 +14,8 @@
     existing_kw::Real=0,
     min_kw::Real=0,
     max_kw::Real=1.0e9, # max new DC capacity (beyond existing_kw)
-    installed_cost_per_kw::Real=1790.0,
-    om_cost_per_kw::Real=18.0,
+    installed_cost_per_kw::Real=1790.0, # Note: default is based on an AC-coupled system and accounts for inverter cost. If setting dc_coupled_with_storage=true, then this value should be adjusted accordingly so as not to double count inverter cost.
+    om_cost_per_kw::Real=18.0, # Note: default is based on an AC-coupled system and accounts for inverter replacement costs. If setting dc_coupled_with_storage=true, then this value should be adjusted accordingly.
     degradation_fraction::Real=0.005,
     macrs_option_years::Int = 5,
     macrs_bonus_fraction::Real = 0.6,
@@ -44,7 +44,7 @@
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
-    dc_coupled_with_storage::Bool = false
+    dc_coupled_with_storage::Bool = false # Notes: If true, the inverter efficiency defined by PV.inv_eff will be ignored since the inverter will be defined by the ElectricStorage system. PV and ElectricStorage installed_cost_per_kw and om_cost_per_kw defaults are based on AC-coupled systems and should be adjusted accordingly if dc_coupled_with_storage=true.
 ```
 
 !!! note "Multiple PV types" 
