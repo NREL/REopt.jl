@@ -270,60 +270,6 @@ function BuiltInElectricLoad(
 end
 
 """
-    get_electric_load_metrics(loads_vector; time_steps_per_hour=1, year=2025, print_to_console=false)
-
-Create a function to analyze monthly and annual data as a pre-processing step
-Inputs are the loads vector, time steps per hour, and year of the interval data
-"""
-function get_electric_load_metrics(loads_vector; time_steps_per_hour=1, year=2025, print_to_console=false)
-
-    # Initialize empty arrays
-    monthly_usage_kwh = []
-    monthly_peaks_kw = []
-    annual_usage_kwh = []
-    annual_peak_kw = []    
-
-    # Initialize a date range for the load data based on year and time_steps_per_hour and check if leap year
-    if isleapyear(year)
-        # If the year is a leap year, adjust the date range to not include the extra day
-        date_range = DateTime(year, 1, 1):Minute(60/time_steps_per_hour):DateTime(year, 12, 30, 23, 59, 59)
-    else
-        # If the year is not a leap year, exclude February 29th
-        date_range = DateTime(year, 1, 1):Minute(60/time_steps_per_hour):DateTime(year, 12, 31, 23, 59)
-    end
-
-    # Find all timesteps in each month using findall
-    for month in 1:12
-
-        # Find all timesteps in the month
-        month_timesteps = findall(x -> Dates.month(x) == month, date_range)
-
-        # Calculate monthly usage kWh
-        monthly_usage_kwh1 = sum(loads_vector[month_timesteps])/time_steps_per_hour
-        push!(monthly_usage_kwh, monthly_usage_kwh1)
-
-        # Calculate monthly peak load kW
-        monthly_peaks_kw1 = maximum(loads_vector[month_timesteps])
-        push!(monthly_peaks_kw, monthly_peaks_kw1)
-    end
-
-    # Calculate annual sums and peak loads
-    annual_usage_kwh = sum(monthly_usage_kwh)
-    annual_peak_kw = maximum(monthly_peaks_kw)
-
-    if print_to_console
-        println("Monthly Usage (kWh): ", monthly_usage_kwh)
-        println("Monthly Peak Load (kW): ", monthly_peaks_kw)
-        println("Annual Usage (kWh): ", annual_usage_kwh)
-        println("Annual Peak Load (kW): ",annual_peak_kw)
-    end
-
-    # Return specified results and their associated names
-    return monthly_usage_kwh, monthly_peaks_kw, annual_usage_kwh, annual_peak_kw
-
-end
-
-"""
     scale_load_to_monthly_peaks(
         initial_loads_kw::Vector{Float64}, 
         target_monthly_peaks_kw::Vector{Float64}, 
