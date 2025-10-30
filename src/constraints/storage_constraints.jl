@@ -257,13 +257,10 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
             - (p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b])
         )
     else
-        println(m[Symbol("dvStorageEnergy"*_n)][b])
-        println(m[Symbol("dvStoredEnergy"*_n)][b,1])
-        println(m[Symbol("dvHeatToStorage"*_n)][b,"ExistingBoiler","ProcessHeat",1])
         @constraint(m, [ts in p.time_steps],
             m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (  
                 p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)) -
-                p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+                p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStoredEnergy"*_n)][b]
         )
     end
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
