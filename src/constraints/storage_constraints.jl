@@ -338,41 +338,30 @@ function add_hot_tes_flow_restrictions!(m, p, b)
     end
 
     #If load isn't served by storage, all charge or discharge flows of that quality heat are zero 
+    if !isempty(setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]))
+        @constraint(m, [t in union(p.techs.heating, p.techs.chp), 
+            q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), 
+            ts in p.time_steps], 
+             m[:dvHeatToStorage][b,t,q,ts] == 0
+        )
+        @constraint(m, [q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), 
+            ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0
+        )
+    end
 
     # If a heating load is served by a storage vehicle, only allow charge from compatible techs. otherwise, allow no charge for that heat quality.
-    if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
-        if !isempty(setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_dhw))
-            @constraint(m, [t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_dhw), 
-                ts in p.time_steps], 
-                m[:dvHeatToStorage][b,t,"DomesticHotWater",ts] == 0
-            )
-        end
-    else
-        @constraint(m, [t in union(p.techs.heating, p.techs.chp), ts in p.time_steps], 
+    if "DomesticHotWater" in p.heating_loads_served_by_tes[b] && !isempty(setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_dhw))
+        @constraint(m, [t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_dhw), ts in p.time_steps], 
             m[:dvHeatToStorage][b,t,"DomesticHotWater",ts] == 0
         )
     end
-    if "SpaceHeating" in p.heating_loads_served_by_tes[b]
-        if !isempty(setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_space_heating))
-            @constraint(m, [t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_space_heating), 
-                ts in p.time_steps], 
-                m[:dvHeatToStorage][b,t,"SpaceHeating",ts] == 0
-            )
-        end
-    else
-        @constraint(m, [t in union(p.techs.heating, p.techs.chp), ts in p.time_steps], 
+    if "SpaceHeating" in p.heating_loads_served_by_tes[b] && !isempty(setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_space_heating))
+        @constraint(m, [t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_space_heating), ts in p.time_steps], 
             m[:dvHeatToStorage][b,t,"SpaceHeating",ts] == 0
         )
     end
-    if "ProcessHeat" in p.heating_loads_served_by_tes[b]
-        if !isempty(setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_process_heat))
-            @constraint(m, [t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_process_heat), 
-                ts in p.time_steps], 
-                m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0
-            )
-        end
-    else
-        @constraint(m, [t in union(p.techs.heating, p.techs.chp), ts in p.time_steps], 
+    if "ProcessHeat" in p.heating_loads_served_by_tes[b] && !isempty(setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_process_heat))
+        @constraint(m, [t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.can_serve_process_heat), ts in p.time_steps], 
             m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0
         )
     end
