@@ -700,6 +700,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			end
         end
 		if !isempty(p.s.storage.types.hot)
+			# TODO introduce these as sparse variables, add a set of techs charging storage?
 			@variable(m, dvHeatToStorage[p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
 			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
 			if !isempty(p.techs.steam_turbine)
