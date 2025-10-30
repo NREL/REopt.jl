@@ -338,16 +338,6 @@ function add_hot_tes_flow_restrictions!(m, p, b)
     end
 
     #If load isn't served by storage, all charge or discharge flows of that quality heat are zero 
-    if !isempty(setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]))
-        @constraint(m, [t in union(p.techs.heating, p.techs.chp), 
-            q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), 
-            ts in p.time_steps], 
-             m[:dvHeatToStorage][b,t,q,ts] == 0
-        )
-        @constraint(m, [q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), 
-            ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0
-        )
-    end
 
     # If a heating load is served by a storage vehicle, only allow charge from compatible techs. otherwise, allow no charge for that heat quality.
     if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
