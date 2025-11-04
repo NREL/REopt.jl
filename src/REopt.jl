@@ -29,7 +29,8 @@ export
     get_ashp_defaults,
     get_pv_cost_params,
     get_sector_defaults,
-    REoptInputs_to_dict
+    REoptInputs_to_dict,
+    compare_dicts
 
 import HTTP
 import JSON

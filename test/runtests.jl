@@ -25,6 +25,11 @@ elseif "CPLEX" in ARGS
     end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
+        @testset "compare jsons" begin
+            before_dict = JSON.parsefile("debug_inputs_before_changes.json")
+            after_dict = JSON.parsefile("debug_inputs_after_changes.json")
+            compare_dicts(before_dict, after_dict)
+        end
         @testset "Sector defaults" begin
             input_data = JSON.parsefile("scenarios/sector_defaults.json")
             
@@ -235,9 +240,9 @@ else  # run HiGHS tests
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             inputs = REoptInputs("./scenarios/pv_storage.json")
             # println(inputs)
-            open("debug_inputs_before_changes.json","w") do f
-                JSON.print(f, REoptInputs_to_dict(inputs), 4)
-            end
+            # open("debug_inputs_before_changes.json","w") do f
+            #     JSON.print(f, REoptInputs_to_dict(inputs), 4)
+            # end
             r = run_reopt(model, inputs)
 
             @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
