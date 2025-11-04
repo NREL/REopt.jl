@@ -803,6 +803,36 @@ function set_sector_defaults!(d::Dict; struct_name::String, sector::String, fede
     end
 end
 
+function REoptInputs_to_dict(reopt_inputs)
+    d = Dict{String, Any}()
+    for upper_field_name in fieldnames(typeof(reopt_inputs))
+        upper_field_value = getfield(reopt_inputs, upper_field_name)
+        if upper_field_value === nothing
+            d[string(upper_field_name)] = nothing
+        elseif upper_field_name == "Scenario"
+            d["Scenario"] = Dict{String, Any}()
+            for model_name in fieldnames(typeof(upper_field_value))
+                model_value = getfield(upper_field_value, model_name)
+                if model_value === nothing
+                    d[string(model_name)] = nothing
+                    continue
+                end
+                if typeof(model_value) <: Array
+                    #not dealing with multiple PVs
+                    model_value = model_value[1]
+                end
+                d["Scenario"][string(model_name)] = Dict{String, Any}()
+                for field_name in fieldnames(typeof(model_value))
+                    field_value = getfield(model_value, field_name)
+                    d["Scenario"][string(model_name)][string(field_name)] = field_value
+                end
+            end
+        else
+            d[string(upper_field_name)] = upper_field_value
+        end
+    end
+    return d
+end
 function struct_to_dict(obj)
     result = Dict{String, Any}()
     if obj === nothing
@@ -816,28 +846,28 @@ function struct_to_dict(obj)
         if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
             continue
         end
-        if isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
-            # Nested struct
-            result[field_name_str] = struct_to_dict(field_value)
-        else
-            result[field_name_str] = typeof(field_value)
-        end
-        # if field_value === nothing
-        #     result[field_name_str] = ""
-        # elseif typeof(field_value) <: Vector && !isempty(field_value)
-        #     # Handle arrays
-        #     if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
-        #         result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
-        #     else
-        #         result[field_name_str] = collect(field_value)
-        #     end
-        # elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
+        # if isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
         #     # Nested struct
         #     result[field_name_str] = struct_to_dict(field_value)
         # else
-        #     # Primitive types
-        #     result[field_name_str] = field_value
+        #     result[field_name_str] = typeof(field_value)
         # end
+        if field_value === nothing
+            result[field_name_str] = nothing
+        elseif typeof(field_value) <: Vector && !isempty(field_value)
+            # Handle arrays
+            if all(x -> isstructtype(typeof(x)), field_value) #|| hasproperty(x, :__dict__), field_value)
+                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
+            else
+                result[field_name_str] = collect(field_value)
+            end
+        elseif isstructtype(typeof(field_value)) #|| hasproperty(field_value, :__dict__)
+            # Nested struct
+            result[field_name_str] = struct_to_dict(field_value)
+        else
+            # Primitive types
+            result[field_name_str] = field_value
+        end
     end
     
     return result

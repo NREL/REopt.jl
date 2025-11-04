@@ -29,7 +29,7 @@ export
     get_ashp_defaults,
     get_pv_cost_params,
     get_sector_defaults,
-    struct_to_dict
+    REoptInputs_to_dict
 
 import HTTP
 import JSON
