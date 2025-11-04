@@ -30,6 +30,10 @@ Classify the change according to the following categories:
 - **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
 - Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
 
+## v0.55.2
+### Fixed 
+- fixed a bug in which demand and energy charges are applied to incorrect tiers in instances where tiered rates decrease as consumption increases, and the limits on the last tier are very large.
+
 ## v0.55.1
 ### Fixed
 - Updated from the deprecated NSRDB API call to the suggested new URL which uses the GOES dataset
