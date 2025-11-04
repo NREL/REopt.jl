@@ -28,9 +28,7 @@ export
     get_electric_heater_defaults,
     get_ashp_defaults,
     get_pv_cost_params,
-    get_sector_defaults,
-    REoptInputs_to_dict,
-    compare_dicts
+    get_sector_defaults
 
 import HTTP
 import JSON

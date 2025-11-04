@@ -831,7 +831,9 @@ function REoptInputs_to_dict(reopt_inputs)
                     continue
                 end
                 if typeof(model_value) <: Array
-                    #not dealing with multiple PVs
+                    if length(model_value) >= 1 #not dealing with multiple PVs
+                        @warn("Multiple PVs not yet handled in REoptInputs_to_dict")
+                    end
                     model_value = model_value[1]
                 end
                 d["Scenario"][string(model_name)] = Dict{String, Any}()
@@ -845,43 +847,4 @@ function REoptInputs_to_dict(reopt_inputs)
         end
     end
     return d
-end
-function struct_to_dict(obj)
-    result = Dict{String, Any}()
-    if obj === nothing
-        return result
-    end
-
-    field_names = fieldnames(typeof(obj))
-    for field_name in field_names
-        field_value = getfield(obj, field_name)
-        field_name_str = string(field_name)
-        if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
-            continue
-        end
-        # if isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
-        #     # Nested struct
-        #     result[field_name_str] = struct_to_dict(field_value)
-        # else
-        #     result[field_name_str] = typeof(field_value)
-        # end
-        if field_value === nothing
-            result[field_name_str] = nothing
-        elseif typeof(field_value) <: Vector && !isempty(field_value)
-            # Handle arrays
-            if all(x -> isstructtype(typeof(x)), field_value) #|| hasproperty(x, :__dict__), field_value)
-                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
-            else
-                result[field_name_str] = collect(field_value)
-            end
-        elseif isstructtype(typeof(field_value)) #|| hasproperty(field_value, :__dict__)
-            # Nested struct
-            result[field_name_str] = struct_to_dict(field_value)
-        else
-            # Primitive types
-            result[field_name_str] = field_value
-        end
-    end
-    
-    return result
 end
