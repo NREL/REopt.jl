@@ -142,10 +142,9 @@ end
 
 
 function GHP(response::Dict, d::Dict; sector::String, federal_procurement_type::String)
-    d = dictkeys_tosymbols(d)
     set_sector_defaults!(d; struct_name="GHP", sector=sector, federal_procurement_type=federal_procurement_type)
 
-    ghp = GHP(; ghpghx_response = response, d...)
+    ghp = GHP(; ghpghx_response = response, dictkeys_tosymbols(d)...)
     
     if !(0 <= ghp.aux_cooler_installed_cost_per_ton <= 1.0e6)
         @error "out of bounds aux_cooler_installed_cost_per_ton"
