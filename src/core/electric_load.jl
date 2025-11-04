@@ -328,6 +328,7 @@ end
 
 """
 Apply linear flattening when initial peak > actual peak (Condition 1).
+This is an analytical solution
 
 Formula: Scaled_Load = initial_Load × x + Flat_Load × (1 - x)
 where Flat_Load = average load that preserves total energy
@@ -344,12 +345,9 @@ function apply_linear_flattening(initial_load_series_kw::Vector{Float64}, target
     # The flat load is the average power (kW) that sums to the same total energy over the time period
     flat_load_kw = sum(initial_load_series_kw) / length(initial_load_series_kw)
     
-    function objective(x)
-        scaled = initial_load_series_kw .* x .+ flat_load_kw .* (1 - x)
-        return abs(maximum(scaled) - target_peak_kw)
-    end
-    x_optimal = (findmin([objective(x) for x in 0:0.001:1])[2] - 1 ) * 0.001 # convert from index to x value
-    scaled_load_series_kw = initial_load_series_kw .* x_optimal .+ flat_load_kw .* (1 - x_optimal)
+    x_calculated = (flat_load_kw - target_peak_kw) / (flat_load_kw - maximum(initial_load_series_kw))
+
+    scaled_load_series_kw = initial_load_series_kw .* x_calculated .+ flat_load_kw .* (1 - x_calculated)
     return scaled_load_series_kw
 end
 
