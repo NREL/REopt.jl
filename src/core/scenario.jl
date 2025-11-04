@@ -78,7 +78,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         settings = Settings()
     end
-    println(typeof(settings.off_grid_flag))
     
     site = Site(;dictkeys_tosymbols(d["Site"])...)
 
