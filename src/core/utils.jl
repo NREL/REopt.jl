@@ -836,3 +836,31 @@ function struct_to_dict(obj)
     
     return result
 end
+
+"""
+    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String) -> Array{<:Real,1}
+
+Checks and adjusts the length of a user-provided load series to ensure it matches the expected length based on the `time_steps_per_hour` setting.
+
+# Arguments
+- `load_series::Array{<:Real,1}`: The input load series (e.g., electric load, thermal load) provided by the user.
+- `time_steps_per_hour::Int`: The number of time steps per hour (e.g., 1 for hourly, 4 for 15-minute intervals).
+- `load_type::String`: A descriptive name for the load type (e.g., "electric load", "thermal load") used in error or warning messages.
+
+# Returns
+- `Array{<:Real,1}`: The adjusted load series if modifications are required, or the original load series if it already matches the expected length.
+"""
+function check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
+            # Timestep checks for custom loads
+        if length(load_series) > 0 && length(load_series) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
+            if length(load_series) < 8760 * time_steps_per_hour && length(load_series) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
+                load_series = repeat(load_series, inner=Int(time_steps_per_hour / (length(load_series)/8760)))
+                @warn "Repeating provided $load_type in each hour to match the time_steps_per_hour."
+                return load_series
+            else # loads_kw is higher resolution than time_steps_per_hour or not an integer multiple of 8760
+                throw(@error("Provided $load_type does not match the Settings.time_steps_per_hour."))
+            end
+        else 
+            return load_series # series not provided or is correct length
+        end
+end
