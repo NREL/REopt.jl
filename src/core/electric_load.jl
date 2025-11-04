@@ -380,7 +380,7 @@ function apply_exponential_stretching(initial_load_series_kw::Vector{Float64}, t
         scaled_total_energy_kwh = sum(scaled_load_series_kw) / time_steps_per_hour
         return abs(scaled_total_energy_kwh - target_total_energy_kwh)
     end
-    x_optimal = (findmin([objective(x) for x in 0:0.01:10])[2] - 1 ) * 0.01 # convert from index to x value
+    x_optimal = (findmin([objective(x) for x in 0:0.001:10])[2] - 1 ) * 0.001 # convert from index to x value
     decay_factor = exp.(-x_optimal .* (1 .- transformed_load_series_kw ./ target_peak_kw))
     scaled_load_series_kw = transformed_load_series_kw .* decay_factor
     return scaled_load_series_kw
