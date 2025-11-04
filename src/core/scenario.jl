@@ -78,7 +78,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         settings = Settings()
     end
-    println(typeof(settings.off_grid_flag))
     
     site = Site(;dictkeys_tosymbols(d["Site"])...)
 
@@ -196,31 +195,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
-        storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
-        storage_dict[:off_grid_flag] = settings.off_grid_flag
+        storage_dict = d["ElectricStorage"]
+        storage_dict["off_grid_flag"] = settings.off_grid_flag
     else
-        storage_dict = Dict(:max_kw => 0.0)
+        storage_dict = Dict("max_kw" => 0.0)
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial, site)
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
-        storage_structs["HotThermalStorage"] = HotThermalStorage(
-                                                    dictkeys_tosymbols(d["HotThermalStorage"]), 
-                                                    financial, site, settings.time_steps_per_hour
-                                                )
+        storage_structs["HotThermalStorage"] = HotThermalStorage(d["HotThermalStorage"], financial, site, settings.time_steps_per_hour)
     end
     if haskey(d, "HighTempThermalStorage")
-        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(
-                                                        dictkeys_tosymbols(d["HighTempThermalStorage"]), 
-                                                        financial, site, settings.time_steps_per_hour
-                                                    )
+        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(d["HighTempThermalStorage"], financial, site, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
-        storage_structs["ColdThermalStorage"] = ColdThermalStorage(
-                                                    dictkeys_tosymbols(d["ColdThermalStorage"]), 
-                                                    financial, site, settings.time_steps_per_hour
-                                                )
+        storage_structs["ColdThermalStorage"] = ColdThermalStorage(d["ColdThermalStorage"], financial, site, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
 
