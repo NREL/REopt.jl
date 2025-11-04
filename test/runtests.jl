@@ -235,7 +235,7 @@ else  # run HiGHS tests
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             inputs = REoptInputs("./scenarios/pv_storage.json")
             # println(inputs)
-            open("debug_inputs_after_changes.json","w") do f
+            open("debug_inputs_before_changes.json","w") do f
                 JSON.print(f, REoptInputs_to_dict(inputs), 4)
             end
             r = run_reopt(model, inputs)
