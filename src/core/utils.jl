@@ -797,7 +797,7 @@ end
 function set_sector_defaults!(d::Dict; struct_name::String, sector::String, federal_procurement_type::String="", federal_sector_state::String="")
     sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
     for (input_name, input_val) in sector_defaults
-        if !(input_name in keys(d))
+        if !(Symbol(input_name) in keys(d))
             d[Symbol(input_name)] = input_val
         end
     end
