@@ -145,7 +145,7 @@ end
 
 
 function dictkeys_tosymbols(d::Dict)
-    d2 = Dict()
+    d2 = Dict{Symbol, Any}()
     for (k, v) in d
         # handling array type conversions for API inputs and JSON
         if k in [
@@ -798,7 +798,7 @@ function set_sector_defaults!(d::Dict; struct_name::String, sector::String, fede
     sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
     for (input_name, input_val) in sector_defaults
         if !(input_name in keys(d))
-            d[input_name] = input_val
+            d[Symbol(input_name)] = input_val
         end
     end
 end
