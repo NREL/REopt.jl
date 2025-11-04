@@ -4221,7 +4221,7 @@ else  # run HiGHS tests
             sim_result = simulated_load(sim_input)
             
             # Test array consistency
-            @test sim_result["loads_kw"] ≈ hourly_peak_scaled rtol=1.0e-2
+            @test sim_result["loads_kw"] ≈ hourly_peak_scaled rtol=1.0e-3
             @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
             @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
 
