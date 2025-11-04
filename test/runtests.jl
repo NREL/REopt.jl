@@ -233,7 +233,11 @@ else  # run HiGHS tests
 
         @testset "Solar and Storage" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_reopt(model, "./scenarios/pv_storage.json")
+            inputs = REoptInputs("./scenarios/pv_storage.json")
+            open("debug_inputs_before_changes.json","w") do f
+                JSON.print(f, struct_to_dict(inputs), 4)
+            end
+            r = run_reopt(model, inputs)
 
             @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
             @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5

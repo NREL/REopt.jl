@@ -816,22 +816,28 @@ function struct_to_dict(obj)
         if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
             continue
         end
-        if field_value === nothing
-            result[field_name_str] = ""
-        elseif typeof(field_value) <: Vector && !isempty(field_value)
-            # Handle arrays
-            if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
-                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
-            else
-                result[field_name_str] = collect(field_value)
-            end
-        elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
+        if isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
             # Nested struct
             result[field_name_str] = struct_to_dict(field_value)
         else
-            # Primitive types
-            result[field_name_str] = field_value
+            result[field_name_str] = typeof(field_value)
         end
+        # if field_value === nothing
+        #     result[field_name_str] = ""
+        # elseif typeof(field_value) <: Vector && !isempty(field_value)
+        #     # Handle arrays
+        #     if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
+        #         result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
+        #     else
+        #         result[field_name_str] = collect(field_value)
+        #     end
+        # elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
+        #     # Nested struct
+        #     result[field_name_str] = struct_to_dict(field_value)
+        # else
+        #     # Primitive types
+        #     result[field_name_str] = field_value
+        # end
     end
     
     return result
