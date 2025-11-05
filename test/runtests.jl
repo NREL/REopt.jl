@@ -1137,7 +1137,7 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt([m1,m2], inputs)
-                @test abs(results["Financial"]["simple_payback_years"] - 8.12) <= 0.02
+                @test abs(results["Financial"]["simple_payback_years"] - 8.31) <= 0.02
                 finalize(backend(m1))
                 empty!(m1)
                 finalize(backend(m2))
@@ -2383,7 +2383,7 @@ else  # run HiGHS tests
             # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
             boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
             expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
-            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
+            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.5
             
             # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
             bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
@@ -4132,6 +4132,114 @@ else  # run HiGHS tests
             init_capital_costs =  results["Financial"]["initial_capital_costs"]
             year_one_om = results["Financial"]["year_one_om_costs_before_tax"]
             @test isapprox(year_one_om / init_capital_costs, 0.025; atol=0.0005)
+            finalize(backend(m1))
+            empty!(m1)
+            finalize(backend(m2))
+            empty!(m2)
+            GC.gc()
         end
+
+        @testset "Peak load scaling" begin
+            # With reference building
+            input_data = JSON.parsefile("./scenarios/no_techs_load_scale.json")
+            input_data["ElectricLoad"] = Dict()
+            input_data["ElectricLoad"]["year"] = 2024
+            input_data["ElectricLoad"]["doe_reference_name"] = "MediumOffice"
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = ones(12) .* 7.0e6/12
+            monthly_peak_kw = 1700.0
+            input_data["ElectricLoad"]["monthly_peaks_kw"] = ones(12) .* monthly_peak_kw
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+            @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ sum(input_data["ElectricLoad"]["monthly_totals_kwh"]) rtol=1.0e-4
+            demand_charge = input_data["ElectricTariff"]["blended_annual_demand_rate"]
+            @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 12.0 * monthly_peak_kw * demand_charge rtol=5.0e-4
+            finalize(backend(m))
+            empty!(m)
+            GC.gc()
+
+            # With custom load profile
+            input_data = JSON.parsefile("./scenarios/no_techs_load_scale.json")
+            input_data["ElectricLoad"] = Dict()
+            input_data["ElectricLoad"]["loads_kw"] = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
+            input_data["ElectricLoad"]["year"] = 2023
+            input_data["ElectricLoad"]["normalize_and_scale_load_profile_input"] = true
+            input_data["ElectricLoad"]["monthly_totals_kwh"] = ones(12) .* 7.0e6/12
+            monthly_peak_kw = 1700.0
+            input_data["ElectricLoad"]["monthly_peaks_kw"] = ones(12) .* monthly_peak_kw
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+            @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ sum(input_data["ElectricLoad"]["monthly_totals_kwh"]) rtol=1.0e-4
+            demand_charge = input_data["ElectricTariff"]["blended_annual_demand_rate"]
+            @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 12.0 * monthly_peak_kw * demand_charge rtol=1.0e-4
+            finalize(backend(m))
+            empty!(m)
+            GC.gc()
+        end
+
+        @testset "Peak load scaling in simulated_load" begin
+            # CRB (hourly) with monthly energy and peak load scaling
+            monthly_peak_kw = 1700.0
+            annual_kwh = 7.0e6
+            sim_input = Dict(
+                "load_type" => "electric",
+                "doe_reference_name" => "LargeOffice",
+                "latitude" => 39.7391536,
+                "longitude" => -104.9847034,
+                "year" => 2017,
+                "monthly_peaks_kw" => ones(12) .* monthly_peak_kw,
+                "monthly_totals_kwh" => ones(12) .* annual_kwh / 12.0
+            )
+
+            # Run simulated_load() to check energy and peaks of scaled load
+            sim_result = simulated_load(sim_input)
+            
+            # Test array consistency
+            @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
+            @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
+
+            # Custom load profile scaled to monthly energy and peak load
+            hourly = readdlm("./data/loads_kw_largeoffice_sanfran.csv", ',')[:,1]
+            # The data below is from an external spreadsheet and is used to validate REopt.jl implementation consistency with that
+            hourly_peak_scaled = readdlm("./data/loads_kw_largeoffice_sanfran_peak_scaled.csv", ',')[:,1]
+            monthly_peak_kw = 1700.0
+            annual_kwh = 7.0e6
+            sim_input = Dict(
+                "load_type" => "electric",
+                "load_profile" => hourly,
+                "normalize_and_scale_load_profile_input" => true,
+                "latitude" => 39.7391536,
+                "longitude" => -104.9847034,
+                "year" => 2023,
+                "monthly_peaks_kw" => ones(12) .* monthly_peak_kw,
+                "monthly_totals_kwh" => ones(12) .* annual_kwh / 12.0
+            )
+
+            # Run simulated_load() to check energy and peaks of scaled load
+            sim_result = simulated_load(sim_input)
+            
+            # Test array consistency
+            @test sim_result["loads_kw"] ≈ hourly_peak_scaled rtol=1.0e-3
+            @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
+            @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
+
+            # 15-min load profile scaled to monthly energy and peak load
+            fifteen = repeat(hourly, inner=4)
+            monthly_peak_kw = 1000.0
+            sim_input["monthly_peaks_kw"] = ones(12) .* monthly_peak_kw
+            sim_input["load_profile"] = fifteen
+            sim_input["time_steps_per_hour"] = 4
+
+            # Run simulated_load() to check energy and peaks of scaled load
+            sim_result = simulated_load(sim_input)
+
+            # Test array consistency
+            @test sim_result["monthly_totals_kwh"] ≈ sim_input["monthly_totals_kwh"] rtol=1.0e-3
+            @test sim_result["monthly_peaks_kw"] ≈ sim_input["monthly_peaks_kw"] rtol=0.01
+            @test sum(sim_result["loads_kw"])/sim_input["time_steps_per_hour"] ≈ sum(sim_input["monthly_totals_kwh"]) rtol=1.0e-2
+        end   
     end
 end

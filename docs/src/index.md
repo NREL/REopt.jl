@@ -1,8 +1,8 @@
 # REopt.jl
-*Renewable Energy Optimization and Integration*
+REopt.jl is the core module of the [REopt® techno-economic decision support platform](https://www.nrel.gov/reopt/), developed by the National Renewable Energy Laboratory (NREL). REopt optimizes the sizing and dispatch of integrated energy systems for buildings, campuses, communities, microgrids, and more. REopt identifies the cost-optimal mix of generation, storage, and heating and cooling technologies to meet cost savings, resilience, emissions reductions, and energy performance goals. The open-source REopt.jl code is available on GitHub: https://github.com/NREL/REopt.jl. 
 
 !!! note
-    This package is used as the core model of the [REopt API](https://github.com/NREL/REopt_API) and the [REopt Web Tool](https://reopt.nrel.gov/tool). This package contains additional functionality and flexibility to run locally and customize.
+    This REopt.jl package is used as the core model of the [REopt API](https://github.com/NREL/REopt_API) and the [REopt Web Tool](https://reopt.nrel.gov/tool). This package contains additional functionality and flexibility to run locally and customize.
 
 ## Installing
 REopt evaluations for all system types except GHP (see below) can be performed using the following installation instructions from the package manager mode (`]`) of the Julia REPL:
