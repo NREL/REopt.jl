@@ -598,15 +598,15 @@ function get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_
         monthly_energy[month] = sum(month_load_series) / time_steps_per_hour
     end
 
+    annual_energy = sum(monthly_energy)
+    annual_peak = maximum(monthly_peaks)
+
     if print_to_console
         println("Monthly Energy: ", monthly_energy)
         println("Monthly Peak Load: ", monthly_peaks)
         println("Annual Energy: ", annual_energy)
         println("Annual Peak Load: ", annual_peak)
     end
-
-    annual_energy = sum(monthly_energy)
-    annual_peak = maximum(monthly_peaks)
 
     return_dict = Dict(
         "monthly_energy" => monthly_energy,
