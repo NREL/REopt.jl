@@ -806,13 +806,13 @@ end
 function compare_dicts(dict1::Dict, dict2::Dict)
     for key in union(keys(dict1), keys(dict2))
         if !haskey(dict1, key)
-            println(key * " not in first dict")
+            println("$key not in first dict")
         elseif !haskey(dict2, key)
-            println(key * " not in second dict")
+            println("$key not in second dict")
         elseif dict1[key] isa Dict && dict2[key] isa Dict
             compare_dicts(dict1[key], dict2[key])
         elseif dict1[key] != dict2[key]
-            println(key * " values " * string(dict1[key]) * " and " * string(dict2[key]) * " are not equal")
+            println("$key values $(dict1[key]) and $(dict2[key]) are not equal")
         end
     end
 end
