@@ -831,7 +831,7 @@ function REoptInputs_to_dict(reopt_inputs)
                     continue
                 end
                 if typeof(model_value) <: Array
-                    if length(model_value) >= 1 #not dealing with multiple PVs
+                    if length(model_value) > 1 #not dealing with multiple PVs
                         @warn("Multiple PVs not yet handled in REoptInputs_to_dict")
                     end
                     model_value = model_value[1]
