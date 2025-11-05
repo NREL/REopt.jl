@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Formatting
 - Use **bold** markup for field and model names (i.e. **outage_start_time_step**)
-- Use `code` markup for  REopt-specific file names, classes and endpoints (e.g. `src/REopt.jl`)
+- Use `code` markup for  REopt-specific file names, functions, and endpoints (e.g. `src/REopt.jl`)
 - Use _italic_ for code terms (i.e. _list_)
 - Prepend change with tag(s) directing where it is in the repository:  
 `src`,`constraints`,`*.jl`
@@ -25,8 +25,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fix-sector-bugs
+### Fixed
+- Bug where storage input with only _Int_ values restricted _Dict_ subtype passed into `set_sector_defaults!` and caused _InexactError_
+- Bug where **ElectricStorage** input with only _Real_ values restricted _Dict_ subtype, causing **off_grid_flag** to be added as an _Int_ instead of _Bool_, leading to a conversion error in **ElectricStorageDefaults**
 
-## develop
+## Develop
 ### Added
 - **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
 - Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
