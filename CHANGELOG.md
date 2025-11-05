@@ -34,6 +34,8 @@ Classify the change according to the following categories:
 ### Added
 - **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
 - Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
+- `ElectricTariff` and `ElectricLoad` inputs and outputs; mostly outputs related to monthly and per-timestep series rates and costs, and `urdb_metadata` which contains additional information about the URDB rate.
+- New function in **utils.jl** called get_load_metrics() which gets the annual and monthly energy and peak load values (units depends on the input `load_profile`, so that it can be used with any load type).
 
 ## v0.55.2
 ### Fixed 
