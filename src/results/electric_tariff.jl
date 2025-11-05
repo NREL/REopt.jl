@@ -45,7 +45,6 @@ Prefix net_metering, wholesale, or net_metering_excess (export categories) for f
 - `_monthly_export_cost_benefit_before_tax` monthly export benefit by export category
 
 """
-# TODO add tests
 
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricTariff` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -202,7 +201,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["monthly_tou_demand_cost_series_before_tax"] = []
     if !isempty(tou_demand_charges)
         for mth in 1:12
-            push!(r["monthly_tou_demand_cost_series_before_tax"], tou_demand_charges[mth])
+            push!(r["monthly_tou_demand_cost_series_before_tax"], get(tou_demand_charges, mth, 0.0))
         end
     else
         for mth in 1:12
