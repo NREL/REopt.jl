@@ -86,7 +86,7 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
     label = get(urdb_response, "label", "")
     rate_name = get(urdb_response, "name", "")
     utility = get(urdb_response, "utility", "")
-    rate_effective_date = get(urdb_response, "latest_update", "")   # could be tricky since date is in weird date format (EPOCH?)
+    latest_update_unix = get(urdb_response, "latest_update", 0.0)
     voltage_level = get(urdb_response, "voltagecategory", "")
     rate_description = get(urdb_response, "description", "")
     peak_kw_capacity_min = get(urdb_response, "peakkwcapacitymin", 0.0)  
@@ -96,8 +96,10 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
     demand_comments = get(urdb_response, "demandcomments", "")
     url_link = get(urdb_response, "uri", "")
 
-    if rate_effective_date != ""
-        rate_effective_date = string(Dates.unix2datetime(rate_effective_date))
+    # Convert Unix timestamp to datetime string
+    rate_effective_date = ""
+    if latest_update_unix > 0
+        rate_effective_date = string(Dates.unix2datetime(latest_update_unix))
     end
 
     # Convert matrix to array if needed
