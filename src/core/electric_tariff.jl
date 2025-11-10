@@ -243,7 +243,6 @@ function ElectricTariff(;
         tou_demand_tier_limits = u.tou_demand_tier_limits
         n_tou_demand_tiers = u.n_tou_demand_tiers
 
-        # need to review!!!!
         urdb_metadata = Dict{Symbol, Any}(
             :label => u.label,
             :rate_name => u.rate_name,
