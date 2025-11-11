@@ -246,13 +246,13 @@ function REoptInputs(s::AbstractScenario)
     if !isempty(s.storage.types.hot)
         for b in s.storage.types.hot
             heating_loads_served_by_tes[b] = String[]
-            if s.storage.attr[b].can_serve_dhw && !isnothing(s.dhw_load)
+            if s.storage.attr[b].can_serve_dhw && ("DomesticHotWater" in heating_loads) && sum(heating_loads_kw["DomesticHotWater"]) > 0.0
                 push!(heating_loads_served_by_tes[b],"DomesticHotWater")
             end
-            if s.storage.attr[b].can_serve_space_heating && !isnothing(s.space_heating_load)
+            if s.storage.attr[b].can_serve_space_heating && ("SpaceHeating" in heating_loads) && sum(heating_loads_kw["SpaceHeating"]) > 0.0
                 push!(heating_loads_served_by_tes[b],"SpaceHeating")
             end
-            if s.storage.attr[b].can_serve_process_heat && !isnothing(s.process_heat_load)
+            if s.storage.attr[b].can_serve_process_heat && ("ProcessHeat" in heating_loads) && sum(heating_loads_kw["ProcessHeat"]) > 0.0
                 push!(heating_loads_served_by_tes[b],"ProcessHeat")
             end
         end
