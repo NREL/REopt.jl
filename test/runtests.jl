@@ -4349,10 +4349,10 @@ else  # run HiGHS tests
                 # Create 4 sub-hourly values per hour with sine wave variation
                 # Base load with ±10% sine wave variation within each hour
                 for quarter_hour in 1:4
-                    # Phase angle for this quarter hour (0, π/2, π, 3π/2)
-                    phase = (quarter_hour - 1) * π / 2
+                    # Intra-hour phase angle for this quarter hour (0, π/2, π, 3π/2)
+                    intra_hour_phase = (quarter_hour - 1) * π / 2
                     # Sine wave variation: ±10% of hourly load
-                    variation = 0.1 * sin(phase + 2π * hour_idx / 24)  # Daily cycle component
+                    variation = 0.1 * sin(intra_hour_phase + 2π * hour_idx / 24)  # Daily cycle component
                     sub_hourly_load = hourly_load * (1.0 + variation)
                     push!(fifteen_min_loads, max(0.0, sub_hourly_load))  # Ensure non-negative
                 end
@@ -4423,7 +4423,7 @@ else  # run HiGHS tests
             
             # Validate that 15-minute energy totals approximately match hourly totals
             # (accounting for sine wave variations that should average out over time)
-            hourly_annual_energy = sum(base_hourly_loads) / 1.0  # Already in kWh for hourly data
+            hourly_annual_energy = sum(base_hourly_loads)  # Already in kWh for hourly data
             fifteen_min_annual_energy = annual_calc_load_15min
             @test fifteen_min_annual_energy ≈ hourly_annual_energy rtol=0.05  # 5% tolerance for sine variations
             finalize(backend(m))

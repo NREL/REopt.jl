@@ -40,7 +40,7 @@ Outputs related to REopt calculated costs of electricity (year-one rates and cos
 
 Prefix net_metering, wholesale, or net_metering_excess (export categories) for following outputs, all can be in results if relevant inputs are provided.
 - `_export_rate_series` export rate timeseries for type of export category in [\$/kWh]
-- `_electric_to_grid_series_kw` exported electricity timeseries for type of export category in [\$/kW]
+- `_electric_to_grid_series_kw` exported electricity timeseries for type of export category in [kW]
 - `_monthly_export_series_kwh` monthly exported energy totals by export category in [kWh]
 - `_monthly_export_cost_benefit_before_tax` monthly export benefit by export category in [\$]
 
