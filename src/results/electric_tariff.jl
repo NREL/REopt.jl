@@ -16,7 +16,7 @@
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
 
 Outputs related to electric tariff (year-one rates and costs; not escalated):
-- `monthly_fixed_cost` the fixed monthly cost of electricity for modeled meter per chosen electric tariff in \$/month
+- `monthly_fixed_cost_series_before_tax` the fixed monthly cost of electricity for modeled meter per chosen electric tariff in \$/month
 - `energy_rate_series` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
 - `energy_rate_tier_limits` dictionary for energy rate tier limits, each key corresponds to a tier with value being kWh limit
 - `energy_rate_average_series` average energy rate across all tiers as \$/kWh timeseries
@@ -82,7 +82,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["year_one_bill_after_tax"] = r["year_one_bill_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
 
-    r["monthly_fixed_cost"] = repeat([p.s.electric_tariff.fixed_monthly_charge], 12)
+    r["monthly_fixed_cost_series_before_tax"] = repeat([p.s.electric_tariff.fixed_monthly_charge], 12)
     
     # energy cost dictionary and tier limits.
     r["energy_rate_series"] = Dict()
