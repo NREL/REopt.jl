@@ -33,6 +33,21 @@ struct URDBrate
     min_monthly_charge::Float64
 
     sell_rates::Array{Float64,2}  # time X tier
+
+    # add new fields here
+    label::String
+    rate_name::String
+    utility::String
+    rate_effective_date::String
+    voltage_level::String
+    rate_description::String
+    peak_kw_capacity_min::Float64
+    peak_kw_capacity_max::Float64
+    rate_additional_info::String
+    energy_comments::String
+    demand_comments::String
+    url_link::String   # why type would a url be?
+
 end
 
 
@@ -68,7 +83,24 @@ process URDB response dict, parse into reopt inputs, return URDBrate struct.
 """
 function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
-    demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
+    label = get(urdb_response, "label", "")
+    rate_name = get(urdb_response, "name", "")
+    utility = get(urdb_response, "utility", "")
+    latest_update_unix = get(urdb_response, "latest_update", 0.0)
+    voltage_level = get(urdb_response, "voltagecategory", "")
+    rate_description = get(urdb_response, "description", "")
+    peak_kw_capacity_min = get(urdb_response, "peakkwcapacitymin", 0.0)  
+    peak_kw_capacity_max = get(urdb_response, "peakkwcapacitymax", 0.0)  
+    rate_additional_info = get(urdb_response, "basicinformationcomments", "")
+    energy_comments = get(urdb_response, "energycomments", "")
+    demand_comments = get(urdb_response, "demandcomments", "")
+    url_link = get(urdb_response, "uri", "")
+
+    # Convert Unix timestamp to datetime string
+    rate_effective_date = ""
+    if latest_update_unix > 0
+        rate_effective_date = string(Dates.unix2datetime(latest_update_unix))
+    end
 
     # Convert matrix to array if needed
     possible_matrix = ["demandratestructure", "flatdemandstructure", "demandweekdayschedule", 
@@ -112,7 +144,20 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
         annual_min_charge,
         min_monthly_charge,
 
-        sell_rates
+        sell_rates,
+
+        label,
+        rate_name,
+        utility,
+        rate_effective_date,
+        voltage_level,
+        rate_description,
+        peak_kw_capacity_min,
+        peak_kw_capacity_max,
+        rate_additional_info,
+        energy_comments,
+        demand_comments,
+        url_link
     )
 end
 

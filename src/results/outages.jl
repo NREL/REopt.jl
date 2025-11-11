@@ -42,6 +42,9 @@
 	
 !!! warn
 	The `Outages` results can be very large when many outages are modeled and can take a long time to generate.
+
+!!! note "Accessing outage results"
+    Outage timeseries results are 3-dimensional arrays with dimensions corresponding to the outage durations, the outage start time, and the time step in the outage. For example, `results["Outages"]["pv_to_load_series_kw"][s,t,ts]` is the PV power used to meet load in outage scenario (duration) `s`, starting at time step `t`, at time step `ts` in that outage.
 """
 function add_outage_results(m, p, d::Dict)
 	# Adds the `Outages` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
