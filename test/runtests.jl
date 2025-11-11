@@ -4420,7 +4420,7 @@ else  # run HiGHS tests
             
             # Validate that 15-minute energy totals approximately match hourly totals
             # (accounting for sine wave variations that should average out over time)
-            hourly_annual_energy = sum(base_hourly_loads) / 1.0  # Already in kWh for hourly data
+            hourly_annual_energy = sum(base_hourly_loads)  # Already in kWh for hourly data
             fifteen_min_annual_energy = annual_calc_load_15min
             @test fifteen_min_annual_energy ≈ hourly_annual_energy rtol=0.05  # 5% tolerance for sine variations
         end
