@@ -16,17 +16,17 @@
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
 
 Outputs related to electric tariff (year-one rates and costs; not escalated):
-- `monthly_fixed_cost` the fixed monthly cost of electricity for each month per chosen electric tariff
+- `monthly_fixed_cost_series_before_tax` the fixed monthly cost of electricity for modeled meter per chosen electric tariff in \$/month
 - `energy_rate_series` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
-- `energy_rate_tier_limits` dictionary for cost of electricity, each key corresponds to a tier with value being \$/kWh timeseries
+- `energy_rate_tier_limits` dictionary for energy rate tier limits, each key corresponds to a tier with value being kWh limit
 - `energy_rate_average_series` average energy rate across all tiers as \$/kWh timeseries
-- `facility_demand_monthly_rate_series` facility demand charges (rows = months, columns = # of tiers)
-- `facility_demand_monthly_rate_tier_limits` facility demand charges (rows = months, columns = # of tiers)
-- `tou_demand_rate_series` is a dictionary with TOU demand charges as timeseries for each timestep
+- `facility_demand_monthly_rate_series` facility demand charge in \$/kW (keys = tiers, values = demand charge for each month)
+- `facility_demand_monthly_rate_tier_limits` facility demand charge limits in kW (keys = tiers, values = demand limit for each month)
+- `tou_demand_rate_series` is a dictionary with TOU demand charges in \$/kW as timeseries for each timestep
 - `demand_rate_average_series` average TOU demand rate across all tiers as \$/kW timeseries
-- `tou_demand_rate_tier_limits`
+- `tou_demand_rate_tier_limits` TOU demand charge limits in kW
 
-Outputs related to eventual costs of electricity (year-one rates and costs; not escalated):
+Outputs related to REopt calculated costs of electricity (year-one rates and costs; not escalated):
 - `energy_cost_series_before_tax` timeseries of cost of electricity purchases from the grid (grid to total net load)
 - `monthly_energy_cost_series_before_tax`
 - `monthly_facility_demand_cost_series_before_tax`
@@ -39,10 +39,13 @@ Outputs related to eventual costs of electricity (year-one rates and costs; not 
 - `monthly_demand_cost_series_before_tax` sum of monthly facility and TOU demand costs, across all Tiers
 
 Prefix net_metering, wholesale, or net_metering_excess (export categories) for following outputs, all can be in results if relevant inputs are provided.
-- `_export_rate_series` export rate timeseries for type of export category
-- `_electric_to_grid_series_kw` exported electricity timeseries for type of export category
-- `_monthly_export_series_kwh` monthly exported energy totals by export category
-- `_monthly_export_cost_benefit_before_tax` monthly export benefit by export category
+- `_export_rate_series` export rate timeseries for type of export category in [\$/kWh]
+- `_electric_to_grid_series_kw` exported electricity timeseries for type of export category in [kW]
+- `_monthly_export_series_kwh` monthly exported energy totals by export category in [kWh]
+- `_monthly_export_cost_benefit_before_tax` monthly export benefit by export category in [\$]
+
+!!! note "Handling of tiered rates"
+	Energy and demand charges costs are returned as a dictionary with each key corresponding to a cost tier. 
 
 """
 
@@ -79,7 +82,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["year_one_bill_after_tax"] = r["year_one_bill_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
 
-    r["monthly_fixed_cost"] = repeat([p.s.electric_tariff.fixed_monthly_charge], 12)
+    r["monthly_fixed_cost_series_before_tax"] = repeat([p.s.electric_tariff.fixed_monthly_charge], 12)
     
     # energy cost dictionary and tier limits.
     r["energy_rate_series"] = Dict()
@@ -220,18 +223,18 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         binmap[Symbol("EXC")] = "net_metering_excess"
         if !isempty(p.techs.elec)
             for bin in p.s.electric_tariff.export_bins
-                cost_series = string(binmap[bin], "_export_rate_series")
+                rate_series = string(binmap[bin], "_export_rate_series")
                 export_series = string(binmap[bin], "_electric_to_grid_series_kw")
 
-                r[cost_series] = collect(p.s.electric_tariff.export_rates[bin])
+                r[rate_series] = collect(p.s.electric_tariff.export_rates[bin])
                 r[export_series] = collect(value.(sum(m[Symbol("dvProductionToGrid"*_n)][t, bin, :] for t in p.techs.elec)))
 
                 r[string(binmap[bin], "_monthly_export_series_kwh")] = []
                 r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")] = []
                 for mth in 1:12
                     idx = findall(x -> Dates.month(x) == mth, dr)
-                    push!(r[string(binmap[bin], "_monthly_export_series_kwh")], sum(r[export_series][idx]))
-                    push!(r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")], sum((r[cost_series].*r[export_series])[idx]))
+                    push!(r[string(binmap[bin], "_monthly_export_series_kwh")], sum(r[export_series][idx]) / p.s.time_steps_per_hour)
+                    push!(r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")], sum((r[rate_series].*r[export_series])[idx]) / p.s.time_steps_per_hour)
                 end
             end
         end

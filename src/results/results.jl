@@ -183,7 +183,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricTariff", "year_one_export_benefit_after_tax"),
         ("ElectricTariff", "year_one_coincident_peak_cost_before_tax"),
         ("ElectricTariff", "lifecycle_coincident_peak_cost_after_tax"),
-        ("ElectricTariff", "monthly_fixed_cost"),
+        ("ElectricTariff", "monthly_fixed_cost_series_before_tax"),
         ("ElectricTariff", "energy_cost_series_before_tax"),
         ("ElectricTariff", "monthly_energy_cost_series_before_tax"),
         ("ElectricTariff", "monthly_facility_demand_cost_series_before_tax"),
