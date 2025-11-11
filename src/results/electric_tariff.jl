@@ -46,7 +46,7 @@ Prefix net_metering, wholesale, or net_metering_excess (export categories) for f
 
 !!! note "Handling of tiered rates"
 	Energy and demand charges costs are returned as a dictionary with each key corresponding to a cost tier. 
-
+    REopt assumes all TOU periods have the same tier limits
 """
 
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
