@@ -223,18 +223,18 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         binmap[Symbol("EXC")] = "net_metering_excess"
         if !isempty(p.techs.elec)
             for bin in p.s.electric_tariff.export_bins
-                cost_series = string(binmap[bin], "_export_rate_series")
+                rate_series = string(binmap[bin], "_export_rate_series")
                 export_series = string(binmap[bin], "_electric_to_grid_series_kw")
 
-                r[cost_series] = collect(p.s.electric_tariff.export_rates[bin])
+                r[rate_series] = collect(p.s.electric_tariff.export_rates[bin])
                 r[export_series] = collect(value.(sum(m[Symbol("dvProductionToGrid"*_n)][t, bin, :] for t in p.techs.elec)))
 
                 r[string(binmap[bin], "_monthly_export_series_kwh")] = []
                 r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")] = []
                 for mth in 1:12
                     idx = findall(x -> Dates.month(x) == mth, dr)
-                    push!(r[string(binmap[bin], "_monthly_export_series_kwh")], sum(r[export_series][idx]))
-                    push!(r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")], sum((r[cost_series].*r[export_series])[idx]))
+                    push!(r[string(binmap[bin], "_monthly_export_series_kwh")], sum(r[export_series][idx]) / p.s.time_steps_per_hour)
+                    push!(r[string(binmap[bin], "_monthly_export_cost_benefit_before_tax")], sum((r[rate_series].*r[export_series])[idx]) / p.s.time_steps_per_hour)
                 end
             end
         end
