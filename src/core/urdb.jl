@@ -38,7 +38,7 @@ struct URDBrate
     label::String
     rate_name::String
     utility::String
-    rate_effective_date::String   # could be tricky since date is in weird format
+    rate_effective_date::String
     voltage_level::String
     rate_description::String
     peak_kw_capacity_min::Float64
@@ -149,7 +149,7 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
         label,
         rate_name,
         utility,
-        rate_effective_date,   # could be tricky since date is in weird date format (unix2datetime)
+        rate_effective_date,
         voltage_level,
         rate_description,
         peak_kw_capacity_min,

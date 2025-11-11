@@ -24,19 +24,19 @@ Outputs related to electric tariff (year-one rates and costs; not escalated):
 - `facility_demand_monthly_rate_tier_limits` facility demand charge limits in kW (keys = tiers, values = demand limit for each month)
 - `tou_demand_rate_series` is a dictionary with TOU demand charges in \$/kW as timeseries for each timestep
 - `demand_rate_average_series` average TOU demand rate across all tiers as \$/kW timeseries
-- `tou_demand_rate_tier_limits` TOU demand charge limits in kW
+- `tou_demand_rate_tier_limits` TOU demand charge limits [kW]
 
 Outputs related to REopt calculated costs of electricity (year-one rates and costs; not escalated):
-- `energy_cost_series_before_tax` timeseries of cost of electricity purchases from the grid (grid to total net load)
-- `monthly_energy_cost_series_before_tax`
-- `monthly_facility_demand_cost_series_before_tax`
+- `energy_cost_series_before_tax` timeseries of cost of electricity purchases from the grid (grid to total net load) [\$]
+- `monthly_energy_cost_series_before_tax` Monthly energy costs, summed across all tiers [\$]
+- `monthly_facility_demand_cost_series_before_tax`  Monthly facility demand cost, dictionary by Tier number [\$]
 - `tou_demand_metrics` -> month: Month this TOU period applies to
 - `tou_demand_metrics` -> tier: Tier of TOU period
 - `tou_demand_metrics` -> demand_rate: \$/kW TOU demand charge
 - `tou_demand_metrics` -> measured_tou_peak_demand: measured peak kW load in TOU period [kW]
 - `tou_demand_metrics` -> demand_charge_before_tax`: calculated demand charge [\$]
-- `monthly_tou_demand_cost_series_before_tax`
-- `monthly_demand_cost_series_before_tax` sum of monthly facility and TOU demand costs, across all Tiers
+- `monthly_tou_demand_cost_series_before_tax`  Monthly TOU demand costs, dictionary by Tier number [\$]
+- `monthly_demand_cost_series_before_tax` Monthly total facility plus TOU demand costs, summed across all tiers [\$]
 
 Prefix net_metering, wholesale, or net_metering_excess (export categories) for following outputs, all can be in results if relevant inputs are provided.
 - `_export_rate_series` export rate timeseries for type of export category in [\$/kWh]
@@ -145,7 +145,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
        r["energy_cost_series_before_tax"][string("Tier_", idx)] = col.*collect(value.(m[Symbol("dvGridPurchase"*_n)][:,idx])).* p.hours_per_time_step
     end
     
-    if Dates.isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm. TODO handle extra day for leap year, remove ts_shift.
+    if Dates.isleapyear(p.s.electric_load.year) # end dr on Dec 30th 11:59 pm.
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,30,23,59)
     else
         dr = DateTime(p.s.electric_load.year):Dates.Minute(Int(60*p.hours_per_time_step)):DateTime(p.s.electric_load.year,12,31,23,59)
