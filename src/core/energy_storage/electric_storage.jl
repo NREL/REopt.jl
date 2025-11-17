@@ -189,10 +189,10 @@ end
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025 # Annual O&M cost as a fraction of installed cost
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 5 #Note: default may change if Site.sector is not "commercial/industrial"
+    macrs_bonus_fraction::Float64 = 1.0 #Note: default may change if Site.sector is not "commercial/industrial"
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.3
+    total_itc_fraction::Float64 = 0.3 #Note: default may change if Site.sector is not "commercial/industrial"
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
@@ -235,8 +235,8 @@ Base.@kwdef struct ElectricStorageDefaults
     battery_replacement_year::Int = 10
     cost_constant_replacement_year::Int = 10
     om_cost_fraction_of_installed_cost::Float64 = 0.025
-    macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.6
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
@@ -256,7 +256,7 @@ end
 
 
 """
-    function ElectricStorage(d::Dict, f::Financial, settings::Settings)
+    function ElectricStorage(d::Dict, f::Financial, s::Site)
 
 Construct ElectricStorage struct from Dict with keys-val pairs from the 
 REopt ElectricStorage and Financial inputs.
@@ -307,9 +307,10 @@ struct ElectricStorage <: AbstractElectricStorage
     fixed_soc_series_fraction::Union{Nothing, Array{<:Real,1}}
     fixed_soc_series_fraction_tolerance::Real
     
-    function ElectricStorage(d::Dict, f::Financial)
+    function ElectricStorage(d::Dict, f::Financial, s::Site)  
+        set_sector_defaults!(d; struct_name="Storage", sector=s.sector, federal_procurement_type=s.federal_procurement_type)
 
-        s = ElectricStorageDefaults(;d...)
+        s = ElectricStorageDefaults(;dictkeys_tosymbols(d)...)
 
         if s.inverter_replacement_year >= f.analysis_years
             @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."

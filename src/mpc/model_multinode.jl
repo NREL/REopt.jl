@@ -77,7 +77,7 @@ function build_mpc!(m::JuMP.AbstractModel, ps::AbstractVector{MPCInputs})
 				elseif b in p.s.storage.types.cold
 					add_cold_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
 				else
-					@error("Invalid storage does not fall in a thermal or electrical set")
+					throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 				end
 			end
 		end

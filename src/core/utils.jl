@@ -153,7 +153,9 @@ function dictkeys_tosymbols(d::Dict)
             "thermal_loads_ton",
             "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
-            "production_factor_series", 
+            "production_factor_series",
+            "production_factor",
+            "elec_consumption_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
             "blended_industrial_reference_percents",
@@ -566,6 +568,61 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 end
 
 """
+    get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_to_console=false)
+
+Analyze the timeseries load profile data to get monthly and annual metrics. 
+The units of the returned metrics are dependent on the units of the load_profile input
+E.g. if load_profile is in kW, the energy metrics will be in kWh. if MMBtu/hr, then MMBtu.
+# Arguments
+- `load_profile`: Array of load values (kW) for the entire year, with a length of `8760 * time_steps_per_hour`.
+- `time_steps_per_hour`: Number of time steps per hour (e.g., 1 for hourly data, 4 for 15-minute intervals). Default is 1.
+- `year`: The year of the load profile, used to determine the number of days in each month (e.g., leap years). Default is 2025.
+- `print_to_console`: Boolean flag to print the results to the console. Default is false.
+# Returns
+- `monthly_energy`: Array of 12 values representing the total energy usage (e.g. kWh) for each month.
+- `monthly_peaks`: Array of 12 values representing the peak demand (e.g. kW) for each month.
+- `annual_energy`: Total annual energy usage (e.g. kWh).
+- `annual_peak`: Maximum peak demand (e.g. kW) for the year.
+
+"""
+function get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_to_console=false)
+
+    # Initialize empty arrays
+    monthly_energy = zeros(12)
+    monthly_peaks = zeros(12)
+
+    # This method handles leap-year truncating of last day
+    monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
+
+    for month in 1:12
+        start_idx = monthly_timesteps[month][1]
+        end_idx = monthly_timesteps[month][end]
+        month_load_series = load_profile[start_idx:end_idx]
+        monthly_peaks[month] = maximum(month_load_series)
+        monthly_energy[month] = sum(month_load_series) / time_steps_per_hour
+    end
+
+    annual_energy = sum(monthly_energy)
+    annual_peak = maximum(monthly_peaks)
+
+    if print_to_console
+        println("Monthly Energy: ", monthly_energy)
+        println("Monthly Peak Load: ", monthly_peaks)
+        println("Annual Energy: ", annual_energy)
+        println("Annual Peak Load: ", annual_peak)
+    end
+
+    return_dict = Dict(
+        "monthly_energy" => monthly_energy,
+        "monthly_peaks" => monthly_peaks,
+        "annual_energy" => annual_energy,
+        "annual_peak" => annual_peak
+    )
+
+    return return_dict
+end
+
+"""
 fuel_slope_and_intercept(;
                 electric_efficiency_full_load::Real, [kWhe/kWht]
                 electric_efficiency_half_load::Real, [kWhe/kWht]
@@ -603,8 +660,266 @@ function check_api_key()
     end
 end
 
+function check_api_email()
+    if isempty(get(ENV, "NREL_DEVELOPER_EMAIL", ""))
+        throw(@error("No NREL Developer API Email provided when trying to call PVWatts or Wind Toolkit.
+                    Within your Julia environment, specify ENV['NREL_DEVELOPER_EMAIL']='your contact email'
+                    See https://nrel.github.io/REopt.jl/dev/ for more information."))
+    end
+end
+
 function error_if_series_vals_not_0_to_1(series, input_struct_name, input_name)
     if any(x -> x < 0 || x > 1, series)
         throw(@error("All values in the provided $(input_struct_name) $(input_name) must be between 0 and 1."))
     end
+end
+
+# Functions to load sector dependent default data from JSON file
+function state_name_to_abbr(federal_sector_state::String)
+    abbr_lookup = Dict{String,String}(
+            "Washington" => "WA",
+            "Oregon" => "OR",
+            "California" => "CA",
+            "Alaska" => "AK",
+            "Hawaii" => "HI",
+            "Nevada" => "NV",
+            "Idaho" => "ID",
+            "Utah" => "UT",
+            "Arizona" => "AZ",
+            "Montana" => "MT",
+            "Wyoming" => "WY",
+            "Colorado" => "CO",
+            "New Mexico" => "NM",
+
+            "North Dakota" => "ND",
+            "South Dakota" => "SD",
+            "Nebraska" => "NE",
+            "Kansas" => "KS",
+            "Minnesota" => "MN",
+            "Iowa" => "IA",
+            "Missouri" => "MO",
+            "Wisconsin" => "WI",
+            "Illinois" => "IL",
+            "Indiana" => "IN",
+            "Ohio" => "OH",
+            "Michigan" => "MI",
+
+            "Louisiana" => "LA",
+            "Texas" => "TX",
+            "Oklahoma" => "OK",
+            "Arkansas" => "AR",
+            "Kentucky" => "KY",
+            "Tennessee" => "TN",
+            "Alabama" => "AL",
+            "Mississippi" => "MS",
+            "North Carolina" => "NC",
+            "South Carolina" => "SC",
+            "Georgia" => "GA",
+            "Florida" => "FL",
+            "West Virginia" => "WV",
+            "Virginia" => "VA",
+            "Maryland" => "MD",
+            "Delaware" => "DE",
+            "District of Columbia" => "DC",
+
+            "New Jersey" => "NJ",
+            "New York" => "NY",
+            "Pennsylvania" => "PA",
+            "Connecticut" => "CT",
+            "Rhode Island" => "RI",
+            "Massachusetts" => "MA",
+            "New Hampshire" => "NH",
+            "Maine" => "ME",
+            "Vermont" => "VT"
+        )
+    if federal_sector_state in values(abbr_lookup)
+        return federal_sector_state
+    else
+        return get(
+            abbr_lookup,
+            federal_sector_state,
+            ""
+        )
+    end
+end
+function get_NIST_EERC_rate_region(state::String)
+    state_abbr = state_name_to_abbr(state)
+    abbr_to_region = Dict{String,String}(
+        "WA" => "West",
+        "OR" => "West",
+        "CA" => "West",
+        "AK" => "West",
+        "HI" => "West",
+        "NV" => "West",
+        "ID" => "West",
+        "UT" => "West",
+        "AZ" => "West",
+        "MT" => "West",
+        "WY" => "West",
+        "CO" => "West",
+        "NM" => "West",
+
+        "ND" => "Midwest",
+        "SD" => "Midwest",
+        "NE" => "Midwest",
+        "KS" => "Midwest",
+        "MN" => "Midwest",
+        "IA" => "Midwest",
+        "MO" => "Midwest",
+        "WI" => "Midwest",
+        "IL" => "Midwest",
+        "IN" => "Midwest",
+        "OH" => "Midwest",
+        "MI" => "Midwest",
+
+        "LA" => "South",
+        "TX" => "South",
+        "OK" => "South",
+        "AR" => "South",
+        "KY" => "South",
+        "TN" => "South",
+        "AL" => "South",
+        "MS" => "South",
+        "NC" => "South",
+        "SC" => "South",
+        "GA" => "South",
+        "FL" => "South",
+        "WV" => "South",
+        "VA" => "South",
+        "MD" => "South",
+        "DE" => "South",
+        "DC" => "South",
+
+        "NJ" => "Northeast",
+        "NY" => "Northeast",
+        "PA" => "Northeast",
+        "CT" => "Northeast",
+        "RI" => "Northeast",
+        "MA" => "Northeast",
+        "NH" => "Northeast",
+        "ME" => "Northeast",
+        "VT" => "Northeast"
+    )
+    return get(abbr_to_region, state_abbr, "")
+end
+function filter_sector_defaults_by_region!(defaults::Dict; federal_escalation_region::String)
+    if isempty(federal_escalation_region)
+        return
+    else
+        if "Financial" in keys(defaults)
+            for input_key in ["elec_cost_escalation_rate_fraction", "existing_boiler_fuel_cost_escalation_rate_fraction",
+                                "boiler_fuel_cost_escalation_rate_fraction", "chp_fuel_cost_escalation_rate_fraction",
+                                "generator_fuel_cost_escalation_rate_fraction"]
+                defaults["Financial"][input_key] = defaults["Financial"][input_key][federal_escalation_region]
+            end
+        else
+            for key in keys(defaults)
+                filter_sector_defaults_by_region!(defaults[key]; federal_escalation_region=federal_escalation_region)
+            end
+        end
+    end
+end
+function get_all_sector_defaults()
+    sector_defaults_path = joinpath(@__DIR__, "..", "..", "data", "sector_dependent_defaults.json")
+    if !isfile(sector_defaults_path)
+        throw(ErrorException("sector_dependent_defaults.json not found at path: $sector_defaults_path"))
+    end
+    sector_defaults = JSON.parsefile(sector_defaults_path)
+    return sector_defaults
+end
+function get_sector_defaults(; sector::String, federal_procurement_type::String="", federal_sector_state::String="", struct_name::String="")
+    sector_defaults = get_all_sector_defaults()
+    
+    if sector=="federal"
+        if isempty(federal_procurement_type) 
+            throw(@error("federal_procurement_type must be provided to get_sector_defaults() when sector is 'federal'"))
+        end
+        sector_defaults = get(get(sector_defaults, sector, Dict{String,Any}()), federal_procurement_type, Dict{String,Any}())
+        federal_escalation_region = get_NIST_EERC_rate_region(federal_sector_state)
+        if struct_name == "Financial" || isempty(struct_name)
+            if isempty(federal_escalation_region)
+                @warn "No or invalid federal_sector_state provided, so national average used for default federal escalation rates."
+                federal_escalation_region = "National"
+            end
+            filter_sector_defaults_by_region!(sector_defaults; federal_escalation_region=federal_escalation_region)
+        end
+    else
+        sector_defaults = get(sector_defaults, sector, Dict{String,Any}())
+    end
+
+    if !isempty(struct_name)
+        sector_defaults = get(sector_defaults, struct_name, Dict{String,Any}())
+    end
+    
+    return sector_defaults
+end
+function set_sector_defaults!(d::Dict; struct_name::String, sector::String, federal_procurement_type::String="", federal_sector_state::String="")
+    sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
+    for (input_name, input_val) in sector_defaults
+        if !(input_name in keys(d))
+            d[input_name] = input_val
+        end
+    end
+end
+
+function struct_to_dict(obj)
+    result = Dict{String, Any}()
+    if obj === nothing
+        return result
+    end
+
+    field_names = fieldnames(typeof(obj))
+    for field_name in field_names
+        field_value = getfield(obj, field_name)
+        field_name_str = string(field_name)
+        if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
+            continue
+        end
+        if field_value === nothing
+            result[field_name_str] = ""
+        elseif typeof(field_value) <: Vector && !isempty(field_value)
+            # Handle arrays
+            if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
+                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
+            else
+                result[field_name_str] = collect(field_value)
+            end
+        elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
+            # Nested struct
+            result[field_name_str] = struct_to_dict(field_value)
+        else
+            # Primitive types
+            result[field_name_str] = field_value
+        end
+    end
+    
+    return result
+end
+
+"""
+    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String) -> Array{<:Real,1}
+
+Checks and adjusts the length of a user-provided load series to ensure it matches the expected length based on the `time_steps_per_hour` setting.
+
+# Arguments
+- `load_series::Array{<:Real,1}`: The input load series (e.g., electric load, thermal load) provided by the user.
+- `time_steps_per_hour::Int`: The number of time steps per hour (e.g., 1 for hourly, 4 for 15-minute intervals).
+- `load_type::String`: A descriptive name for the load type (e.g., "electric load", "thermal load") used in error or warning messages.
+
+# Returns
+- `Array{<:Real,1}`: The adjusted load series if modifications are required, or the original load series if it already matches the expected length.
+"""
+function check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
+            # Timestep checks for custom loads
+        if length(load_series) > 0 && length(load_series) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
+            if length(load_series) < 8760 * time_steps_per_hour && length(load_series) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
+                load_series = repeat(load_series, inner=Int(time_steps_per_hour / (length(load_series)/8760)))
+                @warn "Repeating provided $load_type in each hour to match the time_steps_per_hour."
+                return load_series
+            else # loads_kw is higher resolution than time_steps_per_hour or not an integer multiple of 8760
+                throw(@error("Provided $load_type does not match the Settings.time_steps_per_hour."))
+            end
+        else 
+            return load_series # series not provided or is correct length
+        end
 end

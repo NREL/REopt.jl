@@ -29,12 +29,14 @@
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
+    can_waste_heat::Bool = false
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = true
+    charge_storage_only::Bool = false
 
-    macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 0.0    
+    macrs_option_years::Int = 5 # Note that this value cannot be 0 if aiming to apply 100% bonus depreciation
+    macrs_bonus_fraction::Float64 = 1.0
 ```
 
 """
@@ -65,16 +67,20 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
+    can_waste_heat::Bool = false
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = true
+    charge_storage_only::Bool = false
 
-    macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 0.0   
+    macrs_option_years::Int = 5
+    macrs_bonus_fraction::Float64 = 1.0   
 end
 
 
-function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing)
+function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, sector::String, federal_procurement_type::String)
+    set_sector_defaults!(d; struct_name="SteamTurbine", sector=sector, federal_procurement_type=federal_procurement_type)
+    pop!(d, "federal_itc_fraction", nothing)  #gets added in set_sector_defaults but not an input option for SteamTurbine
     st = SteamTurbine(; dictkeys_tosymbols(d)...)
 
     # Must provide prime_mover or all of custom_chp_inputs
