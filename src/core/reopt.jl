@@ -194,13 +194,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			fix(m[:dvGridPurchase][ts, tier] , 0.0, force=true)
 		end
 
-		for t in p.s.storage.types.elec
-			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
+		for b in p.s.storage.types.elec
+			fix(m[:dvGridToStorage][b, ts], 0.0, force=true)
 		end
 
         if !isempty(p.s.electric_tariff.export_bins)
             for t in p.techs.elec, u in p.export_bins_by_tech[t]
                 fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
+            end
+			for b in p.s.storage.types.elec, u in p.export_bins_by_storage[b]
+                fix(m[:dvStorageToGrid][b, u, ts], 0.0, force=true)
             end
         end
 	end
@@ -276,6 +279,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ExistingChillerCost] = 0.0
 	m[:ElectricStorageCapCost] = 0.0
 	m[:ElectricStorageOMCost] = 0.0
+	m[:TotalUtilityGridCost] = 0.0
 
 	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
 		if !isempty(p.techs.all)
@@ -437,7 +441,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		degr_bool = p.s.storage.attr[b].model_degradation
 		if degr_bool
-			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost will include costs to be incurred for power electronics and the cost constant."
+			@info "Battery energy capacity degradation costs for $b are being modeled using REopt's Degradation model. ElectricStorageOMCost will include costs incurred for power electronics [per kW] and the cost constant, but not for the per kWh components."
             add_to_expression!(
 				m[:ElectricStorageOMCost], -1.0 * p.third_party_factor * p.pwf_om * p.s.storage.attr[b].om_cost_fraction_of_installed_cost * p.s.storage.attr[b].installed_cost_per_kwh * m[:dvStorageEnergy][b]
 			)
@@ -515,6 +519,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	initial_capex_no_incentives(m, p)
 	if !isnothing(p.s.financial.min_initial_capital_costs_before_incentives) || !isnothing(p.s.financial.max_initial_capital_costs_before_incentives)
 		add_capex_constraints(m, p)
+	end 
+
+	# Calculate total grid cost based on utility grid cost per kW series and net load 
+	if !isempty(p.s.electric_utility.utility_grid_cost_per_kw_series)
+		calculate_net_load(m, p)
+		m[:TotalUtilityGridCost] = p.pwf_e * sum(p.s.electric_utility.utility_grid_cost_per_kw_series .* m[:dvNetLoad])
 	end
 
 	#################################  Objective Function   ########################################
@@ -550,7 +560,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost] - 
 
 		# Subtract capital expenditures avoided by inclusion of ASHP
-		m[:AvoidedCapexByASHP]
+		m[:AvoidedCapexByASHP] + 
+
+		# Add utility grid cost (not incurred by customer) - only nonzero if utility_grid_cost_per_kw_series provided
+		m[:TotalUtilityGridCost]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
@@ -671,6 +684,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
+		dvNetLoad[p.time_steps]  # Net load after on-site generation and storage [kW]
 	end
 
 	if !isempty(p.s.storage.types.elec)
@@ -697,6 +711,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 
     if !isempty(p.s.electric_tariff.export_bins)
         @variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
+		@variable(m, dvStorageToGrid[p.s.storage.types.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)

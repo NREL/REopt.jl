@@ -167,16 +167,20 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
             "renewable_energy_fraction_series",
+            "utility_grid_cost_per_kw_series",
             "heating_cop_reference",
             "heating_cf_reference",
             "heating_reference_temps_degF",
             "cooling_cop_reference",
             "cooling_cf_reference",
             "cooling_reference_temps_degF",
+            "cycle_fade_coefficient",
+            "cycle_fade_fraction",
             #for ERP
             "pv_production_factor_series", "wind_production_factor_series",
             "battery_starting_soc_series_fraction",
-            "monthly_mmbtu", "monthly_tonhour"
+            "monthly_mmbtu", "monthly_tonhour",
+            "fixed_soc_series_fraction"
         ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
