@@ -813,6 +813,7 @@ else  # run HiGHS tests
                 d["ElectricHeater"]["installed_cost_per_mmbtu_per_hour"] = 1.0
                 d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
                 d["HotThermalStorage"]["max_gal"] = 0.0
+                d["HotThermalStorage"]["min_gal"] = 0.0
                 s = Scenario(d)
                 inputs = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -3085,17 +3086,17 @@ else  # run HiGHS tests
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, p)
-
-            annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
+            annual_thermal_prod = 0.64 * 8760  #80% efficient boiler --> 0.64 MMBTU of heat load per hour for electric heater
             annual_electric_heater_consumption = annual_thermal_prod * REopt.KWH_PER_MMBTU  #1.0 COP
             annual_energy_supplied = 87600 + annual_electric_heater_consumption
 
-            #Second run: ElectricHeater produces the required heat with free electricity
-            @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.8 atol=0.1
+            #Second run: ElectricHeater produces the required heat with free electricity for two of three heat sources
+            @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.64 atol=0.1
             @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
             @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ annual_electric_heater_consumption rtol=1e-4
             @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
-
+            #no bypass of Electric Heater through Hot TES to process heat
+            @test sum(results["HotThermalStorage"]["storage_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
             finalize(backend(m))
             empty!(m)
             GC.gc()

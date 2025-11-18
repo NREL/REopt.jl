@@ -25,6 +25,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## V0.56.1
+### Fixed
+- `CST` bypassing constraints for not serving (`can_serve_.. = false`) heating load types by going through the `HighTempThermalStorage`
+- Type error with `ElectricLoad.monthly_peaks_kw` so that it now converts Vector{Any} to Vector{<:Real}
+- `ElectricTariff.urdb_metadata.rate_effective_date` with the right URDB parameter
 
 ## v0.56.0
 ### Added
