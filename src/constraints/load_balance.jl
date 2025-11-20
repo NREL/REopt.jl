@@ -14,7 +14,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
                     - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.dc_coupled)
                     - m[Symbol("dvCurtail"*_n)][t, ts])
                 for t in p.techs.dc_coupled_with_storage)
-            + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec) 
+            + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec) # dvDischargeFromStorage is AC 
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
             ==
             sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
