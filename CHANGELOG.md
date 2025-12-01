@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.56.3
+### Fixed
+- Correctly escape the \$ symbol in docstring for `REopt.add_electric_tariff_results` in `results/electric_tariff.jl`
+
 ## v0.56.2
 ### Fixed
 - Robust fix for type error with `ElectricLoad.monthly_peaks_kw` so that it now converts Vector{Any} to Vector{Float64} in scenario.jl before constructing `ElectricLoad`. Also converted `ElectricLoad.monthly_totals_kwh` to Vector{Float64} for good measure even though we weren't getting errors with that.
