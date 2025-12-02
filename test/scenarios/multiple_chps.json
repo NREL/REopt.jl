@@ -1,0 +1,55 @@
+{
+    "Site": {
+        "latitude": 34.5794343,
+        "longitude": -118.1164613
+    },
+    "Financial": {
+        "om_cost_escalation_rate_fraction": 0.025,
+        "elec_cost_escalation_rate_fraction": 0.023,
+        "offtaker_tax_rate_fraction": 0.26,
+        "offtaker_discount_rate_fraction": 0.083,
+        "analysis_years": 25
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "Hospital",
+        "annual_kwh": 10000000.0,
+        "year": 2017
+    },
+    "ElectricTariff": {
+        "blended_annual_energy_rate": 0.12,
+        "blended_annual_demand_rate": 15.0
+    },
+    "DomesticHotWaterLoad": {
+        "doe_reference_name": "Hospital",
+        "annual_mmbtu": 500000.0
+    },
+    "SpaceHeatingLoad": {
+        "doe_reference_name": "Hospital",
+        "annual_mmbtu": 1000000.0
+    },
+    "ExistingBoiler": {
+        "fuel_cost_per_mmbtu": 12.0
+    },
+    "CHP": [
+        {
+            "name": "CHP_recip_engine",
+            "prime_mover": "recip_engine",
+            "size_class": 1,
+            "min_kw": 100.0,
+            "max_kw": 500.0,
+            "fuel_cost_per_mmbtu": 8.0,
+            "can_serve_dhw": true,
+            "can_serve_space_heating": true
+        },
+        {
+            "name": "CHP_micro_turbine",
+            "prime_mover": "micro_turbine",
+            "size_class": 2,
+            "min_kw": 50.0,
+            "max_kw": 300.0,
+            "fuel_cost_per_mmbtu": 8.0,
+            "can_serve_dhw": true,
+            "can_serve_space_heating": false
+        }
+    ]
+}
