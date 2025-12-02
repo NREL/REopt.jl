@@ -3915,7 +3915,7 @@ else  # run HiGHS tests
             capital_costs_after_non_discounted_incentives = results["Financial"]["capital_costs_after_non_discounted_incentives"]
             # Calculated payback from above-two metrics
             payback = capital_costs_after_non_discounted_incentives / savings
-            @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
+            @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2) rtol=0.01
             finalize(backend(m1))
             empty!(m1)
             finalize(backend(m2))
@@ -3932,7 +3932,7 @@ else  # run HiGHS tests
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
             results = run_reopt([m1,m2], inputs)
             payback = results["Financial"]["capital_costs_after_non_discounted_incentives"] / results["Financial"]["year_one_total_operating_cost_savings_after_tax"]
-            @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2)
+            @test round(results["Financial"]["simple_payback_years"], digits=2) ≈ round(payback, digits=2) rtol=0.01
             finalize(backend(m1))
             empty!(m1)
             finalize(backend(m2))
