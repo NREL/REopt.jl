@@ -44,7 +44,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_wind_results(m, p, d; _n)
     end
     
-    if "CHP" in p.techs.all
+    if !isempty(p.techs.chp)
         add_chp_results(m, p, d; _n)
     end
 	
