@@ -2070,7 +2070,7 @@ else  # run HiGHS tests
                                                 "blended_annual_demand_rate" => 0.0  )
             s_chp = Scenario(input_data)
             inputs_chp = REoptInputs(s)
-            installed_cost_chp = s_chp.chp.installed_cost_per_kw
+            installed_cost_chp = s_chp.chps[1].installed_cost_per_kw
 
             # Now get prime generator (electric only)
             input_data["CHP"]["is_electric_only"] = true
