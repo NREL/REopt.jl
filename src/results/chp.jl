@@ -72,6 +72,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 			for t in p.techs.chp) - CHPtoBatt[ts] - CHPtoGrid[ts])
 	r["electric_to_load_series_kw"] = round.(value.(CHPtoLoad), digits=3)
 	# Thermal dispatch breakdown
+	# TODO separate CHPtoHotTES by Storage medium; otherwise Hot Water and High Temp storage aren't feasible on a site.
     if !isempty(p.s.storage.types.hot)
 		@expression(m, CHPToHotTES[ts in p.time_steps],
 			sum(m[Symbol("dvHeatToStorage"*_n)][b, t, q, ts] for b in p.s.storage.types.hot, t in p.techs.chp, q in p.heating_loads))
