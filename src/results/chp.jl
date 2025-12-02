@@ -69,7 +69,7 @@ function get_chp_results_for_tech(m::JuMP.AbstractModel, p::REoptInputs, chp_nam
 	CHPElecProdTotal = [value(m[Symbol("dvRatedProduction"*_n)][chp_name,ts]) * p.production_factor[chp_name, ts] for ts in p.time_steps]
 	r["electric_production_series_kw"] = round.(CHPElecProdTotal, digits=3)
 	# Electric dispatch breakdown
-    if !isempty(p.s.electric_tariff.export_bins)
+    if !isempty(p.s.electric_tariff.export_bins) && haskey(p.export_bins_by_tech, chp_name) && !isempty(p.export_bins_by_tech[chp_name])
         CHPtoGrid = [sum(value(m[Symbol("dvProductionToGrid"*_n)][chp_name,u,ts])
                 for u in p.export_bins_by_tech[chp_name]) for ts in p.time_steps]
     else
