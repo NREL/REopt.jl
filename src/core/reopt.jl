@@ -262,6 +262,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ExistingChillerCost] = 0.0
 	m[:ElectricStorageCapCost] = 0.0
 	m[:ElectricStorageOMCost] = 0.0
+	m[:MaximizeProductionIncentive]  = 0.0
 
 	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
 		if !isempty(p.techs.all)
@@ -503,6 +504,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_capex_constraints(m, p)
 	end
 
+	if !isnothing(p.s.financial.bau_lcc)
+		@expression(m, ProductionByTech[t in p.techs.maximize_size], 
+			sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[:dvRatedProduction][t, ts] for ts in p.time_steps)
+		)
+		m[:MaximizeProductionIncentive] = @expression(m, -10 * sum(m[:ProductionByTech][t] for t in p.techs.maximize_size))
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -580,6 +588,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	if "ExistingChiller" in p.techs.all && (p.s.existing_chiller.installed_cost_dollars > 0.0)
 		add_to_expression!(Costs, m[:ExistingChillerCost])
+	end
+
+	if !isnothing(p.s.financial.bau_lcc)
+		add_to_expression!(Costs, m[:MaximizeProductionIncentive])
+		@constraint(m,
+			m[:Costs] <= p.s.financial.bau_lcc + m[:MaximizeProductionIncentive]
+		)
 	end
 
 	# Set model objective 

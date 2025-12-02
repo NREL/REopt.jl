@@ -31,6 +31,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     ghp_techs = String[]
     ashp_techs = String[]
     ashp_wh_techs = String[]
+    maximize_size_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -89,7 +90,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
         techs_can_serve_process_heat,
         ghp_techs,
         ashp_techs,
-        ashp_wh_techs
+        ashp_wh_techs,
+        maximize_size_techs
     )
 end
 
@@ -130,6 +132,7 @@ function Techs(s::Scenario)
     ghp_techs = String[]
     ashp_techs = String[]
     ashp_wh_techs = String[]
+    maximize_size_techs = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -368,6 +371,10 @@ function Techs(s::Scenario)
         end 
     end
 
+    if !isnothing(s.financial.bau_lcc)
+        maximize_size_techs = copy(pvtechs)
+    end
+    
     Techs(
         all_techs,
         elec,
@@ -395,7 +402,8 @@ function Techs(s::Scenario)
         techs_can_serve_process_heat,
         ghp_techs,
         ashp_techs,
-        ashp_wh_techs
+        ashp_wh_techs,
+        maximize_size_techs
     )
 end
 
@@ -427,6 +435,7 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
         String[],
         String[],
         String[],

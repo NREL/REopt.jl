@@ -77,7 +77,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         m[Symbol("InitialCapexNoIncentives"*_n)] = 0.0
     end
 
-    r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)])
+    r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[:MaximizeProductionIncentive])
 
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + 
@@ -153,6 +153,8 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_emissions_cost_climate"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
         r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
     end
+
+    r["maximize_tech_size_incentive_value"] = value(m[:MaximizeProductionIncentive])
 
     d["Financial"] = Dict{String,Float64}(k => round(v, digits=4) for (k,v) in r)
     nothing
