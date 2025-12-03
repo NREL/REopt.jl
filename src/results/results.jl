@@ -120,6 +120,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_ashp_wh_results(m, p, d; _n)
     end
 
+    if !isempty(union(p.techs.heating, p.techs.chp)) && !isempty(p.s.storage.types.hot) 
+        update_heat_tes_flows(m, p, d; _n)
+    end
+
     d["Financial"]["year_one_fuel_cost_before_tax"] = 0.0
     d["Financial"]["year_one_fuel_cost_after_tax"] = 0.0
     for tech in p.techs.fuel_burning
@@ -299,3 +303,42 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
 
     return opt
 end
+
+
+"""
+update_heat_tes_flows((m::JuMP.AbstractModel, p::REoptInputs, d::Dict{String,Any}; _n=""))
+
+Updates the heating flows so that there is not simulataneous charge and discharge from the Hot TES systems. 
+"""
+function update_heat_tes_flows(m::JuMP.AbstractModel, p::REoptInputs, d::Dict{String,Any}; _n::String="")
+    for b in p.s.storage.types.hot
+        rte_eff = p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency
+        if b == "HighTempThermalStorage"
+            soc_decay = p.s.storage.attr[b].thermal_decay_rate_fraction * value(m[Symbol("dvStorageEnergy"*_n)][b]) * ones(8760)
+            cap_decay = zeros(8760)
+        else
+            soc_decay = zeros(8760)
+            cap_decay = p.s.storage.attr[b].thermal_decay_rate_fraction * value.(m[Symbol("dvStoredEnergy"*_n)][b, ts-1] for ts in p.time_steps)
+        end
+        #check for simultaneous charge and discharge of the storage medium, given by an increase in SOC and discharge to load simultaneously
+        for ts in 2:length(p.time_steps)
+            if d[b]["soc_series_fraction"][ts] > d[b]["soc_series_fraction"][ts-1] && d[b]["storage_to_load_series_mmbtu_per_hour"][ts] > 0.0    
+                for t in setdiff(union(p.techs.heating, p.techs.chp),p.techs.boiler)
+                    if d[t]["thermal_to_storage_series_mmbtu_per_hour"][ts] > d[b]["storage_to_load_series_mmbtu_per_hour"][ts]
+                        d[t]["thermal_to_storage_series_mmbtu_per_hour"][ts] -= d[b]["storage_to_load_series_mmbtu_per_hour"][ts] / rte_eff
+                        d[t]["thermal_curtailed_series_mmbtu_per_hour"][ts] += d[b]["storage_to_load_series_mmbtu_per_hour"][ts] / rte_eff
+                        d[b]["storage_to_load_series_mmbtu_per_hour"][ts] = 0.0
+                    else
+                        d[b]["storage_to_load_series_mmbtu_per_hour"][ts] -= d[t]["thermal_to_storage_series_mmbtu_per_hour"][ts] * rte_eff
+                        d[t]["thermal_curtailed_series_mmbtu_per_hour"][ts] += d[t]["thermal_to_storage_series_mmbtu_per_hour"][ts] * rte_eff
+                        d[t]["thermal_to_storage_series_mmbtu_per_hour"][ts] = 0.0
+                    end
+                    if d[b]["storage_to_load_series_mmbtu_per_hour"][ts] == 0.0
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+
