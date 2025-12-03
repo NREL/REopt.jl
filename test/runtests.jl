@@ -3481,8 +3481,10 @@ else  # run HiGHS tests
             p = REoptInputs(s)
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt(m1, p)
-            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 26175.2 rtol=1.0e-4
-            @test sum(results["CST"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 19548.3 rtol=1.0e-4
+            #ensure charge_storage_only works
+            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ ( sum(
+                    results["CST"]["thermal_curtailed_series_mmbtu_per_hour"] .+ 
+                    results["CST"]["thermal_to_storage_series_mmbtu_per_hour"]) )   rtol=1.0e-4
             @test results["CST"]["size_kw"] ≈ 10000.0 atol=0.001
             @test results["CST"]["size_mmbtu_per_hour"] ≈ 10000.0 / REopt.KWH_PER_MMBTU atol=1.0e-3
             @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 386.9 rtol=1.0e-4
@@ -3493,10 +3495,24 @@ else  # run HiGHS tests
             expected_cst_cost = results["CST"]["size_kw"] * 2200.0  # CST installed_cost_per_kw from defaults
             expected_httes_cost = results["HighTempThermalStorage"]["size_kwh"] * 86.0  # HighTempThermalStorage installed_cost_per_kwh from scenario
             @test results["Financial"]["initial_capital_costs"] ≈ expected_cst_cost + expected_httes_cost rtol=1.0e-3
-            
             finalize(backend(m1))
             empty!(m1)
             GC.gc()
+
+            d["CST"]["charge_storage_only"] = false
+            delete!(d,"HotThermalStorage")
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            results = run_reopt(m1, p)
+            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ ( sum(
+                    results["CST"]["thermal_curtailed_series_mmbtu_per_hour"] .+ 
+                    results["CST"]["thermal_to_storage_series_mmbtu_per_hour"] .+ 
+                    results["CST"]["thermal_to_load_series_mmbtu_per_hour"]) )   rtol=1.0e-4
+            @test results["CST"]["annual_thermal_production_mmbtu"] ≈ 26175.194 rtol=1.0e-4
+            @test sum(results["CST"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 19534.452 rtol=1.0e-4
+            @test sum(results["CST"]["thermal_to_storage_series_mmbtu_per_hour"]) ≈ 3739.95 rtol=1.0e-4
+            @test sum(results["HighTempThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 3734.59 atol=0.1
         end
 
         @testset "Custom REopt logger" begin
