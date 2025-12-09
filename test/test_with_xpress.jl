@@ -260,6 +260,7 @@ end
         empty!(m2)
         GC.gc()
     end
+end
 
 @testset "FlexibleHVAC" begin
 
