@@ -10,7 +10,8 @@
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
 - `lifecycle_fuel_cost_after_tax`  # Life cycle fuel cost [\$]
-- `year_one_fuel_cost_before_tax`  # Year one fuel cost [\$]
+- `year_one_fuel_cost_before_tax`  # Year one fuel cost, before tax [\$]
+- `year_one_fuel_cost_after_tax`  # Year one fuel cost, after tax [\$]
 - `lifecycle_per_unit_prod_om_costs`  # Life cycle production-based O&M cost [\$]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
@@ -18,7 +19,6 @@
 	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
 
 """
-
 function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["Boiler"]) / KWH_PER_MMBTU, digits=3)
@@ -34,7 +34,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
         @expression(m, NewBoilerToHotTESKW[ts in p.time_steps],
 		    sum(m[:dvHeatToStorage][b,"Boiler",q,ts] for b in p.s.storage.types.hot, q in p.heating_loads)
             )
-            @expression(m, NewBoilerToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage","Boiler",q,ts])
+            @expression(m, NewBoilerToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvHeatToStorage"*_n)][b,"Boiler",q,ts] for b in p.s.storage.types.hot))
     else
         NewBoilerToHotTESKW = zeros(length(p.time_steps))
         @expression(m, NewBoilerToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
@@ -87,6 +87,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     )
 	r["lifecycle_fuel_cost_after_tax"] = round(lifecycle_fuel_cost * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	r["year_one_fuel_cost_before_tax"] = round(lifecycle_fuel_cost / p.pwf_fuel["Boiler"], digits=3)
+    r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
     r["lifecycle_per_unit_prod_om_costs"] = round(value(m[:TotalBoilerPerUnitProdOMCosts]), digits=3)
 
