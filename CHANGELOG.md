@@ -25,6 +25,26 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.56.3
+### Fixed
+- Correctly escape the \$ symbol in docstring for `REopt.add_electric_tariff_results` in `results/electric_tariff.jl`
+
+## v0.56.2
+### Fixed
+- Robust fix for type error with `ElectricLoad.monthly_peaks_kw` so that it now converts Vector{Any} to Vector{Float64} in scenario.jl before constructing `ElectricLoad`. Also converted `ElectricLoad.monthly_totals_kwh` to Vector{Float64} for good measure even though we weren't getting errors with that.
+
+## v0.56.1
+### Fixed
+- `CST` bypassing constraints for not serving (`can_serve_.. = false`) heating load types by going through the `HighTempThermalStorage`
+- Type error with `ElectricLoad.monthly_peaks_kw` so that it now converts Vector{Any} to Vector{<:Real}
+- `ElectricTariff.urdb_metadata.rate_effective_date` with the right URDB parameter
+
+## v0.56.0
+### Added
+- **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
+- Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
+- `ElectricTariff` and `ElectricLoad` inputs and outputs; mostly outputs related to monthly and per-timestep series rates and costs, and `urdb_metadata` which contains additional information about the URDB rate.
+- New function in **utils.jl** called get_load_metrics() which gets the annual and monthly energy and peak load values (units depends on the input `load_profile`, so that it can be used with any load type).
 
 ## v0.55.2
 ### Fixed 
