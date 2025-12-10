@@ -14,7 +14,7 @@
         "max_kw": 10000,
         "federal_itc_fraction": 0,
         "macrs_option_years": 0,
-        "size_class": "Northern Power Systems 100"
+        "size_class": "large"
     },
     "Financial": {
         "om_cost_escalation_rate_fraction": 0.001,
