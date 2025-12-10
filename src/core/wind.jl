@@ -71,6 +71,7 @@ struct Wind <: AbstractTech
     om_cost_per_kw::Real
     production_factor_series::Union{Nothing, Array{Real,1}}
     size_class::String
+    use_turbine_model_names::Bool
     hub_height::T where T <: Real
     wind_meters_per_sec::Any
     wind_direction_degrees::Any
