@@ -204,6 +204,7 @@ include("multinode/multinode.jl")
 include("multinode/multinode_outage_simulator.jl")
 include("multinode/multinode_results_processing.jl")
 include("multinode/multinode_inputs.jl")
+include("multinode/multinode_utils.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")

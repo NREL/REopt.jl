@@ -517,16 +517,21 @@ end
 
 function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_timesteps, time_results; combined_REopt_inputs = "", outage_simulator = false, BAU_case = false)
     
-    print("\n Parsing the network input file \n")
     if typeof(Multinode_Inputs.PMD_network_input) == String 
+        print("\n Parsing the network input file \n")
         data_eng = PowerModelsDistribution.parse_file(Multinode_Inputs.PMD_network_input, transformations=[PowerModelsDistribution.remove_all_bounds!])
+        @info "Completed parsing the .dss file"
     elseif typeof(Multinode_Inputs.PMD_network_input) == Dict{String, Any}
+        print("\n Saving the PMD network input as a variable")
         data_eng = Multinode_Inputs.PMD_network_input
+        print("\n Completed the PMD network input as a variable")
     else
         throw(@error("The PMD_network_input input format is not valid"))
     end 
-
-    @info "Completed parsing the .dss file"
+    
+    data_eng_keys = keys(data_eng)
+    print("\n The data_eng keys are $(data_eng_keys)")
+    print("\n The data_eng bus keys are $(keys(data_eng["bus"]))")
 
     Start_generate_REopt_nodes_list = now()
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs) # Generate a list of the REopt nodes
