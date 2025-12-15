@@ -430,7 +430,7 @@ function ApplyDataEngSettings(data_eng, Multinode_Inputs)
     # Apply several miscellaneous settings to the data_eng dictionary
 
     data_eng["settings"]["sbase_default"] = 1.0*1E3/data_eng["settings"]["power_scale_factor"] # Set the power base (sbase) equal to 1 kW
-    data_eng["voltage_source"]["source"]["bus"] = "sourcebus"
+    data_eng["voltage_source"]["source"]["bus"] = Multinode_Inputs.substation_node # "sourcebus"
     data_eng["settings"]["name"] = "OptimizationModel" 
     
     PowerModelsDistribution.add_bus_absolute_vbounds!(
@@ -531,7 +531,8 @@ function Create_PMD_Model_For_REopt_Integration(Multinode_Inputs, PMD_number_of_
     
     data_eng_keys = keys(data_eng)
     print("\n The data_eng keys are $(data_eng_keys)")
-    print("\n The data_eng bus keys are $(keys(data_eng["bus"]))")
+    #print("\n The data_eng bus keys are $(keys(data_eng["bus"]))")
+    #print("\n The data_eng load keys are $(keys(data_eng["load"]))")
 
     Start_generate_REopt_nodes_list = now()
     REopt_nodes = REopt.GenerateREoptNodesList(Multinode_Inputs) # Generate a list of the REopt nodes
@@ -771,31 +772,40 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
     lines = collect(keys(data_eng["line"]))
 
     summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors = REopt.DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
+    print("\n Finished determining the distance from the sourcebus")
 
+
+
+    
     # Create a new dictionary based on the paths (which will include the transformer path)
-    line_names_to_sourcebus_dict_including_transformers = Dict()
+    line_names_to_sourcebus_dict_including_transformers = "This variable is not used anymore" # Dict()
 
+    #=
     for bus in collect(keys(paths))
         bus_original = deepcopy(bus)
-        if bus == "sourcebus"
-            bus = Multinode_Inputs.substation_node
-        end
+        #if bus == "sourcebus"
+        #    bus = Multinode_Inputs.substation_node
+        #end
         line_names_to_sourcebus_dict_including_transformers[bus] = []
         for i in collect(1:Int(length(paths[bus_original])-1))
 
             bus1 = paths[bus_original][i]
-            if bus1 == "sourcebus"
-                bus1 = Multinode_Inputs.substation_node
-            end
+           # if bus1 == "sourcebus"
+            #    bus1 = Multinode_Inputs.substation_node
+           # end
 
             bus2 = paths[bus_original][i+1]
-            if bus2 == "sourcebus"
-                bus2 = Multinode_Inputs.substation_node
-            end
+            #if bus2 == "sourcebus"
+            #    bus2 = Multinode_Inputs.substation_node
+            #end
             
             push!(line_names_to_sourcebus_dict_including_transformers[bus], "line"*string(bus1)*"_"*string(bus2))
         end
     end
+    =#
+
+    # Initiate this dictionary with just the phases for each line; and then later in the code will add the phases for each transformer that is being represented as a line
+    phases_for_each_line_and_transformer_line =  create_dictionary_of_phases_for_each_line(data_eng) 
 
     # Represent transformers as lines because voltage is not modeled in the simple powerflow representation without PMD
     transformers = collect(keys(data_eng["transformer"]))
@@ -804,31 +814,176 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
         transformer_bus1 = data_eng["transformer"][transformer_name]["bus"][1]
         transformer_bus2 = data_eng["transformer"][transformer_name]["bus"][2]
         transformer_line = "line"*string(transformer_bus1)*"_"*string(transformer_bus2) 
-        transformer_busses[transformer_line] = [transformer_bus1, transformer_bus2]     
-        push!(lines, transformer_line)
+        transformer_busses[transformer_line] = [transformer_bus1, transformer_bus2]
+        if !(transformer_line in lines)     
+            push!(lines, transformer_line)
+        else
+            print("\n Not adding $(transformer_line) to the lines vector because it already exists. This is likely due to a multiple single phase transformers (or voltage regulators) connecting the same busses. The total power rating for these may need to be added together in the model inputs.")
+        end
+
+        # Add the phases for the transformer line to dictionary:
+        if !(transformer_line in collect(keys(phases_for_each_line_and_transformer_line)))  # use this conditional to avoid adding multiple lines for the same connection between two nodes (could occur if there are single phase transformers or voltage regulators connecting each of of two adjacent three-phase busses)
+            phases_for_each_line_and_transformer_line[transformer_line] = filter!(x -> x != 4, data_eng["transformer"][transformer_name]["connections"][1]) # Remove the 4 connection (the neutral I think) for the purposes of this simple powerflow equation
+        else
+            # Add the phase to the existing line between the two busses (which is from another transformer or voltage regulator, likely a single phase transformer connecting the same two busses)
+            append!(phases_for_each_line_and_transformer_line[transformer_line], filter!(x -> x != 4, data_eng["transformer"][transformer_name]["connections"][1])) 
+        end
     end
 
-    all_connections_lines_to_busses = Dict()
-    connections_upstream = Dict()
-    connections_downstream = Dict()
+    all_connections_lines_to_busses = Dict() # This variable is not used outside of this function
+
+    connections_upstream_busses = Dict()
+    connections_downstream_busses = Dict()
     
-    for line in lines
+    all_lines_including_transformers_converted_to_lines = collect(keys(phases_for_each_line_and_transformer_line))
+
+    all_busses = keys(neighbors)
+    for bus in all_busses
+
+        #print("\n the key type for neighbors is: $(keytype(neighbors))")
+        #print("\n the bus key type is: $(typeof(bus))")
+        upstream_path = paths[bus]
+        neighboring_busses = neighbors[bus]
+
+        overlap = intersect(neighboring_busses, upstream_path)
+        if length(overlap) > 1 # This should be correected if want to model mesh networks
+            throw(@error("There are multiple upstream busses to bus $(bus)"))
+        end
+
+        if length(overlap) == 1
+            #print("\n Overlap length is 1")
+            upstream_bus = overlap[1]
+        else
+            print("\n Overlap length is not 1 or greater than 1 for bus $(bus), which should be the source bus")
+            print("\n")
+            upstream_bus = "N/A"
+        end
+
+        downstream_busses = setdiff(neighboring_busses, upstream_path) # Finds the busses that are neighbors that are not part of the upstream path
+
+        connections_upstream_busses[bus] = upstream_bus
+        connections_downstream_busses[bus] = downstream_busses
+
+    end
+   
+  
+
+    bus_pair_to_line_conversion = Dict()
+
+    for line in all_lines_including_transformers_converted_to_lines
+        if line in keys(data_eng["line"])
+            node1 = data_eng["line"][line]["f_bus"]
+            node2 = data_eng["line"][line]["t_bus"]
+            bus_pair_to_line_conversion[(node1, node2)] = line
+        elseif line in keys(transformer_busses)
+            node1 = transformer_busses[line][1]
+            node2 = transformer_busses[line][2]
+            bus_pair_to_line_conversion[(node1, node2)] = line
+        else
+            throw(@error("Error converting the bus-pair to line for line $(line) "))
+        end
+    end
+
+    
+
+    connections_upstream_lines = Dict()
+    connections_downstream_lines = Dict()
+
+    # Loop through all downstream connections_busses and identify the corresponding line using the bus_pair_to_line_conversion
+    for bus in collect(keys(connections_downstream_busses))
+        downstream_lines_temp = []       
+        downstream_buses = connections_downstream_busses[bus]
+        for downstream_bus in downstream_buses
+            if (bus, downstream_bus) in keys(bus_pair_to_line_conversion)
+                push!(downstream_lines_temp, bus_pair_to_line_conversion[(bus, downstream_bus)])
+            elseif (downstream_bus, bus) in keys(bus_pair_to_line_conversion)
+                push!(downstream_lines_temp, bus_pair_to_line_conversion[(downstream_bus, bus)])
+            else
+                throw(@error("No line found for the downstream neighboring bus pair $(bus) and $(downstream_bus)"))
+            end
+        end
+        connections_downstream_lines[bus] = downstream_lines_temp
+    end
+
+
+
+    # Loop through all upstream connections_busses and identify the corresponding line using the bus_pair_to_line_conversion
+    for bus in collect(keys(connections_upstream_busses))
+        upstream_lines_temp = []       
+        upstream_bus = connections_upstream_busses[bus]
+        #for upstream_bus in upstream_buses # use something like this for mesh networks probably
+        if (bus, upstream_bus) in keys(bus_pair_to_line_conversion)
+            push!(upstream_lines_temp, bus_pair_to_line_conversion[(bus, upstream_bus)])
+        elseif (upstream_bus, bus) in keys(bus_pair_to_line_conversion)
+            push!(upstream_lines_temp, bus_pair_to_line_conversion[(upstream_bus, bus)])
+        elseif bus == Multinode_Inputs.substation_node
+            print("\n The bus $(bus) is the substation node, so no upstream lines are being added to the connections_upstream_lines dictionary for that bus")
+        else
+            throw(@error("No line found for the upstream neighboring bus pair $(bus) and $(upstream_bus)"))
+        end
+        #end
+        connections_upstream_lines[bus] = upstream_lines_temp
+    end
+
+    if Multinode_Inputs.display_information_during_modeling_run
+       # Save some text files showing connectivity from the simple powerflow model
+        open(Multinode_Inputs.folder_location*"/paths.txt","w") do input
+            for (key, val) in paths
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/neighbors.txt","w") do input
+            for (key, val) in neighbors
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/connections_upstream_busses.txt","w") do input
+            for (key, val) in connections_upstream_busses
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/connections_downstream_busses.txt","w") do input
+            for (key, val) in connections_downstream_busses
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/bus_pair_to_line_conversion.txt","w") do input
+            for (key, val) in bus_pair_to_line_conversion
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/connections_downstream_lines.txt","w") do input
+            for (key, val) in connections_downstream_lines
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/connections_upstream_lines.txt","w") do input
+            for (key, val) in connections_upstream_lines
+                println(input, "$key => $val" ) 
+            end
+        end
+    end
+
+    #=
+    for line in all_lines_including_transformers_converted_to_lines # lines
         if line in keys(data_eng["line"])
             line_busses = [data_eng["line"][line]["f_bus"], data_eng["line"][line]["t_bus"]]
         else
             line_busses = transformer_busses[line]
         end
-
+        
+        print("\n for line $(line), the line_busses are: $(line_busses)")
+        
         for bus in line_busses
             bus_original = deepcopy(bus)
-            if bus == "sourcebus"
-                bus = Multinode_Inputs.substation_node
-            end
+            #if bus == "sourcebus"
+            #    bus = Multinode_Inputs.substation_node
+            #end
 
             connecting_bus = setdiff(line_busses, [bus_original])[1]
-            if connecting_bus == "sourcebus"
-                connecting_bus = Multinode_Inputs.substation_node
-            end
+            #if connecting_bus == "sourcebus"
+            #    connecting_bus = Multinode_Inputs.substation_node
+            #end
             
             for i in collect(1:2)
                 if i ==1 
@@ -836,8 +991,9 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
                 else
                     connecting_line = "line"*string(connecting_bus)*"_"*string(bus)
                 end
-                                
-                if string(connecting_line) in lines
+                # This line assumes that the lines are named with the busses
+
+                if string(connecting_line) in all_lines_including_transformers_converted_to_lines # lines  
                     if bus in keys(all_connections_lines_to_busses)
                         push!(all_connections_lines_to_busses[bus], connecting_line)
                     else
@@ -863,8 +1019,9 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
             end
         end
     end
+    =#
 
-    return all_connections_lines_to_busses, connections_upstream, connections_downstream, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers
+    return all_connections_lines_to_busses, connections_upstream_lines, connections_downstream_lines, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers, phases_for_each_line_and_transformer_line
 end
 
 
@@ -891,14 +1048,15 @@ end
 
 
 function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptInputs_Combined, pm, m, REoptTimeSteps, LineInfo, REopt_nodes, data_eng)
-    print("\n Adding Simple Powerflow Constraints to Non-PMD Timesteps")
+    print("\n Adding Simple Powerflow Constraints to Non-PMD Timesteps: This can take a few minutes for very large models")
     
     time_steps_without_PMD = setdiff(REoptTimeSteps, Multinode_Inputs.PMD_time_steps)
-
     indeces = collect(1:length(time_steps_without_PMD))
+    print("\n Generated timesteps vector and indeces")
 
-    connections, connections_upstream, connections_downstream, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers = CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)  # Note: the lines variable here includes lines that represent the transformer
-    
+    connections, connections_upstream, connections_downstream, lines, transformer_busses, line_names_to_sourcebus_dict_including_transformers, phases_for_each_line_and_transformer_line = CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)  # Note: the lines variable here includes lines that represent the transformer
+    print("\n Finished creating a dictionary of node connections")
+
     if Multinode_Inputs.display_information_during_modeling_run
         print("\n")
         print("\n Connectivity information used in the simple power flow model:")
@@ -921,21 +1079,77 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
     else
         throw(@error("The input for the number of phases is invalid"))
     end
-
+    
     # Create a dictionary such that, for instance, phases_for_each_line["line_name"] = [1,2,3] for three phase, or [3] for single phase on phase #3, or [2,3] for two phase
-    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    print("\n Generating dvP variable for busses (this may take a few minutes for large models using the simple powerflow constraints)")
+    
     phases_for_each_bus = create_dictionary_of_phases_for_each_bus(data_eng) 
-
     all_busses = collect(keys(data_eng["bus"])) # This includes both the PMD and the REopt busses
-
-    @variable(m, dvP[all_busses, phases, indeces] >= -1000000)
+    @variable(m, dvP[bus in all_busses, phase in phases, t in indeces; phase in phases_for_each_bus[bus]] >= -1000000 )
     #@variable(m, Q[REopt_nodes] >= -10000000)
     
-    @variable(m, dvPline[lines, phases, indeces] >= -1000000)
-    #@variable(m, dvQline[lines, indeces])
+    #=
+    print("\n    Step 1 of 6 complete")
+
+    valid_tuples_busses = [(b, p, t)
+                    for (b,plist) in phases_for_each_bus
+                    for p in plist
+                    for t in indeces]
     
+    size = sum(length,valid_tuples_busses)
+    print("\n    Step 2 of 6 complete, there will be $(size) dvP variables for the busses")
+
+    @variable(m, dvP[(b,p,t) in valid_tuples_busses] >= -1000000)
+    print("\n    Step 3 of 6 complete")
+    =#
+                        
+    
+    print("\n Generating dvP variable for lines (this may take a few minutes for large models using the simple powerflow constraints)")
+    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    
+    if Multinode_Inputs.display_information_during_modeling_run
+        print("\n The lines are: $(lines)")
+        print("\n")
+        #print("\n The phases for each line are: $(phases_for_each_line)")
+        #print("\n")
+        print("\n The phases for each line are: $(phases_for_each_line_and_transformer_line)")
+        print("\n")
+    end
+    
+    @variable(m, dvPline[line in lines, phase in phases, t in indeces; phase in phases_for_each_line_and_transformer_line[line]] >= -1000000)
+    #@variable(m, dvQline[lines, indeces])
+    print("\n Completed dvP variable generation")
+    
+
+    #=
+    valid_tuples_lines = [(bB, pB, tB)
+                    for (bB,plistB) in phases_for_each_line
+                    for pB in plistB
+                    for tB in indeces]
+    
+    # Debugging
+    #print("\n the valid tuples are: ")
+    #print(valid_tuples_lines)
+    #print("\n")
+
+   
+    =#
+   
+    
+    #=
+    size = sum(length,valid_tuples_lines)
+    print("\n    Step 5 of 6 complete, there will be $(size) dvP variables for the lines")
+    
+    @variable(m, dvPline[(bB,pB,tB) in valid_tuples_lines] >= -1000000)
+    print("\n    Step 6 of 6 complete")
+
+    print("\n Completed generating variables list")
+    =#
+
     # Prevent power on phases of buses that do not exist in the model
+    #=
     for bus in collect(keys(phases_for_each_bus))
+        print("\n The bus is: $(bus)")
         for phase in phases
             if !(phase in phases_for_each_bus[bus])
                 @constraint(m, dvP[bus, phase, indeces] .== 0.0)
@@ -951,12 +1165,16 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             end
         end
     end
+    =#
 
+    phases_for_each_line = phases_for_each_line_and_transformer_line
+    
     # Add constraints for maximum power through each line
     if Multinode_Inputs.model_line_upgrades
         print("Adding simple powerflow constraints to allow for line upgrades")
         line_upgrade_options_each_line = CreateDictionaryOfLineUpgradeOptions(Multinode_Inputs)
         for line in lines
+            
             if line in collect(keys(phases_for_each_line)) # prevent looking for a line if it is a virtual line part of a transformer
                 if length(phases_for_each_line[line]) == 3 
                     multiphase_multiplier = sqrt(3) # Use the sqrt(3) factor for three-phase lines
@@ -976,8 +1194,8 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
 
             elseif line in keys(transformer_busses)
                 # Note: transformer power ratings are for power going through all phases combined, but for simplicity
-                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] .<= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
-                @constraint(m, [t in indeces, phase in phases], m[:dvPline][line, [phase], t] .>= -100000000 / 1)
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] .<= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] .>= -100000000 / 1)
             else
                 if LineInfo[line]["maximum_power_kw"] == Inf
                     line_max_power = 1000000000 #LineInfo[line]["maximum_power_kw"]
@@ -993,11 +1211,18 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             end
         end
     else
-        
         for line in lines
+            if Multinode_Inputs.display_information_during_modeling_run
+                print("\nThe line is: $(line)")
+                print(", which has phases: $(phases_for_each_line[line])")
+            end
+
             if line in keys(transformer_busses)
-                @constraint(m, [t in indeces, phase in [1]], m[:dvPline][line, phase, t] <= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
-                @constraint(m, [t in indeces, phase in [1]], m[:dvPline][line, phase, t] >= -100000000 / 1)
+                if Multinode_Inputs.display_information_during_modeling_run
+                    print("  this is a line that was derived from a transformer")
+                end
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] <= 100000000 / 1) # TODO: replace the 10000000 with the transformer power rating add maximum transformer power
+                @constraint(m, [t in indeces, phase in phases_for_each_line[line]], m[:dvPline][line, phase, t] >= -100000000 / 1)
             else
                 if LineInfo[line]["maximum_power_kw"] == Inf
                     line_max_power = 1000000000 #LineInfo[line]["maximum_power_kw"]
@@ -1048,7 +1273,33 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             end
         end
     end
+
+    if Multinode_Inputs.display_information_during_modeling_run
+        # Save some text files showing connectivity from the simple powerflow model
+        open(Multinode_Inputs.folder_location*"/connections_upstream.txt","w") do input
+            for (key, val) in connections_upstream
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/connections_downstream.txt","w") do input
+            for (key, val) in connections_downstream
+                println(input, "$key => $val" ) 
+            end
+        end
+
+        open(Multinode_Inputs.folder_location*"/phases_for_each_line.txt","w") do input
+            for (key, val) in phases_for_each_line
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/phases_for_each_line_and_transformer_line.txt","w") do input
+            for (key, val) in phases_for_each_line_and_transformer_line
+                println(input, "$key => $val" ) 
+            end
+        end
+    end
   
+  print("\n The REopt nodes are: $(REopt_nodes)")
     # Conservation of energy for each bus
     for bus in collect(keys(connections)) # all_busses #
         bus_connections = connections[bus]
@@ -1058,7 +1309,7 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             # TODO: does this constraint need to exist?
             #@constraint(m, [t in indeces], m[:dvP][bus, t] - sum(m[:dvPline][line, t] for line in connections_downstream[string(bus)]) == 0)
 
-        elseif parse(Int, bus) in REopt_nodes  # for buses that have an associated REopt node
+        elseif bus in REopt_nodes # parse(Int, bus) in REopt_nodes  # for buses that have an associated REopt node
             Multinode_Inputs.display_information_during_modeling_run ? print("\n Adding constraint for REopt bus $(bus):") : nothing
             if bus in keys(connections_downstream)
                 Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
@@ -1295,7 +1546,7 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
 
             Multinode_Inputs.display_information_during_modeling_run ? print("\n The export bins for the facility meter node are: $(p.export_bins_by_tech["PV"]) \n") : nothing
             
-            i = LineInfo[Multinode_Inputs.substation_line]["index"]
+            i = LineInfo[lowercase(Multinode_Inputs.substation_line)]["index"]
                 # Based off of code in line 470 of PMD's src>core>constraint_template
                 timestep = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
                 branch = PowerModelsDistribution.ref(pm, timestep, :branch, i)
@@ -1334,7 +1585,7 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                     
                     elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD      
                         simple_powerflow_timestep = findall(x -> x==timestep, time_steps_without_PMD)[1]
-                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(m[:dvPline][Multinode_Inputs.substation_line, phase, simple_powerflow_timestep] for phase in phases_for_each_line[Multinode_Inputs.substation_line]))
+                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == sum(m[:dvPline][lowercase(Multinode_Inputs.substation_line), phase, simple_powerflow_timestep] for phase in phases_for_each_line[lowercase(Multinode_Inputs.substation_line)]))
                         
                     else
                         # Instead of using the line flow from PMD or the simple powerflow model, consider the total system inflow/outflow to be based on a lumped-element model, which sums all power inflows and outflows for each node
@@ -1376,9 +1627,9 @@ function LinkFacilityMeterNodeToSubstationPower(m, pm, Multinode_Inputs, REoptIn
                     elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                         simple_powerflow_timestep = findall(x -> x==timestep, time_steps_without_PMD)[1]
                         
-                        @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == sum(m[:dvPline][Multinode_Inputs.substation_line, phase, simple_powerflow_timestep] for phase in phases_for_each_line[Multinode_Inputs.substation_line]))
+                        @constraint(m, sum(m[Symbol("dvGridPurchase_"*p.s.settings.facilitymeter_node)][timestep, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == sum(m[:dvPline][lowercase(Multinode_Inputs.substation_line), phase, simple_powerflow_timestep] for phase in phases_for_each_line[lowercase(Multinode_Inputs.substation_line)]))
                         
-                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == m[:dvPline][Multinode_Inputs.substation_line, simple_powerflow_timestep])
+                        @constraint(m, m[:dvSubstationPowerFlow][timestep] == m[:dvPline][lowercase(Multinode_Inputs.substation_line), simple_powerflow_timestep])
                         @constraint(m, m[:dvSubstationPowerFlow][timestep] >= 0) 
                         
                     else
@@ -1506,6 +1757,8 @@ end
 function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, line, REoptTimeSteps, LineInfo, data_eng; Grid_Outage=false, Off_Grid=false, Switches_Open=false, Prevent_Export=false, Substation_Export_Limit=1E10, Substation_Import_Limit=1E10, OutageSimulator = false, OutageLength_Timesteps = 0)
     # Function used for restricting power flow for grid outages, times when switches are opened, and substation import and export limits
     
+    line = lowercase(line)
+
     # Save the REopt Inputs for the site not to a variable
     FacilityMeterNode_REoptInputs = ""
     for p in REoptInputs_Combined
@@ -1521,6 +1774,15 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
     elseif OutageSimulator == true
         PMDTimeSteps_InREoptTimes = collect(1:OutageLength_Timesteps)
         PMDTimeSteps_Indeces = collect(1:OutageLength_Timesteps)
+    end
+
+    print("\n the line is $(line)")
+    if Multinode_Inputs.display_information_during_modeling_run
+        open(Multinode_Inputs.folder_location*"/LineInfo.txt","w") do input
+            for (key, val) in LineInfo
+                println(input, "$key => $val" ) 
+            end
+        end
     end
 
     i = LineInfo[line]["index"]
@@ -1567,7 +1829,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 JuMP.@constraint(m, [phase in f_connections], q_fr[phase] .>= -Multinode_Inputs.external_reactive_power_support_per_phase_maximum_kvar) # no restrictions on reactive power
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
-                    @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] .>= 0)
+                    @constraint(m, m[:dvPline][lowercase(Multinode_Inputs.substation_line), phase, timestep_for_simple_powerflow_model] .>= 0)
                 end
             else
                 @constraint(m, sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) == 0)
@@ -1582,7 +1844,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
-                    @constraint(m, m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model] .>= (1/length(phases_for_each_line[line])) * -Substation_Export_Limit) # Assume that the maximum export limit is evenly divided by each of the phases
+                    @constraint(m, m[:dvPline][lowercase(Multinode_Inputs.substation_line), phase, timestep_for_simple_powerflow_model] .>= (1/length(phases_for_each_line[line])) * -Substation_Export_Limit) # Assume that the maximum export limit is evenly divided by each of the phases
                 end
             else
                 @constraint(m, sum(m[Symbol("dvProductionToGrid_"*Multinode_Inputs.facilitymeter_node)]["PV", u, timestep] for u in FacilityMeterNode_REoptInputs.export_bins_by_tech["PV"]) <= Substation_Export_Limit)
@@ -1597,7 +1859,7 @@ function RestrictLinePowerFlow(Multinode_Inputs, REoptInputs_Combined, pm, m, li
                 end
             elseif Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
                 for phase in phases_for_each_line[line]
-                    @constraint(m, sum(m[:dvPline][Multinode_Inputs.substation_line, phase, timestep_for_simple_powerflow_model]) .<= (1/length(phases_for_each_line[line])) * Substation_Import_Limit) # Assume that the maximum import limit is evenly divided by each of the phases
+                    @constraint(m, sum(m[:dvPline][lowercase(Multinode_Inputs.substation_line), phase, timestep_for_simple_powerflow_model]) .<= (1/length(phases_for_each_line[line])) * Substation_Import_Limit) # Assume that the maximum import limit is evenly divided by each of the phases
                 end
             else
                 @constraint(m, sum(m[Symbol("dvGridPurchase_"*Multinode_Inputs.facilitymeter_node)][timestep, tier] for tier in 1:FacilityMeterNode_REoptInputs.s.electric_tariff.n_energy_tiers) <= Substation_Import_Limit)

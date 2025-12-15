@@ -967,11 +967,11 @@ function DetermineOutageStartsAndEnds(Multinode_Inputs, outages_vector)
 end
 
 
-function DeterminePathToSourcebus(neighbors)
+function DeterminePathToSourcebus(neighbors, Multinode_Inputs)
     # Acknowledgement: This function was built with the assistance of ChatGPT
     parent_dict = Dict()
     path_dict = Dict()
-    substation_bus = "sourcebus"
+    substation_bus = Multinode_Inputs.substation_node #"sourcebus"
     queue = [substation_bus]
     visited = Dict()
     visited[substation_bus] = true
@@ -1004,7 +1004,7 @@ end
 
 function DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
     neighbors = REopt.modified_calc_connected_components_eng(data_eng)
-    paths = REopt.DeterminePathToSourcebus(neighbors)
+    paths = REopt.DeterminePathToSourcebus(neighbors, Multinode_Inputs)
 
     #Multinode_Inputs = results["Multinode_Inputs"]
 
@@ -1095,7 +1095,10 @@ function modified_calc_connected_components_eng(data; edges::Vector{<:String}=St
             PowerModelsDistribution._cc_dfs(i, neighbors, component_lookup, touched)
         end
     end
-    return neighbors 
+
+    neighbors_with_keys_as_strings = Dict(string(key)=> value for (key, value) in neighbors)
+
+    return neighbors_with_keys_as_strings 
 end
 
 
