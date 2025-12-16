@@ -1146,7 +1146,7 @@ else  # run HiGHS tests
             end
         end
         
-        @testset verbose=true "FlexibleHVAC" begin
+         @testset verbose=true "FlexibleHVAC" begin
         
             @testset "Single RC Model heating only" begin
                 #=
