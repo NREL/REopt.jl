@@ -527,7 +527,7 @@ function get_electric_energy_tiers_bigM(p::REoptInputs)
                         p.s.dhw_load.loads_kw .+ 
                         p.s.cooling_load.loads_kw_thermal
                     )
-    added_energy = min(added_energy,sum(bigM_hourly_load))
+    added_energy = min(added_energy, sum(bigM_hourly_load))
     bigM_energy_tier_limits = zeros(12,p.s.electric_tariff.n_energy_tiers)
     for mth in p.months
         monthly_bigM = added_energy + sum(bigM_hourly_load[ts] for ts in p.s.electric_tariff.time_steps_monthly[mth])
