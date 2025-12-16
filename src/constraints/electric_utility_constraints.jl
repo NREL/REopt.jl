@@ -484,7 +484,7 @@ function get_electric_demand_tiers_bigM(p::REoptInputs, tou::Bool)
             p.s.dhw_load.loads_kw .+ 
             p.s.cooling_load.loads_kw_thermal 
             ) 
-    added_power = min(added_power,bigM_load)
+    added_power = min(added_power, bigM_load)
     bigM = bigM_load + added_power
     if tou
         periods = 1:length(p.s.electric_tariff.tou_demand_ratchet_time_steps)
@@ -527,7 +527,7 @@ function get_electric_energy_tiers_bigM(p::REoptInputs)
                         p.s.dhw_load.loads_kw .+ 
                         p.s.cooling_load.loads_kw_thermal
                     )
-    added_energy = min(added_energy,sum(bigM_hourly_load))
+    added_energy = min(added_energy, sum(bigM_hourly_load))
     bigM_energy_tier_limits = zeros(12,p.s.electric_tariff.n_energy_tiers)
     for mth in p.months
         monthly_bigM = added_energy + sum(bigM_hourly_load[ts] for ts in p.s.electric_tariff.time_steps_monthly[mth])
