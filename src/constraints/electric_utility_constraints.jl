@@ -484,7 +484,7 @@ function get_electric_demand_tiers_bigM(p::REoptInputs, tou::Bool)
             p.s.dhw_load.loads_kw .+ 
             p.s.cooling_load.loads_kw_thermal 
             ) 
-    added_power = min(added_power,bigM)
+    added_power = min(added_power,bigM_load)
     bigM = bigM_load + added_power
     if tou
         periods = 1:length(p.s.electric_tariff.tou_demand_ratchet_time_steps)
