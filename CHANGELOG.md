@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fix-storage-contribution-to-bigm
+###Fixed 
+- Fixed a bug in which demand and energy charges are inaccurately calculated when large max storage system sizes are present.
+
 ## v0.56.3
 ### Fixed
 - Correctly escape the \$ symbol in docstring for `REopt.add_electric_tariff_results` in `results/electric_tariff.jl`
