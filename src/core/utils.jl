@@ -566,6 +566,61 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 end
 
 """
+    get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_to_console=false)
+
+Analyze the timeseries load profile data to get monthly and annual metrics. 
+The units of the returned metrics are dependent on the units of the load_profile input
+E.g. if load_profile is in kW, the energy metrics will be in kWh. if MMBtu/hr, then MMBtu.
+# Arguments
+- `load_profile`: Array of load values (kW) for the entire year, with a length of `8760 * time_steps_per_hour`.
+- `time_steps_per_hour`: Number of time steps per hour (e.g., 1 for hourly data, 4 for 15-minute intervals). Default is 1.
+- `year`: The year of the load profile, used to determine the number of days in each month (e.g., leap years). Default is 2025.
+- `print_to_console`: Boolean flag to print the results to the console. Default is false.
+# Returns
+- `monthly_energy`: Array of 12 values representing the total energy usage (e.g. kWh) for each month.
+- `monthly_peaks`: Array of 12 values representing the peak demand (e.g. kW) for each month.
+- `annual_energy`: Total annual energy usage (e.g. kWh).
+- `annual_peak`: Maximum peak demand (e.g. kW) for the year.
+
+"""
+function get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_to_console=false)
+
+    # Initialize empty arrays
+    monthly_energy = zeros(12)
+    monthly_peaks = zeros(12)
+
+    # This method handles leap-year truncating of last day
+    monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
+
+    for month in 1:12
+        start_idx = monthly_timesteps[month][1]
+        end_idx = monthly_timesteps[month][end]
+        month_load_series = load_profile[start_idx:end_idx]
+        monthly_peaks[month] = maximum(month_load_series)
+        monthly_energy[month] = sum(month_load_series) / time_steps_per_hour
+    end
+
+    annual_energy = sum(monthly_energy)
+    annual_peak = maximum(monthly_peaks)
+
+    if print_to_console
+        println("Monthly Energy: ", monthly_energy)
+        println("Monthly Peak Load: ", monthly_peaks)
+        println("Annual Energy: ", annual_energy)
+        println("Annual Peak Load: ", annual_peak)
+    end
+
+    return_dict = Dict(
+        "monthly_energy" => monthly_energy,
+        "monthly_peaks" => monthly_peaks,
+        "annual_energy" => annual_energy,
+        "annual_peak" => annual_peak
+    )
+
+    return return_dict
+end
+
+"""
 fuel_slope_and_intercept(;
                 electric_efficiency_full_load::Real, [kWhe/kWht]
                 electric_efficiency_half_load::Real, [kWhe/kWht]
@@ -837,4 +892,32 @@ function struct_to_dict(obj)
     end
     
     return result
+end
+
+"""
+    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String) -> Array{<:Real,1}
+
+Checks and adjusts the length of a user-provided load series to ensure it matches the expected length based on the `time_steps_per_hour` setting.
+
+# Arguments
+- `load_series::Array{<:Real,1}`: The input load series (e.g., electric load, thermal load) provided by the user.
+- `time_steps_per_hour::Int`: The number of time steps per hour (e.g., 1 for hourly, 4 for 15-minute intervals).
+- `load_type::String`: A descriptive name for the load type (e.g., "electric load", "thermal load") used in error or warning messages.
+
+# Returns
+- `Array{<:Real,1}`: The adjusted load series if modifications are required, or the original load series if it already matches the expected length.
+"""
+function check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
+            # Timestep checks for custom loads
+        if length(load_series) > 0 && length(load_series) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
+            if length(load_series) < 8760 * time_steps_per_hour && length(load_series) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
+                load_series = repeat(load_series, inner=Int(time_steps_per_hour / (length(load_series)/8760)))
+                @warn "Repeating provided $load_type in each hour to match the time_steps_per_hour."
+                return load_series
+            else # loads_kw is higher resolution than time_steps_per_hour or not an integer multiple of 8760
+                throw(@error("Provided $load_type does not match the Settings.time_steps_per_hour."))
+            end
+        else 
+            return load_series # series not provided or is correct length
+        end
 end

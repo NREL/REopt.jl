@@ -100,6 +100,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    # json parsing may make monthly_peaks_kw and monthly_totals_kwh type Vector{Any} instead of Vector{<:Real}
+    if haskey(d["ElectricLoad"], "monthly_peaks_kw")
+        d["ElectricLoad"]["monthly_peaks_kw"] = convert(Vector{Float64}, d["ElectricLoad"]["monthly_peaks_kw"])
+    end
+    if haskey(d["ElectricLoad"], "monthly_totals_kwh")
+        d["ElectricLoad"]["monthly_totals_kwh"] = convert(Vector{Float64}, d["ElectricLoad"]["monthly_totals_kwh"])
+    end
+
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
     latitude=site.latitude, longitude=site.longitude, 
     time_steps_per_hour=settings.time_steps_per_hour,
