@@ -162,10 +162,6 @@ function dictkeys_tosymbols(d::Dict)
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
-            "emissions_factor_series_lb_CO2_per_kwh",
-            "emissions_factor_series_lb_NOx_per_kwh", 
-            "emissions_factor_series_lb_SO2_per_kwh",
-            "emissions_factor_series_lb_PM25_per_kwh",
             "renewable_energy_fraction_series",
             "heating_cop_reference",
             "heating_cf_reference",
@@ -229,7 +225,11 @@ function dictkeys_tosymbols(d::Dict)
             "generator_size_kw", "generator_operational_availability",
             "generator_failure_to_start", "generator_mean_time_to_failure",
             "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
-            "fuel_limit"
+            "fuel_limit",
+            "emissions_factor_series_lb_CO2_per_kwh",
+            "emissions_factor_series_lb_NOx_per_kwh", 
+            "emissions_factor_series_lb_SO2_per_kwh",
+            "emissions_factor_series_lb_PM25_per_kwh"
         ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
