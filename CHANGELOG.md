@@ -25,6 +25,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## type-bug
+### Fixed
+- Fixed a bug in the type handling of **emissions_factor_series_lb_XXX_per_kwh** in which `xxx` is in the group **[CO2, SO2, NOx, PM25]**.
+
+## Develop
+
 ## v0.56.3
 ### Fixed
 - Correctly escape the \$ symbol in docstring for `REopt.add_electric_tariff_results` in `results/electric_tariff.jl`
