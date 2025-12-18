@@ -161,7 +161,8 @@ struct ColdThermalStorage <: AbstractThermalStorage
     soc_min_fraction::Float64
     soc_init_fraction::Float64
     installed_cost_per_gal::Float64
-    thermal_decay_rate_fraction::Float64
+    soc_self_discharge_rate_fraction::Float64
+    capacity_self_discharge_rate_fraction::Float64
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
@@ -220,6 +221,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
             stor.soc_min_fraction,
             stor.soc_init_fraction,
             stor.installed_cost_per_gal,
+            0.0,
             stor.thermal_decay_rate_fraction,
             stor.om_cost_per_gal,
             stor.macrs_option_years,
@@ -255,7 +257,8 @@ struct HotThermalStorage <: AbstractThermalStorage
     soc_min_fraction::Float64
     soc_init_fraction::Float64
     installed_cost_per_gal::Float64
-    thermal_decay_rate_fraction::Float64
+    soc_self_discharge_rate_fraction::Float64
+    capacity_self_discharge_rate_fraction::Float64
     om_cost_per_gal::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
@@ -319,6 +322,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             stor.soc_min_fraction,
             stor.soc_init_fraction,
             stor.installed_cost_per_gal,
+            0.0,
             stor.thermal_decay_rate_fraction,
             stor.om_cost_per_gal,
             stor.macrs_option_years,
@@ -357,7 +361,8 @@ struct HighTempThermalStorage <: AbstractThermalStorage
     internal_efficiency_fraction::Float64
     soc_min_fraction::Float64
     soc_init_fraction::Float64
-    thermal_decay_rate_fraction::Float64
+    soc_self_discharge_rate_fraction::Float64
+    capacity_self_discharge_rate_fraction::Float64
     macrs_option_years::Int
     macrs_bonus_fraction::Float64
     total_itc_fraction::Float64
@@ -411,6 +416,7 @@ struct HighTempThermalStorage <: AbstractThermalStorage
             stor.soc_min_fraction,
             stor.soc_init_fraction,
             stor.thermal_decay_rate_fraction,
+            0.0,
             stor.macrs_option_years,
             stor.macrs_bonus_fraction,
             stor.total_itc_fraction,

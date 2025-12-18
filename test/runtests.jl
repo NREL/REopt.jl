@@ -1137,21 +1137,21 @@ else  # run HiGHS tests
 
             data["ElectricStorage"]["soc_init_fraction"] = 1.0
             data["ElectricStorage"]["soc_min_fraction"] = 0.0
-            data["ElectricStorage"]["soc_based_per_ts_self_discharge_fraction"] = 0.0025/24
+            data["ElectricStorage"]["soc_self_discharge_rate_fraction"] = 0.0025/24
 
             s = Scenario(data)
             inputs = REoptInputs(s)
             results_soc_based_self_discharge = run_reopt(model, inputs)
 
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            data["ElectricStorage"]["soc_based_per_ts_self_discharge_fraction"] = 0.0
+            data["ElectricStorage"]["soc_self_discharge_rate_fraction"] = 0.0
 
             s = Scenario(data)
             inputs = REoptInputs(s)
             results_no_self_discharge = run_reopt(model, inputs)
 
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            data["ElectricStorage"]["capacity_based_per_ts_self_discharge_fraction"] = 0.0025/24
+            data["ElectricStorage"]["capacity_self_discharge_rate_fraction"] = 0.0025/24
 
             s = Scenario(data)
             inputs = REoptInputs(s)

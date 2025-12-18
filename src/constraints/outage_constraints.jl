@@ -301,7 +301,7 @@ function add_MG_elec_storage_dispatch_constraints(m,p)
             - m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
         )
         - (p.s.storage.attr["ElectricStorage"].soc_self_discharge_rate_fraction * m[:dvMGStoredEnergy]["ElectricStorage", s, tz, ts-1])
-        # - (p.s.storage.attr["ElectricStorage"].capacity_self_discharge_rate_fraction * m[:dvStorageEnergy]["ElectricStorage"])
+        - (p.s.storage.attr["ElectricStorage"].capacity_self_discharge_rate_fraction * m[:dvStorageEnergy]["ElectricStorage"])
     )
 
 	# Prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
