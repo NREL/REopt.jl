@@ -27,7 +27,7 @@ Classify the change according to the following categories:
 
 ## type-bug
 ### Fixed
-- Fixed a bug in the type handling of `emissions_factor_series_lb_XXX_per_kwh` in which `xxx` is in the group `[CO2, SO2, NOx, PM25]`.
+- Fixed a bug in the type handling of **emissions_factor_series_lb_XXX_per_kwh** in which `xxx` is in the group **[CO2, SO2, NOx, PM25]**.
 
 ## Develop
 
