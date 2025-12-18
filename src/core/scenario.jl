@@ -236,10 +236,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         params = dictkeys_tosymbols(d["HydrogenStorage"])
         storage_structs["HydrogenStorage"] = HydrogenStorage(params, financial)
     end
-    if haskey(d, "HighTempThermalStorage")
-        params = HighTempThermalStorageDefaults(; dictkeys_tosymbols(d["HighTempThermalStorage"])...)
-        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(params, financial, settings.time_steps_per_hour)
-    end 
     storage = Storage(storage_structs)
 
     if haskey(d, "Wind")
