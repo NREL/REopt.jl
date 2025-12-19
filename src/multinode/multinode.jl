@@ -786,9 +786,6 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
     summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors = REopt.DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
     print("\n Finished determining the distance from the sourcebus")
 
-
-
-    
     # Create a new dictionary based on the paths (which will include the transformer path)
     line_names_to_sourcebus_dict_including_transformers = "This variable is not used anymore" # Dict()
 
@@ -842,8 +839,6 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
         end
     end
 
-    all_connections_lines_to_busses = Dict() # This variable is not used outside of this function
-
     connections_upstream_busses = Dict()
     connections_downstream_busses = Dict()
     
@@ -878,8 +873,6 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
 
     end
    
-  
-
     bus_pair_to_line_conversion = Dict()
 
     for line in all_lines_including_transformers_converted_to_lines
@@ -895,8 +888,6 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
             throw(@error("Error converting the bus-pair to line for line $(line) "))
         end
     end
-
-    
 
     connections_upstream_lines = Dict()
     connections_downstream_lines = Dict()
@@ -917,8 +908,6 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
         connections_downstream_lines[bus] = downstream_lines_temp
     end
 
-
-
     # Loop through all upstream connections_busses and identify the corresponding line using the bus_pair_to_line_conversion
     for bus in collect(keys(connections_upstream_busses))
         upstream_lines_temp = []       
@@ -937,6 +926,10 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
         connections_upstream_lines[bus] = upstream_lines_temp
     end
 
+    all_connections_lines_to_busses = merge(connections_downstream_lines, connections_upstream_lines) do a, b
+                                            vcat(a, b)
+                                        end
+
     if Multinode_Inputs.display_information_during_modeling_run
        # Save some text files showing connectivity from the simple powerflow model
         open(Multinode_Inputs.folder_location*"/paths.txt","w") do input
@@ -946,6 +939,11 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
         end
         open(Multinode_Inputs.folder_location*"/neighbors.txt","w") do input
             for (key, val) in neighbors
+                println(input, "$key => $val" ) 
+            end
+        end
+        open(Multinode_Inputs.folder_location*"/all_connections_lines_to_busses.txt","w") do input
+            for (key, val) in all_connections_lines_to_busses
                 println(input, "$key => $val" ) 
             end
         end
@@ -1296,7 +1294,11 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
                 println(input, "$key => $val" ) 
             end
         end
-
+        open(Multinode_Inputs.folder_location*"/connections.txt","w") do input
+            for (key, val) in connections
+                println(input, "$key => $val" ) 
+            end
+        end
         open(Multinode_Inputs.folder_location*"/phases_for_each_line.txt","w") do input
             for (key, val) in phases_for_each_line
                 println(input, "$key => $val" ) 
@@ -1308,7 +1310,7 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
             end
         end
     end
-  
+  print("\n The phases for each bus are: $(phases_for_each_bus)")
   print("\n The REopt nodes are: $(REopt_nodes)")
     # Conservation of energy for each bus
     for bus in collect(keys(connections)) # all_busses #
@@ -1321,33 +1323,76 @@ function AddSimplePowerFlowConstraintsToNonPMDTimesteps(Multinode_Inputs, REoptI
 
         elseif bus in REopt_nodes # parse(Int, bus) in REopt_nodes  # for buses that have an associated REopt node
             Multinode_Inputs.display_information_during_modeling_run ? print("\n Adding constraint for REopt bus $(bus):") : nothing
-            if bus in keys(connections_downstream)
+            if length(connections_downstream[bus]) > 0
                 Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
                 # For nodes that have upstream and downstream lines
                     # This code assumes that the network has been defined correctly such that the phases on the lines are connected correctly to the phases on each bus
-                for phase in phases
-                    @constraint(m, [t in indeces], m[:dvP][bus, phase, t] + sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, phase, t] for line in connections_downstream[string(bus)]) == 0)
+                for phase in phases_for_each_bus[bus]
+
+                    connections_upstream_of_same_phase = []
+                    for line in connections_upstream[string(bus)]
+                        if phase in phases_for_each_line[line]
+                            push!(connections_upstream_of_same_phase, line)
+                        end
+                    end
+
+                    connections_downstream_of_same_phase = []
+                    for line in connections_downstream[string(bus)]
+                        if phase in phases_for_each_line[line]
+                            push!(connections_downstream_of_same_phase, line)
+                        end
+                    end
+
+                    @constraint(m, [t in indeces], m[:dvP][bus, phase, t] + sum(m[:dvPline][line, phase, t] for line in connections_upstream_of_same_phase) - sum(m[:dvPline][line, phase, t] for line in connections_downstream_of_same_phase) == 0)
                 end
-            else
+            else # This else might not be used because all busses should be in the keys of the connections_downstream
                 Multinode_Inputs.display_information_during_modeling_run ? print(" at the end of a branch") : nothing
                 # For nodes that are at the end of branch
                     # This code assumes that the network has been defined correctly such that the phases on the lines are connected correctly to the phases on each bus
-                for phase in phases
-                    @constraint(m, [t in indeces], m[:dvP][bus, phase, t] + sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) == 0)
+            
+                for phase in phases_for_each_bus[bus]
+                    connections_upstream_of_same_phase = []
+                    for line in connections_upstream[string(bus)]
+                        if phase in phases_for_each_line[line]
+                            push!(connections_upstream_of_same_phase, line)
+                        end
+                    end
+                    @constraint(m, [t in indeces], m[:dvP][bus, phase, t] + sum(m[:dvPline][line, phase, t] for line in connections_upstream_of_same_phase) == 0)
                 end
             end
             
         else # for buses in the model without a REopt node
             Multinode_Inputs.display_information_during_modeling_run ? print("\n Adding constraint for non-REopt bus $(bus):") : nothing
-            if bus in keys(connections_downstream)
+            if length(connections_downstream[bus]) > 0
                 Multinode_Inputs.display_information_during_modeling_run ? print(" mid-branch") : nothing
+
                 for phase in phases_for_each_bus[bus]
-                    @constraint(m, [t in indeces], sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) - sum(m[:dvPline][line, phase, t] for line in connections_downstream[string(bus)]) == 0)
+                    connections_upstream_of_same_phase = []
+                    for line in connections_upstream[string(bus)]
+                        if phase in phases_for_each_line[line]
+                            push!(connections_upstream_of_same_phase, line)
+                        end
+                    end
+
+                    connections_downstream_of_same_phase = []
+                    for line in connections_downstream[string(bus)]
+                        if phase in phases_for_each_line[line]
+                            push!(connections_downstream_of_same_phase, line)
+                        end
+                    end
+                    @constraint(m, [t in indeces], sum(m[:dvPline][line, phase, t] for line in connections_upstream_of_same_phase) - sum(m[:dvPline][line, phase, t] for line in connections_downstream_of_same_phase) == 0)
                 end
             else
                 Multinode_Inputs.display_information_during_modeling_run ? print(" at the end of a branch") : nothing
+                
                 for phase in phases_for_each_bus[bus]
-                    @constraint(m, [t in indeces], sum(m[:dvPline][line, phase, t] for line in connections_upstream[string(bus)]) == 0)
+                    connections_upstream_of_same_phase = []
+                    for line in connections_upstream[string(bus)]
+                        if phase in phases_for_each_line[line]
+                            push!(connections_upstream_of_same_phase, line)
+                        end
+                    end
+                    @constraint(m, [t in indeces], sum(m[:dvPline][line, phase, t] for line in connections_upstream_of_same_phase) == 0)
                 end
             end
         end
