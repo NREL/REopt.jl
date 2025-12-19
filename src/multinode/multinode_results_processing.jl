@@ -874,11 +874,13 @@ function VoltageResultsSummary(results)
 end
 
 
-function CollectMapInformation(results, Multinode_Inputs)
+function CollectMapInformation(results, Multinode_Inputs, all_lines_including_transformers_as_lines, lines_in_PMD, data_eng_lines)
 
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
         lines = keys(results["Line_Info_PMD"])
     end
+
+    print("\n The lines in PMD are: $(lines_in_PMD)")
 
     # Extract the latitude and longitude for the busses
     bus_coordinates_filename = Multinode_Inputs.bus_coordinates
@@ -896,6 +898,27 @@ function CollectMapInformation(results, Multinode_Inputs)
     # Create a dictionary of the line segment start and end coordinates
     substation_cords = "N/A"
     line_cords = Dict([])
+    print("\n lines_in_PMD is: $(lines_in_PMD)")
+    for line in all_lines_including_transformers_as_lines
+        if line in lines_in_PMD # for lines that are lines in PMD
+            print("\n line $(line) is in lines_in_PMD")
+            line_cords[line] = [bus_cords[data_eng_lines[line]["f_bus"]], bus_cords[data_eng_lines[line]["t_bus"]]]
+
+        else # assume that the line is part of a transformer line
+            # transformer lines are represented with the syntax "xfmr_line_bus1_bus2"
+            print("\n line $(line) is not in lines_in_PMD")
+            line_interpretation = match(r"_([^_]+)_([^_]+)$", line)
+            bus1 = line_interpretation.captures[1]
+            bus2 = line_interpretation.captures[2]
+
+            line_cords[line] = [bus_cords[bus1],bus_cords[bus2]]
+        end
+    end
+
+    substation_cords = bus_cords[Multinode_Inputs.substation_node]
+
+    #=
+    # Previous code:
     for i in keys(bus_cords)
         for x in keys(bus_cords)
             if i != x
@@ -912,7 +935,8 @@ function CollectMapInformation(results, Multinode_Inputs)
             end
         end
     end
-    
+    =#
+
     bus_key_values = collect(keys(bus_cords))
     line_key_values = collect(keys(line_cords))
 
@@ -1034,6 +1058,11 @@ end
 function DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
     neighbors = REopt.modified_calc_connected_components_eng(data_eng)
     paths = REopt.DeterminePathToSourcebus(neighbors, Multinode_Inputs)
+
+    # remove duplicate values if a key has duplicates
+    for (key, values) in neighbors
+        neighbors[key] = unique(values)
+    end
 
     #Multinode_Inputs = results["Multinode_Inputs"]
 

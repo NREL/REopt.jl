@@ -777,11 +777,37 @@ function LinkREoptAndPMD(pm, m, data_math_mn, Multinode_Inputs, REopt_nodes, REo
 end
 
 
+function add_transformer_lines_to_the_dictionary(data_eng, lines, phases_for_each_line)
+    # Represent transformers as lines because voltage is not modeled in the simple powerflow representation without PMD
+
+    transformers = collect(keys(data_eng["transformer"]))
+    transformer_busses = Dict()
+    for transformer_name in transformers
+        transformer_bus1 = data_eng["transformer"][transformer_name]["bus"][1]
+        transformer_bus2 = data_eng["transformer"][transformer_name]["bus"][2]
+        transformer_line = "xfmr_line_"*string(transformer_bus1)*"_"*string(transformer_bus2) 
+        transformer_busses[transformer_line] = [transformer_bus1, transformer_bus2]
+        if !(transformer_line in lines)     
+            push!(lines, transformer_line)
+        else
+            print("\n Not adding $(transformer_line) to the lines vector because it already exists. This is likely due to a multiple single phase transformers (or voltage regulators) connecting the same busses. The total power rating for these may need to be added together in the model inputs.")
+        end
+
+        # Add the phases for the transformer line to dictionary:
+        if !(transformer_line in collect(keys(phases_for_each_line)))  # use this conditional to avoid adding multiple lines for the same connection between two nodes (could occur if there are single phase transformers or voltage regulators connecting each of of two adjacent three-phase busses)
+            phases_for_each_line[transformer_line] = filter!(x -> x != 4, data_eng["transformer"][transformer_name]["connections"][1]) # Remove the 4 connection (the neutral I think) for the purposes of this simple powerflow equation
+        else
+            # Add the phase to the existing line between the two busses (which is from another transformer or voltage regulator, likely a single phase transformer connecting the same two busses)
+            append!(phases_for_each_line[transformer_line], filter!(x -> x != 4, data_eng["transformer"][transformer_name]["connections"][1])) 
+        end
+    end
+
+    return phases_for_each_line, lines, transformer_busses
+end
+
+
 function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
    # Create dictionary with information about which lines are connected to each bus
-   # TODO: this function could likely be simplified
-
-    lines = collect(keys(data_eng["line"]))
 
     summed_lengths_to_sourcebus_dict, lengths_to_sourcebus_dict, line_names_to_sourcebus_dict, paths, neighbors = REopt.DetermineDistanceFromSourcebus(Multinode_Inputs, data_eng)
     print("\n Finished determining the distance from the sourcebus")
@@ -813,31 +839,14 @@ function CreateDictionaryOfNodeConnections(Multinode_Inputs, data_eng)
     end
     =#
 
-    # Initiate this dictionary with just the phases for each line; and then later in the code will add the phases for each transformer that is being represented as a line
-    phases_for_each_line_and_transformer_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    # Initial the lines vector based on data in PMD (which doesn't represent the transformers as lines)
+    lines = collect(keys(data_eng["line"]))
 
-    # Represent transformers as lines because voltage is not modeled in the simple powerflow representation without PMD
-    transformers = collect(keys(data_eng["transformer"]))
-    transformer_busses = Dict()
-    for transformer_name in transformers
-        transformer_bus1 = data_eng["transformer"][transformer_name]["bus"][1]
-        transformer_bus2 = data_eng["transformer"][transformer_name]["bus"][2]
-        transformer_line = "line"*string(transformer_bus1)*"_"*string(transformer_bus2) 
-        transformer_busses[transformer_line] = [transformer_bus1, transformer_bus2]
-        if !(transformer_line in lines)     
-            push!(lines, transformer_line)
-        else
-            print("\n Not adding $(transformer_line) to the lines vector because it already exists. This is likely due to a multiple single phase transformers (or voltage regulators) connecting the same busses. The total power rating for these may need to be added together in the model inputs.")
-        end
-
-        # Add the phases for the transformer line to dictionary:
-        if !(transformer_line in collect(keys(phases_for_each_line_and_transformer_line)))  # use this conditional to avoid adding multiple lines for the same connection between two nodes (could occur if there are single phase transformers or voltage regulators connecting each of of two adjacent three-phase busses)
-            phases_for_each_line_and_transformer_line[transformer_line] = filter!(x -> x != 4, data_eng["transformer"][transformer_name]["connections"][1]) # Remove the 4 connection (the neutral I think) for the purposes of this simple powerflow equation
-        else
-            # Add the phase to the existing line between the two busses (which is from another transformer or voltage regulator, likely a single phase transformer connecting the same two busses)
-            append!(phases_for_each_line_and_transformer_line[transformer_line], filter!(x -> x != 4, data_eng["transformer"][transformer_name]["connections"][1])) 
-        end
-    end
+    # Initiate this dictionary with just the phases for each line; 
+    phases_for_each_line =  create_dictionary_of_phases_for_each_line(data_eng) 
+    
+    # Then add the line IDs and phases for each transformer, representing the transformers as lines
+    phases_for_each_line_and_transformer_line, lines, transformer_busses = add_transformer_lines_to_the_dictionary(data_eng, lines, phases_for_each_line)
 
     connections_upstream_busses = Dict()
     connections_downstream_busses = Dict()
