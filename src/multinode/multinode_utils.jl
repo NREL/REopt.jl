@@ -33,9 +33,13 @@ function combine_dss_files_into_aggregated_dss_file(folder, new_file_name, exist
 end
 
 
-function prepare_dss_file_for_multinode(Multinode_Inputs, folder, input_dss_filepath) #, output_dss_filepath)
+function prepare_dss_file_for_multinode(Multinode_Inputs_struct, folder, input_dss_filepath) 
 
-	output_dss_filepath_reactors_processed = process_reactors(input_dss_filepath, folder*"/"*"temp_reactors_processed.dss")
+	# Convert the syntax "new object=" into simpler syntax
+	output_dss_filepath_object_syntax_processed = modify_object_syntax(input_dss_filepath, folder*"/"*"temp_object_syntax_modified.dss")
+
+	# Process the reactors
+	output_dss_filepath_reactors_processed = process_reactors(output_dss_filepath_object_syntax_processed, folder*"/"*"temp_reactors_processed.dss")
 
 	output_dss_filepath_redirects_removed = remove_redirect_lines(output_dss_filepath_reactors_processed, folder*"/"*"temp_redirects_removed.dss")
 
@@ -43,11 +47,41 @@ function prepare_dss_file_for_multinode(Multinode_Inputs, folder, input_dss_file
 
 	output_dss_filepath_loads_renamed_to_names_of_busses, load_map = rename_load_names_to_names_of_busses_with_phase_label(output_dss_filepath_multiphase_split_into_multiple_lines, folder*"/"*"temp_loads_renamed_to_busses_with_phase_label.dss")
 
-	output_dss_filepath_kw_kvar_modified = set_kw_and_kvar_loads_to_1_if_there_is_an_associated_REopt_node(Multinode_Inputs, output_dss_filepath_loads_renamed_to_names_of_busses, folder*"/"*"temp_kw_and_kvar_loads_with_value_of_1.dss")
+	output_dss_filepath_kw_kvar_modified = set_kw_and_kvar_loads_to_1_if_there_is_an_associated_REopt_node(Multinode_Inputs_struct, output_dss_filepath_loads_renamed_to_names_of_busses, folder*"/"*"temp_kw_and_kvar_loads_with_value_of_1.dss")
 
 	dss_file_export = output_dss_filepath_kw_kvar_modified
 
 	return dss_file_export, load_map
+end
+
+
+function modify_object_syntax(input_filepath::String, output_filepath::String)
+	# This function was generated with the assistance of ChatGPT
+
+	open(output_filepath, "w") do output
+		for line in eachline(input_filepath)
+			println(output, change_object_syntax(line))
+		end
+	end
+	
+	return output_filepath
+end
+
+
+function change_object_syntax(line)
+	# This funcition was generated with the assistance of ChatGPT
+
+	new_object_syntax_pattern = r"(?i)^\s*new\s+object\s*=\s*(\S+)"
+
+	m = match(new_object_syntax_pattern, line)
+	if m !== nothing
+		object_name = lowercase(m.captures[1])
+		return replace(line, new_object_syntax_pattern => "new $object_name"; count=1)
+	else
+		return line
+	end
+
+	return 
 end
 
 
@@ -72,8 +106,7 @@ function set_kw_and_kvar_loads_to_1_if_there_is_an_associated_REopt_node(Multino
 		for line in eachline(input_dss_file)
 			if occursin(r"(?i)new\s+load\.", line) && occursin(r"(?i)bus1=",line)
 				bus, phases = get_bus_and_phases(line)
-				print("\n The bus is $(bus), phases are: $(phases)")
-				
+								
 				phase = phases[1] # There will only be one phase listed in each row due to the function split_multiphase_loads_into_separate_lines
 
 				if (bus !== nothing) && (lowercase(bus) in REopt_nodes) 

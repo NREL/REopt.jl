@@ -46,6 +46,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     print("\n Reading the REopt results \n")
     Start_reading_REopt_results = now()
     REopt_results = reopt_results(m, REoptInputs_Combined)
+    print("\n Completed reading the REopt results \n")
 
     # Process the line upgrade results
     if allow_upgrades == true && Multinode_Inputs.model_line_upgrades == true
@@ -56,7 +57,9 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
 
     # Generate inputs that will be used for the multinode outage simulator
     if Multinode_Inputs.run_outage_simulator
+        print("\n Generating inputs for the outage simulator \n")
         DataDictionaryForEachNodeForOutageSimulator = REopt.GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
+        print("\n Completed generating inputs for the outage simulator \n")
     else
         DataDictionaryForEachNodeForOutageSimulator = "N/A"
     end
@@ -73,7 +76,7 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
     DataLineFlow = Vector{Any}(zeros(7))
     DataFrame_LineFlow = DataFrame(fill(Any[],7), [:Line, :Minimum_LineFlow_ActivekW, :Maximum_LineFlow_ActivekW, :Average_LineFlow_ActivekW, :Minimum_LineFlow_ReactivekVAR, :Maximum_LineFlow_ReactivekVAR, :Average_LineFlow_ReactivekVAR ])
     PMD_Dictionary_LineFlow_Power_Series = Dict([])
-
+    print("\n Storing the line flow data in PMD")
     for line in keys(sol_eng["nw"]["1"]["line"]) # read all of the line names from the first time step
         ActivePowerFlow_line_temp = []
         ReactivePowerFlow_line_temp = []
@@ -160,6 +163,8 @@ function Results_Processing_REopt_PMD_Model(m, results, data_math_mn, REoptInput
         merge!(PMD_Dictionary_LineFlow_Power_Series, PMD_Dictionary_LineFlow_Power_Series_temp)
 
     end
+
+    print("\n Completed storing the line flow data in PMD")
 
     # Record the time for post-processing
     milliseconds, time_results["Step $(length(keys(time_results))+1): "*BAU_indicator*"reading_REopt_results_minutes"] = CalculateComputationTime(Start_reading_REopt_results)
@@ -276,7 +281,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             DataLabels = []
             Data = []
             
-            LineFromSubstationToFacilityMeter = "line"*Multinode_Inputs.substation_node * "_" * Multinode_Inputs.facilitymeter_node
+            LineFromSubstationToFacilityMeter = Multinode_Inputs.substation_line # "line"*Multinode_Inputs.substation_node * "_" * Multinode_Inputs.facilitymeter_node
             
             if Multinode_Inputs.model_type == "PowerModelsDistribution"
 
@@ -682,7 +687,7 @@ function determine_timestep_information(Multinode_Inputs, m, data_eng, phases_fo
     if Multinode_Inputs.apply_simple_powerflow_model_to_timesteps_that_do_not_use_PMD
         line_to_use_to_collect_timesteps = collect(keys(data_eng["line"]))[1]
         phase_to_use_to_collect_timesteps = phases_for_each_line[line_to_use_to_collect_timesteps][1]
-        simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][line_to_use_to_collect_timesteps, phase_to_use_to_collect_timesteps, :].data))) # the phase 1 might not always work # pull the total number of timesteps from the first line in the simplified powerflow model
+        simplified_powerflow_model_timesteps = collect(1:length(value.(m[:dvPline][line_to_use_to_collect_timesteps, phase_to_use_to_collect_timesteps, :]))) # the phase 1 might not always work # pull the total number of timesteps from the first line in the simplified powerflow model
     else
         simplified_powerflow_model_timesteps = "the simplified powerflow model was not used"
     end
@@ -706,11 +711,21 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
     if length(time_steps_without_PMD) != length(simplified_powerflow_model_timesteps)
         throw(@error("The lengths of the time step arrays should be the same. This indicates that there is an issue with how the simple powerflow model and/or PMD model was formulated."))
     end
+    
+    timesteps = collect(1:length(time_steps_without_PMD)) # axes(m[:dvPline],3)
 
     simple_powerflow_line_results = Dict()
     lines = collect(keys(data_eng["line"]))   
     for line in lines
-        line_power_flow_series = sum(value.(m[:dvPline][line,phase,:].data) for phase in phases_for_each_line[line])
+        #line_power_flow_series = sum(value.(m[:dvPline][line,phase,:].data) for phase in phases_for_each_line[line])
+        
+        line_power_flow_series = zeros(length(time_steps_without_PMD))
+        
+        for phase in phases_for_each_line[line]
+            values = value.(m[:dvPline][line, phase, :])
+            line_power_flow_series += [values[i] for i in timesteps]
+        end
+        
         simple_powerflow_line_results[line] = Dict("line_power_flow_series" => line_power_flow_series,
                                                    "line_maximum_power_flow" => maximum(line_power_flow_series),
                                                    "line_average_power_flow" => mean(line_power_flow_series),
@@ -721,18 +736,25 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
         # Add power flow results for individual phases
         individual_phase_results=Dict([])
         for phase in phases_for_each_line[line]
-            individual_phase_results["phase_$(phase)"] = value.(m[:dvPline][line,phase,:].data) 
+            individual_phase_results["phase_$(phase)"] = value.(m[:dvPline][line,phase,:]) 
         end
         simple_powerflow_line_results[line]["individual_phase_results"] = individual_phase_results
     end
 
     simple_powerflow_bus_results = Dict()
-    busses = axes(m[:dvP][:,:,1])[1]  
+    #busses = axes(m[:dvP][:,:,1])[1]  # sounds like this line will error
+
+    busses = unique(first.(collect(keys(m[:dvP][:,:,1].data)))) # something to extract all of the indeces in the first index of dvP
+
+    #dvP_values = value.(m[:dvP][bus,:,:])
+
     for bus in busses
         if Multinode_Inputs.display_information_during_modeling_run
             print("\n For bus $(bus), the phases are: ")
             print(phases_for_each_bus[string(bus)])
         end
+
+        dvP_values = value.(m[:dvP][bus,:,:]).data
 
         # Adjust the phases associated with the sourcebus because in the PMD model the sourcebus will have three phases, even if the rest of the components on the system are single phase
         if Multinode_Inputs.number_of_phases == 3
@@ -745,7 +767,14 @@ function process_simple_powerflow_results(Multinode_Inputs, m, data_eng, connect
             throw(@error("The input for the number_of_phases is invalid."))
         end
 
-        bus_power_series = sum(value.(m[:dvP][bus, phase, :].data) for phase in phases_for_each_bus[string(bus)])
+        #bus_power_series = sum(value.(m[:dvP][bus, phase, :].data) for phase in phases_for_each_bus[string(bus)])
+        bus_power_series = zeros(Float64, length(time_steps_without_PMD))
+        
+        for ((_,j), val) in dvP_values
+            bus_power_series[j] += val
+        end
+
+        #sum(dvP_values[phase, :] for phase in phases_for_each_bus[bus])
         simple_powerflow_bus_results[bus] = Dict("bus_power_series" => bus_power_series,
                                                    "bus_maximum_power" => maximum(bus_power_series),
                                                    "bus_average_power" => mean(bus_power_series),
