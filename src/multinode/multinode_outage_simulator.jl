@@ -506,15 +506,15 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
     critical_loads_kw = Dict([])
     if Multinode_Inputs.critical_load_method == "Fraction"
         for i in 1:length(NodeList)
-            if results[parse(Int,NodeList[i])]["ElectricLoad"]["annual_calculated_kwh"] > 1
-                critical_loads_kw[NodeList[i]] = Multinode_Inputs.critical_load_fraction[NodeList[i]] * Multinode_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method[parse(Int,NodeList[i])]
+            if results[NodeList[i]]["ElectricLoad"]["annual_calculated_kwh"] > 1
+                critical_loads_kw[NodeList[i]] = Multinode_Inputs.critical_load_fraction[NodeList[i]] * Multinode_Inputs.load_profiles_for_outage_sim_if_using_the_fraction_method[NodeList[i]]
             else
                 critical_loads_kw[NodeList[i]] = zeros(8760*Multinode_Inputs.time_steps_per_hour)
             end
         end
     elseif Multinode_Inputs.critical_load_method == "TimeSeries"
         for i in 1:length(NodeList)
-            if results[parse(Int,NodeList[i])]["ElectricLoad"]["annual_calculated_kwh"] > 1
+            if results[NodeList[i]]["ElectricLoad"]["annual_calculated_kwh"] > 1
                 critical_loads_kw[NodeList[i]] = Multinode_Inputs.critical_load_timeseries[NodeList[i]]
             else
                 critical_loads_kw[NodeList[i]] = zeros(8760*Multinode_Inputs.time_steps_per_hour)
@@ -525,11 +525,11 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
     end
 
     # Initiate the dictionary with data from the first node
-    if "ElectricStorage" in keys(results[parse(Int,NodeList[1])])
-        if length(results[parse(Int,NodeList[1])]["ElectricStorage"]["soc_series_fraction"]) > 0
-            BatteryChargekwh = results[parse(Int,NodeList[1])]["ElectricStorage"]["soc_series_fraction"]*results[parse(Int,NodeList[1])]["ElectricStorage"]["size_kwh"]
-            Batterykw = results[parse(Int,NodeList[1])]["ElectricStorage"]["size_kw"]
-            Batterykwh = results[parse(Int,NodeList[1])]["ElectricStorage"]["size_kwh"]
+    if "ElectricStorage" in keys(results[NodeList[1]])
+        if length(results[NodeList[1]]["ElectricStorage"]["soc_series_fraction"]) > 0
+            BatteryChargekwh = results[NodeList[1]]["ElectricStorage"]["soc_series_fraction"]*results[NodeList[1]]["ElectricStorage"]["size_kwh"]
+            Batterykw = results[NodeList[1]]["ElectricStorage"]["size_kw"]
+            Batterykwh = results[NodeList[1]]["ElectricStorage"]["size_kwh"]
         else
             BatteryChargekwh = 0*ones(length(TimeSteps))
             Batterykw = 0
@@ -541,9 +541,9 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
         Batterykwh = 0
     end 
 
-    if "PV" in keys(results[parse(Int,NodeList[1])])
-        if results[parse(Int,NodeList[1])]["PV"]["size_kw"] > 0
-            PVProductionProfile_results = round.(((results[parse(Int,NodeList[1])]["PV"]["production_factor_series"])*results[parse(Int,NodeList[1])]["PV"]["size_kw"]), digits = 3)
+    if "PV" in keys(results[NodeList[1]])
+        if results[NodeList[1]]["PV"]["size_kw"] > 0
+            PVProductionProfile_results = round.(((results[NodeList[1]]["PV"]["production_factor_series"])*results[NodeList[1]]["PV"]["size_kw"]), digits = 3)
         else
             PVProductionProfile_results = zeros(length(TimeSteps))
         end
@@ -551,8 +551,8 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
         PVProductionProfile_results = zeros(length(TimeSteps))
     end
 
-    if "Generator" in keys(results[parse(Int,NodeList[1])])
-        GeneratorSize_results = results[parse(Int,NodeList[1])]["Generator"]["size_kw"]
+    if "Generator" in keys(results[NodeList[1]])
+        GeneratorSize_results = results[NodeList[1]]["Generator"]["size_kw"]
         if NodeList[1] in keys(Multinode_Inputs.generator_fuel_gallon_available)
             generator_fuel_gallon_available = Multinode_Inputs.generator_fuel_gallon_available[NodeList[1]]
         else
@@ -579,11 +579,11 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
 
     # Add additional dictionaries to the main dictionary for the additional nodes, depending on how many nodes there are
     for i in 2:length(NodeList)
-        if "ElectricStorage" in keys(results[parse(Int,NodeList[i])]) 
-            if length(results[parse(Int,NodeList[i])]["ElectricStorage"]["soc_series_fraction"]) > 0
-                BatteryChargekwh_B = results[parse(Int,NodeList[i])]["ElectricStorage"]["soc_series_fraction"]*results[parse(Int,NodeList[i])]["ElectricStorage"]["size_kwh"]
-                Batterykw_B = results[parse(Int,NodeList[i])]["ElectricStorage"]["size_kw"]
-                Batterykwh_B = results[parse(Int,NodeList[i])]["ElectricStorage"]["size_kwh"]
+        if "ElectricStorage" in keys(results[NodeList[i]]) 
+            if length(results[NodeList[i]]["ElectricStorage"]["soc_series_fraction"]) > 0
+                BatteryChargekwh_B = results[NodeList[i]]["ElectricStorage"]["soc_series_fraction"]*results[NodeList[i]]["ElectricStorage"]["size_kwh"]
+                Batterykw_B = results[NodeList[i]]["ElectricStorage"]["size_kw"]
+                Batterykwh_B = results[NodeList[i]]["ElectricStorage"]["size_kwh"]
             else
                 BatteryChargekwh_B = 0*ones(length(TimeSteps))
                 Batterykw_B = 0
@@ -594,9 +594,9 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
             Batterykw_B = 0
             Batterykwh_B = 0
         end
-        if "PV" in keys(results[parse(Int,NodeList[i])])
-            if results[parse(Int,NodeList[i])]["PV"]["size_kw"] > 0
-                PVProductionProfile_results_B = round.(((results[parse(Int,NodeList[i])]["PV"]["production_factor_series"])*results[parse(Int,NodeList[i])]["PV"]["size_kw"]), digits = 3)
+        if "PV" in keys(results[NodeList[i]])
+            if results[NodeList[i]]["PV"]["size_kw"] > 0
+                PVProductionProfile_results_B = round.(((results[NodeList[i]]["PV"]["production_factor_series"])*results[NodeList[i]]["PV"]["size_kw"]), digits = 3)
             else
                 PVProductionProfile_results_B = zeros(length(TimeSteps))
             end
@@ -604,8 +604,8 @@ function GenerateInputsForOutageSimulator(Multinode_Inputs, REopt_results)
             PVProductionProfile_results_B = zeros(length(TimeSteps))
         end
         
-        if "Generator" in keys(results[parse(Int,NodeList[i])])
-            GeneratorSize_results_B = results[parse(Int,NodeList[i])]["Generator"]["size_kw"]
+        if "Generator" in keys(results[NodeList[i]])
+            GeneratorSize_results_B = results[NodeList[i]]["Generator"]["size_kw"]
             if NodeList[i] in keys(Multinode_Inputs.generator_fuel_gallon_available)
                 generator_fuel_gallon_available = Multinode_Inputs.generator_fuel_gallon_available[NodeList[i]]
             else
