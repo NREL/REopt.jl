@@ -992,9 +992,9 @@ function CollectResultsByNode(results, busses)
                 punctuation = ""
             end
             
-            results_by_node[string(i)] = punctuation*PV*Generator*Battery
+            results_by_node[lowercase(string(i))] = punctuation*PV*Generator*Battery
         else
-            results_by_node[string(i)] = ""
+            results_by_node[lowercase(string(i))] = ""
         end
     end
 
