@@ -79,8 +79,6 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
             model_diagnostics_bus_voltage_violations = "N/A"
         end
 
-        #return pm
-
         ComputationTime_EntireModel_Milliseconds, ComputationTime_EntireModel_Minutes = CalculateComputationTime(StartTime_EntireModel)
         time_results["ComputationTime_EntireModel_Minutes"] = ComputationTime_EntireModel_Minutes
         
@@ -138,7 +136,7 @@ function Multinode_Model(Multinode_Settings::Dict{String, Any})
                             ("DataDictionaryForEachNode", DataDictionaryForEachNode),
                             ("CompiledResults", CompiledResults),
                             ("REoptInputs_Combined", REoptInputs_Combined),
-                            ("model", pm.model),
+                            ("substation_power_flow", value.(pm.model[Symbol("dvSubstationPowerFlow")]).data),
                             ("outage_simulator_results_for_plotting", outage_simulator_results_for_plotting)
                         ])
         else

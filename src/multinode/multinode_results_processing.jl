@@ -875,44 +875,41 @@ function VoltageResultsSummary(results)
 end
 
 
-function CollectMapInformation(results, Multinode_Inputs, all_lines_including_transformers_as_lines, lines_in_PMD, data_eng_lines)
+function CollectMapInformation(results, Multinode_Inputs, all_lines_including_transformers_as_lines, lines_in_PMD, data_eng_lines, busses_in_PMD)
 
     if Multinode_Inputs.model_type == "PowerModelsDistribution"
         lines = keys(results["Line_Info_PMD"])
     end
 
-    print("\n The lines in PMD are: $(lines_in_PMD)")
-
     # Extract the latitude and longitude for the busses
     bus_coordinates_filename = Multinode_Inputs.bus_coordinates
     data_input = CSV.read(bus_coordinates_filename, DataFrame, header =1)
-    latitudes = vec(Matrix(data_input[:,[:Latitude]]))
-    longitudes = vec(Matrix(data_input[:,[:Longitude]]))
-    busses = vec(Matrix(data_input[:,[:Bus]]))
 
     # Create a dictionary of the bus coordinates
+    number_of_entries_in_lat_long_file = size(data_input, 1)
+    busses_in_PMD_lowercase = lowercase.(busses_in_PMD)
     bus_cords = Dict([])
-    for i in 1:length(busses)
-        bus_cords[string(busses[i])] = [latitudes[i], longitudes[i]]
+    busses=[]
+    for row in collect(1:number_of_entries_in_lat_long_file)
+        bus = lowercase(data_input[row,:Bus])
+        if bus in busses_in_PMD_lowercase
+            push!(busses, bus)
+            bus_cords[string(bus)] = [data_input[row,:Latitude], data_input[row,:Longitude]]
+        end
     end
 
     # Create a dictionary of the line segment start and end coordinates
     substation_cords = "N/A"
-    line_cords = Dict([])
-    print("\n lines_in_PMD is: $(lines_in_PMD)")
-    print("\n the bus cords are: $(bus_cords))")
+    line_cords = Dict([])   
 
     # Convert all of the characters to lower case
     bus_cords = Dict(lowercase(String(key)) => value for (key,value) in bus_cords)
 
     for line in all_lines_including_transformers_as_lines
         if line in lines_in_PMD # for lines that are lines in PMD
-            print("\n line $(line) is in lines_in_PMD")
             line_cords[line] = [bus_cords[data_eng_lines[line]["f_bus"]], bus_cords[data_eng_lines[line]["t_bus"]]]
-
         else # assume that the line is part of a transformer line
             # transformer lines are represented with the syntax "xfmr_line_bus1_bus2"
-            print("\n line $(line) is not in lines_in_PMD")
             line_interpretation = match(r"_([^_]+)_([^_]+)$", line)
             bus1 = line_interpretation.captures[1]
             bus2 = line_interpretation.captures[2]
@@ -922,26 +919,6 @@ function CollectMapInformation(results, Multinode_Inputs, all_lines_including_tr
     end
 
     substation_cords = bus_cords[Multinode_Inputs.substation_node]
-
-    #=
-    # Previous code:
-    for i in keys(bus_cords)
-        for x in keys(bus_cords)
-            if i != x
-                if ("line"*i*"_"*x in lines) && (i == Multinode_Inputs.substation_node || x == Multinode_Inputs.substation_node)
-                    line_cords["line"*i*"_"*x] = [bus_cords[i],bus_cords[x]]
-                    if i == Multinode_Inputs.substation_node
-                        substation_cords = bus_cords[i]
-                    elseif x == Multinode_Inputs.substation_node
-                        substation_cords = bus_cords[x]
-                    end
-                elseif "line"*i*"_"*x in lines
-                    line_cords["line"*i*"_"*x] = [bus_cords[i],bus_cords[x]]
-                end
-            end
-        end
-    end
-    =#
 
     bus_key_values = collect(keys(bus_cords))
     line_key_values = collect(keys(line_cords))
