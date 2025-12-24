@@ -24,24 +24,24 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 
     r = Dict{String, Any}()
 
-    r["bau_load_series_kw"] = p.s.electric_load.loads_kw
+    r["bau_load_series_kw"] = p.s.electric_load.loads_kw # includes bau_existing_chiller_electric_load_series_kw
     r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
 
     r["bau_existing_chiller_electric_load_series_kw"] = p.s.cooling_load.loads_kw_thermal ./ p.cooling_cop["ExistingChiller"]
-    r["chiller_load_kw"] = [
+    r["chiller_load_series_kw"] = [
         sum(value(m[Symbol("dvCoolingProduction"*_n)][t, ts]) / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling, p.techs.ghp); init=0.0)
         for ts in p.time_steps
     ]
-    r["electric_heater_load_kw"] = [
+    r["electric_heater_load_series_kw"] = [
         sum(value(m[Symbol("dvHeatingProduction"*_n)][t, q, ts]) / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater; init=0.0)
         for ts in p.time_steps
     ]
-    r["ghp_load_kw"] = [ 
+    r["ghp_load_series_kw"] = [ 
         sum(p.ghp_electric_consumption_kw[g,ts] * value(m[Symbol("binGHP"*_n)][g]) for g in p.ghp_options; init=0.0)
         for ts in p.time_steps
     ]
     # TODO: if we change how we report this here, should we consider changing the critical load calculation throughout? 
-    r["load_series_kw"] = r["bau_load_series_kw"] .- r["bau_existing_chiller_electric_load_series_kw"] .+ r["chiller_load_kw"] .+ r["electric_heater_load_kw"] .+ r["ghp_load_kw"]
+    r["load_series_kw"] = r["bau_load_series_kw"] .- r["bau_existing_chiller_electric_load_series_kw"] .+ r["chiller_load_series_kw"] .+ r["electric_heater_load_series_kw"] .+ r["ghp_load_series_kw"]
     
     r["bau_annual_calculated_kwh"] = round(
         sum(r["bau_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
