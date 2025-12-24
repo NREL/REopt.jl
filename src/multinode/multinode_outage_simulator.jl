@@ -414,10 +414,10 @@ function Connect_To_PMD_Model(pm, Multinode_Inputs, data_math_mn, OutageLength_T
             )
         end
     end
-
+    
     # Prevent power from entering the multinode to simulate a power outage
     for PMD_time_step in outage_timesteps
-        substation_line_index = LineInfo_PMD[Multinode_Inputs.substation_line]["index"]
+        substation_line_index = LineInfo_PMD[lowercase(Multinode_Inputs.substation_line)]["index"]
         timestep_for_network_data = 1 # collect the network configuration information from timestep 1, which assumes that the network is not changing (fair to assume with the REopt integration)
         branch = PowerModelsDistribution.ref(pm, timestep_for_network_data, :branch, substation_line_index)
         f_bus = branch["f_bus"]
@@ -659,7 +659,7 @@ function PrepareInputsForOutageSimulator(Multinode_Inputs, OutageLength_TimeStep
     outage_start_timesteps_checked = outage_start_timesteps_filtered[1:RunNumber]
  
     if Multinode_Inputs.model_type == "PowerModelsDistribution" 
-        OutageSimulator_LineFromSubstationToFacilityMeter = Multinode_Inputs.substation_node*"-"*Multinode_Inputs.facilitymeter_node
+        OutageSimulator_LineFromSubstationToFacilityMeter = lowercase(Multinode_Inputs.substation_line) #substation_node*"-"*Multinode_Inputs.facilitymeter_node
     end
 
     return OutageSimulator_LineFromSubstationToFacilityMeter, RunNumber, outage_start_timesteps_checked
