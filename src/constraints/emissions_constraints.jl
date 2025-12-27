@@ -97,16 +97,16 @@ Function to calculate annual emissions from grid electricity consumption.
 """
 function calc_yr1_emissions_from_elec_grid_purchase(m,p)
 	yr1_emissions_from_elec_grid_lbs_CO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
+		sum(p.scenario_probabilities[s] * m[:dvGridPurchase][s, ts, tier]*p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts] for s in 1:p.n_scenarios, ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
 		 
 	yr1_emissions_from_elec_grid_lbs_NOx = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
+		sum(p.scenario_probabilities[s] * m[:dvGridPurchase][s, ts, tier]*p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts] for s in 1:p.n_scenarios, ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
 
 	yr1_emissions_from_elec_grid_lbs_SO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
+		sum(p.scenario_probabilities[s] * m[:dvGridPurchase][s, ts, tier]*p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts] for s in 1:p.n_scenarios, ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
 
 	yr1_emissions_from_elec_grid_lbs_PM25 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
+		sum(p.scenario_probabilities[s] * m[:dvGridPurchase][s, ts, tier]*p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts] for s in 1:p.n_scenarios, ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
 
 	return yr1_emissions_from_elec_grid_lbs_CO2, 
 		   yr1_emissions_from_elec_grid_lbs_NOx, 

@@ -61,19 +61,19 @@ function add_re_elec_calcs(m,p)
 	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
 	# 		onsite is counted so battery doesn't become a back door for RE to grid.
 	m[:AnnualOnsiteREEleckWh] = @expression(m, p.hours_per_time_step * (
-			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
-				p.tech_renewable_energy_fraction[t] for t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
+			sum(p.scenario_probabilities[s] * p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][s, t,ts] * 
+				p.tech_renewable_energy_fraction[t] for s in 1:p.n_scenarios, t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
 			) - #total RE elec generation, excl steam turbine
-			sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(
+			sum(p.scenario_probabilities[s] * m[:dvProductionToStorage][s, b,t,ts]*p.tech_renewable_energy_fraction[t]*(
 				1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) 
-				for t in setdiff(p.techs.elec, p.techs.steam_turbine), b in p.s.storage.types.elec, ts in p.time_steps
+				for s in 1:p.n_scenarios, t in setdiff(p.techs.elec, p.techs.steam_turbine), b in p.s.storage.types.elec, ts in p.time_steps
 			) - #minus battery efficiency losses
-			sum(m[:dvCurtail][t,ts] * p.tech_renewable_energy_fraction[t] 
-				for t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
+			sum(p.scenario_probabilities[s] * m[:dvCurtail][s, t,ts] * p.tech_renewable_energy_fraction[t] 
+				for s in 1:p.n_scenarios, t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
 			) - # minus curtailment
 			(1 - p.s.site.include_exported_renewable_electricity_in_total) *
-			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_fraction[t] 
-				for t in setdiff(p.techs.elec, p.techs.steam_turbine), u in p.export_bins_by_tech[t], ts in p.time_steps
+			sum(p.scenario_probabilities[s] * m[:dvProductionToGrid][s, t,u,ts]*p.tech_renewable_energy_fraction[t] 
+				for s in 1:p.n_scenarios, t in setdiff(p.techs.elec, p.techs.steam_turbine), u in p.export_bins_by_tech[t], ts in p.time_steps
 			) # minus exported RE, if RE accounting method = 0.
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
@@ -82,11 +82,11 @@ function add_re_elec_calcs(m,p)
 	# Note: when we add capability for battery to discharge to grid, need to subtract out *grid RE* discharged from battery 
 	# 		back to grid so that loop doesn't become a back door for increasing RE. This will require some careful thought!
 	m[:AnnualGridREEleckWh] = @expression(m, p.hours_per_time_step * (
-			sum(m[:dvGridPurchase][ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
-				for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 
-			- sum(m[:dvGridToStorage][b, ts] * p.s.electric_utility.renewable_energy_fraction_series[ts] *
+			sum(p.scenario_probabilities[s] * m[:dvGridPurchase][s, ts, tier] * p.s.electric_utility.renewable_energy_fraction_series[ts] 
+				for s in 1:p.n_scenarios, ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers) # renewable energy from grid 
+			- sum(p.scenario_probabilities[s] * m[:dvGridToStorage][s, b, ts] * p.s.electric_utility.renewable_energy_fraction_series[ts] *
 				(1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency)
-				for ts in p.time_steps, b in p.s.storage.types.elec
+				for s in 1:p.n_scenarios, ts in p.time_steps, b in p.s.storage.types.elec
 			) # minus battery efficiency losses from grid charging storage (assumes all that is charged is discharged)
 		) 
 	)
