@@ -564,8 +564,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ObjectivePenalties] += m[:dvComfortLimitViolationCost]
 	# 2. Incentive to keep SOC high
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
+		# Expected SOC incentive across scenarios (unified indexing approach)
 		m[:ObjectivePenalties] += -1 * sum(
-				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
+				p.scenario_probabilities[s] * m[:dvStoredEnergy][s, b, ts] for s in 1:p.n_scenarios, b in p.s.storage.types.elec, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
 	end
 	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
@@ -641,20 +642,22 @@ end
 Add JuMP variables to the model.
 """
 function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
+	# For OUU modeling, first-stage (sizing) variables are scenario-independent, while second-stage (dispatch) variables have the scenario index
+	# For non-OUU, dispatch variables will have 1:1 scenario index range (=>1)
 	@variables m begin
 		dvSize[p.techs.all] >= 0  # System Size of Technology t [kW]
 		dvPurchaseSize[p.techs.all] >= 0  # system kW beyond existing_kw that must be purchased
-		dvGridPurchase[p.time_steps, 1:p.s.electric_tariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
-		dvRatedProduction[p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
-		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.s.storage.types.all, union(p.techs.ghp,p.techs.all), p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
-		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
-		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
-		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
+		dvGridPurchase[1:p.n_scenarios, p.time_steps, 1:p.s.electric_tariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
+		dvRatedProduction[1:p.n_scenarios, p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
+		dvCurtail[1:p.n_scenarios, p.techs.all, p.time_steps] >= 0  # [kW]
+		dvProductionToStorage[1:p.n_scenarios, p.s.storage.types.all, union(p.techs.ghp,p.techs.all), p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvDischargeFromStorage[1:p.n_scenarios, p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
+		dvGridToStorage[1:p.n_scenarios, p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStoredEnergy[1:p.n_scenarios, p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
-		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
-		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
+		dvPeakDemandTOU[1:p.n_scenarios, p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
+		dvPeakDemandMonth[1:p.n_scenarios, p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
@@ -678,16 +681,16 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(p.techs.fuel_burning)
-		@variable(m, dvFuelUsage[p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by technology t in each time step [kWh]
+		@variable(m, dvFuelUsage[1:p.n_scenarios, p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by scenario [kWh]
     end
 
     if !isempty(p.s.electric_tariff.export_bins)
-        @variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
+		@variable(m, dvProductionToGrid[1:p.n_scenarios, p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
 		@warn "Adding binary variable to prevent simultaneous grid import/export. Some solvers are very slow with integer variables"
-		@variable(m, binNoGridPurchases[p.time_steps], Bin)
+		@variable(m, binNoGridPurchases[1:p.n_scenarios, p.time_steps], Bin)
 	end
 
     if !isempty(union(p.techs.heating, p.techs.chp))
@@ -762,3 +765,4 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 end
+
