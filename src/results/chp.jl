@@ -34,43 +34,36 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 	r["size_kw"] = value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.chp))
     r["size_supplemental_firing_kw"] = value(sum(m[Symbol("dvSupplementaryFiringSize"*_n)][t] for t in p.techs.chp))
-	@expression(m, CHPFuelUsedKWH, sum(m[Symbol("dvFuelUsage"*_n)][t, ts] for t in p.techs.chp, ts in p.time_steps))
-	r["annual_fuel_consumption_mmbtu"] = round(value(CHPFuelUsedKWH) / KWH_PER_MMBTU, digits=3)
-	@expression(m, Year1CHPElecProd,
-		p.hours_per_time_step * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
-			for t in p.techs.chp, ts in p.time_steps))
-	r["annual_electric_production_kwh"] = round(value(Year1CHPElecProd), digits=3)
-	
-	@expression(m, CHPThermalProdKW[ts in p.time_steps],
-		sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] - m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + 
-		m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] for t in p.techs.chp))
-
+	CHPFuelUsedKWH = sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvFuelUsage"*_n)][s, t, ts]) for t in p.techs.chp, ts in p.time_steps) for s in 1:p.n_scenarios)
+	r["annual_fuel_consumption_mmbtu"] = round(CHPFuelUsedKWH / KWH_PER_MMBTU, digits=3)
+	Year1CHPElecProd = p.hours_per_time_step * sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvRatedProduction"*_n)][s, t,ts]) * p.production_factor[t, ts]
+			for t in p.techs.chp, ts in p.time_steps) for s in 1:p.n_scenarios)
+	r["annual_electric_production_kwh"] = round(Year1CHPElecProd, digits=3)
+	CHPThermalProdKW = sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] - m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + 
+		m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] for t in p.techs.chp)
 	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
 	r["annual_thermal_production_mmbtu"] = round(p.hours_per_time_step * sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
 
-	@expression(m, CHPElecProdTotal[ts in p.time_steps],
-		sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for t in p.techs.chp))
-	r["electric_production_series_kw"] = round.(value.(CHPElecProdTotal), digits=3)
+	CHPElecProdTotal = [sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvRatedProduction"*_n)][s, t,ts]) * p.production_factor[t, ts] for t in p.techs.chp) for s in 1:p.n_scenarios) for ts in p.time_steps]
+	r["electric_production_series_kw"] = round.(CHPElecProdTotal, digits=3)
 	# Electric dispatch breakdown
     if !isempty(p.s.electric_tariff.export_bins)
-        @expression(m, CHPtoGrid[ts in p.time_steps], sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts]
-                for t in p.techs.chp, u in p.export_bins_by_tech[t]))
+        CHPtoGrid = [sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvProductionToGrid"*_n)][s, t,u,ts])
+                for t in p.techs.chp, u in p.export_bins_by_tech[t]) for s in 1:p.n_scenarios) for ts in p.time_steps]
     else
         CHPtoGrid = zeros(length(p.time_steps))
     end
-    r["electric_to_grid_series_kw"] = round.(value.(CHPtoGrid), digits=3)
+    r["electric_to_grid_series_kw"] = round.(CHPtoGrid, digits=3)
 	if !isempty(p.s.storage.types.elec)
-		@expression(m, CHPtoBatt[ts in p.time_steps],
-			sum(m[Symbol("dvProductionToStorage"*_n)]["ElectricStorage",t,ts] for t in p.techs.chp))
+		CHPtoBatt = [sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvProductionToStorage"*_n)][s, "ElectricStorage",t,ts]) for t in p.techs.chp) for s in 1:p.n_scenarios) for ts in p.time_steps]
 	else
 		CHPtoBatt = zeros(length(p.time_steps))
 	end
-	r["electric_to_storage_series_kw"] = round.(value.(CHPtoBatt), digits=3)
-	@expression(m, CHPtoLoad[ts in p.time_steps],
-		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
-			for t in p.techs.chp) - CHPtoBatt[ts] - CHPtoGrid[ts])
-	r["electric_to_load_series_kw"] = round.(value.(CHPtoLoad), digits=3)
+	r["electric_to_storage_series_kw"] = round.(CHPtoBatt, digits=3)
+	CHPtoLoad = [sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvRatedProduction"*_n)][s, t, ts]) * p.production_factor[t, ts] * p.levelization_factor[t]
+			for t in p.techs.chp) for s in 1:p.n_scenarios) - CHPtoBatt[ts] - CHPtoGrid[ts] for ts in p.time_steps]
+	r["electric_to_load_series_kw"] = round.(CHPtoLoad, digits=3)
 	# Thermal dispatch breakdown
     if !isempty(p.s.storage.types.hot)
 		@expression(m, CHPToHotTES[ts in p.time_steps],

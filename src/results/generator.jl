@@ -42,34 +42,24 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["year_one_fixed_om_cost_before_tax"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	if !isempty(p.s.storage.types.elec)
-	generatorToBatt = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec, t in p.techs.gen))
+	generatorToBatt = [sum(p.scenario_probabilities[s] * sum(value(m[:dvProductionToStorage][s, b, t, ts]) for b in p.s.storage.types.elec, t in p.techs.gen) for s in 1:p.n_scenarios) for ts in p.time_steps]
 	else
 		generatorToBatt = zeros(length(p.time_steps))
 	end
-	r["electric_to_storage_series_kw"] = round.(value.(generatorToBatt), digits=3)
+	r["electric_to_storage_series_kw"] = round.(generatorToBatt, digits=3)
 
-	generatorToGrid = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToGrid][t, u, ts] for t in p.techs.gen, u in p.export_bins_by_tech[t])
-	)
-	r["electric_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
+	generatorToGrid = [sum(p.scenario_probabilities[s] * sum(value(m[:dvProductionToGrid][s, t, u, ts]) for t in p.techs.gen, u in p.export_bins_by_tech[t]) for s in 1:p.n_scenarios) for ts in p.time_steps]
+	r["electric_to_grid_series_kw"] = round.(generatorToGrid, digits=3)
 
-	generatorToLoad = @expression(m, [ts in p.time_steps],
-		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
-			for t in p.techs.gen) -
-			generatorToBatt[ts] - generatorToGrid[ts]
-	)
-	r["electric_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
+	generatorToLoad = [sum(p.scenario_probabilities[s] * sum(value(m[:dvRatedProduction][s, t, ts]) * p.production_factor[t, ts] * p.levelization_factor[t] for t in p.techs.gen) for s in 1:p.n_scenarios) - generatorToBatt[ts] - generatorToGrid[ts] for ts in p.time_steps]
+	r["electric_to_load_series_kw"] = round.(generatorToLoad, digits=3)
 
-    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / p.s.generator.fuel_higher_heating_value_kwh_per_gal)
-	r["annual_fuel_consumption_gal"] = round(value(GeneratorFuelUsed), digits=2)
+    GeneratorFuelUsed = sum(p.scenario_probabilities[s] * sum(value(m[:dvFuelUsage][s, t, ts]) for t in p.techs.gen, ts in p.time_steps) for s in 1:p.n_scenarios) / p.s.generator.fuel_higher_heating_value_kwh_per_gal
+	r["annual_fuel_consumption_gal"] = round(GeneratorFuelUsed, digits=2)
 
-	AverageGenProd = @expression(m,
-		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
-		p.levelization_factor[t]
-			for t in p.techs.gen, ts in p.time_steps)
-	)
-	r["annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+	AverageGenProd = p.hours_per_time_step * sum(p.scenario_probabilities[s] * sum(value(m[:dvRatedProduction][s, t,ts]) * p.production_factor[t, ts] *
+		p.levelization_factor[t] for t in p.techs.gen, ts in p.time_steps) for s in 1:p.n_scenarios)
+	r["annual_energy_produced_kwh"] = round(AverageGenProd, digits=0)
     
 	d["Generator"] = r
     nothing
