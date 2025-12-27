@@ -24,7 +24,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     size_actual_mmbtu_per_hour = max_prod_kw / KWH_PER_MMBTU * p.s.existing_boiler.max_thermal_factor_on_peak_load
     r["size_mmbtu_per_hour"] = round(size_actual_mmbtu_per_hour, digits=3)
 	r["fuel_consumption_series_mmbtu_per_hour"] = 
-        round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) ./ KWH_PER_MMBTU, digits=5)
+        round.(sum(p.scenario_probabilities[s] * value(m[:dvFuelUsage][s, "ExistingBoiler", ts]) for s in 1:p.n_scenarios) ./ KWH_PER_MMBTU for ts in p.time_steps, digits=5)
     r["annual_fuel_consumption_mmbtu"] = round(sum(r["fuel_consumption_series_mmbtu_per_hour"]), digits=5)
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
@@ -87,7 +87,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(BoilerToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
     m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
-        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.fuel_cost_per_kwh["ExistingBoiler"][ts] for ts in p.time_steps)
+        sum(p.scenario_probabilities[s] * m[:dvFuelUsage][s, "ExistingBoiler", ts] * p.fuel_cost_per_kwh["ExistingBoiler"][ts] for s in 1:p.n_scenarios, ts in p.time_steps)
     )
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalExistingBoilerFuelCosts]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalExistingBoilerFuelCosts]) / p.pwf_fuel["ExistingBoiler"], digits=3)
