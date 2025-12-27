@@ -23,7 +23,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["Boiler"]) / KWH_PER_MMBTU, digits=3)
 	r["fuel_consumption_series_mmbtu_per_hour"] = 
-        round.(value.(m[:dvFuelUsage]["Boiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=3)
+        round.(sum(p.scenario_probabilities[s] * value(m[:dvFuelUsage][s, "Boiler", ts]) for s in 1:p.n_scenarios) / KWH_PER_MMBTU for ts in p.time_steps, digits=3)
     r["annual_fuel_consumption_mmbtu"] = round(sum(r["fuel_consumption_series_mmbtu_per_hour"]), digits=3)
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
@@ -83,7 +83,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
     lifecycle_fuel_cost = p.pwf_fuel["Boiler"] * value(
-        sum(m[:dvFuelUsage]["Boiler", ts] * p.fuel_cost_per_kwh["Boiler"][ts] for ts in p.time_steps)
+        sum(p.scenario_probabilities[s] * m[:dvFuelUsage][s, "Boiler", ts] * p.fuel_cost_per_kwh["Boiler"][ts] for s in 1:p.n_scenarios, ts in p.time_steps)
     )
 	r["lifecycle_fuel_cost_after_tax"] = round(lifecycle_fuel_cost * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	r["year_one_fuel_cost_before_tax"] = round(lifecycle_fuel_cost / p.pwf_fuel["Boiler"], digits=3)

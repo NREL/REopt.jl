@@ -39,8 +39,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	Year1CHPElecProd = p.hours_per_time_step * sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvRatedProduction"*_n)][s, t,ts]) * p.production_factor[t, ts]
 			for t in p.techs.chp, ts in p.time_steps) for s in 1:p.n_scenarios)
 	r["annual_electric_production_kwh"] = round(Year1CHPElecProd, digits=3)
-	CHPThermalProdKW = sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] - m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + 
-		m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] for t in p.techs.chp)
+	CHPThermalProdKW = [sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] - m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + 
+		m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] for t in p.techs.chp) for ts in p.time_steps]
 	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
 	r["annual_thermal_production_mmbtu"] = round(p.hours_per_time_step * sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)

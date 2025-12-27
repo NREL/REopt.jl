@@ -257,7 +257,7 @@ MPC `ElectricTariff` results keys:
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     m[Symbol("energy_purchased"*_n)] = p.hours_per_time_step * 
-        sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+        sum(m[Symbol("dvGridPurchase"*_n)][s, ts, tier] for s in 1:p.n_scenarios, ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
 
     r["energy_cost"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]), digits=2)
 

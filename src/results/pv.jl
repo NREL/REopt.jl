@@ -103,7 +103,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
 		if !isempty(p.s.storage.types.elec) 
-			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
+			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][1, b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
             PVtoBatt = round.(value.(PVtoBatt), digits=3)
 		else
 			PVtoBatt = zeros(length(p.time_steps))
@@ -113,19 +113,19 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
         r["to_grid_series_kw"] = zeros(length(p.time_steps))
         if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
-                    sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]))
+                    sum(m[Symbol("dvProductionToGrid"*_n)][1, t, u, ts] for u in p.export_bins_by_tech[t]))
             r["to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
         end
 
-		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
+		PVtoCUR = (m[Symbol("dvCurtail"*_n)][1, t, ts] for ts in p.time_steps)
 		r["curtailed_production_series_kw"] = round.(value.(PVtoCUR), digits=3)
-		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][1, t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 					- r["curtailed_production_series_kw"][ts]
 					- r["to_grid_series_kw"][ts]
 					- PVtoBatt[ts] for ts in p.time_steps
 		)
 		r["to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
-		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
+		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][1, t, ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
 		r["energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
         d[t] = r
 	end

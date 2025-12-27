@@ -78,10 +78,10 @@ MPC `ElectricStorage` results keys:
 function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
 
-    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+    soc = (m[Symbol("dvStoredEnergy"*_n)][1, b, ts] for ts in p.time_steps)
     r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
 
-    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][1, b, ts] for ts in p.time_steps)
     r["to_load_series_kw"] = round.(value.(discharge), digits=3)
 
     d[b] = r
