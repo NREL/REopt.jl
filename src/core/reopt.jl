@@ -190,33 +190,33 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	for ts in p.time_steps_without_grid
 
-		for tier in 1:p.s.electric_tariff.n_energy_tiers
-			fix(m[:dvGridPurchase][ts, tier] , 0.0, force=true)
+		for s in 1:p.n_scenarios, tier in 1:p.s.electric_tariff.n_energy_tiers
+			fix(m[:dvGridPurchase][s, ts, tier] , 0.0, force=true)
 		end
 
-		for t in p.s.storage.types.elec
-			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
+		for s in 1:p.n_scenarios, t in p.s.storage.types.elec
+			fix(m[:dvGridToStorage][s, t, ts], 0.0, force=true)
 		end
 
         if !isempty(p.s.electric_tariff.export_bins)
-            for t in p.techs.elec, u in p.export_bins_by_tech[t]
-                fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
+            for s in 1:p.n_scenarios, t in p.techs.elec, u in p.export_bins_by_tech[t]
+                fix(m[:dvProductionToGrid][s, t, u, ts], 0.0, force=true)
             end
         end
 	end
 	for b in p.s.storage.types.all
 		if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
-			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
+			@constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps], m[:dvStoredEnergy][s, b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
-			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
+			@constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps], m[:dvDischargeFromStorage][s, b, ts] == 0)
 			if b in p.s.storage.types.elec
 				@constraint(m, m[:dvStoragePower][b] == 0)
-				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
-				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
-						m[:dvProductionToStorage][b, t, ts] == 0)
+				@constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps], m[:dvGridToStorage][s, b, ts] == 0)
+				@constraint(m, [s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps_with_grid],
+						m[:dvProductionToStorage][s, b, t, ts] == 0)
 			elseif b in p.s.storage.types.hot
-				@constraint(m, [q in p.heating_loads, ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
-				@constraint(m, [t in union(p.techs.heating, p.techs.chp), q in p.heating_loads, ts in p.time_steps], m[:dvHeatToStorage][b,t,q,ts] == 0)
+				@constraint(m, [s in 1:p.n_scenarios, q in p.heating_loads, ts in p.time_steps], m[:dvHeatFromStorage][s, b,q,ts] == 0)
+				@constraint(m, [s in 1:p.n_scenarios, t in union(p.techs.heating, p.techs.chp), q in p.heating_loads, ts in p.time_steps], m[:dvHeatToStorage][s, b,t,q,ts] == 0)
 			end
 		else
 			add_storage_size_constraints(m, p, b)
@@ -694,31 +694,31 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(union(p.techs.heating, p.techs.chp))
-        @variable(m, dvHeatingProduction[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
-		@variable(m, dvProductionToWaste[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
+        @variable(m, dvHeatingProduction[1:p.n_scenarios, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
+		@variable(m, dvProductionToWaste[1:p.n_scenarios, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
         if !isempty(p.techs.chp)
 			@variables m begin
-				dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
+				dvSupplementaryThermalProduction[1:p.n_scenarios, p.techs.chp, p.time_steps] >= 0
 				dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
 			end
         end
 		if !isempty(p.s.storage.types.hot)
 			# TODO introduce these as sparse variables, add a set of techs charging storage?
-			@variable(m, dvHeatToStorage[p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
-			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
+			@variable(m, dvHeatToStorage[1:p.n_scenarios, p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
+			@variable(m, dvHeatFromStorage[1:p.n_scenarios, p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
 			if !isempty(p.techs.steam_turbine)
-				@variable(m, dvHeatFromStorageToTurbine[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0)
+				@variable(m, dvHeatFromStorageToTurbine[1:p.n_scenarios, p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0)
 			end
     	end
 	end
 
 	if !isempty(p.techs.cooling)
-		@variable(m, dvCoolingProduction[p.techs.cooling, p.time_steps] >= 0)
+		@variable(m, dvCoolingProduction[1:p.n_scenarios, p.techs.cooling, p.time_steps] >= 0)
 	end
 
     if !isempty(p.techs.steam_turbine)
 		if !isempty(p.techs.can_supply_steam_turbine)
-	        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
+	        @variable(m, dvThermalToSteamTurbine[1:p.n_scenarios, p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
 		elseif !any(p.s.storage.attr[b].can_supply_steam_turbine for b in p.s.storage.types.hot)
 			throw(@error("Steam turbine is present, but set p.techs.can_supply_steam_turbine is empty and no storage is compatible with steam turbine."))
 		end
