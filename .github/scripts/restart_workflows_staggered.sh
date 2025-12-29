@@ -46,10 +46,20 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         -d|--delay)
             DELAY="$2"
+            # Validate delay is a positive integer
+            if ! [[ "$DELAY" =~ ^[0-9]+$ ]] || [ "$DELAY" -lt 1 ]; then
+                echo -e "${RED}Error: Delay must be a positive integer${NC}"
+                exit 1
+            fi
             shift 2
             ;;
         -t|--date)
             DATE_FILTER="$2"
+            # Validate date format (YYYY-MM-DD)
+            if ! [[ "$DATE_FILTER" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                echo -e "${RED}Error: Date must be in YYYY-MM-DD format${NC}"
+                exit 1
+            fi
             shift 2
             ;;
         -n|--dry-run)
@@ -91,7 +101,7 @@ echo ""
 echo -e "${YELLOW}Fetching workflow runs...${NC}"
 RUNS=$(gh api \
     "/repos/$OWNER/$REPO/actions/runs" \
-    --jq ".workflow_runs[] | select(.created_at | startswith(\"$DATE_FILTER\")) | select(.conclusion == \"failure\" or .conclusion == \"cancelled\" or .status == \"completed\" and .conclusion == \"failure\") | {id: .id, name: .name, status: .status, conclusion: .conclusion, created_at: .created_at, html_url: .html_url}" \
+    --jq ".workflow_runs[] | select(.created_at | startswith(\"$DATE_FILTER\")) | select(.conclusion == \"failure\" or .conclusion == \"cancelled\") | {id: .id, name: .name, status: .status, conclusion: .conclusion, created_at: .created_at, html_url: .html_url}" \
     | jq -s '.')
 
 # Count runs to restart
@@ -123,7 +133,8 @@ fi
 
 # Restart workflows with staggering
 counter=0
-echo "$RUNS" | jq -r '.[].id' | while read -r run_id; do
+# Use process substitution instead of pipe to avoid subshell
+while read -r run_id; do
     counter=$((counter + 1))
     workflow_name=$(echo "$RUNS" | jq -r ".[] | select(.id == $run_id) | .name")
     
@@ -144,7 +155,7 @@ echo "$RUNS" | jq -r '.[].id' | while read -r run_id; do
         sleep "$DELAY"
         echo ""
     fi
-done
+done < <(echo "$RUNS" | jq -r '.[].id')
 
 echo ""
 echo -e "${GREEN}Workflow restart process completed!${NC}"
