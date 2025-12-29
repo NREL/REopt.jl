@@ -120,24 +120,24 @@ function calc_yr1_emissions_offset_from_elec_exports(m, p)
 		return 0.0, 0.0, 0.0, 0.0
 	end
 	yr1_emissions_offset_from_elec_exports_lbs_CO2 = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+		sum(p.scenario_probabilities[s] * m[:dvProductionToGrid][s,t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])
+		for s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
 	)
 		# if battery ends up being able to discharge to grid, need to incorporate here- might require complex tracking of what's charging battery
 
 	yr1_emissions_offset_from_elec_exports_lbs_NOx = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+		sum(p.scenario_probabilities[s] * m[:dvProductionToGrid][s,t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts])
+		for s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
 	)
 
 	yr1_emissions_offset_from_elec_exports_lbs_SO2 = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+		sum(p.scenario_probabilities[s] * m[:dvProductionToGrid][s,t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts])
+		for s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
 	)
 
 	yr1_emissions_offset_from_elec_exports_lbs_PM25 = @expression(m, p.hours_per_time_step *
-		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+		sum(p.scenario_probabilities[s] * m[:dvProductionToGrid][s,t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts])
+		for s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
 	)
 
 	return yr1_emissions_offset_from_elec_exports_lbs_CO2, 

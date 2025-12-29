@@ -262,7 +262,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 				 Some solvers are very slow with integer variables"""
 		@variables m begin
 			dvFuelUsage[1:p.n_scenarios, p.techs.gen, p.time_steps] >= 0 # Fuel burned by technology t in each time step [kWh]
-			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
+			binGenIsOnInTS[1:p.n_scenarios, p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 

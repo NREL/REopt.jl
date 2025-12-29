@@ -8,7 +8,7 @@ function add_fuel_burn_constraints(m,p)
     @constraint(m, [s in 1:p.n_scenarios, t in p.techs.gen, ts in p.time_steps],
 	    m[:dvFuelUsage][s, t, ts] == (fuel_slope_gal_per_kwhe * p.s.generator.fuel_higher_heating_value_kwh_per_gal *
 	    p.production_factor[t, ts] * p.hours_per_time_step * m[:dvRatedProduction][s, t, ts]) +
-	    (fuel_intercept_gal_per_hr * p.s.generator.fuel_higher_heating_value_kwh_per_gal * p.hours_per_time_step * m[:binGenIsOnInTS][t, ts])
+	    (fuel_intercept_gal_per_hr * p.s.generator.fuel_higher_heating_value_kwh_per_gal * p.hours_per_time_step * m[:binGenIsOnInTS][s, t, ts])
     )
     @constraint(m, [s in 1:p.n_scenarios],
 	    sum(m[:dvFuelUsage][s, t, ts] for t in p.techs.gen, ts in p.time_steps) <=
@@ -20,18 +20,18 @@ end
 function add_binGenIsOnInTS_constraints(m,p)
 	# Generator must be on for nonnegative output
     @constraint(m, [s in 1:p.n_scenarios, t in p.techs.gen, ts in p.time_steps],
-	    m[:dvRatedProduction][s, t, ts] <= p.max_sizes[t] * m[:binGenIsOnInTS][t, ts]
+	    m[:dvRatedProduction][s, t, ts] <= p.max_sizes[t] * m[:binGenIsOnInTS][s, t, ts]
     )
 	# Note: min_turn_down_fraction is only enforced when `off_grid_flag` is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
 	if p.s.settings.off_grid_flag 
         @constraint(m, [s in 1:p.n_scenarios, t in p.techs.gen, ts in p.time_steps_without_grid],
 		    p.s.generator.min_turn_down_fraction * m[:dvSize][t] - m[:dvRatedProduction][s, t, ts] <=
-		    p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
+		    p.max_sizes[t] * (1 - m[:binGenIsOnInTS][s, t, ts])
 	    )
 	else 
         @constraint(m, [s in 1:p.n_scenarios, t in p.techs.gen, ts in p.time_steps_with_grid],
 		    p.s.generator.min_turn_down_fraction * m[:dvSize][t] - m[:dvRatedProduction][s, t, ts] <=
-		    p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
+		    p.max_sizes[t] * (1 - m[:binGenIsOnInTS][s, t, ts])
 	    )
 	end 
 end

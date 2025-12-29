@@ -48,11 +48,13 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	CHPElecProdTotal = [sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvRatedProduction"*_n)][s, t,ts]) * p.production_factor[t, ts] for t in p.techs.chp) for s in 1:p.n_scenarios) for ts in p.time_steps]
 	r["electric_production_series_kw"] = round.(CHPElecProdTotal, digits=3)
 	# Electric dispatch breakdown
+	CHPtoGrid = zeros(length(p.time_steps))
     if !isempty(p.s.electric_tariff.export_bins)
-        CHPtoGrid = [sum(p.scenario_probabilities[s] * sum(value(m[Symbol("dvProductionToGrid"*_n)][s, t,u,ts])
-                for t in p.techs.chp, u in p.export_bins_by_tech[t]) for s in 1:p.n_scenarios) for ts in p.time_steps]
-    else
-        CHPtoGrid = zeros(length(p.time_steps))
+		for t in p.techs.chp
+			for u in p.export_bins_by_tech[t]
+				CHPtoGrid .+= [p.scenario_probabilities[s] * value(m[Symbol("dvProductionToGrid"*_n)][s, t, u, ts]) for s in 1:p.n_scenarios for ts in p.time_steps]
+			end
+		end
     end
     r["electric_to_grid_series_kw"] = round.(CHPtoGrid, digits=3)
 	if !isempty(p.s.storage.types.elec)

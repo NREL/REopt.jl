@@ -45,6 +45,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
 	else
 		WindToGrid = zeros(length(p.time_steps))
+		r["electric_to_grid_series_kw"] = WindToGrid
 	end
 	
 	WindToCUR = [sum(p.scenario_probabilities[s] * value(m[Symbol("dvCurtail"*_n)][s, t, ts]) for s in 1:p.n_scenarios) for ts in p.time_steps]

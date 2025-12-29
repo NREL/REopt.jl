@@ -29,8 +29,8 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.gen))
 
 	GenPerUnitProdOMCosts = @expression(m, p.third_party_factor * p.pwf_om * p.hours_per_time_step *
-		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
-			for t in p.techs.gen, ts in p.time_steps)
+		sum(p.scenario_probabilities[s] * m[:dvRatedProduction][s, t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
+			for s in 1:p.n_scenarios, t in p.techs.gen, ts in p.time_steps)
 	)
 	r["size_kw"] = round(value(sum(m[:dvSize][t] for t in p.techs.gen)), digits=2)
 	r["lifecycle_fixed_om_cost_after_tax"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
@@ -48,7 +48,14 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	end
 	r["electric_to_storage_series_kw"] = round.(generatorToBatt, digits=3)
 
-	generatorToGrid = [sum(p.scenario_probabilities[s] * sum(value(m[:dvProductionToGrid][s, t, u, ts]) for t in p.techs.gen, u in p.export_bins_by_tech[t]) for s in 1:p.n_scenarios) for ts in p.time_steps]
+	generatorToGrid = zeros(length(p.time_steps))
+	if !isempty(p.s.electric_tariff.export_bins)
+		for t in p.techs.gen
+			for u in p.export_bins_by_tech[t]
+				generatorToGrid .+= [p.scenario_probabilities[s] * value(m[:dvProductionToGrid][s, t, u, ts]) for s in 1:p.n_scenarios for ts in p.time_steps]
+			end
+		end
+	end
 	r["electric_to_grid_series_kw"] = round.(generatorToGrid, digits=3)
 
 	generatorToLoad = [sum(p.scenario_probabilities[s] * sum(value(m[:dvRatedProduction][s, t, ts]) * p.production_factor[t, ts] * p.levelization_factor[t] for t in p.techs.gen) for s in 1:p.n_scenarios) - generatorToBatt[ts] - generatorToGrid[ts] for ts in p.time_steps]

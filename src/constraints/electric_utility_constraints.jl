@@ -383,12 +383,12 @@ end
 function add_coincident_peak_charge_constraints(m, p; _n="")
 	## Constraint (14a): in each coincident peak period, charged CP demand is the max of demand in all CP time_steps
     dv = "dvPeakDemandCP" * _n
-    m[Symbol(dv)] = @variable(m, [p.s.electric_tariff.coincpeak_periods], lower_bound = 0, base_name = dv)
+    m[Symbol(dv)] = @variable(m, [1:p.n_scenarios, p.s.electric_tariff.coincpeak_periods], lower_bound = 0, base_name = dv)
     @constraint(m, 
         [s in 1:p.n_scenarios,
          prd in p.s.electric_tariff.coincpeak_periods, 
          ts in p.s.electric_tariff.coincident_peak_load_active_time_steps[prd]],
-	    m[Symbol("dvPeakDemandCP"*_n)][prd] >= sum(m[Symbol("dvGridPurchase"*_n)][s, ts, tier] 
+	    m[Symbol("dvPeakDemandCP"*_n)][s, prd] >= sum(m[Symbol("dvGridPurchase"*_n)][s, ts, tier] 
                                                                       for tier in 1:p.s.electric_tariff.n_energy_tiers)
     )
 end
@@ -438,15 +438,15 @@ function add_elec_utility_expressions(m, p; _n="")
     end
 
 	if m[Symbol("TotalMinCharge"*_n)] >= 1e-2
-		add_mincharge_constraint(m, p)
+		add_mincharge_constraint(m, p; _n=_n)
 	else
 		@constraint(m, m[Symbol("MinChargeAdder"*_n)] == 0)
 	end
 
     if !isempty(p.s.electric_tariff.coincpeak_periods)
         m[Symbol("TotalCPCharges"*_n)] = @expression(m, p.pwf_e * 
-            sum( p.s.electric_tariff.coincident_peak_load_charge_per_kw[prd] * m[Symbol("dvPeakDemandCP"*_n)][prd] 
-                for prd in p.s.electric_tariff.coincpeak_periods ) 
+            sum( p.scenario_probabilities[s] * p.s.electric_tariff.coincident_peak_load_charge_per_kw[prd] * m[Symbol("dvPeakDemandCP"*_n)][s, prd] 
+                for s in 1:p.n_scenarios, prd in p.s.electric_tariff.coincpeak_periods ) 
         )
     else
         m[Symbol("TotalCPCharges"*_n)] = 0

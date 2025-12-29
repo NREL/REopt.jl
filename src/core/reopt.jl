@@ -676,7 +676,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
 		@variables m begin
-			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
+			binGenIsOnInTS[1:p.n_scenarios, p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 
@@ -759,8 +759,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	if p.s.settings.off_grid_flag
 		@variables m begin
-			dvOpResFromBatt[p.s.storage.types.elec, p.time_steps_without_grid] >= 0 # Operating reserves provided by the electric storage [kW]
-			dvOpResFromTechs[p.techs.providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
+			dvOpResFromBatt[1:p.n_scenarios, p.s.storage.types.elec, p.time_steps_without_grid] >= 0 # Operating reserves provided by the electric storage [kW]
+			dvOpResFromTechs[1:p.n_scenarios, p.techs.providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
 			1 >= dvOffgridLoadServedFraction[p.time_steps_without_grid] >= 0 # Critical load served in each time_step. Applied in off-grid scenarios only. [fraction]
 		end
 	end
