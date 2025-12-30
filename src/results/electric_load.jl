@@ -1,9 +1,15 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ElectricLoad` results keys:
-- `bau_load_series_kw` # vector of BAU site load in every time step. Does not include electric load for any new heating or cooling techs. Does not adjust for critical load during 
+- `bau_load_series_kw` # vector of BAU site load in every time step. Does not include electric load for any new heating or cooling techs. Does not adjust for critical load during modeled outages.
+- `bau_existing_chiller_load_series_kw` # vector of BAU existing chiller electric load in every time step
+- `chiller_load_series_kw` # vector of optimized chiller electric load in every time step
+- `electric_heater_load_series_kw` # vector of optimized electric heater load in every time step
+- `ghp_load_series_kw` # vector of optimized GHP electric load in every time step
+- `load_series_kw` # vector of site electric load in the optimized case in every time step 
 - `critical_load_series_kw` # vector of site critical load in every time step
-- `annual_calculated_kwh` # sum of the `load_series_kw`. Does not include electric load for any new heating or cooling techs.
+- `bau_annual_calculated_kwh` # sum of `bau_load_series_kw`. Does not include electric load for any new heating or cooling techs.
+- `annual_calculated_kwh` # sum of `load_series_kw`
 - `annual_electric_load_with_thermal_conversions_kwh` # Total end-use electrical load, including electrified heating and cooling end-use load
 - `offgrid_load_met_series_kw` # vector of electric load met by generation techs, for off-grid scenarios only
 - `offgrid_load_met_fraction` # percentage of total electric load met on an annual basis, for off-grid scenarios only
