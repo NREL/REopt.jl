@@ -2,7 +2,7 @@
  
 """
 `multinode` is an optional input with the following keys and default values:
-```julia
+
     folder_location::String="",
     bus_coordinates::String="",  # Location of the csv document with the bus coordinates
     PMD_network_input::Any,
@@ -61,6 +61,7 @@
     pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
     
     display_information_during_modeling_run::Bool=false, # This can be helpful for debugging a model
+    include_additional_outputs_into_the_combined_results_dictionary::Bool=false,
     fault_analysis::Dict=Dict(),
     allow_bus_voltage_violations::Bool=false,
     bus_per_unit_voltage_target_upper_bound::Real=1.05,
@@ -124,6 +125,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
     generate_same_pv_production_profile_for_each_node
     pv_inputs_for_standardized_pv_production_profile 
     display_information_during_modeling_run
+    include_additional_outputs_into_the_combined_results_dictionary
     fault_analysis
     allow_bus_voltage_violations
     bus_per_unit_voltage_target_upper_bound
@@ -186,6 +188,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         generate_same_pv_production_profile_for_each_node::Bool=false,
         pv_inputs_for_standardized_pv_production_profile::Dict=Dict(), 
         display_information_during_modeling_run::Bool=false,
+        include_additional_outputs_into_the_combined_results_dictionary::Bool=false,
         fault_analysis::Dict=Dict(),
         allow_bus_voltage_violations::Bool=false,
         bus_per_unit_voltage_target_upper_bound::Real=1.05,
@@ -283,6 +286,7 @@ mutable struct MultinodeInputs <: AbstractMultinode
         generate_same_pv_production_profile_for_each_node,
         pv_inputs_for_standardized_pv_production_profile, 
         display_information_during_modeling_run,
+        include_additional_outputs_into_the_combined_results_dictionary,
         fault_analysis,
         allow_bus_voltage_violations,
         bus_per_unit_voltage_target_upper_bound,

@@ -203,8 +203,8 @@ function Process_Line_Upgrades(m, line_upgrade_options_each_line, Multinode_Inpu
 end
 
 
-function Results_Compilation(model, results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, PMD_Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel; all_line_powerflow_results="", simple_powerflow_model_results="", bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
-    
+function Results_Compilation(model, results, PMD_Results, Outage_Results, Multinode_Inputs, DataFrame_LineFlow_Summary, PMD_Dictionary_LineFlow_Power_Series, TimeStamp, start_time_entire_model; all_line_powerflow_results="", simple_powerflow_model_results="", bau_model = "", system_results_BAU = "", line_upgrade_results = "", transformer_upgrade_results = "", outage_simulator_time = "")
+      
     @info "Compiling the results"
 
     InputsList = Multinode_Inputs.REopt_inputs_list
@@ -318,13 +318,14 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
             end
 
             # Add system-level results
-
+            ComputationTime_EntireModel_Milliseconds, ComputationTime_EntireModel_Minutes = CalculateComputationTime(start_time_entire_model)
+      
             push!(DataLabels, "----Optimization Parameters----")
             push!(Data,"")
             push!(DataLabels, "  Number of Variables")
             push!(Data, length(all_variables(model)))
             push!(DataLabels, "  Computation time, including the BAU model and the outage simulator if used (minutes)")
-            push!(Data, round(ComputationTime_EntireModel, digits=2))
+            push!(Data, round(ComputationTime_EntireModel_Minutes, digits=2))
             push!(DataLabels, "  Model solve time (minutes)" )
             push!(Data, round(JuMP.solve_time(model)/60, digits = 2))
             
@@ -468,7 +469,7 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                 NodeNumberTempB = n["Site"]["node"]
                 InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
                 InputsDictionary = n
-                push!(DataLabels, "--Node $(NodeNumberTempB)")
+                push!(DataLabels, "----Node $(NodeNumberTempB)----")
                 push!(Data, "")
 
                 if "PV" in keys(results[NodeNumberTempB])
