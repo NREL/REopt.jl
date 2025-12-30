@@ -1,7 +1,7 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ElectricLoad` results keys:
-- `load_series_kw` # vector of BAU site load in every time step. Does not include electric load for any new heating or cooling techs.
+- `bau_load_series_kw` # vector of BAU site load in every time step. Does not include electric load for any new heating or cooling techs. Does not adjust for critical load during 
 - `critical_load_series_kw` # vector of site critical load in every time step
 - `annual_calculated_kwh` # sum of the `load_series_kw`. Does not include electric load for any new heating or cooling techs.
 - `annual_electric_load_with_thermal_conversions_kwh` # Total end-use electrical load, including electrified heating and cooling end-use load
@@ -24,10 +24,15 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 
     r = Dict{String, Any}()
 
+    # BAU Loads
     r["bau_load_series_kw"] = p.s.electric_load.loads_kw # includes bau_existing_chiller_electric_load_series_kw
     r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
+    r["bau_existing_chiller_load_series_kw"] = p.s.cooling_load.loads_kw_thermal ./ p.cooling_cop["ExistingChiller"]
+    r["bau_annual_calculated_kwh"] = round(sum(r["bau_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2)
 
-    r["bau_existing_chiller_electric_load_series_kw"] = p.s.cooling_load.loads_kw_thermal ./ p.cooling_cop["ExistingChiller"]
+    # Optimized loads
+    # dvCoolingProduction, dvHeatingProduction are not constrained in time_steps_without_grid
+    # ghp_electric_consumption_kw is not relevant (?) in time_steps_without_grid
     r["chiller_load_series_kw"] = [
         sum(value(m[Symbol("dvCoolingProduction"*_n)][t, ts]) / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling, p.techs.ghp); init=0.0)
         for ts in p.time_steps
@@ -40,16 +45,9 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         sum(p.ghp_electric_consumption_kw[g,ts] * value(m[Symbol("binGHP"*_n)][g]) for g in p.ghp_options; init=0.0)
         for ts in p.time_steps
     ]
-    # TODO: if we change how we report this here, should we consider changing the critical load calculation throughout? 
-    r["load_series_kw"] = r["bau_load_series_kw"] .- r["bau_existing_chiller_electric_load_series_kw"] .+ r["chiller_load_series_kw"] .+ r["electric_heater_load_series_kw"] .+ r["ghp_load_series_kw"]
-    
-    r["bau_annual_calculated_kwh"] = round(
-        sum(r["bau_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
-    )
-
-    r["annual_calculated_kwh"] = round(
-        sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
-    )
+    # TODO: splice critical load series into bau loads during time_steps_without_grid?
+    r["load_series_kw"] = r["bau_load_series_kw"] .- r["bau_existing_chiller_load_series_kw"] .+ r["chiller_load_series_kw"] .+ r["electric_heater_load_series_kw"] .+ r["ghp_load_series_kw"]
+    r["annual_calculated_kwh"] = round(sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2)
 
     load_dict = get_load_metrics(
         r["load_series_kw"];
