@@ -47,6 +47,10 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         sum(r["bau_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
     )
 
+    r["annual_calculated_kwh"] = round(
+        sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
+    )
+
     load_dict = get_load_metrics(
         r["load_series_kw"];
         time_steps_per_hour=p.s.settings.time_steps_per_hour,
