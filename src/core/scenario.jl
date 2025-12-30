@@ -205,6 +205,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d,  "ElectricStorage")
         storage_dict = d["ElectricStorage"]
         storage_dict["off_grid_flag"] = settings.off_grid_flag
+
+        electric_load_annual_peak = maximum(electric_load.loads_kw)
+        electric_load_average_peak = sum(electric_load.loads_kw) / Int(8760*settings.time_steps_per_hour)
+        storage_dict["electric_load_annual_peak"] = electric_load_annual_peak
+        storage_dict["electric_load_average_peak"] = electric_load_average_peak
     else
         storage_dict = Dict("max_kw" => 0.0)
     end

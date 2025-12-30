@@ -4,40 +4,31 @@
       "size_class": 1,
       "name": "Residential",
       "kw_tech_sizes_for_cost_curve": [0, 40],
-      "kwh_tech_sizes_for_cost_curve": [0, 160],
-      "installed_cost_per_kw": [665, 661],
-      "installed_cost_per_kwh": [581, 574],
-      "installed_cost_constant": 10000,
-      "avg_installed_cost_per_kw": 663,
-      "avg_installed_cost_per_kwh": 577,
+      "installed_cost_per_kw": 603,
+      "installed_cost_per_kwh": 449,
+      "installed_cost_constant": 7308,
       "om_cost_fraction_of_installed_cost": 0.025,
-      "notes": "Based on ATB 2024 Residential 7.9 kW system and estimating 3 kW to 11 kW cost scaling"
+      "notes": "Based on ATB 2024 Residential 12.5 kW system and estimating minimum kW to 40 kW cost scaling"
     },
     {
       "size_class": 2,
       "name": "Small-Commercial",
       "kw_tech_sizes_for_cost_curve": [40, 400],
-      "kwh_tech_sizes_for_cost_curve": [40, 1600],
-      "installed_cost_per_kw": [661, 626],
-      "installed_cost_per_kwh": [574, 507],
-      "installed_cost_constant": 100000,
-      "avg_installed_cost_per_kw": 644,
-      "avg_installed_cost_per_kwh": 544,
+      "installed_cost_per_kw": 725,
+      "installed_cost_per_kwh": 432,
+      "installed_cost_constant": 109492,
       "om_cost_fraction_of_installed_cost": 0.025,
-      "notes": "Based on ATB 2024 Residential 7.9 kW system and estimating 3 kW to 11 kW cost scaling"
+      "notes": "Based on ATB 2024 Residential 100 kW system and estimating 40 kW to 400 kW cost scaling"
     },
     {
       "size_class": 3,
       "name": "Commercial",
       "kw_tech_sizes_for_cost_curve": [400,1.0e6],
-      "kwh_tech_sizes_for_cost_curve": [400,1.0e6],
-      "installed_cost_per_kw": [626,351],
-      "installed_cost_per_kwh": [507,211],
-      "installed_cost_constant": 200000,
-      "avg_installed_cost_per_kw": 488,
-      "avg_installed_cost_per_kwh": 359,
+      "installed_cost_per_kw": 842,
+      "installed_cost_per_kwh": 213,
+      "installed_cost_constant": 194710,
       "om_cost_fraction_of_installed_cost": 0.025,
-      "notes": "Based on ATB 2024 Residential 7.9 kW system and estimating 3 kW to 11 kW cost scaling"
+      "notes": "Based on ATB 2024 Residential 1800 kW system and estimating 400 kW to maximum kW cost scaling"
     }
   ]
 }
