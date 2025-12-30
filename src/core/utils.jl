@@ -871,38 +871,6 @@ function compare_dicts(dict1::Dict, dict2::Dict)
         end
     end
 end
-function REoptInputs_to_dict(reopt_inputs)
-    d = Dict{String, Any}()
-    for upper_field_name in fieldnames(typeof(reopt_inputs))
-        upper_field_value = getfield(reopt_inputs, upper_field_name)
-        if upper_field_value === nothing
-            d[string(upper_field_name)] = nothing
-        elseif upper_field_name == "Scenario"
-            d["Scenario"] = Dict{String, Any}()
-            for model_name in fieldnames(typeof(upper_field_value))
-                model_value = getfield(upper_field_value, model_name)
-                if model_value === nothing
-                    d[string(model_name)] = nothing
-                    continue
-                end
-                if typeof(model_value) <: Array
-                    if length(model_value) > 1 #not dealing with multiple PVs
-                        @warn("Multiple PVs not yet handled in REoptInputs_to_dict")
-                    end
-                    model_value = model_value[1]
-                end
-                d["Scenario"][string(model_name)] = Dict{String, Any}()
-                for field_name in fieldnames(typeof(model_value))
-                    field_value = getfield(model_value, field_name)
-                    d["Scenario"][string(model_name)][string(field_name)] = field_value
-                end
-            end
-        else
-            d[string(upper_field_name)] = upper_field_value
-        end
-    end
-    return d
-end
 
 """
     check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String) -> Array{<:Real,1}
