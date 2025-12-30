@@ -373,15 +373,18 @@ else  # run HiGHS tests
         end
 
         @testset "Fifteen minute load" begin
-            d = JSON.parsefile("scenarios/no_techs.json")
-            d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040), "year" => 2017)
-            d["Settings"] = Dict("time_steps_per_hour" => 4)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(model, d)
-            @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 8760
-            finalize(backend(model))
-            empty!(model)
-            GC.gc()            
+            logger = SimpleLogger()
+            with_logger(logger) do
+                d = JSON.parsefile("scenarios/no_techs.json")
+                d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040), "year" => 2017)
+                d["Settings"] = Dict("time_steps_per_hour" => 4)
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(model, d)
+                @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 8760
+                finalize(backend(model))
+                empty!(model)
+                GC.gc()
+            end
         end
 
         try
@@ -4362,74 +4365,77 @@ else  # run HiGHS tests
             # Update input data for 15-minute intervals
             input_data["Settings"] = Dict("time_steps_per_hour" => 4)
             input_data["ElectricLoad"] = Dict("loads_kw" => fifteen_min_loads, "year" => 2023)
-
-            # Run REopt with 15-minute data
-            s_fifteen = Scenario(input_data)
-            inputs_fifteen = REoptInputs(s_fifteen)
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
-            results_fifteen = run_reopt(m, inputs_fifteen)
-
-            # Verify correct time resolution setup
-            @test length(results_fifteen["ElectricLoad"]["load_series_kw"]) == length(fifteen_min_loads)
-            @test results_fifteen["ElectricLoad"]["load_series_kw"] ≈ fifteen_min_loads rtol=1e-6
-
-            # Verify energy rate series has correct length for 15-minute data
-            energy_rate_series_15min = results_fifteen["ElectricTariff"]["energy_rate_series"]["Tier_1"]
-            @test length(energy_rate_series_15min) == 8760 * 4  # 15-minute intervals
-            @test all(rate -> rate ≈ blended_energy_rate, energy_rate_series_15min)
-
-            # Calculate expected costs manually for 15-minute data
-            monthly_energy_kwh_15min = results_fifteen["ElectricLoad"]["monthly_calculated_kwh"]
-            monthly_peaks_kw_15min = results_fifteen["ElectricLoad"]["monthly_peaks_kw"]
-
-            expected_energy_costs_15min = monthly_energy_kwh_15min .* blended_energy_rate
-            actual_energy_costs_15min = results_fifteen["ElectricTariff"]["monthly_energy_cost_series_before_tax"]
-
-            expected_demand_costs_15min = monthly_peaks_kw_15min .* blended_demand_rate
-            actual_demand_costs_15min = results_fifteen["ElectricTariff"]["monthly_demand_cost_series_before_tax"]
-
-            # Test 15-minute energy cost alignment
-            for month in 1:12
-                @test actual_energy_costs_15min[month] ≈ expected_energy_costs_15min[month] rtol=0.01
-            end
-
-            # Test 15-minute demand cost alignment  
-            for month in 1:12
-                @test actual_demand_costs_15min[month] ≈ expected_demand_costs_15min[month] rtol=0.01
-            end
-
-            # Verify annual totals consistency
-            annual_energy_cost_15min = sum(actual_energy_costs_15min)
-            annual_demand_cost_15min = sum(actual_demand_costs_15min)
-
-            @test results_fifteen["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ annual_energy_cost_15min rtol=0.01
-            @test results_fifteen["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ annual_demand_cost_15min rtol=0.01
-
-            # Verify load metrics consistency for 15-minute data
-            annual_calc_load_15min = results_fifteen["ElectricLoad"]["annual_calculated_kwh"]
-            sum_monthly_load_15min = sum(results_fifteen["ElectricLoad"]["monthly_calculated_kwh"])
-            annual_peak_15min = results_fifteen["ElectricLoad"]["annual_peak_kw"]
-            max_monthly_peak_15min = maximum(results_fifteen["ElectricLoad"]["monthly_peaks_kw"])
-
-            @test annual_calc_load_15min ≈ sum_monthly_load_15min rtol=0.01
-            @test annual_peak_15min ≈ max_monthly_peak_15min rtol=0.01
-
-            # Test monthly bill accuracy for 15-minute data
-            for month in 1:12
-                total_monthly_cost_15min = actual_energy_costs_15min[month] + actual_demand_costs_15min[month]
-                expected_monthly_cost_15min = (monthly_energy_kwh_15min[month] * blended_energy_rate) + 
-                                                (monthly_peaks_kw_15min[month] * blended_demand_rate)
-                @test total_monthly_cost_15min ≈ expected_monthly_cost_15min rtol=0.01
-            end
             
-            # Validate that 15-minute energy totals approximately match hourly totals
-            # (accounting for sine wave variations that should average out over time)
-            hourly_annual_energy = sum(base_hourly_loads)  # Already in kWh for hourly data
-            fifteen_min_annual_energy = annual_calc_load_15min
-            @test fifteen_min_annual_energy ≈ hourly_annual_energy rtol=0.05  # 5% tolerance for sine variations
-            finalize(backend(m))
-            empty!(m)
-            GC.gc()
+            logger = SimpleLogger()
+            with_logger(logger) do
+                # Run REopt with 15-minute data
+                s_fifteen = Scenario(input_data)
+                inputs_fifteen = REoptInputs(s_fifteen)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                results_fifteen = run_reopt(m, inputs_fifteen)
+
+                # Verify correct time resolution setup
+                @test length(results_fifteen["ElectricLoad"]["load_series_kw"]) == length(fifteen_min_loads)
+                @test results_fifteen["ElectricLoad"]["load_series_kw"] ≈ fifteen_min_loads rtol=1e-6
+
+                # Verify energy rate series has correct length for 15-minute data
+                energy_rate_series_15min = results_fifteen["ElectricTariff"]["energy_rate_series"]["Tier_1"]
+                @test length(energy_rate_series_15min) == 8760 * 4  # 15-minute intervals
+                @test all(rate -> rate ≈ blended_energy_rate, energy_rate_series_15min)
+
+                # Calculate expected costs manually for 15-minute data
+                monthly_energy_kwh_15min = results_fifteen["ElectricLoad"]["monthly_calculated_kwh"]
+                monthly_peaks_kw_15min = results_fifteen["ElectricLoad"]["monthly_peaks_kw"]
+
+                expected_energy_costs_15min = monthly_energy_kwh_15min .* blended_energy_rate
+                actual_energy_costs_15min = results_fifteen["ElectricTariff"]["monthly_energy_cost_series_before_tax"]
+
+                expected_demand_costs_15min = monthly_peaks_kw_15min .* blended_demand_rate
+                actual_demand_costs_15min = results_fifteen["ElectricTariff"]["monthly_demand_cost_series_before_tax"]
+
+                # Test 15-minute energy cost alignment
+                for month in 1:12
+                    @test actual_energy_costs_15min[month] ≈ expected_energy_costs_15min[month] rtol=0.01
+                end
+
+                # Test 15-minute demand cost alignment  
+                for month in 1:12
+                    @test actual_demand_costs_15min[month] ≈ expected_demand_costs_15min[month] rtol=0.01
+                end
+
+                # Verify annual totals consistency
+                annual_energy_cost_15min = sum(actual_energy_costs_15min)
+                annual_demand_cost_15min = sum(actual_demand_costs_15min)
+
+                @test results_fifteen["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ annual_energy_cost_15min rtol=0.01
+                @test results_fifteen["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ annual_demand_cost_15min rtol=0.01
+
+                # Verify load metrics consistency for 15-minute data
+                annual_calc_load_15min = results_fifteen["ElectricLoad"]["annual_calculated_kwh"]
+                sum_monthly_load_15min = sum(results_fifteen["ElectricLoad"]["monthly_calculated_kwh"])
+                annual_peak_15min = results_fifteen["ElectricLoad"]["annual_peak_kw"]
+                max_monthly_peak_15min = maximum(results_fifteen["ElectricLoad"]["monthly_peaks_kw"])
+
+                @test annual_calc_load_15min ≈ sum_monthly_load_15min rtol=0.01
+                @test annual_peak_15min ≈ max_monthly_peak_15min rtol=0.01
+
+                # Test monthly bill accuracy for 15-minute data
+                for month in 1:12
+                    total_monthly_cost_15min = actual_energy_costs_15min[month] + actual_demand_costs_15min[month]
+                    expected_monthly_cost_15min = (monthly_energy_kwh_15min[month] * blended_energy_rate) + 
+                                                    (monthly_peaks_kw_15min[month] * blended_demand_rate)
+                    @test total_monthly_cost_15min ≈ expected_monthly_cost_15min rtol=0.01
+                end
+                
+                # Validate that 15-minute energy totals approximately match hourly totals
+                # (accounting for sine wave variations that should average out over time)
+                hourly_annual_energy = sum(base_hourly_loads)  # Already in kWh for hourly data
+                fifteen_min_annual_energy = annual_calc_load_15min
+                @test fifteen_min_annual_energy ≈ hourly_annual_energy rtol=0.05  # 5% tolerance for sine variations
+                finalize(backend(m))
+                empty!(m)
+                GC.gc()
+            end
         end
 
     end
