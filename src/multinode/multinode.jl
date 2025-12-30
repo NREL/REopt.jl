@@ -1910,7 +1910,7 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
     if Multinode_Inputs.critical_load_method == "Fraction"
         for x in values(Multinode_Inputs.critical_load_fraction)
             if x >= 5.0
-                throw(@error("The critical_load_fraction load fraction should be entered as a fraction, not a percent. The model currently limits the critical_load_fraction to 5.0 (or 500%) to reduce possibility of user error. "))
+                throw(@error("The critical_load_fraction load fraction should be entered as a fraction, not a percent. The model currently limits the critical_load_fraction to 5.0 (or 500%) to reduce the possibility of user error. "))
             end
         end
     end
@@ -1952,7 +1952,7 @@ function RunDataChecks(Multinode_Inputs,  REopt_dictionary)
         if Multinode_Inputs.model_outages_with_outages_vector == true
             for timestep in Multinode_Inputs.outages_vector
                 if !(timestep in Multinode_Inputs.PMD_time_steps)
-                    throw(@error("For multi-phase systems, modeling outages using the outages vector is not working. Please use the single outage functionality instead."))
+                    throw(@error("For multi-phase systems, all outages must be modeled during times steps modeled with PowerModelsDistribution (PMD)."))
                 end
             end
         end

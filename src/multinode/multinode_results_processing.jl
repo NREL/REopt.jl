@@ -307,14 +307,11 @@ function Results_Compilation(model, results, PMD_Results, Outage_Results, Multin
                         warning_PMD_MinimumPowerOnsubstation_line_ReactivePower = "Warning: less than -1kW (multi-node does not model meeting reactive power demand)"
                         @warn("The maximum reactive power support from the substation is less than -1 kW")
                     end   
-
                 else
-                    #number_of_values = length(PMD_Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["ActiveLineFlow"])
-                    PMD_MaximumPowerOnsubstation_line_ReactivePower = "N/A" # fill("N/A", number_of_values)
-                    PMD_MinimumPowerOnsubstation_line_ReactivePower = "N/A" # fill("N/A", number_of_values)
-                    PMD_AveragePowerOnsubstation_line_ReactivePower = "N/A" # fill("N/A", number_of_values)
+                    PMD_MaximumPowerOnsubstation_line_ReactivePower = "N/A" 
+                    PMD_MinimumPowerOnsubstation_line_ReactivePower = "N/A" 
+                    PMD_AveragePowerOnsubstation_line_ReactivePower = "N/A"
                 end
-            
             end
 
             # Add system-level results
