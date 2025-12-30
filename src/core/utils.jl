@@ -145,7 +145,7 @@ end
 
 
 function dictkeys_tosymbols(d::Dict)
-    d2 = Dict()
+    d2 = Dict{Symbol, Any}()
     for (k, v) in d
         # handling array type conversions for API inputs and JSON
         if k in [
@@ -852,44 +852,24 @@ end
 function set_sector_defaults!(d::Dict; struct_name::String, sector::String, federal_procurement_type::String="", federal_sector_state::String="")
     sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
     for (input_name, input_val) in sector_defaults
-        if !(input_name in keys(d))
-            d[input_name] = input_val
+        if !(Symbol(input_name) in keys(d))
+            d[Symbol(input_name)] = input_val
         end
     end
 end
 
-function struct_to_dict(obj)
-    result = Dict{String, Any}()
-    if obj === nothing
-        return result
-    end
-
-    field_names = fieldnames(typeof(obj))
-    for field_name in field_names
-        field_value = getfield(obj, field_name)
-        field_name_str = string(field_name)
-        if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
-            continue
-        end
-        if field_value === nothing
-            result[field_name_str] = ""
-        elseif typeof(field_value) <: Vector && !isempty(field_value)
-            # Handle arrays
-            if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
-                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
-            else
-                result[field_name_str] = collect(field_value)
-            end
-        elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
-            # Nested struct
-            result[field_name_str] = struct_to_dict(field_value)
-        else
-            # Primitive types
-            result[field_name_str] = field_value
+function compare_dicts(dict1::Dict, dict2::Dict)
+    for key in union(keys(dict1), keys(dict2))
+        if !haskey(dict1, key)
+            println("$key not in first dict")
+        elseif !haskey(dict2, key)
+            println("$key not in second dict")
+        elseif dict1[key] isa Dict && dict2[key] isa Dict
+            compare_dicts(dict1[key], dict2[key])
+        elseif dict1[key] != dict2[key]
+            println("$key values $(dict1[key]) and $(dict2[key]) are not equal")
         end
     end
-    
-    return result
 end
 
 """
