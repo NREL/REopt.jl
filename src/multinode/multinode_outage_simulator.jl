@@ -728,7 +728,7 @@ end
 function RandomlyOrderedTimesteps() 
     path = joinpath(dirname(pathof(REopt)))
     path = replace(path, "\\" => "/")
-    randomly_ordered_timesteps = JSON.parsefile(path*"/multinode/random_vectors.json")
+    randomly_ordered_timesteps = JSON.parsefile(path*"/multinode/random_vectors_data.json")
     return randomly_ordered_timesteps
 end
 
@@ -758,7 +758,7 @@ function CreateRandomVectorOrder(filepath, vector1, vector2, vector3)
                  "35040" => vector_35040_randomly_unordered
                 ])
     
-    open(filepath*"/random_vectors.json", "w") do x
+    open(filepath*"/random_vectors_data.json", "w") do x
         JSON.print(x, data)
     end
 
