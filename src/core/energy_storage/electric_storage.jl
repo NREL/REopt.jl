@@ -556,6 +556,8 @@ function get_electric_storage_cost_params(;
         defaults[matching_default]
     end
 
+    installed_cost_constant = isnothing(installed_cost_constant) ? 0 : installed_cost_constant
+
     # STEP 2: Handle installed costs
     installed_cost_per_kw, installed_cost_per_kwh, installed_cost_constant = if (
         typeof(installed_cost_per_kw) <: Real && typeof(installed_cost_per_kwh) <: Real && typeof(installed_cost_constant) <: Real
