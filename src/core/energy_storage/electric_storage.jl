@@ -204,7 +204,7 @@ end
     max_duration_hours::Real = 100000.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
     size_class::Union{Int, Nothing} = nothing, # Size class for cost curve selection
     electric_load_annual_peak::Real = 0.0, # Annual electric load peak (kW) for size class determination
-    electric_load_average_peak::Real = 0.0, # Annual electric load average (kW) for size class determination
+    electric_load_average::Real = 0.0, # Annual electric load average (kW) for size class determination
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -248,7 +248,7 @@ Base.@kwdef struct ElectricStorageDefaults
     max_duration_hours::Real = 100000.0
     size_class::Union{Int, Nothing} = nothing # Size class for cost curve selection
     electric_load_annual_peak::Real = 0.0 # Annual electric load peak (kW) for size class determination
-    electric_load_average_peak::Real = 0.0 # Annual electric load average (kW) for size class determination
+    electric_load_average::Real = 0.0 # Annual electric load average (kW) for size class determination
 end
 
 
@@ -300,7 +300,7 @@ struct ElectricStorage <: AbstractElectricStorage
     max_duration_hours::Real
     size_class::Union{Int, Nothing}
     electric_load_annual_peak::Real
-    electric_load_average_peak::Real
+    electric_load_average::Real
 
     function ElectricStorage(d::Dict, f::Financial, s::Site)  
         set_sector_defaults!(d; struct_name="Storage", sector=s.sector, federal_procurement_type=s.federal_procurement_type)
@@ -326,7 +326,7 @@ struct ElectricStorage <: AbstractElectricStorage
             throw(@error("ElectricStorage macrs_option_years must be 0, 5, or 7."))
         end
 
-        @info s.installed_cost_per_kw, s.size_class, s.electric_load_annual_peak, s.electric_load_average_peak
+        @info s.installed_cost_per_kw, s.size_class, s.electric_load_annual_peak, s.electric_load_average
 
         installed_cost_per_kw, installed_cost_per_kwh, installed_cost_constant, size_class,
         size_kw_for_size_class = get_electric_storage_cost_params(;
@@ -335,7 +335,7 @@ struct ElectricStorage <: AbstractElectricStorage
             installed_cost_constant = s.installed_cost_constant, 
             size_class = s.size_class,
             electric_load_annual_peak = s.electric_load_annual_peak,
-            electric_load_average_peak = s.electric_load_average_peak,
+            electric_load_average = s.electric_load_average,
             min_kw = s.min_kw,
             max_kw = s.max_kw
         )
@@ -455,7 +455,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.max_duration_hours,
             size_class,
             s.electric_load_annual_peak,
-            s.electric_load_average_peak
+            s.electric_load_average
         )
     end
 end
@@ -491,7 +491,7 @@ O&M cost per kW, size class, and technology sizes for cost curves.
 A tuple containing:
 1. `installed_cost_per_kw`: Final installed cost per kW or cost curve.
 3. `size_class`: Determined size class.
-4. `kw_tech_sizes_for_cost_curve`: Final technology sizes for the cost curve.
+4. `size_class_kw_bounds`: Final technology sizes for the cost curve.
 5. `kwh_tech_sizes_for_cost_curve`: Final technology sizes for the cost curve.
 6. `size_kw_for_size_class`: Maximum kW for determining the size class.
 7. `size_kwh_for_size_class`: Maximum kW for determining the size class.
@@ -509,7 +509,7 @@ function get_electric_storage_cost_params(;
     min_kw::Real = 0.0,
     max_kw::Real = 1.0e9,
     electric_load_annual_peak::Real = 0.0,
-    electric_load_average_peak::Real = 0.0
+    electric_load_average::Real = 0.0
 )
 
     # Get defaults and determine mount type
@@ -535,11 +535,11 @@ function get_electric_storage_cost_params(;
         # Single cost value provided - size class not needed
         size_class
     else
-        # Default case: no costs, size_class, or tech sizes information provided.
-        kw_tech_sizes = [c["kw_tech_sizes_for_cost_curve"] for c in defaults]
+        # Default case: no costs or size_class information provided.
+        kw_tech_sizes = [c["size_class_kw_bounds"] for c in defaults]
         size_class, size_kw_for_size_class = get_electric_storage_size_class(
                 electric_load_annual_peak,
-                electric_load_average_peak,
+                electric_load_average,
                 kw_tech_sizes;
                 min_kw=min_kw,
                 max_kw=max_kw
@@ -589,8 +589,8 @@ end
 # Determine appropriate size class based on system parameters
 function get_electric_storage_size_class(
     electric_load_annual_peak::Real,
-    electric_load_average_peak::Real,
-    kw_tech_sizes_for_cost_curve::AbstractVector;
+    electric_load_average::Real,
+    size_class_kw_bounds::AbstractVector;
     min_kw::Real=0.0,
     max_kw::Real=1.0e9
     )
@@ -599,7 +599,7 @@ function get_electric_storage_size_class(
     size_kw = nothing
 
     # Estimate size based on electric load and estimated (max_kw - avg_kw) value
-    kw_for_sizing = electric_load_annual_peak - electric_load_average_peak
+    kw_for_sizing = electric_load_annual_peak - electric_load_average
     # if default min/max kw have been updated, factor those in.
     # Do we need 2 size_kw here to factor in a wide size range that spreads over multiple size classes?
     @info kw_for_sizing
@@ -614,7 +614,7 @@ function get_electric_storage_size_class(
     end
     @info size_kw
     # Find the appropriate kw size class for the effective size
-    for (i, size_range) in enumerate(kw_tech_sizes_for_cost_curve)
+    for (i, size_range) in enumerate(size_class_kw_bounds)
         min_size = convert(Float64, size_range[1])
         max_size = convert(Float64, size_range[2])
         
@@ -624,8 +624,8 @@ function get_electric_storage_size_class(
     end
     if isnothing(size_class_kw)
         # Handle edge cases -> highest size class returned.
-        if size_kw > convert(Float64, kw_tech_sizes_for_cost_curve[end][2])
-            size_class_kw = length(kw_tech_sizes_for_cost_curve)
+        if size_kw > convert(Float64, size_class_kw_bounds[end][2])
+            size_class_kw = length(size_class_kw_bounds)
         else
             size_class_kw = 1  # Default to smallest size class
         end
