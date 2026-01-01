@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## hi-avert-bug
+### Fixed
+- Handle "HIMS" region incorrectly named "HI" in avert_102008.shp
+
 ## Develop
 ### Fixed
 - Bug where storage input with only _Int_ values restricted _Dict_ subtype passed into `set_sector_defaults!` and caused _InexactError_
