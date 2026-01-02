@@ -31,10 +31,12 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     r = Dict{String, Any}()
 
     # BAU Loads
+    # TODO: bau load series should have critical load spliced in during time_steps_without_grid
     r["bau_load_series_kw"] = p.s.electric_load.loads_kw # includes bau_existing_chiller_electric_load_series_kw
-    r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
     r["bau_existing_chiller_load_series_kw"] = p.s.cooling_load.loads_kw_thermal ./ p.cooling_cop["ExistingChiller"]
     r["bau_annual_calculated_kwh"] = round(sum(r["bau_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2)
+
+    r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
 
     # Optimized loads
     # dvCoolingProduction, dvHeatingProduction are not constrained in time_steps_without_grid
@@ -52,6 +54,7 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         for ts in p.time_steps
     ]
     # TODO: splice critical load series into bau loads during time_steps_without_grid?
+    # TODO: would need to update heating and cooling load reporting too 
     r["load_series_kw"] = r["bau_load_series_kw"] .- r["bau_existing_chiller_load_series_kw"] .+ r["chiller_load_series_kw"] .+ r["electric_heater_load_series_kw"] .+ r["ghp_load_series_kw"]
     r["annual_calculated_kwh"] = round(sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2)
 

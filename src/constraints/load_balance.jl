@@ -51,7 +51,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + p.s.electric_load.critical_loads_kw[ts]
         )
             """
-            Why not do the following, unless a custom critical load series is uploaded?: 
+            TODO: Do the following, unless a custom critical load series is uploaded?: 
             + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp)) * critical_load_fraction
             + sum(m[Symbol("dvHeatingProduction"*_n)][t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater) * critical_load_fraction
             + p.s.electric_load.loads_kw[ts] * critical_load_fraction
