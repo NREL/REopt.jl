@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Formatting
 - Use **bold** markup for field and model names (i.e. **outage_start_time_step**)
-- Use `code` markup for  REopt-specific file names, classes and endpoints (e.g. `src/REopt.jl`)
+- Use `code` markup for  REopt-specific file names, functions, and endpoints (e.g. `src/REopt.jl`)
 - Use _italic_ for code terms (i.e. _list_)
 - Prepend change with tag(s) directing where it is in the repository:  
 `src`,`constraints`,`*.jl`
@@ -25,11 +25,51 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## v0.56.4
+### Fixed
+- Bug where storage input with only _Int_ values restricted _Dict_ subtype passed into `set_sector_defaults!` and caused _InexactError_
+- Bug where **ElectricStorage** input with only _Real_ values restricted _Dict_ subtype, causing **off_grid_flag** to be added as an _Int_ instead of _Bool_, leading to a conversion error in **ElectricStorageDefaults**
+- Fixed a bug in the type handling of **emissions_factor_series_lb_XXX_per_kwh** in which `xxx` is in the group **[CO2, SO2, NOx, PM25]**.
+- Handle "HIMS" region incorrectly named "HI" in avert_102008.shp
+
+## v0.56.3
+### Fixed
+- Correctly escape the \$ symbol in docstring for `REopt.add_electric_tariff_results` in `results/electric_tariff.jl`
+
+## v0.56.2
+### Fixed
+- Robust fix for type error with `ElectricLoad.monthly_peaks_kw` so that it now converts Vector{Any} to Vector{Float64} in scenario.jl before constructing `ElectricLoad`. Also converted `ElectricLoad.monthly_totals_kwh` to Vector{Float64} for good measure even though we weren't getting errors with that.
+
+## v0.56.1
+### Fixed
+- `CST` bypassing constraints for not serving (`can_serve_.. = false`) heating load types by going through the `HighTempThermalStorage`
+- Type error with `ElectricLoad.monthly_peaks_kw` so that it now converts Vector{Any} to Vector{<:Real}
+- `ElectricTariff.urdb_metadata.rate_effective_date` with the right URDB parameter
+
+## v0.56.0
+### Added
+- **ElectricLoad** input **monthly_peaks_kw**. Can be used to scale loads_kw or doe_reference loads to monthly peaks while maintaining monthly energy.
+- Ability to use monthly energy and peak scaling with timesteps_per_hour > 1
+- `ElectricTariff` and `ElectricLoad` inputs and outputs; mostly outputs related to monthly and per-timestep series rates and costs, and `urdb_metadata` which contains additional information about the URDB rate.
+- New function in **utils.jl** called get_load_metrics() which gets the annual and monthly energy and peak load values (units depends on the input `load_profile`, so that it can be used with any load type).
+
+## v0.55.2
+### Fixed 
+- fixed a bug in which demand and energy charges are applied to incorrect tiers in instances where tiered rates decrease as consumption increases, and the limits on the last tier are very large.
+
+## v0.55.1
+### Fixed
+- Updated from the deprecated NSRDB API call to the suggested new URL which uses the GOES dataset
+- Added `CST` to `Financial.initial_capital_costs` output
+### Changed
+- The solar resource data for CST changed with the new API call for the GOES dataset
+
+## v0.55.0
 ### Added
 - Added **Site** inputs **sector**, **federal_sector_state**, and **federal_procurement_type**
 - Alternative defaults used when **sector** is "federal"
-- **GHPOutputs** field **number_of_boreholes_flipped_guess**
+- **GHPOutputs** fields **hybrid_solution_type**, **solve_time_min**, **number_of_boreholes_nonhybrid**, **number_of_boreholes_auto_guess**,
+**number_of_boreholes_flipped_guess**, **iterations_nonhybrid**, **iterations_auto_guess**, **iterations_flipped_guess**
 ### Changed
 - Change hybrid GHP workflow from (1) running a 2-year simulation to guess if an auxiliary heating or cooling unit is required and outputting results to (2) running non-hybrid first in all hybrid runs and comparing to hybrid outputs to guarantee an actual hybrid solution where possible
 

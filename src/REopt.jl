@@ -29,8 +29,9 @@ export
     get_ashp_defaults,
     get_pv_cost_params,
     get_sector_defaults,
+    get_load_metrics,
     convert_mgravens_inputs_to_reopt_inputs,
-    update_mgravens_with_reopt_results!
+    update_mgravens_with_reopt_results!    
 
 import HTTP
 import JSON

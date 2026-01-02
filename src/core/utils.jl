@@ -145,7 +145,7 @@ end
 
 
 function dictkeys_tosymbols(d::Dict)
-    d2 = Dict()
+    d2 = Dict{Symbol, Any}()
     for (k, v) in d
         # handling array type conversions for API inputs and JSON
         if k in [
@@ -162,10 +162,6 @@ function dictkeys_tosymbols(d::Dict)
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
-            "emissions_factor_series_lb_CO2_per_kwh",
-            "emissions_factor_series_lb_NOx_per_kwh", 
-            "emissions_factor_series_lb_SO2_per_kwh",
-            "emissions_factor_series_lb_PM25_per_kwh",
             "renewable_energy_fraction_series",
             "heating_cop_reference",
             "heating_cf_reference",
@@ -229,7 +225,11 @@ function dictkeys_tosymbols(d::Dict)
             "generator_size_kw", "generator_operational_availability",
             "generator_failure_to_start", "generator_mean_time_to_failure",
             "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
-            "fuel_limit"
+            "fuel_limit",
+            "emissions_factor_series_lb_CO2_per_kwh",
+            "emissions_factor_series_lb_NOx_per_kwh", 
+            "emissions_factor_series_lb_SO2_per_kwh",
+            "emissions_factor_series_lb_PM25_per_kwh"
         ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
@@ -564,6 +564,61 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 end
 
 """
+    get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_to_console=false)
+
+Analyze the timeseries load profile data to get monthly and annual metrics. 
+The units of the returned metrics are dependent on the units of the load_profile input
+E.g. if load_profile is in kW, the energy metrics will be in kWh. if MMBtu/hr, then MMBtu.
+# Arguments
+- `load_profile`: Array of load values (kW) for the entire year, with a length of `8760 * time_steps_per_hour`.
+- `time_steps_per_hour`: Number of time steps per hour (e.g., 1 for hourly data, 4 for 15-minute intervals). Default is 1.
+- `year`: The year of the load profile, used to determine the number of days in each month (e.g., leap years). Default is 2025.
+- `print_to_console`: Boolean flag to print the results to the console. Default is false.
+# Returns
+- `monthly_energy`: Array of 12 values representing the total energy usage (e.g. kWh) for each month.
+- `monthly_peaks`: Array of 12 values representing the peak demand (e.g. kW) for each month.
+- `annual_energy`: Total annual energy usage (e.g. kWh).
+- `annual_peak`: Maximum peak demand (e.g. kW) for the year.
+
+"""
+function get_load_metrics(load_profile; time_steps_per_hour=1, year=2025, print_to_console=false)
+
+    # Initialize empty arrays
+    monthly_energy = zeros(12)
+    monthly_peaks = zeros(12)
+
+    # This method handles leap-year truncating of last day
+    monthly_timesteps = get_monthly_time_steps(year; time_steps_per_hour=time_steps_per_hour)
+
+    for month in 1:12
+        start_idx = monthly_timesteps[month][1]
+        end_idx = monthly_timesteps[month][end]
+        month_load_series = load_profile[start_idx:end_idx]
+        monthly_peaks[month] = maximum(month_load_series)
+        monthly_energy[month] = sum(month_load_series) / time_steps_per_hour
+    end
+
+    annual_energy = sum(monthly_energy)
+    annual_peak = maximum(monthly_peaks)
+
+    if print_to_console
+        println("Monthly Energy: ", monthly_energy)
+        println("Monthly Peak Load: ", monthly_peaks)
+        println("Annual Energy: ", annual_energy)
+        println("Annual Peak Load: ", annual_peak)
+    end
+
+    return_dict = Dict(
+        "monthly_energy" => monthly_energy,
+        "monthly_peaks" => monthly_peaks,
+        "annual_energy" => annual_energy,
+        "annual_peak" => annual_peak
+    )
+
+    return return_dict
+end
+
+"""
 fuel_slope_and_intercept(;
                 electric_efficiency_full_load::Real, [kWhe/kWht]
                 electric_efficiency_half_load::Real, [kWhe/kWht]
@@ -797,87 +852,50 @@ end
 function set_sector_defaults!(d::Dict; struct_name::String, sector::String, federal_procurement_type::String="", federal_sector_state::String="")
     sector_defaults = get_sector_defaults(; sector=sector, federal_procurement_type=federal_procurement_type, federal_sector_state=federal_sector_state, struct_name=struct_name)
     for (input_name, input_val) in sector_defaults
-        if !(input_name in keys(d))
-            d[input_name] = input_val
+        if !(Symbol(input_name) in keys(d))
+            d[Symbol(input_name)] = input_val
         end
     end
 end
 
-# function get_sector_defaults_techs(; sector::String, federal_procurement_type::String)
-#     return get(get_sector_defaults(;
-#                     sector=sector, 
-#                     federal_procurement_type=federal_procurement_type
-#                 ), 
-#                 "Techs", 
-#                 Dict{String,Any}()
-#             )
-# end
-# function set_tech_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
-#     sector_defaults = get_sector_defaults_techs(; sector=sector, federal_procurement_type=federal_procurement_type)
-#     for (input_name, input_val) in sector_defaults
-#         if !(input_name in keys(d))
-#             d[input_name] = input_val
-#         end
-#     end
-# end
-# function get_sector_defaults_storage(; sector::String, federal_procurement_type::String)
-#     return get(get_sector_defaults(;
-#                     sector=sector, 
-#                     federal_procurement_type=federal_procurement_type
-#                 ), 
-#                 "Storage", 
-#                 Dict{String,Any}()
-#             )
-# end
-# function set_storage_sector_defaults!(d::Dict; sector::String, federal_procurement_type::String)
-#     sector_defaults = get_sector_defaults_storage(; sector=sector, federal_procurement_type=federal_procurement_type)
-#     for (input_name, input_val) in sector_defaults
-#         if !(input_name in keys(d))
-#             d[input_name] = input_val
-#         end
-#     end
-# end
-# function get_sector_defaults_financial(; sector::String, federal_procurement_type::String, federal_sector_state::String="")
-#     return get(get_sector_defaults(;
-#                     sector=sector, 
-#                     federal_procurement_type=federal_procurement_type,
-#                     federal_sector_state=federal_sector_state
-#                 ), 
-#                 "Financial", 
-#                 Dict{String,Any}()
-#             )
-# end
-
-function struct_to_dict(obj)
-    result = Dict{String, Any}()
-    if obj === nothing
-        return result
-    end
-
-    field_names = fieldnames(typeof(obj))
-    for field_name in field_names
-        field_value = getfield(obj, field_name)
-        field_name_str = string(field_name)
-        if field_name_str == "ref" || field_name_str == "mem" || field_name_str == "ptr"
-            continue
+function compare_dicts(dict1::Dict, dict2::Dict)
+    for key in union(keys(dict1), keys(dict2))
+        if !haskey(dict1, key)
+            println("$key not in first dict")
+        elseif !haskey(dict2, key)
+            println("$key not in second dict")
+        elseif dict1[key] isa Dict && dict2[key] isa Dict
+            compare_dicts(dict1[key], dict2[key])
+        elseif dict1[key] != dict2[key]
+            println("$key values $(dict1[key]) and $(dict2[key]) are not equal")
         end
-        if field_value === nothing
-            result[field_name_str] = ""
-        elseif typeof(field_value) <: Vector && !isempty(field_value)
-            # Handle arrays
-            if all(x -> isstructtype(typeof(x)) || hasproperty(x, :__dict__), field_value)
-                result[field_name_str] = [struct_to_dict(item) for item in field_value if item !== nothing]
-            else
-                result[field_name_str] = collect(field_value)
+    end
+end
+
+"""
+    check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String) -> Array{<:Real,1}
+
+Checks and adjusts the length of a user-provided load series to ensure it matches the expected length based on the `time_steps_per_hour` setting.
+
+# Arguments
+- `load_series::Array{<:Real,1}`: The input load series (e.g., electric load, thermal load) provided by the user.
+- `time_steps_per_hour::Int`: The number of time steps per hour (e.g., 1 for hourly, 4 for 15-minute intervals).
+- `load_type::String`: A descriptive name for the load type (e.g., "electric load", "thermal load") used in error or warning messages.
+
+# Returns
+- `Array{<:Real,1}`: The adjusted load series if modifications are required, or the original load series if it already matches the expected length.
+"""
+function check_and_adjust_load_length(load_series::Array{<:Real,1}, time_steps_per_hour::Int, load_type::String)
+            # Timestep checks for custom loads
+        if length(load_series) > 0 && length(load_series) / time_steps_per_hour != 8760 # user provided load with incorrect time_steps_per_hour
+            if length(load_series) < 8760 * time_steps_per_hour && length(load_series) % 8760 == 0 # loads_kw is lower resolution than time_steps_per_hour and is an integer multiple of 8760
+                load_series = repeat(load_series, inner=Int(time_steps_per_hour / (length(load_series)/8760)))
+                @warn "Repeating provided $load_type in each hour to match the time_steps_per_hour."
+                return load_series
+            else # loads_kw is higher resolution than time_steps_per_hour or not an integer multiple of 8760
+                throw(@error("Provided $load_type does not match the Settings.time_steps_per_hour."))
             end
-        elseif isstructtype(typeof(field_value)) || hasproperty(field_value, :__dict__)
-            # Nested struct
-            result[field_name_str] = struct_to_dict(field_value)
-        else
-            # Primitive types
-            result[field_name_str] = field_value
+        else 
+            return load_series # series not provided or is correct length
         end
-    end
-    
-    return result
 end

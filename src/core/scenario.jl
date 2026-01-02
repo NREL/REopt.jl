@@ -90,6 +90,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    # json parsing may make monthly_peaks_kw and monthly_totals_kwh type Vector{Any} instead of Vector{<:Real}
+    if haskey(d["ElectricLoad"], "monthly_peaks_kw")
+        d["ElectricLoad"]["monthly_peaks_kw"] = convert(Vector{Float64}, d["ElectricLoad"]["monthly_peaks_kw"])
+    end
+    if haskey(d["ElectricLoad"], "monthly_totals_kwh")
+        d["ElectricLoad"]["monthly_totals_kwh"] = convert(Vector{Float64}, d["ElectricLoad"]["monthly_totals_kwh"])
+    end
+
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
     latitude=site.latitude, longitude=site.longitude, 
     time_steps_per_hour=settings.time_steps_per_hour,
@@ -195,41 +203,33 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
-        storage_dict = d["ElectricStorage"]
-        storage_dict["off_grid_flag"] = settings.off_grid_flag
+        storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
+        storage_dict[:off_grid_flag] = settings.off_grid_flag
     else
-        storage_dict = Dict("max_kw" => 0.0)
+        storage_dict = Dict(:max_kw => 0.0)
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial, site)
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
-        storage_structs["HotThermalStorage"] = HotThermalStorage(d["HotThermalStorage"], financial, site, settings.time_steps_per_hour)
+        storage_structs["HotThermalStorage"] = HotThermalStorage(
+                                                    dictkeys_tosymbols(d["HotThermalStorage"]), 
+                                                    financial, site, settings.time_steps_per_hour
+                                                )
     end
     if haskey(d, "HighTempThermalStorage")
-        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(d["HighTempThermalStorage"], financial, site, settings.time_steps_per_hour)
+        storage_structs["HighTempThermalStorage"] = HighTempThermalStorage(
+                                                        dictkeys_tosymbols(d["HighTempThermalStorage"]), 
+                                                        financial, site, settings.time_steps_per_hour
+                                                    )
     end
     if haskey(d, "ColdThermalStorage")
-        storage_structs["ColdThermalStorage"] = ColdThermalStorage(d["ColdThermalStorage"], financial, site, settings.time_steps_per_hour)
+        storage_structs["ColdThermalStorage"] = ColdThermalStorage(
+                                                    dictkeys_tosymbols(d["ColdThermalStorage"]), 
+                                                    financial, site, settings.time_steps_per_hour
+                                                )
     end
     storage = Storage(storage_structs)
-
-    if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
-        electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
-                                        year=electric_load.year,
-                                        NEM=electric_utility.net_metering_limit_kw > 0, 
-                                        time_steps_per_hour=settings.time_steps_per_hour
-                                        )
-    else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
-        if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
-        end
-        electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
-                                            blended_annual_demand_rate = 0.0,
-                                            year=electric_load.year,
-                                            time_steps_per_hour=settings.time_steps_per_hour
-        )
-    end
 
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., off_grid_flag=settings.off_grid_flag,
@@ -901,7 +901,25 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "ElectricHeater") && (!haskey(d["ElectricHeater"], "max_mmbtu_per_hour") || d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
+    
+    if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
+        electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
+                                        year=electric_load.year,
+                                        NEM=electric_utility.net_metering_limit_kw > 0, 
+                                        time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
+        if haskey(d, "ElectricTariff")
+            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
+        end
+        electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
+                                            blended_annual_demand_rate = 0.0,
+                                            year=electric_load.year,
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    end
 
+    # CST                                    
     cst = nothing
     if haskey(d, "CST") && (!haskey(d["CST"], "max_kw") || d["CST"]["max_kw"] > 0.0)
         if !haskey(d,"Site") || !haskey(d["Site"], "land_acres")
