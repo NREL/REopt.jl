@@ -166,6 +166,9 @@ function BAUInputs(p::REoptInputs)
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
+    # Initialize CHP-specific parameters as nested dictionary (empty for BAU)
+    chp_params = Dict{String, Dict{Symbol, Float64}}()
+
     REoptInputs(
         bau_scenario,
         techs,
@@ -234,7 +237,8 @@ function BAUInputs(p::REoptInputs)
         heating_loads_served_by_tes,
         unavailability,
         absorption_chillers_using_heating_load,
-        avoided_capex_by_ashp_present_value
+        avoided_capex_by_ashp_present_value,
+        chp_params
     )
 end
 

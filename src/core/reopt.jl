@@ -153,6 +153,9 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 			if !isempty(p.techs.pv)
 				organize_multiple_pv_results(p, results_dict)
 			end
+			if !isempty(p.techs.chp)
+				organize_multiple_chp_results(p, results_dict)
+			end
 			return results_dict
 		else
 			throw(@error("REopt scenarios solved either with errors or non-optimal solutions."))
@@ -284,11 +287,17 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalFuelCosts] += m[:TotalCHPFuelCosts]        
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
-			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+			# Add standby charges for each CHP
+			for chp in p.s.chps
+				if chp.standby_rate_per_kw_per_month > 1.0e-7
+					m[:TotalCHPStandbyCharges] += p.pwf_e * 12 * chp.standby_rate_per_kw_per_month * m[:dvSize][chp.name]
+				end
 			end
 
-			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+			# Add supplementary firing capital costs for each CHP
+			for chp in p.s.chps
+				m[:TotalTechCapCosts] += chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][chp.name]
+			end
         end
 
         if !isempty(setdiff(p.techs.heating, p.techs.elec))
@@ -619,6 +628,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
 		if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
 			organize_multiple_pv_results(p, results)
+		end
+		if organize_pvs && !isempty(p.techs.chp)  # same logic as PV
+			organize_multiple_chp_results(p, results)
 		end
 
 		# add error messages (if any) and warnings to results dict

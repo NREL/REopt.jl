@@ -186,21 +186,21 @@ function Techs(s::Scenario)
         end
     end
     
-    if !isnothing(s.chp)
-        push!(all_techs, "CHP")
-        push!(elec, "CHP")
-        push!(chp_techs, "CHP")
-        if s.chp.can_supply_steam_turbine
-            push!(techs_can_supply_steam_turbine, "CHP")
+    for chp in s.chps
+        push!(all_techs, chp.name)
+        push!(chp_techs, chp.name)
+        push!(elec, chp.name)
+        if chp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, chp.name)
         end
-        if s.chp.can_serve_space_heating
-            push!(techs_can_serve_space_heating, "CHP")
+        if chp.can_serve_space_heating
+            push!(techs_can_serve_space_heating, chp.name)
         end
-        if s.chp.can_serve_dhw
-            push!(techs_can_serve_dhw, "CHP")
+        if chp.can_serve_dhw
+            push!(techs_can_serve_dhw, chp.name)
         end
-        if s.chp.can_serve_process_heat
-            push!(techs_can_serve_process_heat, "CHP")
+        if chp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, chp.name)
         end
     end
 

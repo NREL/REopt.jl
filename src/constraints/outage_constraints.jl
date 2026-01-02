@@ -176,8 +176,8 @@ end
 function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
     fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
-        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
-        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
+        electric_efficiency_full_load = p.s.chps[1].electric_efficiency_full_load, 
+        electric_efficiency_half_load = p.s.chps[1].electric_efficiency_half_load, 
         fuel_higher_heating_value_kwh_per_unit=1
     )
   

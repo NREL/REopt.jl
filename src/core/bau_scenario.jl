@@ -33,7 +33,8 @@ struct BAUScenario <: AbstractScenario
     cooling_load::CoolingLoad
     ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
-    cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}    
+    cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    chps::Array{CHP, 1}  # Empty array for BAU scenarios (no new CHP modeled)
 end
 
 
@@ -150,6 +151,7 @@ function BAUScenario(s::Scenario)
         s.cooling_load,
         ghp_option_list,
         space_heating_thermal_load_reduction_with_ghp_kw,
-        cooling_thermal_load_reduction_with_ghp_kw
+        cooling_thermal_load_reduction_with_ghp_kw,
+        CHP[]  # Empty array - no CHP in BAU scenario
     )
 end

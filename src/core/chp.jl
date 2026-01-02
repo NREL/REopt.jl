@@ -80,6 +80,7 @@ conflict_res_min_allowable_fraction_of_max = 0.25
 Base.@kwdef mutable struct CHP <: AbstractCHP
     # Required input
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []    
+    name::String = "CHP"  # for use with multiple CHPs
     
     # Inputs which defaults vary depending on prime_mover and size_class
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
@@ -140,6 +141,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
+    fuel_cost_escalation_rate_fraction::Union{Nothing, Float64} = nothing
 end
 
 
@@ -549,4 +551,9 @@ function get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_cl
         end
     end
     return size_class
+end
+
+# Get a specific CHP by name from an array of CHPs
+function get_chp_by_name(name::String, chps::AbstractArray{CHP, 1})
+    chps[findfirst(chp -> chp.name == name, chps)]
 end

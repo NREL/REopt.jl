@@ -133,8 +133,14 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # calculate CHP o+m costs, incentives, and depreciation
-    if "CHP" in keys(d) && d["CHP"]["size_kw"] > 0
-        update_metrics(m, p, p.s.chp, "CHP", d, third_party)
+    for chp_name in p.techs.chp
+        if chp_name in keys(d) && get(d[chp_name], "size_kw", 0) > 0
+            # Find the CHP object for this name
+            chp_idx = findfirst(chp -> chp.name == chp_name, p.s.chps)
+            if !isnothing(chp_idx)
+                update_metrics(m, p, p.s.chps[chp_idx], chp_name, d, third_party)
+            end
+        end
     end
 
     # calculate ExistingBoiler o+m costs (just fuel, no non-fuel operating costs currently)
