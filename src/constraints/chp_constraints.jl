@@ -1,17 +1,11 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-function add_chp_fuel_burn_constraints(m, p; _n="")
-    # Fuel burn slope and intercept
-    fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
-        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
-        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
-        fuel_higher_heating_value_kwh_per_unit=1
-    )
-
+function add_chp_fuel_burn_constraints(m, p; _n="", binary_created=true, fuel_burn_slope, fuel_burn_intercept)
     # Fuel cost
     m[:TotalCHPFuelCosts] = @expression(m, 
         sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
+    # Note: if intercept exists, binary_created will always be true (checked in add_chp_constraints)
     if abs(fuel_burn_intercept) > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
@@ -40,15 +34,9 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     end 
 end
 
-function add_chp_thermal_production_constraints(m, p; _n="")
-    # Thermal production slope and intercept
-    thermal_prod_full_load = 1.0 / p.s.chp.electric_efficiency_full_load * p.s.chp.thermal_efficiency_full_load  # [kWt/kWe]
-    thermal_prod_half_load = 0.5 / p.s.chp.electric_efficiency_half_load * p.s.chp.thermal_efficiency_half_load   # [kWt/kWe]
-    thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
-    thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
-
-
+function add_chp_thermal_production_constraints(m, p; _n="", binary_created=true, thermal_prod_slope, thermal_prod_intercept)
     # Conditionally add dvHeatingProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
+    # Note: if intercept exists, binary_created will always be true (checked in add_chp_constraints)
     if abs(thermal_prod_intercept) > 1.0E-7
         dv = "dvHeatingProductionYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
@@ -92,16 +80,20 @@ Used by add_chp_constraints to add supplementary firing constraints if
     p.s.chp.supplementary_firing_max_steam_ratio > 1.0 to add CHP supplementary firing operating constraints.  
     Else, the supplementary firing dispatch and size decision variables are set to zero.
 """
-function add_chp_supplementary_firing_constraints(m, p; _n="")
-    thermal_prod_full_load = 1.0 / p.s.chp.electric_efficiency_full_load * p.s.chp.thermal_efficiency_full_load  # [kWt/kWe]
-    thermal_prod_half_load = 0.5 / p.s.chp.electric_efficiency_half_load * p.s.chp.thermal_efficiency_half_load   # [kWt/kWe]
-    thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
-
+function add_chp_supplementary_firing_constraints(m, p; _n="", thermal_prod_slope, thermal_prod_intercept)
     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
-    @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
-                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
-                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
-                )
+    # Note: dvHeatingProductionYIntercept only exists when thermal_prod_intercept > 0
+    if abs(thermal_prod_intercept) > 1.0E-7
+        @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
+                    m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
+                    (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
+                    )
+    else
+        @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
+                    m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
+                    (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t]
+                    )
+    end
     if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
         # Constrain lower limit of 0 if CHP tech is off
         @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
@@ -174,13 +166,32 @@ end
 Used in src/reopt.jl to add_chp_constraints if !isempty(p.techs.chp) to add CHP operating constraints and 
 cost expressions.
 """
-function add_chp_constraints(m, p; _n="")
-    # TODO if chp.min_turn_down_fraction is 0.0, and there is no fuel burn or thermal y-intercept, we don't need the binary below
-    @warn """Adding binary variable to model CHP. 
-                Some solvers are very slow with integer variables"""
-    @variables m begin
-        binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
-    end    
+function add_chp_constraints(m, p; _n="")   
+    # Calculate fuel burn and thermal production slopes and intercepts which are passed into some constraint functions
+    fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
+        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
+        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
+        fuel_higher_heating_value_kwh_per_unit=1
+    )
+    
+    thermal_prod_full_load = 1.0 / p.s.chp.electric_efficiency_full_load * p.s.chp.thermal_efficiency_full_load
+    thermal_prod_half_load = 0.5 / p.s.chp.electric_efficiency_half_load * p.s.chp.thermal_efficiency_half_load
+    thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)
+    thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0
+    
+    # Check if binary variable is needed which creates binCHPIsOnInTS binary decision variable and activates other constraints
+    binary_needed = (abs(fuel_burn_intercept) > 1.0E-7) || 
+                    (abs(thermal_prod_intercept) > 1.0E-7) || 
+                    (p.s.chp.min_turn_down_fraction > 1.0E-7) ||
+                    (p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7)
+    
+    if binary_needed
+        @warn """Adding binary variable binCHPIsOnInTS to model CHP. 
+                    Some solvers are very slow with integer variables"""
+        @variables m begin
+            binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
+        end
+    end
     
     m[:TotalHourlyCHPOMCosts] = 0
     m[:TotalCHPFuelCosts] = 0
@@ -189,17 +200,20 @@ function add_chp_constraints(m, p; _n="")
         m[:dvRatedProduction][t, ts] for t in p.techs.chp, ts in p.time_steps)
     )
 
-    if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
-        add_chp_hourly_om_charges(m, p)
-    end
-
-    add_chp_fuel_burn_constraints(m, p; _n=_n)
-    add_chp_thermal_production_constraints(m, p; _n=_n)
-    add_binCHPIsOnInTS_constraints(m, p; _n=_n)
+    # These constraints are always needed
+    add_chp_fuel_burn_constraints(m, p; _n=_n, binary_created=binary_needed, fuel_burn_slope=fuel_burn_slope, fuel_burn_intercept=fuel_burn_intercept)
+    add_chp_thermal_production_constraints(m, p; _n=_n, binary_created=binary_needed, thermal_prod_slope=thermal_prod_slope, thermal_prod_intercept=thermal_prod_intercept)
     add_chp_rated_prod_constraint(m, p; _n=_n)
 
+    # These constraints and decision variables created within the functions are only needed if binary_needed or more specific parameters is non-zero
+    if binary_needed
+        add_binCHPIsOnInTS_constraints(m, p; _n=_n)
+    end
+    if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
+        add_chp_hourly_om_charges(m, p; _n=_n)
+    end
     if p.s.chp.supplementary_firing_max_steam_ratio > 1.0
-        add_chp_supplementary_firing_constraints(m,p; _n=_n)
+        add_chp_supplementary_firing_constraints(m, p; _n=_n, thermal_prod_slope=thermal_prod_slope, thermal_prod_intercept=thermal_prod_intercept)
     else
         for t in p.techs.chp
             fix(m[Symbol("dvSupplementaryFiringSize"*_n)][t], 0.0, force=true)
