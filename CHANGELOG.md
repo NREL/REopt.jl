@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 
+### Fixed
+- Include boiler emissions in emissions calculations
+
 ## v0.56.4
 ### Fixed
 - Bug where storage input with only _Int_ values restricted _Dict_ subtype passed into `set_sector_defaults!` and caused _InexactError_
