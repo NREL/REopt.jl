@@ -24,12 +24,14 @@ ENV["NREL_DEVELOPER_EMAIL"]="your contact email"
 ### Additional package loading for GHP
 GHP evaluations must load in the [`GhpGhx.jl`](https://github.com/NREL/GhpGhx.jl) package separately because it has a more [restrictive license](https://github.com/NREL/GhpGhx.jl/blob/main/LICENSE.md) and is not a registered Julia package.
 
-First add the GhpGhx.jl package to the project's dependencies from the package manager (`]`):
+Install gcc via homebrew (if running on a Mac).
+
+Add the GhpGhx.jl package to the project's dependencies from the package manager (`]`):
 ```sh
 (active_env) pkg> add "https://github.com/NREL/GhpGhx.jl"
 ```
 
-Then load in the package from the script where `run_reopt()` is called:
+Load in the package from the script where `run_reopt()` is called:
 ```julia
 using GhpGhx
 ```
