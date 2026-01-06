@@ -2187,6 +2187,7 @@ else  # run HiGHS tests
             input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
             s = Scenario(input_data)
             inputs = REoptInputs(s)
+            @test inputs.tech_emissions_factors_CO2["ExistingBoiler"] ≈ inputs.tech_emissions_factors_CO2["Boiler"] atol=1.0e-6 
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt([m1,m2], inputs)
