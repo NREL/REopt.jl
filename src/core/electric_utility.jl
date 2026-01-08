@@ -476,7 +476,9 @@ function avert_region_abbreviation(latitude, longitude)
             @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
             return abbr, meters_to_region #nothing, #
         else
-            return ArchGDAL.getfield(feature,"AVERT"), meters_to_region
+            abbr = ArchGDAL.getfield(feature,"AVERT")
+            abbr = abbr == "HI" ? "HIMS" : abbr
+            return abbr, meters_to_region
         end
     end
 end
