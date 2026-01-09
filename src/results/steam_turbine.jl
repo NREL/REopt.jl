@@ -80,11 +80,11 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 		@expression(m, SteamTurbineToHighTempTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
 		@expression(m, SteamTurbineToHighTempTESKW[ts in p.time_steps], 0.0)
 	end
-	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(SteamTurbinetoHotTESKW) ./ KWH_PER_MMBTU, digits=5)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToHotTESKW) ./ KWH_PER_MMBTU, digits=5)
 	r["thermal_to_high_temp_thermal_storage_series_mmbtu_per_hour"] = round.(value.(m[:SteamTurbineToHighTempTESKW]) ./ KWH_PER_MMBTU, digits=5)
 	
 	@expression(m, SteamTurbineThermalToLoadKW[ts in p.time_steps],
-		sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in p.techs.steam_turbine, q in p.heating_loads) - SteamTurbinetoHotTESKW[ts])
+		sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in p.techs.steam_turbine, q in p.heating_loads) - SteamTurbineToHotTESKW[ts] - SteamTurbineToHighTempTESKW[ts])
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineThermalToLoadKW) ./ KWH_PER_MMBTU, digits=5)
 	
 	if "DomesticHotWater" in p.heating_loads && p.s.steam_turbine.can_serve_dhw
