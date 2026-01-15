@@ -25,6 +25,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## fed-updates
+### Changed
+- Updated defaults for **Financial** inputs **elec_cost_escalation_rate_fraction**, **boiler_fuel_cost_escalation_rate_fraction**, **existing_boiler_fuel_cost_escalation_rate_fraction**, **chp_fuel_cost_escalation_rate_fraction**, **generator_fuel_cost_escalation_rate_fraction**, **om_cost_escalation_rate_fraction**, and **offtaker_discount_rate_fraction** when **sector** is "federal"
+
 ## Develop 
 ### Fixed
 - Include boiler emissions in emissions calculations
