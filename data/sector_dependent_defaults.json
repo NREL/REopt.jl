@@ -2,7 +2,7 @@
   "federal": {
     "fedowned_dirpurch": {
       "Financial": {
-        "om_cost_escalation_rate_fraction": 0.012,
+        "om_cost_escalation_rate_fraction": 0.015,
         "elec_cost_escalation_rate_fraction": {"West": -0.00088, "Midwest": 0.00397, "South": 0.00468, "Northeast": 0.01077, "National": 0.00415},
         "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184, "National": 0.00581},
         "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184, "National": 0.00581},
@@ -44,7 +44,7 @@
     },
     "fedowned_thirdparty": {
       "Financial": {
-        "om_cost_escalation_rate_fraction": 0.012,
+        "om_cost_escalation_rate_fraction": 0.015,
         "elec_cost_escalation_rate_fraction": {"West": -0.00088, "Midwest": 0.00397, "South": 0.00468, "Northeast": 0.01077, "National": 0.00415},
         "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184, "National": 0.00581},
         "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184, "National": 0.00581},
@@ -88,7 +88,7 @@
     },
     "privateowned_thirdparty": {
       "Financial": {
-        "om_cost_escalation_rate_fraction": 0.012,
+        "om_cost_escalation_rate_fraction": 0.015,
         "elec_cost_escalation_rate_fraction": {"West": -0.00088, "Midwest": 0.00397, "South": 0.00468, "Northeast": 0.01077, "National": 0.00415},
         "existing_boiler_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184, "National": 0.00581},
         "boiler_fuel_cost_escalation_rate_fraction": {"West": 0.01022, "Midwest": 0.00387, "South": 0.0112, "Northeast": -0.00184, "National": 0.00581},
