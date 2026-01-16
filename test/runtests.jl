@@ -40,7 +40,7 @@ else  # run HiGHS tests
             @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.0348
             @test s.financial.elec_cost_escalation_rate_fraction == 0.0166
             @test s.financial.om_cost_escalation_rate_fraction == 0.025
-            test s.financial.offtaker_discount_rate_fraction == 0.0624
+            @test s.financial.offtaker_discount_rate_fraction == 0.0624
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
                     @test getfield(tech_struct, incentive_input_name) != 0 
@@ -65,7 +65,7 @@ else  # run HiGHS tests
             @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.024 #national avg
             @test s.financial.elec_cost_escalation_rate_fraction == 0.0074 #national avg
             @test s.financial.om_cost_escalation_rate_fraction == 0.015
-            test s.financial.offtaker_discount_rate_fraction == 0.045
+            @test s.financial.offtaker_discount_rate_fraction == 0.045
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction)
                     @test getfield(tech_struct, incentive_input_name) != 0 
@@ -90,7 +90,7 @@ else  # run HiGHS tests
             @test s.financial.chp_fuel_cost_escalation_rate_fraction == 0.0079
             @test s.financial.elec_cost_escalation_rate_fraction == -0.0062
             @test s.financial.om_cost_escalation_rate_fraction == 0.015
-            test s.financial.offtaker_discount_rate_fraction == 0.0.045
+            @test s.financial.offtaker_discount_rate_fraction == 0.0.045
             for tech_struct in (s.pvs[1], s.wind, s.chp, s.ghp_option_list[1], s.steam_turbine)
                 for incentive_input_name in (:macrs_option_years, :macrs_bonus_fraction, :federal_itc_fraction)
                     default = 0
