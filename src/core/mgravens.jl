@@ -68,6 +68,43 @@ function get_value_in_kw(object)
     return value
 end
 
+"""
+    write_timeseries_to_csv(timeseries_data::Vector, filename::String, timestep_sec::Int, year::Int=2024)
+
+Write a timeseries array to a CSV file with a datetime index.
+
+# Arguments
+- `timeseries_data::Vector`: The timeseries data to write (e.g., loads_kw)
+- `filename::String`: Name of the output CSV file
+- `timestep_sec::Int`: Time step in seconds (900 for 15-min, 3600 for hourly)
+- `year::Int`: Calendar year for the datetime index (default: 2024)
+
+# Returns
+- Writes CSV file to the current working directory with columns: datetime, value
+"""
+function write_timeseries_to_csv(timeseries_data::Vector, filename::String, timestep_sec::Int, year::Int=2024)
+    # Calculate time steps per hour
+    time_steps_per_hour = convert(Int64, 3600 / timestep_sec)
+    
+    # Create datetime index starting from January 1 of the given year
+    start_datetime = DateTime(year, 1, 1, 0, 0, 0)
+    
+    # Generate datetime stamps for each timestep
+    datetime_index = [start_datetime + Dates.Minute((i-1) * (60 / time_steps_per_hour)) for i in 1:length(timeseries_data)]
+    
+    # Open file and write header
+    open(filename, "w") do io
+        println(io, "datetime,value")
+        
+        # Write each row
+        for (dt, val) in zip(datetime_index, timeseries_data)
+            println(io, "$(Dates.format(dt, "yyyy-mm-dd HH:MM:SS")),$val")
+        end
+    end
+    
+    @info "Timeseries data written to $filename"
+end
+
 
 function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
     reopt_inputs = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "mgravens_fields_defaults.json"))
@@ -233,10 +270,14 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                 end
             end
             reopt_inputs["ElectricLoad"]["loads_kw"] = total_loads_kw
+            # Write total_loads_kw to CSV file with datetime index
+            write_timeseries_to_csv(total_loads_kw, "total_loads_kw.csv", timestep_sec, year)
             println("Min gross load (kW): ", round(minimum(total_loads_kw), digits=0))
             println("Max gross load (kW): ", round(maximum(total_loads_kw), digits=0))
             if sum(microgrid_loads_kw) > 0.0
                 reopt_inputs["ElectricLoad"]["critical_loads_kw"] = microgrid_loads_kw
+                # Write microgrid_loads_kw to CSV file with datetime index
+                write_timeseries_to_csv(microgrid_loads_kw, "microgrid_loads_kw.csv", timestep_sec, year)
             end
             println("Min critical load (kW): ", round(minimum(microgrid_loads_kw), digits=0))
             println("Max critical load (kW): ", round(maximum(microgrid_loads_kw), digits=0))
@@ -361,11 +402,11 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
             end
             # Technology specific input parameters
             # Current approach: only include *microgrid* PV + Battery in "existing", 
-            #   where existing battery will only be accounted for by zeroing out the first X amount of capacity, and
+            #   where existing battery will only be accounted for by min_kw and min_kwh = existing battery and zeroing out the first "min" amount of capacity cost, and
             #   the generation from existing PVs that are NOT in the microgrid are subtracted off of the total grid-tied load (above)
             # Check for existing assets such as PhotoVoltaicUnit and BatteryUnit, and "consider" them in REopt if those technologies are options
             # TODO we cannot currently model a different size PV or battery for the whole system vs the microgrid for the outage, but
-            #   we can net out the non-MG PV from the loads_kw and then ONLY include the PV capacity which is on the microgrid
+            #   we can net out the non-MG PV from the loads_kw and then ONLY include the existing PV capacity which is on the microgrid
             # Defaults from electric_load.jl
             # loads_kw_is_net::Bool = true, --> we want to say this is FALSE because we are NOT modeling non-MG existing PV, and we are NOT subtracting MG PV from load
             # critical_loads_kw_is_net::Bool = false, --> keep as false because we are NOT netting out MG existing PV, but maybe we would sometimes if that's the load data we have?
@@ -514,6 +555,25 @@ function convert_mgravens_inputs_to_reopt_inputs(mgravens::Dict)
                     end
                 else
                     @info "No PhotoVoltaicUnit.GenerationProfile found for existing PV $largest_pv_name, so REopt will call PVWatts for production_factor_series"
+                end
+
+                # Calculate total aggregated existing PV production profile for all PV systems (MG and non-MG)
+                if haskey(reopt_inputs["PV"], "production_factor_series")
+                    total_existing_pv_capacity_kw = sum([existing_pv_data[pv]["ac_rating_kw"] for pv in keys(existing_pv_data)])
+                    total_existing_pv_production_kw = total_existing_pv_capacity_kw * reopt_inputs["PV"]["production_factor_series"]
+                    write_timeseries_to_csv(total_existing_pv_production_kw, "total_existing_pv_production_kw.csv", timestep_sec, year)
+                    println("Total existing PV capacity (kW): ", round(total_existing_pv_capacity_kw, digits=0))
+                    println("Min existing PV production (kW): ", round(minimum(total_existing_pv_production_kw), digits=0))
+                    println("Max existing PV production (kW): ", round(maximum(total_existing_pv_production_kw), digits=0))
+                    # Create the same type of pv_production but just for the microgrid existing PVs
+                    if !isempty(existing_mg_pvs)
+                        total_mg_existing_pv_capacity_kw = sum([existing_pv_data[pv]["ac_rating_kw"] for pv in existing_mg_pvs])
+                        total_mg_existing_pv_production_kw = total_mg_existing_pv_capacity_kw * reopt_inputs["PV"]["production_factor_series"]
+                        write_timeseries_to_csv(total_mg_existing_pv_production_kw, "total_mg_existing_pv_production_kw.csv", timestep_sec, year)
+                        println("Total MG existing PV capacity (kW): ", round(total_mg_existing_pv_capacity_kw, digits=0))
+                        println("Min MG existing PV production (kW): ", round(minimum(total_mg_existing_pv_production_kw), digits=0))
+                        println("Max MG existing PV production (kW): ", round(maximum(total_mg_existing_pv_production_kw), digits=0))
+                    end
                 end
             end
 
