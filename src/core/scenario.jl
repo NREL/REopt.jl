@@ -28,8 +28,8 @@ struct Scenario <: AbstractScenario
     cst::Union{CST, Nothing}
     ashp::Union{ASHP, Nothing}
     ashp_wh::Union{ASHP, Nothing}
-    load_uncertainty::LoadUncertainty
-    production_uncertainty::ProductionUncertainty
+    load_uncertainty::TimeSeriesUncertainty
+    production_uncertainty::TimeSeriesUncertainty
 end
 
 """
@@ -1017,13 +1017,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         if haskey(unc_dict, :deviation_probabilities)
             unc_dict[:deviation_probabilities] = Float64.(unc_dict[:deviation_probabilities])
         end
-        load_uncertainty = LoadUncertainty(; unc_dict...)
+        load_uncertainty = TimeSeriesUncertainty(; unc_dict...)
     else
-        load_uncertainty = LoadUncertainty()  # Default: disabled
+        load_uncertainty = TimeSeriesUncertainty()  # Default: disabled
     end
     
     # Check for production uncertainty in PV or Wind
-    production_uncertainty = ProductionUncertainty()  # Default: disabled
+    production_uncertainty = TimeSeriesUncertainty()  # Default: disabled
     if haskey(d, "PV")
         pv_dict = typeof(d["PV"]) <: AbstractArray ? d["PV"][1] : d["PV"]
         if haskey(pv_dict, "production_uncertainty")
@@ -1035,7 +1035,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if haskey(unc_dict, :deviation_probabilities)
                 unc_dict[:deviation_probabilities] = Float64.(unc_dict[:deviation_probabilities])
             end
-            production_uncertainty = ProductionUncertainty(; unc_dict...)
+            production_uncertainty = TimeSeriesUncertainty(; unc_dict...)
         end
     end
     if haskey(d, "Wind") && haskey(d["Wind"], "production_uncertainty")
@@ -1047,7 +1047,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         if haskey(unc_dict, :deviation_probabilities)
             unc_dict[:deviation_probabilities] = Float64.(unc_dict[:deviation_probabilities])
         end
-        production_uncertainty = ProductionUncertainty(; unc_dict...)
+        production_uncertainty = TimeSeriesUncertainty(; unc_dict...)
     end
 
     return Scenario(
