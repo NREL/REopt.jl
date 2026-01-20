@@ -40,9 +40,29 @@ This finds a **robust solution** that performs well across all possible futures,
 
 ## Uncertainty Parameters for ElectricLoad and PV
 
+REopt supports two approaches to modeling uncertainty: **time-invariant** scenarios and **Monte Carlo sampling** methods. These allow you to capture different types of uncertainty in load and renewable production.
+
+### Uncertainty Method Overview
+
+**Time-Invariant Method (`method="time_invariant"`):**
+- Each scenario applies the **same deviation to all timesteps**
+- Models systematic, persistent uncertainty (e.g., overall building occupancy changes, general climate conditions)
+- User specifies exact scenarios with their probabilities
+- Best for: Known scenarios with specific probabilities, policy analysis, deterministic sensitivity studies
+
+**Monte Carlo Methods (`method="discrete"`, `"normal"`, or `"uniform"`):**
+- Each scenario applies **different random deviations to each timestep**
+- Models timestep-level variability and stochastic uncertainty
+- User specifies sampling distribution and number of samples
+- Best for: Capturing short-term variability, weather uncertainty, load fluctuations
+
+---
+
+### Time-Invariant Uncertainty (Original Method)
+
 ### ElectricLoad Uncertainty Specification
 
-Users can add uncertainty to electric load in the JSON input:
+Users can add time-invariant uncertainty to electric load in the JSON input:
 
 ```json
 {
@@ -51,6 +71,7 @@ Users can add uncertainty to electric load in the JSON input:
         "annual_kwh": 2000000.0,
         "uncertainty": {
             "enabled": true,
+            "method": "time_invariant",
             "deviation_fractions": [-0.1, 0.0, 0.1],
             "deviation_probabilities": [0.25, 0.50, 0.25]
         }
@@ -60,6 +81,7 @@ Users can add uncertainty to electric load in the JSON input:
 
 **Parameters:**
 - `enabled` (bool): Activate load uncertainty
+- `method` (string): Must be `"time_invariant"` for this approach
 - `deviation_fractions` (array): Fractional deviations from nominal (e.g., [-0.1, 0.0, 0.1] = -10%, nominal, +10%)
   - Negative values decrease load, positive values increase load
   - Zero represents the nominal case
@@ -89,7 +111,7 @@ Users can add uncertainty to electric load in the JSON input:
 
 ### PV Production Uncertainty Specification
 
-Similarly for PV production factors:
+Similarly for PV production factors with time-invariant uncertainty:
 
 ```json
 {
@@ -97,6 +119,7 @@ Similarly for PV production factors:
         "max_kw": 2000.0,
         "production_uncertainty": {
             "enabled": true,
+            "method": "time_invariant",
             "deviation_fractions": [-0.2, 0.0, 0.2],
             "deviation_probabilities": [0.25, 0.50, 0.25]
         }
@@ -106,6 +129,7 @@ Similarly for PV production factors:
 
 **Parameters:**
 - `enabled` (bool): Activate PV production uncertainty
+- `method` (string): Must be `"time_invariant"` for this approach
 - `deviation_fractions` (array): Fractional deviations from nominal production factors
   - Negative values = less solar resource, positive = more solar resource
   - Zero represents the nominal case
@@ -118,9 +142,230 @@ Similarly for PV production factors:
 
 **Note:** The same flexible specification applies - you can define any number of scenarios with asymmetric deviations and probabilities.
 
-### Combined Scenarios
+---
 
-When **both** load and PV uncertainty are enabled, scenarios are combined assuming independence:
+### Monte Carlo Uncertainty Methods
+
+REopt supports three Monte Carlo sampling methods that generate scenarios with **timestep-varying uncertainty**. Unlike time-invariant methods where each scenario applies the same deviation to all timesteps, Monte Carlo methods sample different deviations for each timestep, capturing short-term variability and stochastic uncertainty.
+
+#### Method 1: Discrete Distribution Sampling (`method="discrete"`)
+
+Samples from a discrete probability distribution at each timestep. Best for modeling uncertainty with known discrete outcomes (e.g., weather states: sunny/cloudy/rainy).
+
+**ElectricLoad Example:**
+```json
+{
+    "ElectricLoad": {
+        "doe_reference_name": "LargeHotel",
+        "annual_kwh": 2000000.0,
+        "uncertainty": {
+            "enabled": true,
+            "method": "discrete",
+            "deviation_fractions": [-0.1, 0.0, 0.1],
+            "deviation_probabilities": [0.25, 0.50, 0.25],
+            "n_samples": 3
+        }
+    }
+}
+```
+
+**Parameters:**
+- `method`: `"discrete"`
+- `deviation_fractions`: Possible deviation values to sample from
+- `deviation_probabilities`: Sampling probabilities for each deviation (must sum to 1.0)
+- `n_samples`: Number of scenario samples to generate
+
+**How It Works:**
+- For each of the `n_samples` scenarios:
+  - At each timestep, randomly sample a deviation from the discrete distribution
+  - Apply that deviation to the nominal value for that timestep
+- Each scenario has a different sequence of deviations across timesteps
+- All scenarios have equal probability (1/n_samples)
+
+**PV Production Example:**
+```json
+{
+    "PV": {
+        "max_kw": 1000.0,
+        "production_uncertainty": {
+            "enabled": true,
+            "method": "discrete",
+            "deviation_fractions": [-0.2, 0.0, 0.2],
+            "deviation_probabilities": [0.30, 0.40, 0.30],
+            "n_samples": 5
+        }
+    }
+}
+```
+
+This generates 5 PV production scenarios, where each scenario has a unique sequence of deviations sampled from {-20%, 0%, +20%} with probabilities {30%, 40%, 30%} at each timestep.
+
+#### Method 2: Normal Distribution Sampling (`method="normal"`)
+
+Samples from a Normal (Gaussian) distribution at each timestep. Best for modeling continuous uncertainty with expected value and known variability.
+
+**ElectricLoad Example:**
+```json
+{
+    "ElectricLoad": {
+        "doe_reference_name": "LargeHotel",
+        "annual_kwh": 2000000.0,
+        "uncertainty": {
+            "enabled": true,
+            "method": "normal",
+            "mean": 0.0,
+            "std": 0.10,
+            "n_samples": 5
+        }
+    }
+}
+```
+
+**Parameters:**
+- `method`: `"normal"`
+- `mean`: Mean of the Normal distribution (fractional deviation, typically 0.0 for unbiased uncertainty)
+- `std`: Standard deviation of the Normal distribution (fractional)
+- `n_samples`: Number of scenario samples to generate
+
+**How It Works:**
+- For each timestep in each scenario, samples a deviation from Normal(mean, std)
+- Deviations are unbounded in theory but typically fall within ±3σ
+- Captures continuous, symmetric uncertainty around the expected value
+
+**Interpretation:**
+- `std = 0.10` means typical deviations are ±10% (1 standard deviation)
+- ~68% of sampled deviations fall within ±10%
+- ~95% of sampled deviations fall within ±20% (2 standard deviations)
+
+**PV Production Example:**
+```json
+{
+    "PV": {
+        "max_kw": 1000.0,
+        "production_uncertainty": {
+            "enabled": true,
+            "method": "normal",
+            "mean": -0.05,
+            "std": 0.15,
+            "n_samples": 10
+        }
+    }
+}
+```
+
+This models PV with a slight negative bias (mean = -5%) and moderate variability (std = 15%), generating 10 scenarios.
+
+#### Method 3: Uniform Distribution Sampling (`method="uniform"`)
+
+Samples from a Uniform distribution at each timestep. Best for representing maximum uncertainty or unknown distribution within known bounds.
+
+**ElectricLoad Example:**
+```json
+{
+    "ElectricLoad": {
+        "doe_reference_name": "LargeHotel",
+        "annual_kwh": 2000000.0,
+        "uncertainty": {
+            "enabled": true,
+            "method": "uniform",
+            "lower_bound": -0.15,
+            "upper_bound": 0.15,
+            "n_samples": 5
+        }
+    }
+}
+```
+
+**Parameters:**
+- `method`: `"uniform"`
+- `lower_bound`: Lower bound of the uniform distribution (fractional)
+- `upper_bound`: Upper bound of the uniform distribution (fractional)
+- `n_samples`: Number of scenario samples to generate
+
+**How It Works:**
+- For each timestep in each scenario, samples a deviation uniformly from [lower_bound, upper_bound]
+- All deviations within the range are equally likely
+- Represents maximum entropy (maximum uncertainty) within bounds
+
+**Interpretation:**
+- Bounds of [-0.15, 0.15] mean deviations range from -15% to +15%
+- No preference for any value within the range
+- Mean deviation is (lower_bound + upper_bound) / 2 = 0.0 in this example
+
+**PV Production Example:**
+```json
+{
+    "PV": {
+        "max_kw": 1000.0,
+        "production_uncertainty": {
+            "enabled": true,
+            "method": "uniform",
+            "lower_bound": -0.30,
+            "upper_bound": 0.20,
+            "n_samples": 8
+        }
+    }
+}
+```
+
+This models asymmetric PV uncertainty ranging from -30% to +20%, generating 8 scenarios.
+
+#### Combined Monte Carlo Scenarios
+
+When both load and PV use Monte Carlo methods, scenarios are combined multiplicatively:
+
+**Example: 3 load samples × 5 PV samples = 15 total scenarios**
+
+```json
+{
+    "ElectricLoad": {
+        "uncertainty": {
+            "enabled": true,
+            "method": "discrete",
+            "deviation_fractions": [-0.1, 0.0, 0.1],
+            "deviation_probabilities": [0.25, 0.50, 0.25],
+            "n_samples": 3
+        }
+    },
+    "PV": {
+        "production_uncertainty": {
+            "enabled": true,
+            "method": "normal",
+            "mean": 0.0,
+            "std": 0.15,
+            "n_samples": 5
+        }
+    }
+}
+```
+
+**Result:** 15 scenarios (3 × 5), each with equal probability (1/15), combining:
+- One of 3 load deviation sequences
+- One of 5 PV deviation sequences
+
+**Important:** Each load scenario has its own independent sequence of per-timestep deviations, and each PV scenario has its own independent sequence. The combination creates joint scenarios that capture both load and PV variability simultaneously.
+
+#### Choosing Between Methods
+
+| Method | Best For | Advantages | Disadvantages |
+|--------|----------|------------|---------------|
+| `time_invariant` | Policy analysis, known scenarios, systematic uncertainty | Interpretable, exact probabilities, efficient | Doesn't capture timestep variability |
+| `discrete` | Weather states, discrete outcomes | Matches known distributions, interpretable | Requires probability specification |
+| `normal` | Continuous uncertainty, measurement error | Natural for many processes, parameterized by mean/std | Can sample extreme values |
+| `uniform` | Maximum uncertainty, bounded unknowns | Maximum entropy within bounds, conservative | Equal likelihood may be unrealistic |
+
+**Computational Note:** More samples improve statistical representation but increase solve time:
+- 3-5 samples: Quick, captures basic variability
+- 10-20 samples: Good balance for most applications
+- 50+ samples: Detailed uncertainty quantification (expensive)
+
+For combined load × PV uncertainty, total scenarios = n_load_samples × n_pv_samples. Keep this product manageable (typically < 50 total scenarios) for reasonable solve times.
+
+---
+
+### Combined Scenarios (Time-Invariant Method)
+
+When **both** load and PV uncertainty are enabled using the time-invariant method, scenarios are combined assuming independence:
 
 **Example: 9 Joint Scenarios with 3×3 Configuration**
 
