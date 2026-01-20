@@ -1,14 +1,37 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 # Test suite for Optimization Under Uncertainty (OUU) implementation
 # Tests validate expected behavior and impacts of uncertainty on results
-using Revise
+# using Revise
 using Test
 using JuMP
 using HiGHS
+# using Xpress
 using JSON
 using REopt
 using DotEnv
 DotEnv.load!()
+
+# ============================================================================
+# SOLVER CONFIGURATION - Change solver here
+# ============================================================================
+const USE_XPRESS = false  # Set to false to use HiGHS
+
+"""
+Helper function to create model with configured solver
+"""
+function create_model(mip_gap::Float64=0.05; verbose::Bool=false)
+    if USE_XPRESS
+        m = Model(Xpress.Optimizer)
+        set_optimizer_attribute(m, "OUTPUTLOG", verbose ? 1 : 0)
+        set_optimizer_attribute(m, "MIPRELSTOP", mip_gap)
+    else
+        m = Model(HiGHS.Optimizer)
+        set_optimizer_attribute(m, "output_flag", verbose)
+        set_optimizer_attribute(m, "log_to_console", verbose)
+        set_optimizer_attribute(m, "mip_rel_gap", mip_gap)
+    end
+    return m
+end
 
 """
 Helper function to create base scenario dict for OUU testing
@@ -68,10 +91,7 @@ end
 Helper function to run optimization and return key results
 """
 function run_ouu_test(scenario_dict)
-    m = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-        "output_flag" => false, 
-        "log_to_console" => false)
-    )
+    m = create_model()
     
     s = Scenario(scenario_dict)
     inputs = REoptInputs(s)

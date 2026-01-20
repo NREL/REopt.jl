@@ -1834,7 +1834,7 @@ else  # run HiGHS tests
             for ts in p.time_steps
                 #heating and cooling loads only
                 if ts % 2 == 0  #in even periods, there is a nonzero load and energy is higher cost, and storage should discharge
-                    p.s.electric_load.loads_kw[ts] = 10
+                    p.loads_kw_by_scenario[1][ts] = 10
                     p.s.dhw_load.loads_kw[ts] = 5
                     p.s.space_heating_load.loads_kw[ts] = 5
                     p.s.cooling_load.loads_kw_thermal[ts] = 10
@@ -1843,7 +1843,7 @@ else  # run HiGHS tests
                         p.s.electric_tariff.energy_rates[ts, tier] = 100
                     end
                 else #in odd periods, there is no load and energy is cheaper - storage should charge 
-                    p.s.electric_load.loads_kw[ts] = 0
+                    p.loads_kw_by_scenario[1][ts] = 0
                     p.s.dhw_load.loads_kw[ts] = 0
                     p.s.space_heating_load.loads_kw[ts] = 0
                     p.s.cooling_load.loads_kw_thermal[ts] = 0
@@ -4436,6 +4436,12 @@ else  # run HiGHS tests
                 empty!(m)
                 GC.gc()
             end
+        end
+
+        @testset "OUU" begin
+            include("test_ouu_foundation.jl")
+            include("test_ouu_run.jl")
+            include("test_monte_carlo_ouu.jl")
         end
 
     end

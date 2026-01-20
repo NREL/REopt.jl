@@ -1,12 +1,34 @@
-using Revise
+# using Revise
 using JuMP
 using HiGHS
-using Xpress
+# using Xpress
 using JSON
 using REopt
 using Logging
 using DotEnv
 DotEnv.load!()
+
+# ============================================================================
+# SOLVER CONFIGURATION - Change solver here
+# ============================================================================
+const USE_XPRESS = false  # Set to true to use Xpress
+
+"""
+Helper function to create model with configured solver
+"""
+function create_model(mip_gap::Float64=0.05; verbose::Bool=false)
+    if USE_XPRESS
+        m = Model(Xpress.Optimizer)
+        set_optimizer_attribute(m, "OUTPUTLOG", verbose ? 1 : 0)
+        set_optimizer_attribute(m, "MIPRELSTOP", mip_gap)
+    else
+        m = Model(HiGHS.Optimizer)
+        set_optimizer_attribute(m, "output_flag", verbose)
+        set_optimizer_attribute(m, "log_to_console", verbose)
+        set_optimizer_attribute(m, "mip_rel_gap", mip_gap)
+    end
+    return m
+end
 
 # Create a minimal test scenario with OUU
 scenario = Dict(
@@ -20,6 +42,7 @@ scenario = Dict(
         "annual_kwh" => 2000000.0,
         "uncertainty" => Dict(
             "enabled" => true,
+            "method" => "time_invariant",
             "deviation_fractions" => [-0.1, 0.0, 0.1],
             "deviation_probabilities" => [0.25, 0.50, 0.25]
         ),
@@ -38,6 +61,7 @@ scenario = Dict(
         "max_kw" => 2000.0,
         "production_uncertainty" => Dict(
             "enabled" => true,
+            "method" => "time_invariant",
             "deviation_fractions" => [-0.2, 0.0],# 0.2],
             "deviation_probabilities" => [0.25, 0.75],# 0.25]
         )
@@ -63,10 +87,7 @@ original_logger = Logging.global_logger()
 Logging.global_logger(Logging.SimpleLogger(stderr, Logging.Error))
 
 # Create model with logging enabled
-# m = Model(HiGHS.Optimizer)
-# set_optimizer_attribute(m, "output_flag", true)
-# set_optimizer_attribute(m, "log_to_console", true)
-m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.025, "OUTPUTLOG" => 1))
+m = create_model(verbose=true)
 
 print("Building Scenario... ")
 s = Scenario(scenario)
