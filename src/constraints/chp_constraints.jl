@@ -21,7 +21,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         @constraint(m, CHPFuelBurnCon[s in 1:p.n_scenarios, t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][s,t,ts]  == p.hours_per_time_step * (
                 m[Symbol("dvFuelBurnYIntercept"*_n)][t,ts] +
-                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][s,t,ts] +
+                p.production_factor_by_scenario[s][t][ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][s,t,ts] +
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts] / p.s.chp.supplementary_firing_efficiency
             )
         )
@@ -34,7 +34,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         #Constraint (1c2): Total Fuel burn for CHP **without** y-intercept fuel burn
         @constraint(m, CHPFuelBurnConLinear[s in 1:p.n_scenarios, t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][s,t,ts]  == p.hours_per_time_step * (
-                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][s,t,ts] +
+                p.production_factor_by_scenario[s][t][ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][s,t,ts] +
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts] / p.s.chp.supplementary_firing_efficiency
             )
         )
@@ -72,14 +72,14 @@ function add_chp_thermal_production_constraints(m, p; _n="")
         # Note: p.HotWaterAmbientFactor[t,ts] * p.HotWaterThermalFactor[t,ts] removed from this but present in math
         @constraint(m, CHPThermalProductionCon[s in 1:p.n_scenarios, t in p.techs.chp, ts in p.time_steps],
         sum(m[Symbol("dvHeatingProduction"*_n)][s,t,q,ts] for q in p.heating_loads) ==
-            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][s,t,ts] 
+            thermal_prod_slope * p.production_factor_by_scenario[s][t][ts] * m[Symbol("dvRatedProduction"*_n)][s,t,ts] 
             + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts]
         )
     else
         @constraint(m, CHPThermalProductionConLinear[s in 1:p.n_scenarios, t in p.techs.chp, ts in p.time_steps],
             sum(m[Symbol("dvHeatingProduction"*_n)][s,t,q,ts] for q in p.heating_loads) ==
-            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][s,t,ts] +
+            thermal_prod_slope * p.production_factor_by_scenario[s][t][ts] * m[Symbol("dvRatedProduction"*_n)][s,t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts]
         )        
     end
@@ -101,7 +101,7 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
     @constraint(m, CHPSupplementaryFireCon[s in 1:p.n_scenarios, t in p.techs.chp, ts in p.time_steps],
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts] <=
-                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
+                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor_by_scenario[s][t][ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
                 )
     if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
         # Constrain lower limit of 0 if CHP tech is off
@@ -112,7 +112,7 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
         #There's no upper bound specified for the CHP supplementary firing, so assume the entire heat load as a reasonable maximum that wouldn't be exceeded (but might not be the best possible value). 
         max_supplementary_firing_size = maximum(p.s.dhw_load.loads_kw .+ p.s.space_heating_load.loads_kw)
         @constraint(m, NoCHPSupplementaryFireOffCon[s in 1:p.n_scenarios, t in p.techs.chp, ts in p.time_steps],
-                m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][s,t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor_by_scenario[s][t][ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
                 )
     end
 end

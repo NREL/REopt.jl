@@ -10,7 +10,7 @@ function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export and curtailment no greater than production
     @constraint(m, [s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps_with_grid],
-        p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] 
+        p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] 
         >= sum(m[Symbol("dvProductionToGrid"*_n)][s, t, u, ts] for u in p.export_bins_by_tech[t]) +
            m[Symbol("dvCurtail"*_n)][s, t, ts]
     )
@@ -193,7 +193,7 @@ function add_monthly_peak_constraint(m, p; _n="")
         @constraint(m, [s in 1:p.n_scenarios, mth in p.months, ts in p.s.electric_tariff.time_steps_monthly[mth]],
             sum(m[Symbol("dvPeakDemandMonth"*_n)][s, mth, t] for t in 1:p.s.electric_tariff.n_monthly_demand_tiers) 
             >= sum(m[Symbol("dvGridPurchase"*_n)][s, ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) + 
-            sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts] for t in p.techs.chp) - 
+            sum(p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts] for t in p.techs.chp) - 
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][s, b, t, ts] for b in p.s.storage.types.elec) for t in p.techs.chp) -
             sum(sum(m[Symbol("dvProductionToGrid")][s, t,u,ts] for u in p.export_bins_by_tech[t]) for t in p.techs.chp)
                 

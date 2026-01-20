@@ -5,7 +5,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
 	##Constraint (8a): Electrical Load Balancing with Grid
     if isempty(p.s.electric_tariff.export_bins)
         conrefs = @constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps_with_grid],
-            sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)  
+            sum(p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][s, b,ts] for b in p.s.storage.types.elec) 
             + sum(m[Symbol("dvGridPurchase"*_n)][s, ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
             ==
@@ -14,7 +14,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvGridToStorage"*_n)][s, b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvCoolingProduction"*_n)][s, t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp))
             + sum(m[Symbol("dvHeatingProduction"*_n)][s, t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater)
-            + p.s.electric_load.loads_kw[ts]
+            + p.loads_kw_by_scenario[s][ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cop["ExistingChiller"][ts]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
         )
@@ -25,7 +25,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
         end
     else
         conrefs = @constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps_with_grid],
-            sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)
+            sum(p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][s, b,ts] for b in p.s.storage.types.elec )
             + sum(m[Symbol("dvGridPurchase"*_n)][s, ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
             ==
@@ -35,7 +35,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvGridToStorage"*_n)][s, b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvCoolingProduction"*_n)][s, t, ts] / p.cooling_cop[t][ts] for t in setdiff(p.techs.cooling,p.techs.ghp))
             + sum(m[Symbol("dvHeatingProduction"*_n)][s, t, q, ts] / p.heating_cop[t][ts] for q in p.heating_loads, t in p.techs.electric_heater)
-            + p.s.electric_load.loads_kw[ts]
+            + p.loads_kw_by_scenario[s][ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cooling_cop["ExistingChiller"][ts]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
         )
@@ -49,7 +49,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
 	##Constraint (8b): Electrical Load Balancing without Grid
 	if !p.s.settings.off_grid_flag # load balancing constraint for grid-connected runs
         @constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps_without_grid],
-            sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)  
+            sum(p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][s, b,ts] for b in p.s.storage.types.elec)
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][s, b, t, ts] for b in p.s.storage.types.elec) 
@@ -58,7 +58,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
         )
     else # load balancing constraint for off-grid runs 
         @constraint(m, [s in 1:p.n_scenarios, ts in p.time_steps_without_grid],
-            sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)
+            sum(p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t,ts] for t in p.techs.elec)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][s, b,ts] for b in p.s.storage.types.elec)
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][s, b, t, ts] for b in p.s.storage.types.elec)
@@ -83,7 +83,7 @@ function add_production_constraints(m, p; _n="")
             sum(m[Symbol("dvProductionToStorage"*_n)][s, b, t, ts] for b in p.s.storage.types.elec)  
             + m[Symbol("dvCurtail"*_n)][s, t, ts]
             <= 
-            p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts]
+            p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts]
         )
     else
         @constraint(m, [s in 1:p.n_scenarios, t in p.techs.elec, ts in p.time_steps_with_grid],
@@ -91,7 +91,7 @@ function add_production_constraints(m, p; _n="")
             + m[Symbol("dvCurtail"*_n)][s, t, ts]
             + sum(m[Symbol("dvProductionToGrid"*_n)][s, t, u, ts] for u in p.export_bins_by_tech[t])
             <= 
-            p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts]
+            p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts]
         )
     end
 
@@ -100,7 +100,7 @@ function add_production_constraints(m, p; _n="")
         sum(m[Symbol("dvProductionToStorage"*_n)][s, b, t, ts] for b in p.s.storage.types.elec)  
         + m[Symbol("dvCurtail"*_n)][s, t, ts]
         <= 
-        p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts]
+        p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][s, t, ts]
     )
 
 end

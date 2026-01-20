@@ -7,7 +7,7 @@ function add_fuel_burn_constraints(m,p)
 	)
     @constraint(m, [s in 1:p.n_scenarios, t in p.techs.gen, ts in p.time_steps],
 	    m[:dvFuelUsage][s, t, ts] == (fuel_slope_gal_per_kwhe * p.s.generator.fuel_higher_heating_value_kwh_per_gal *
-	    p.production_factor[t, ts] * p.hours_per_time_step * m[:dvRatedProduction][s, t, ts]) +
+	    p.production_factor_by_scenario[s][t][ts] * p.hours_per_time_step * m[:dvRatedProduction][s, t, ts]) +
 	    (fuel_intercept_gal_per_hr * p.s.generator.fuel_higher_heating_value_kwh_per_gal * p.hours_per_time_step * m[:binGenIsOnInTS][s, t, ts])
     )
     @constraint(m, [s in 1:p.n_scenarios],

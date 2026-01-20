@@ -61,7 +61,7 @@ function add_re_elec_calcs(m,p)
 	# Note: when we add capability for battery to discharge to grid, need to make sure only RE that is being consumed 
 	# 		onsite is counted so battery doesn't become a back door for RE to grid.
 	m[:AnnualOnsiteREEleckWh] = @expression(m, p.hours_per_time_step * (
-			sum(p.scenario_probabilities[s] * p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][s, t,ts] * 
+			sum(p.scenario_probabilities[s] * p.production_factor_by_scenario[s][t][ts] * p.levelization_factor[t] * m[:dvRatedProduction][s, t,ts] * 
 				p.tech_renewable_energy_fraction[t] for s in 1:p.n_scenarios, t in setdiff(p.techs.elec, p.techs.steam_turbine), ts in p.time_steps
 			) - #total RE elec generation, excl steam turbine
 			sum(p.scenario_probabilities[s] * m[:dvProductionToStorage][s, b,t,ts]*p.tech_renewable_energy_fraction[t]*(
