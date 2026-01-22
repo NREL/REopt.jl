@@ -4,8 +4,8 @@ REopt.jl is the core module of the [REopt® techno-economic decision support pla
 REopt.jl (this package) is used within the publicly-accessible and open-source [REopt API](https://github.com/NREL/REopt_API), and the publicly-available [REopt Web Tool](https://reopt.nrel.gov/tool) calls the REopt API.
 
 For more information about REopt.jl please see the Julia documentation:
-<!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REopt.jl/stable) -->
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nrel.github.io/REopt.jl/dev)
+<!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://natlabrockies.github.io/REopt.jl/stable) -->
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://natlabrockies.github.io/REopt.jl/dev)
 
 
 ## Quick Start
@@ -20,4 +20,4 @@ results = run_reopt(m, "pv_storage.json")
 ```
 See the `test/scenarios` directory for examples of `scenario.json`.
 
-For more details, including installation instructions, see the [documentation](https://nrel.github.io/REopt.jl/dev).
+For more details, including installation instructions, see the [documentation](https://natlabrockies.github.io/REopt.jl/dev).
