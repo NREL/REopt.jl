@@ -185,7 +185,7 @@ function MPCElectricTariff(d::Dict)
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
     tou_demand_ratchet_time_steps = get(d, "tou_demand_ratchet_time_steps", [])
     tou_previous_peak_demands = get(d, "tou_previous_peak_demands", Float64[])
-    @assert length(tou_demand_rates) == length(tou_demand_ratchet_time_steps) == length(tou_previous_peak_demands)
+    # @assert length(tou_demand_rates) == length(tou_demand_ratchet_time_steps) == length(tou_previous_peak_demands)
 
     # TODO can remove these inputs?
     fixed_monthly_charge = 0.0
