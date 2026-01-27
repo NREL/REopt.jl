@@ -29,6 +29,8 @@ Classify the change according to the following categories:
 ### Fixed
 - Include boiler emissions in emissions calculations
 - Update links that broke with NLR domain change and update other references to NREL
+### Changed
+- Updated defaults for **Financial** inputs **elec_cost_escalation_rate_fraction**, **boiler_fuel_cost_escalation_rate_fraction**, **existing_boiler_fuel_cost_escalation_rate_fraction**, **chp_fuel_cost_escalation_rate_fraction**, **generator_fuel_cost_escalation_rate_fraction**, **om_cost_escalation_rate_fraction**, and **offtaker_discount_rate_fraction** when **sector** is "federal" (based on the 2025 NIST Handbook and Annual Supplement)
 
 ## v0.56.4
 ### Fixed
