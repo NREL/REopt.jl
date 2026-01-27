@@ -28,6 +28,7 @@ Classify the change according to the following categories:
 ## Develop 
 ### Fixed
 - Include boiler emissions in emissions calculations
+- Update links that broke with NLR domain change and update other references to NREL
 
 ## v0.56.4
 ### Fixed
