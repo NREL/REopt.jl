@@ -88,8 +88,8 @@ end
 Method for use with Threads when running BAU in parallel with optimal scenario.
 """
 function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
-	run_reopt(t[1], t[2]; organize_pvs=false)
-	# must organize_pvs after adding proforma results
+	run_reopt(t[1], t[2]; organize_pvs=false, organize_chps=false)
+# must organize_pvs/chps after adding proforma results
 end
 
 
@@ -598,7 +598,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
+function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true, organize_chps=true)
 
 	try
 		build_reopt!(m, p)
@@ -629,7 +629,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 		if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
 			organize_multiple_pv_results(p, results)
 		end
-		if organize_pvs && !isempty(p.techs.chp)  # same logic as PV
+		if organize_chps && !isempty(p.techs.chp)  # same logic as PV
 			organize_multiple_chp_results(p, results)
 		end
 
