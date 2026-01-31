@@ -131,14 +131,28 @@ function get_chp_results_for_tech(m::JuMP.AbstractModel, p::REoptInputs, chp_nam
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(CHPToProcessHeatKW ./ KWH_PER_MMBTU, digits=5)
 
-	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel[chp_name]), digits=3)
+	# Calculate individual CHP fuel cost (not the total across all CHPs)
+	chp_fuel_cost_lifecycle = sum(p.pwf_fuel[chp_name] * value(m[:dvFuelUsage][chp_name, ts]) * p.fuel_cost_per_kwh[chp_name][ts] for ts in p.time_steps)
+	r["year_one_fuel_cost_before_tax"] = round(chp_fuel_cost_lifecycle / p.pwf_fuel[chp_name], digits=3)
 	r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
-	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * (1- p.s.financial.offtaker_tax_rate_fraction), digits=3)
+	r["lifecycle_fuel_cost_after_tax"] = round(chp_fuel_cost_lifecycle * (1- p.s.financial.offtaker_tax_rate_fraction), digits=3)
+	
 	#Standby charges and hourly O&M
-	r["year_one_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
+	r["year_one_standby_cost_before_tax"] = round(chp.standby_rate_per_kw_per_month * 12 * value(m[Symbol("dvSize"*_n)][chp_name]), digits=0)
 	r["year_one_standby_cost_after_tax"] = r["year_one_standby_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
-	r["lifecycle_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=0)
-	r["initial_capital_costs"] = round(value(m[Symbol("CHPCapexNoIncentives")]), digits=2)
+	r["lifecycle_standby_cost_after_tax"] = round(r["year_one_standby_cost_before_tax"] * p.pwf_e * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=0)
+	
+	# Calculate individual CHP capital costs
+	size_kw = value(m[Symbol("dvSize"*_n)][chp_name])
+	suppl_firing_size = value(m[Symbol("dvSupplementaryFiringSize"*_n)][chp_name])
+	
+	# Base CHP capital cost using generalized function
+	capital_cost = get_tech_initial_capex(chp, size_kw)
+	
+	# Add supplementary firing capital cost
+	capital_cost += chp.supplementary_firing_capital_cost_per_kw * suppl_firing_size
+	
+	r["initial_capital_costs"] = round(capital_cost, digits=2)
 
     return r
 end
