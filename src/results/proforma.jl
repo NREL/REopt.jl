@@ -383,7 +383,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     # owner is responsible for only new technologies operating and maintenance cost in optimal case
     # CHP doesn't have existing CHP, and it has different O&M cost parameters
     if tech_name in [chp.name for chp in p.s.chps]
-        hours_operating = sum(results[tech_name]["electric_production_series_kw"] .> 0.0) / (8760 * p.s.settings.time_steps_per_hour)
+        hours_operating = sum(results[tech_name]["electric_production_series_kw"] .> 0.0) * p.hours_per_time_step
         annual_om = -1 * (results[tech_name]["annual_electric_production_kwh"] * tech.om_cost_per_kwh + 
                             new_kw * tech.om_cost_per_kw + 
                             new_kw * tech.om_cost_per_hr_per_kw_rated * hours_operating)
