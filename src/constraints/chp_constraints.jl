@@ -1,5 +1,10 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_chp_fuel_burn_constraints(m, p; _n="")
+    # Fuel cost
+    m[:TotalCHPFuelCosts] = @expression(m, 
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
+    )
+    
     # Loop through each CHP and add constraints with tech-specific parameters
     for t in p.techs.chp
         # Fuel burn slope and intercept for this specific CHP
@@ -39,11 +44,6 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
             )
         end
     end
-    
-    # Fuel cost (sum over all CHPs)
-    m[:TotalCHPFuelCosts] = @expression(m, 
-        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
-    )
 end
 
 function add_chp_thermal_production_constraints(m, p; _n="")
@@ -208,13 +208,43 @@ end
 Used in src/reopt.jl to add_chp_constraints if !isempty(p.techs.chp) to add CHP operating constraints and 
 cost expressions.
 """
-function add_chp_constraints(m, p; _n="")
-    # TODO if chp.min_turn_down_fraction is 0.0, and there is no fuel burn or thermal y-intercept, we don't need the binary below
-    @warn """Adding binary variable to model CHP. 
-                Some solvers are very slow with integer variables"""
-    @variables m begin
-        binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
-    end    
+function add_chp_constraints(m, p; _n="")   
+    # Check if binary variable is needed by evaluating any CHP's parameters
+    # Binary is needed if any CHP has non-zero intercepts, min_turn_down, or hourly O&M
+    binary_needed = false
+    for t in p.techs.chp
+        # Calculate fuel burn slopes/intercepts for this CHP
+        fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
+            electric_efficiency_full_load = p.chp_params[t][:electric_efficiency_full_load], 
+            electric_efficiency_half_load = p.chp_params[t][:electric_efficiency_half_load], 
+            fuel_higher_heating_value_kwh_per_unit=1
+        )
+        
+        # Calculate thermal production slopes/intercepts for this CHP
+        thermal_prod_full_load = 1.0 / p.chp_params[t][:electric_efficiency_full_load] * p.chp_params[t][:thermal_efficiency_full_load]
+        thermal_prod_half_load = 0.5 / p.chp_params[t][:electric_efficiency_half_load] * p.chp_params[t][:thermal_efficiency_half_load]
+        thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)
+        thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0
+        
+        # Check if this CHP needs binary variables
+        chp_idx = findfirst(chp -> chp.name == t, p.s.chps)
+        if (abs(fuel_burn_intercept) > 1.0E-7) || 
+           (abs(thermal_prod_intercept) > 1.0E-7) || 
+           (p.chp_params[t][:min_turn_down_fraction] > 1.0E-7) ||
+           (p.s.chps[chp_idx].om_cost_per_hr_per_kw_rated > 1.0E-7)
+            binary_needed = true
+            break
+        end
+    end
+    
+    # Create binary variable if needed
+    if binary_needed
+        @warn """Adding binary variable binCHPIsOnInTS to model CHP. 
+                    Some solvers are very slow with integer variables"""
+        @variables m begin
+            binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
+        end
+    end
     
     m[:TotalHourlyCHPOMCosts] = 0
     m[:TotalCHPFuelCosts] = 0
@@ -224,15 +254,20 @@ function add_chp_constraints(m, p; _n="")
         m[:dvRatedProduction][t, ts] for t in p.techs.chp, ts in p.time_steps)
     )
 
-    # Check if any CHP has hourly O&M charges
-    if any(chp.om_cost_per_hr_per_kw_rated > 1.0E-7 for chp in p.s.chps)
-        add_chp_hourly_om_charges(m, p)
-    end
-
+    # These constraints are always needed
     add_chp_fuel_burn_constraints(m, p; _n=_n)
     add_chp_thermal_production_constraints(m, p; _n=_n)
-    add_binCHPIsOnInTS_constraints(m, p; _n=_n)
     add_chp_rated_prod_constraint(m, p; _n=_n)
+
+    # These constraints are only needed if binary was created
+    if binary_needed
+        add_binCHPIsOnInTS_constraints(m, p; _n=_n)
+        
+        # Check if any CHP has hourly O&M charges
+        if any(chp.om_cost_per_hr_per_kw_rated > 1.0E-7 for chp in p.s.chps)
+            add_chp_hourly_om_charges(m, p; _n=_n)
+        end
+    end
 
     # Add supplementary firing constraints - function handles per-tech logic
     add_chp_supplementary_firing_constraints(m,p; _n=_n)
