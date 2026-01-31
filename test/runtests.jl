@@ -1144,6 +1144,10 @@ else  # run HiGHS tests
                 empty!(m2)
                 GC.gc()
             end
+
+            @testset "Multiple CHPs" begin
+                include("test_multiple_chps.jl")
+            end
         end
         
         @testset verbose=true "FlexibleHVAC" begin
