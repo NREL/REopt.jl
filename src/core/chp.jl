@@ -494,6 +494,20 @@ function validate_chp_dual_fuel_inputs!(chp::CHP; errors::Vector{String}=String[
         push!(errors, "CHP.fuel_max_period must be one of $(CHP_FUEL_MAX_PERIODS), got \"$(chp.fuel_max_period)\".")
     end
 
+    if has_fuel2 && !has_capacity_limit && !has_fuel_switch
+        push!(errors,
+            "CHP fuel2 inputs require either CHP.fuel_max_period and CHP.fuel_max_mmbtu_per_period (fuel 2 tops up the capped fuel 1) " *
+            "or CHP.fuel2_switch_start_year (long-term fuel switch); otherwise fuel 2 would never be used."
+        )
+    end
+
+    if has_fuel_switch && chp.existing_kw > 0
+        push!(errors,
+            "CHP.fuel2_switch_start_year (long-term fuel switch) cannot be combined with CHP.existing_kw > 0, because the " *
+            "business-as-usual emissions would not reflect the fuel switch."
+        )
+    end
+
     if has_fuel2 && isnothing(chp.fuel2_cost_per_mmbtu)
         push!(errors, "CHP.fuel2_cost_per_mmbtu is required when CHP.fuel2_type (or any other fuel2 input) is provided.")
     end

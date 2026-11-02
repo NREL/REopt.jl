@@ -731,8 +731,9 @@ end
         @test_throws ArgumentError build_chp(chp_inputs(fuel2_type="propane"))
 
         # Any other fuel2 input without fuel2_type defaults fuel2_type to natural_gas, with natural_gas defaults
-        for fuel2_input in [Dict(:fuel2_cost_per_mmbtu => 8.0), Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel2_switch_start_year => 6),
-                            Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel2_cost_escalation_rate_fraction => 0.01)]
+        for fuel2_input in [Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel2_switch_start_year => 6),
+                            Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel_max_period => "hour", :fuel_max_mmbtu_per_period => 3.0),
+                            Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel2_cost_escalation_rate_fraction => 0.01, :fuel2_switch_start_year => 6)]
             chp = build_chp(chp_inputs(; fuel2_input...))
             @test chp.fuel2_type == "natural_gas"
             @test chp.fuel2_renewable_energy_fraction == REopt.FUEL_DEFAULTS["fuel_renewable_energy_fraction"]["natural_gas"]
@@ -741,8 +742,17 @@ end
         # ... which then requires the cost
         @test_throws ArgumentError build_chp(chp_inputs(fuel2_switch_start_year=6))
 
+        # Fuel 2 would never be used without a fuel limit or a fuel switch
+        @test_throws ArgumentError build_chp(chp_inputs(fuel2_type="propane", fuel2_cost_per_mmbtu=8.0))
+        @test_throws ArgumentError build_chp(chp_inputs(fuel2_cost_per_mmbtu=8.0))
+
+        # A fuel switch is not allowed with an existing CHP, since the BAU emissions would not reflect the switch
+        @test_throws ArgumentError build_chp(chp_inputs(existing_kw=500.0, fuel2_switch_start_year=6, fuel2_cost_per_mmbtu=8.0))
+        chp = build_chp(chp_inputs(existing_kw=500.0, fuel_max_period="hour", fuel_max_mmbtu_per_period=3.0, fuel2_cost_per_mmbtu=8.0))
+        @test chp.existing_kw == 500.0
+
         # An explicit fuel2_type determines the fuel2 defaults
-        chp = build_chp(chp_inputs(fuel2_type="propane", fuel2_cost_per_mmbtu=8.0))
+        chp = build_chp(chp_inputs(fuel2_type="propane", fuel2_cost_per_mmbtu=8.0, fuel2_switch_start_year=6))
         @test chp.fuel2_emissions_factor_lb_CO2_per_mmbtu == REopt.FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"]["propane"]
 
         # A fuel limit alone is a cap on the CHP fuel use, not dual fuel
@@ -769,7 +779,7 @@ end
             "fuel2_emissions_factor_lb_PM25_per_mmbtu" => 0.023,
         )
         all_custom_inputs = merge(custom_fuel_inputs, custom_fuel2_inputs)
-        d_custom = merge(chp_inputs(fuel_type="custom", fuel2_type="custom", fuel2_cost_per_mmbtu=8.0), all_custom_inputs)
+        d_custom = merge(chp_inputs(fuel_type="custom", fuel2_type="custom", fuel2_cost_per_mmbtu=8.0, fuel2_switch_start_year=6), all_custom_inputs)
 
         # Custom fuel 1 and fuel 2 use the provided values, not fuel type defaults
         chp = build_chp(deepcopy(d_custom))
