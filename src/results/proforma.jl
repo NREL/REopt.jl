@@ -404,7 +404,8 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
         # combined total is already fuel 1 only, and year_one_fuel2_cost_before_tax is fuel 2's hypothetical
         # year-one cost, which is its escalation basis; see chp_fuel_cost_breakdown in chp_dual_fuel_constraints.jl.
         year_one_fuel2 = get(results[tech_name], "year_one_fuel2_cost_before_tax", 0.0)
-        year_one_fuel1 = isnothing(tech.fuel2_switch_start_year) ?
+        # With a switch in year 1, fuel 2 is the only fuel in year one, so the combined total is again fuel 2's.
+        year_one_fuel1 = (isnothing(tech.fuel2_switch_start_year) || tech.fuel2_switch_start_year == 1) ?
             results[tech_name]["year_one_fuel_cost_before_tax"] - year_one_fuel2 :
             results[tech_name]["year_one_fuel_cost_before_tax"]
         nominal_fuel_cost_series = chp_annual_fuel_cost_nominal_series(p, tech, year_one_fuel1, year_one_fuel2)

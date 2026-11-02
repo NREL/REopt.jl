@@ -29,7 +29,7 @@
 - `lifecycle_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
 - `thermal_production_series_mmbtu_per_hour`
 - `initial_capital_costs` Initial capital costs of the CHP system, before incentives [\$]
-- `annual_fuel2_consumption_mmbtu` Fuel 2 consumed in a year [MMBtu] (dual-fuel CHPs only; `annual_fuel_consumption_mmbtu` is the combined fuel 1 + fuel 2 total, same as for a single-fuel CHP — fuel 1's own consumption is that total minus this field)
+- `annual_fuel2_consumption_mmbtu` Fuel 2 consumed in a year [MMBtu] (dual-fuel CHPs only; `annual_fuel_consumption_mmbtu` is the combined fuel 1 + fuel 2 total, same as for a single-fuel CHP — fuel 1's own consumption is that total minus this field). With a long-term fuel switch it is 0.0, since year one burns fuel 1, unless `fuel2_switch_start_year` is 1, when it is the total
 - `pwf_fuel` Present worth factor for the CHP fuel cost: the annuity over the analysis period at the CHP fuel cost escalation rate and the offtaker discount rate. With a long-term fuel switch (`fuel2_switch_start_year`), it covers only the years before the switch
 - `pwf_fuel2` Present worth factor for the fuel 2 cost (dual-fuel CHPs only): the annuity at the fuel 2 cost escalation rate and the offtaker discount rate. With a long-term fuel switch, it covers only the years from `fuel2_switch_start_year` on (0.0 if that is beyond the analysis period)
 - `year_one_fuel2_cost_before_tax`/`_after_tax` Year-one fuel 2 cost (dual-fuel CHPs only; `year_one_fuel_cost_before_tax`/`_after_tax` remain the combined fuel 1 + fuel 2 total). With a long-term fuel switch, fuel 2 is not used in year one, so this is the hypothetical year-one cost of fuel 2 (its input, today's-dollars price applied to the year-one dispatch) and `year_one_fuel_cost_before_tax`/`_after_tax` are fuel 1 only
@@ -189,8 +189,14 @@ function get_chp_results_for_tech(m::JuMP.AbstractModel, p::REoptInputs, chp_nam
 
 	is_dual_fuel = !isnothing(chp.fuel2_type)
 	if is_dual_fuel
-		CHPFuelUsedKWH_2 = chp_has_fuel_capacity_limit(chp) ?
-			sum(value(m[Symbol("dvFuelUsageFuel2"*_n)][chp_name, ts]) for ts in p.time_steps) : 0.0
+		# Capacity-limited: the fuel 2 share. Fuel switch in year 1: all of the fuel is fuel 2. Later switch: 0.0 (year one burns fuel 1)
+		CHPFuelUsedKWH_2 = if chp_has_fuel_capacity_limit(chp)
+			sum(value(m[Symbol("dvFuelUsageFuel2"*_n)][chp_name, ts]) for ts in p.time_steps)
+		elseif chp.fuel2_switch_start_year == 1
+			CHPFuelUsedKWH
+		else
+			0.0
+		end
 		r["annual_fuel2_consumption_mmbtu"] = round(CHPFuelUsedKWH_2 / KWH_PER_MMBTU, digits=3)
 		# With the long-term fuel switch, fuel 2 isn't used until fuel2_switch_start_year, so this is the
 		# hypothetical year-one cost of fuel 2 (its input price applied to the year-one dispatch), which is the basis

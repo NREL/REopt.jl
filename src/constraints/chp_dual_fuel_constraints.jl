@@ -237,7 +237,7 @@ of \$ fuel costs and the present worth factors applied to them (`lifecycle_fuel1
 `lifecycle_fuel2 = yr1_equivalent_fuel2 * pwf_fuel2`) for the (solved) CHP `chp_name`, correctly split across
 fuel 1 and fuel 2 for both dual-fuel modes. For the long-term fuel-switch mode, `pwf_fuel1` covers only the years
 before `fuel2_switch_start_year` and `pwf_fuel2` only the years from it on; `pwf_fuel2` is `0.0` without a fuel 2. `yr1_*` are the actual year-1 dollar costs (for the long-term fuel-switch mode,
-`yr1_fuel2` is always `0.0` since fuel 2 is never used in year 1). `yr1_equivalent_fuel2` is the basis
+`yr1_fuel2` is `0.0` and `yr1_fuel1` the full year-1 cost, unless `fuel2_switch_start_year` is 1, when only fuel 2 is burned in year 1 and `yr1_fuel1` is `0.0`). `yr1_equivalent_fuel2` is the basis
 used to escalate fuel 2's cost in `chp_annual_fuel_cost_nominal_series` (for the fuel-switch mode this
 is fuel 2's today's-dollars price applied to the year-1-repeating dispatch — not a real year-1 cost,
 purely the present-worth-factor/escalation multiplicand from `add_chp_fuel_switch_costs`; for the
@@ -266,8 +266,11 @@ function chp_fuel_cost_breakdown(m, p, chp_name::String)
             yr1_equivalent_fuel2 = sum(value(m[:dvFuelUsage][chp_name, ts]) * fuel2_cost_per_kwh[ts] for ts in p.time_steps)
             lifecycle_fuel2 = yr1_equivalent_fuel2 * pwf2
         end
-        return (yr1_fuel1=yr1_fuel1, yr1_fuel2=0.0, yr1_equivalent_fuel2=yr1_equivalent_fuel2,
-            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=lifecycle_fuel2, pwf_fuel1=pwf1, pwf_fuel2=pwf2)
+        # If the switch is in year 1, only fuel 2 is burned in year 1, so its equivalent cost is the actual year-1 cost
+        fuel2_in_year_one = n_fuel1_years == 0
+        return (yr1_fuel1=fuel2_in_year_one ? 0.0 : yr1_fuel1, yr1_fuel2=fuel2_in_year_one ? yr1_equivalent_fuel2 : 0.0,
+            yr1_equivalent_fuel2=yr1_equivalent_fuel2, lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=lifecycle_fuel2,
+            pwf_fuel1=pwf1, pwf_fuel2=pwf2)
 
     elseif !isnothing(chp.fuel2_type) && chp_has_fuel_capacity_limit(chp)
         yr1_fuel1 = sum(value(m[:dvFuelUsageFuel1][chp_name, ts]) * p.fuel_cost_per_kwh[chp_name][ts] for ts in p.time_steps)

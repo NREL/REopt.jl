@@ -1096,6 +1096,14 @@ end
         @test breakdown.pwf_fuel1 ≈ REopt.annuity(analysis_years, esc1, discount_rate) rtol=1e-12
         @test breakdown.lifecycle_fuel1 ≈ year_one_fuel_mmbtu * fuel1_cost_per_mmbtu * REopt.annuity(analysis_years, esc1, discount_rate) rtol=1e-4
 
+        # A switch in year 1 burns only fuel 2 in year one, so the year-one cost is fuel 2's and fuel 1 is never used
+        d["CHP"]["fuel2_switch_start_year"] = 1
+        breakdown = REopt.chp_fuel_cost_breakdown(m, REoptInputs(Scenario(d)), "CHP")
+        @test breakdown.yr1_fuel1 == 0.0 && breakdown.pwf_fuel1 == 0.0 && breakdown.lifecycle_fuel1 == 0.0
+        @test breakdown.yr1_fuel2 ≈ year_one_fuel_mmbtu * fuel2_cost_per_mmbtu rtol=1e-4
+        @test breakdown.pwf_fuel2 ≈ REopt.annuity(analysis_years, fuel2_escalation_rate, discount_rate) rtol=1e-12
+        @test breakdown.lifecycle_fuel2 ≈ year_one_fuel_mmbtu * fuel2_cost_per_mmbtu * breakdown.pwf_fuel2 rtol=1e-4
+
         finalize_models(m, m_bau)
     end
 end
