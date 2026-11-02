@@ -652,148 +652,7 @@ end
 
 @testset "Dual Fuel CHP" begin
 
-    @testset "Rate-limited fuel 1" begin
-        input_data = JSON.parsefile("./scenarios/chp_dual_fuel_capacity_limited.json")
-        input_data["CHP"]["fuel_max_period"] = "hour"
-        input_data["CHP"]["fuel_max_mmbtu_per_period"] = 2.0
-        s = Scenario(input_data)
-        p = REoptInputs(s)
-
-        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        results = run_reopt([m1,m2], p)
-        r = results["CHP"]
-
-        # Fuel 1 (the limited/cheap fuel) never exceeds its per-timestep cap
-        cap_kwh_per_ts = s.chps[1].fuel_max_mmbtu_per_period * REopt.KWH_PER_MMBTU
-        fuel1_series = [value(m2[:dvFuelUsageFuel1]["CHP", ts]) for ts in p.time_steps]
-        @test maximum(fuel1_series) <= cap_kwh_per_ts + 1e-6
-
-        # Fuel 2 makes up the difference; fuel 1's share is the (unchanged) combined total minus fuel 2's
-        @test r["annual_fuel2_consumption_mmbtu"] > 0.0
-        @test r["annual_fuel_consumption_mmbtu"] - r["annual_fuel2_consumption_mmbtu"] > 0.0
-        @test r["year_one_fuel_cost_before_tax"] - r["year_one_fuel2_cost_before_tax"] > 0.0
-
-        # Both fuels are burned every year, so both present worth factors cover the whole analysis period
-        pwf_all_years = REopt.annuity(s.financial.analysis_years, s.financial.chp_fuel_cost_escalation_rate_fraction, s.financial.offtaker_discount_rate_fraction)
-        @test isapprox(r["pwf_fuel"], pwf_all_years, atol=1e-4)
-        @test isapprox(r["pwf_fuel2"], pwf_all_years, atol=1e-4)  # fuel 2 inherits fuel 1's escalation rate
-
-        optimal_lcc = results["Financial"]["lcc"]
-        optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])
-        @test isapprox(optimal_lcc, optimal_cashflow_sum, rtol=0.001)
-
-        finalize(backend(m1)); empty!(m1)
-        finalize(backend(m2)); empty!(m2)
-        GC.gc()
-    end
-
-    @testset "Volume-limited fuel 1 (monthly)" begin
-        input_data = JSON.parsefile("./scenarios/chp_dual_fuel_capacity_limited.json")
-        input_data["CHP"]["fuel_max_period"] = "month"
-        input_data["CHP"]["fuel_max_mmbtu_per_period"] = 500.0
-        s = Scenario(input_data)
-        p = REoptInputs(s)
-
-        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        results = run_reopt([m1,m2], p)
-        r = results["CHP"]
-
-        # Fuel 1 never exceeds its monthly cap in any month
-        monthly_time_steps = REopt.get_monthly_time_steps(s.electric_load.year; time_steps_per_hour=s.settings.time_steps_per_hour)
-        fuel1_series = [value(m2[:dvFuelUsageFuel1]["CHP", ts]) for ts in p.time_steps]
-        monthly_fuel1_mmbtu = [sum(fuel1_series[period]) / REopt.KWH_PER_MMBTU for period in monthly_time_steps]
-        @test maximum(monthly_fuel1_mmbtu) <= s.chps[1].fuel_max_mmbtu_per_period + 1e-3
-
-        # Fuel 2 makes up the difference; fuel 1's share is the (unchanged) combined total minus fuel 2's
-        @test r["annual_fuel2_consumption_mmbtu"] > 0.0
-        @test r["annual_fuel_consumption_mmbtu"] - r["annual_fuel2_consumption_mmbtu"] > 0.0
-
-        optimal_lcc = results["Financial"]["lcc"]
-        optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])
-        @test isapprox(optimal_lcc, optimal_cashflow_sum, rtol=0.001)
-
-        finalize(backend(m1)); empty!(m1)
-        finalize(backend(m2)); empty!(m2)
-        GC.gc()
-    end
-
-    @testset "Long-term fuel switch" begin
-        input_data = JSON.parsefile("./scenarios/chp_dual_fuel_switch.json")
-        s = Scenario(input_data)
-        p = REoptInputs(s)
-
-        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        results = run_reopt([m1,m2], p)
-        r = results["CHP"]
-
-        # Year one always uses fuel 1's price (the switch to fuel2_type happens in year fuel2_switch_start_year)
-        yr1_fuel_kwh = sum(value(m2[:dvFuelUsage]["CHP", ts]) for ts in p.time_steps)
-        expected_year1_cost = yr1_fuel_kwh * s.chps[1].fuel_cost_per_mmbtu / REopt.KWH_PER_MMBTU
-        @test isapprox(r["year_one_fuel_cost_before_tax"], expected_year1_cost, rtol=1e-6)
-
-        # year_one_fuel2_cost_* is the hypothetical year-one cost of fuel 2 (its price on the year-one dispatch),
-        # which is not part of the (fuel 1 only) year-one total
-        expected_year1_fuel2_cost = yr1_fuel_kwh * s.chps[1].fuel2_cost_per_mmbtu / REopt.KWH_PER_MMBTU
-        @test isapprox(r["year_one_fuel2_cost_before_tax"], expected_year1_fuel2_cost, rtol=1e-6)
-        @test isapprox(r["year_one_fuel2_cost_after_tax"], expected_year1_fuel2_cost * (1 - s.financial.offtaker_tax_rate_fraction), rtol=1e-6)
-        @test !haskey(r, "year_one_fuel2_equivalent_cost_before_tax")
-
-        # Lifecycle cost should sit strictly between an all-fuel-1 and an all-fuel-2 lifecycle cost,
-        # since the actual scenario is a mix of both over the analysis period
-        analysis_years = s.financial.analysis_years
-        discount_rate = s.financial.offtaker_discount_rate_fraction
-        esc = s.financial.chp_fuel_cost_escalation_rate_fraction
-        pwf_all_years = REopt.annuity(analysis_years, esc, discount_rate)
-        all_fuel1_lifecycle = yr1_fuel_kwh * (s.chps[1].fuel_cost_per_mmbtu / REopt.KWH_PER_MMBTU) * pwf_all_years
-        all_fuel2_lifecycle = yr1_fuel_kwh * (s.chps[1].fuel2_cost_per_mmbtu / REopt.KWH_PER_MMBTU) * pwf_all_years
-        actual_lifecycle_before_tax = r["lifecycle_fuel_cost_after_tax"] / (1 - s.financial.offtaker_tax_rate_fraction)
-        @test all_fuel1_lifecycle < actual_lifecycle_before_tax < all_fuel2_lifecycle
-
-        # Exact lifecycle cost, built year by year: both prices are today's-dollars inputs that escalate
-        # from year 1, fuel 1 is used in years 1..(switch year - 1), fuel 2 from the switch year on, and
-        # every year is discounted from year 1.
-        switch_year = s.chps[1].fuel2_switch_start_year
-        price1 = s.chps[1].fuel_cost_per_mmbtu / REopt.KWH_PER_MMBTU
-        price2 = s.chps[1].fuel2_cost_per_mmbtu / REopt.KWH_PER_MMBTU
-        expected_lifecycle_before_tax = sum(
-            yr1_fuel_kwh * (yr < switch_year ? price1 : price2) * (1 + esc)^yr / (1 + discount_rate)^yr
-            for yr in 1:analysis_years
-        )
-        @test isapprox(actual_lifecycle_before_tax, expected_lifecycle_before_tax, rtol=1e-5)
-
-        # Reported present worth factors: the CHP fuel factors are split at the switch year, so that
-        # lifecycle cost = year-one (or year-one equivalent) cost x factor for each fuel
-        pwf_fuel1, pwf_fuel2 = REopt.annuity_split_periods(switch_year - 1, analysis_years - switch_year + 1, esc, esc, discount_rate)
-        @test isapprox(r["pwf_fuel"], pwf_fuel1, atol=1e-4)
-        @test isapprox(r["pwf_fuel2"], pwf_fuel2, atol=1e-4)
-        financial = results["Financial"]
-        @test isapprox(financial["pwf_e"], REopt.annuity(analysis_years, s.financial.elec_cost_escalation_rate_fraction, discount_rate), atol=1e-4)
-        @test isapprox(financial["pwf_om"], REopt.annuity(analysis_years, s.financial.om_cost_escalation_rate_fraction, s.financial.owner_discount_rate_fraction), atol=1e-4)
-        @test isapprox(financial["pwf_offtaker"], REopt.annuity(analysis_years, 0.0, discount_rate), atol=1e-4)
-        @test isapprox(financial["pwf_owner"], REopt.annuity(analysis_years, 0.0, s.financial.owner_discount_rate_fraction), atol=1e-4)
-        @test financial["third_party_factor"] == 1.0
-        @test isapprox(financial["pwf_fuel_existing_boiler"],
-            REopt.annuity(analysis_years, s.financial.existing_boiler_fuel_cost_escalation_rate_fraction, discount_rate), atol=1e-4)
-        @test !haskey(financial, "pwf_fuel_boiler") && !haskey(financial, "pwf_fuel_generator")  # not modeled
-        for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
-            @test haskey(financial, "pwf_emissions_cost_$(emissions_type)_grid")
-            @test haskey(financial, "pwf_emissions_cost_$(emissions_type)_onsite")
-            @test haskey(financial, "pwf_grid_emissions_$(emissions_type)")
-        end
-
-        optimal_lcc = results["Financial"]["lcc"]
-        optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])
-        @test isapprox(optimal_lcc, optimal_cashflow_sum, rtol=0.001)
-
-        finalize(backend(m1)); empty!(m1)
-        finalize(backend(m2)); empty!(m2)
-        GC.gc()
-    end
-
-    @testset "Fuel switch present worth factors" begin
+    @testset "Present worth factors for a fuel switch" begin
         n1, n2, d = 5, 7, 0.083
         esc1, esc2 = 0.034, 0.02
         pwf1, pwf2 = REopt.annuity_split_periods(n1, n2, esc1, esc2, d)
@@ -811,55 +670,88 @@ end
         @test REopt.annuity_split_periods(n1, 0, esc1, esc2, d)[2] == 0.0
     end
 
-    @testset "Capacity-limited fuel 1 without fuel 2" begin
-        # Without fuel2_type, the fuel 1 limit is a hard cap on the CHP's fuel burn (there is no second fuel to fill the gap)
-        for (period, max_mmbtu) in [("hour", 3.0), ("month", 1000.0)]
-            input_data = JSON.parsefile("./scenarios/chp_dual_fuel_capacity_limited.json")
-            delete!(input_data["CHP"], "fuel2_type")
-            delete!(input_data["CHP"], "fuel2_cost_per_mmbtu")
-            input_data["CHP"]["fuel_max_period"] = period
-            input_data["CHP"]["fuel_max_mmbtu_per_period"] = max_mmbtu
-            s = Scenario(input_data)
-            p = REoptInputs(s)
+    @testset "Fuel cost escalation rate precedence" begin
+        financial_rate = 0.034
+        p = (s = (financial = (chp_fuel_cost_escalation_rate_fraction = financial_rate,),),)
 
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt([m1,m2], p)
-            r = results["CHP"]
+        # No CHP-level rates: both fuels use the Financial rate
+        chp = REopt.CHP(; fuel_cost_per_mmbtu=5.0)
+        @test REopt.chp_fuel_cost_escalation_rates(p, chp) == (financial_rate, financial_rate)
 
-            # No second fuel, so no fuel2 results and no fuel1/fuel2 split variables
-            @test !haskey(r, "annual_fuel2_consumption_mmbtu")
-            @test !haskey(m2, :dvFuelUsageFuel1)
+        # CHP-level fuel rate overrides the Financial rate, and fuel 2 inherits it
+        chp = REopt.CHP(; fuel_cost_per_mmbtu=5.0, fuel_cost_escalation_rate_fraction=0.01)
+        @test REopt.chp_fuel_cost_escalation_rates(p, chp) == (0.01, 0.01)
 
-            fuel_series = [value(m2[:dvFuelUsage]["CHP", ts]) for ts in p.time_steps]
-            if period == "hour"
-                # Rate cap in every time step, which also caps the electric (and thermal) production
-                cap_kwh_per_ts = max_mmbtu * REopt.KWH_PER_MMBTU * p.hours_per_time_step
-                @test maximum(fuel_series) <= cap_kwh_per_ts + 1e-6
-                @test isapprox(maximum(fuel_series), cap_kwh_per_ts, rtol=1e-4)  # the cap is binding
-                max_kw = max_mmbtu * REopt.KWH_PER_MMBTU * s.chps[1].electric_efficiency_full_load
-                @test maximum(r["electric_production_series_kw"]) <= max_kw + 1e-3
-            else
-                # Volume cap in every month
-                monthly_time_steps = REopt.get_monthly_time_steps(s.electric_load.year; time_steps_per_hour=s.settings.time_steps_per_hour)
-                monthly_mmbtu = [sum(fuel_series[ts]) / REopt.KWH_PER_MMBTU for ts in monthly_time_steps]
-                @test maximum(monthly_mmbtu) <= max_mmbtu + 1e-3
-                @test isapprox(maximum(monthly_mmbtu), max_mmbtu, rtol=1e-4)  # the cap is binding
-            end
-            @test r["annual_fuel_consumption_mmbtu"] > 0.0  # CHP still runs, within its limit
+        # A fuel 2 rate applies only to fuel 2
+        chp = REopt.CHP(; fuel_cost_per_mmbtu=5.0, fuel_cost_escalation_rate_fraction=0.01, fuel2_cost_escalation_rate_fraction=-0.02)
+        @test REopt.chp_fuel_cost_escalation_rates(p, chp) == (0.01, -0.02)
 
-            optimal_lcc = results["Financial"]["lcc"]
-            optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])
-            @test isapprox(optimal_lcc, optimal_cashflow_sum, rtol=0.001)
+        # Without a fuel rate, a fuel 2 rate still leaves fuel 1 on the Financial rate
+        chp = REopt.CHP(; fuel_cost_per_mmbtu=5.0, fuel2_cost_escalation_rate_fraction=-0.02)
+        @test REopt.chp_fuel_cost_escalation_rates(p, chp) == (financial_rate, -0.02)
+    end
 
-            finalize(backend(m1)); empty!(m1)
-            finalize(backend(m2)); empty!(m2)
-            GC.gc()
+    @testset "Time steps grouped by period" begin
+        days = REopt.get_time_steps_by_period("day", 2017)
+        @test length(days) == 365 && all(length.(days) .== 24)
+        @test reduce(vcat, days) == collect(1:8760)
+
+        # 365 days is 52 full weeks plus a final day
+        weeks = REopt.get_time_steps_by_period("week", 2017)
+        @test length(weeks) == 53 && all(length.(weeks[1:52]) .== 168) && length(weeks[53]) == 24
+        @test reduce(vcat, weeks) == collect(1:8760)
+
+        months = REopt.get_time_steps_by_period("month", 2017)
+        @test length.(months) == 24 .* [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+        # Sub-hourly time steps
+        days_15min = REopt.get_time_steps_by_period("day", 2017; time_steps_per_hour=4)
+        @test length(days_15min) == 365 && all(length.(days_15min) .== 96)
+
+        # An hourly limit is a rate limit on each time step, not a volume limit over groups of time steps
+        @test_throws ArgumentError REopt.get_time_steps_by_period("hour", 2017)
+    end
+
+    # The validation and default tests build CHPs directly (without a Scenario), since only the fuel inputs matter
+    chp_inputs(; kwargs...) = merge(Dict{String,Any}("fuel_cost_per_mmbtu" => 5.0, "prime_mover" => "recip_engine", "max_kw" => 1000.0),
+                                    Dict{String,Any}(string(k) => v for (k, v) in kwargs))
+    build_chp(d) = REopt.CHP(d; sector="commercial/industrial", federal_procurement_type="")
+
+    @testset "Input validation and defaults" begin
+        # Cannot combine the long-term fuel switch with a fuel limit
+        @test_throws ArgumentError build_chp(chp_inputs(fuel2_switch_start_year=6, fuel2_cost_per_mmbtu=8.0, fuel_max_period="hour", fuel_max_mmbtu_per_period=2.0))
+
+        # fuel_max_period and fuel_max_mmbtu_per_period must be set together, and the period must be an allowed value
+        @test_throws ArgumentError build_chp(chp_inputs(fuel_max_period="week"))
+        @test_throws ArgumentError build_chp(chp_inputs(fuel_max_mmbtu_per_period=2.0))
+        @test_throws ArgumentError build_chp(chp_inputs(fuel_max_period="quarter", fuel_max_mmbtu_per_period=500.0))
+        @test_throws ArgumentError build_chp(chp_inputs(fuel2_cost_per_mmbtu=8.0, fuel2_switch_start_year=0))
+
+        # fuel2_type indicates dual fuel and requires fuel2_cost_per_mmbtu
+        @test_throws ArgumentError build_chp(chp_inputs(fuel2_type="propane"))
+
+        # Any other fuel2 input without fuel2_type defaults fuel2_type to natural_gas, with natural_gas defaults
+        for fuel2_input in [Dict(:fuel2_cost_per_mmbtu => 8.0), Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel2_switch_start_year => 6),
+                            Dict(:fuel2_cost_per_mmbtu => 8.0, :fuel2_cost_escalation_rate_fraction => 0.01)]
+            chp = build_chp(chp_inputs(; fuel2_input...))
+            @test chp.fuel2_type == "natural_gas"
+            @test chp.fuel2_renewable_energy_fraction == REopt.FUEL_DEFAULTS["fuel_renewable_energy_fraction"]["natural_gas"]
+            @test chp.fuel2_emissions_factor_lb_CO2_per_mmbtu == REopt.FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"]["natural_gas"]
         end
+        # ... which then requires the cost
+        @test_throws ArgumentError build_chp(chp_inputs(fuel2_switch_start_year=6))
+
+        # An explicit fuel2_type determines the fuel2 defaults
+        chp = build_chp(chp_inputs(fuel2_type="propane", fuel2_cost_per_mmbtu=8.0))
+        @test chp.fuel2_emissions_factor_lb_CO2_per_mmbtu == REopt.FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"]["propane"]
+
+        # A fuel limit alone is a cap on the CHP fuel use, not dual fuel
+        chp = build_chp(chp_inputs(fuel_max_period="hour", fuel_max_mmbtu_per_period=3.0))
+        @test isnothing(chp.fuel2_type) && isnothing(chp.fuel2_cost_per_mmbtu)
+        @test chp.fuel_max_period == "hour" && chp.fuel_max_mmbtu_per_period == 3.0
     end
 
     @testset "Custom fuel types" begin
-        base = JSON.parsefile("./scenarios/chp_dual_fuel_switch.json")
         custom_fuel_inputs = Dict(
             "fuel_cost_escalation_rate_fraction" => 0.01,
             "fuel_renewable_energy_fraction" => 0.4,
@@ -876,89 +768,324 @@ end
             "fuel2_emissions_factor_lb_SO2_per_mmbtu" => 0.022,
             "fuel2_emissions_factor_lb_PM25_per_mmbtu" => 0.023,
         )
+        all_custom_inputs = merge(custom_fuel_inputs, custom_fuel2_inputs)
+        d_custom = merge(chp_inputs(fuel_type="custom", fuel2_type="custom", fuel2_cost_per_mmbtu=8.0), all_custom_inputs)
 
         # Custom fuel 1 and fuel 2 use the provided values, not fuel type defaults
-        d = deepcopy(base)
-        d["CHP"]["fuel_type"] = "custom"
-        d["CHP"]["fuel2_type"] = "custom"
-        merge!(d["CHP"], custom_fuel_inputs, custom_fuel2_inputs)
-        s = Scenario(d)
-        REoptInputs(s)
-        for (k, v) in merge(custom_fuel_inputs, custom_fuel2_inputs)
-            @test getproperty(s.chps[1], Symbol(k)) == v
+        chp = build_chp(deepcopy(d_custom))
+        @test chp.fuel_type == "custom" && chp.fuel2_type == "custom"
+        for (k, v) in all_custom_inputs
+            @test getproperty(chp, Symbol(k)) == v
         end
 
         # A custom fuel requires all of its escalation rate, renewable fraction and emissions factor inputs
-        d = deepcopy(base)
-        d["CHP"]["fuel_type"] = "custom"
-        d["CHP"]["fuel2_type"] = "custom"
-        merge!(d["CHP"], custom_fuel_inputs, custom_fuel2_inputs)
-        for k in keys(merge(custom_fuel_inputs, custom_fuel2_inputs))
-            d_missing = deepcopy(d)
-            delete!(d_missing["CHP"], k)
-            @test_throws ArgumentError Scenario(d_missing)
+        for k in keys(all_custom_inputs)
+            d_missing = deepcopy(d_custom)
+            delete!(d_missing, k)
+            @test_throws ArgumentError build_chp(d_missing)
         end
 
         # All of the input errors are reported together in a single error
-        d = deepcopy(base)
-        d["CHP"]["fuel_type"] = "custom"
-        d["CHP"]["fuel2_type"] = "custom"
-        delete!(d["CHP"], "fuel2_cost_per_mmbtu")
-        err = try Scenario(d); nothing catch e e end
+        d_errors = chp_inputs(fuel_type="custom", fuel2_type="custom")
+        err = try build_chp(d_errors); nothing catch e e end
         @test err isa ArgumentError
         for fragment in ["CHP.fuel_type \"custom\"", "CHP.fuel2_cost_per_mmbtu is required", "CHP.fuel2_type \"custom\""]
             @test occursin(fragment, err.msg)
         end
     end
 
-    @testset "Input validation" begin
-        base = JSON.parsefile("./scenarios/chp_dual_fuel_switch.json")
+    # The optimization tests use a flat 1000 kW electric load, no heating load, and a CHP with the same electric efficiency
+    # at all loads and no unavailability, so the CHP runs at full load in every time step and its fuel use, size and costs
+    # can be calculated by hand. All of the inputs that determine them (rates, costs, efficiencies, emissions factors) are
+    # set in chp_dual_fuel.json or here, rather than relying on defaults.
+    load_kw = 1000.0
+    electric_efficiency = 0.34  # full and half load, in chp_dual_fuel.json
+    kwh_per_mmbtu = REopt.KWH_PER_MMBTU
+    fuel1_cost_per_mmbtu = 5.0  # in chp_dual_fuel.json
+    fuel2_cost_per_mmbtu = 8.0
+    co2_lb_per_mmbtu_fuel1 = 100.0  # in chp_dual_fuel.json
+    co2_lb_per_mmbtu_fuel2 = 200.0
+    full_load_fuel_mmbtu_per_hour = load_kw / electric_efficiency / kwh_per_mmbtu  # fuel needed to serve the whole load
+    thermal_efficiency = 0.45  # full and half load, in chp_dual_fuel.json
+    # Optional heating load, served by the CHP and an existing boiler: the load is a boiler fuel load, so the thermal load is
+    # that times the boiler efficiency. It is larger than the CHP thermal output, so all of the CHP thermal output is used.
+    heating_fuel_load_mmbtu_per_hour = 6.0
+    boiler_efficiency = 0.8
+    boiler_fuel_cost_per_mmbtu = 10.0
+    boiler_lb_per_mmbtu = Dict("CO2" => 120.0, "NOx" => 0.2, "SO2" => 0.002, "PM25" => 0.01)
 
-        # Cannot combine the long-term fuel switch with a capacity-limited fuel 1
-        d = deepcopy(base)
-        d["CHP"]["fuel_max_period"] = "hour"
-        d["CHP"]["fuel_max_mmbtu_per_period"] = 2.0
-        @test_throws ArgumentError Scenario(d)
-
-        # fuel_max_period and fuel_max_mmbtu_per_period must be set together
-        d = deepcopy(base)
-        delete!(d["CHP"], "fuel2_switch_start_year")
-        d["CHP"]["fuel_max_period"] = "week"
-        @test_throws ArgumentError Scenario(d)
-
-        # fuel_max_period must be one of the allowed values
-        d = deepcopy(base)
-        delete!(d["CHP"], "fuel2_switch_start_year")
-        d["CHP"]["fuel_max_period"] = "quarter"
-        d["CHP"]["fuel_max_mmbtu_per_period"] = 500.0
-        @test_throws ArgumentError Scenario(d)
-
-        # fuel2_switch_start_year requires fuel2_cost_per_mmbtu (fuel2_type defaults to natural_gas)
-        d = deepcopy(base)
-        delete!(d["CHP"], "fuel2_type")
-        delete!(d["CHP"], "fuel2_cost_per_mmbtu")
-        @test_throws ArgumentError Scenario(d)
-
-        # fuel2_type indicates dual fuel and requires fuel2_cost_per_mmbtu
-        d = deepcopy(base)
-        delete!(d["CHP"], "fuel2_switch_start_year")
-        delete!(d["CHP"], "fuel2_cost_per_mmbtu")
-        @test_throws ArgumentError Scenario(d)
-
-        # Any other fuel2 input without fuel2_type defaults fuel2_type to natural_gas (with natural_gas defaults)
-        d = deepcopy(base)
-        delete!(d["CHP"], "fuel2_type")
-        chp = Scenario(d).chps[1]
-        @test chp.fuel2_type == "natural_gas"
-        @test chp.fuel2_emissions_factor_lb_CO2_per_mmbtu == REopt.FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"]["natural_gas"]
-
-        # ... but a fuel limit alone is not dual fuel
-        d = deepcopy(base)
-        for k in ["fuel2_type", "fuel2_cost_per_mmbtu", "fuel2_switch_start_year"]
-            delete!(d["CHP"], k)
+    function chp_dual_fuel_inputs(; fuel2=true, heating=false)
+        d = JSON.parsefile("./scenarios/chp_dual_fuel.json")
+        d["ElectricLoad"] = Dict("loads_kw" => fill(load_kw, 8760), "year" => 2017)
+        if heating
+            d["SpaceHeatingLoad"] = Dict("fuel_loads_mmbtu_per_hour" => fill(heating_fuel_load_mmbtu_per_hour, 8760), "year" => 2017)
+            d["ExistingBoiler"] = Dict(
+                "efficiency" => boiler_efficiency,
+                "fuel_type" => "natural_gas",
+                "fuel_cost_per_mmbtu" => boiler_fuel_cost_per_mmbtu,
+                "fuel_renewable_energy_fraction" => 0.0,
+                [("emissions_factor_lb_$(k)_per_mmbtu" => v) for (k, v) in boiler_lb_per_mmbtu]...
+            )
         end
+        if fuel2
+            d["CHP"]["fuel2_type"] = "natural_gas"
+            d["CHP"]["fuel2_cost_per_mmbtu"] = fuel2_cost_per_mmbtu
+            d["CHP"]["fuel2_emissions_factor_lb_CO2_per_mmbtu"] = co2_lb_per_mmbtu_fuel2
+        end
+        return d
+    end
+
+    # Returns the Scenario, REoptInputs, the optimal model and its results, and the BAU model if requested
+    function solve_chp_dual_fuel(d; with_bau=false)
+        s = Scenario(d)
+        p = REoptInputs(s)
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        if with_bau
+            m_bau = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m_bau, m], p)
+        else
+            m_bau = nothing
+            results = run_reopt(m, p)
+        end
+        return s, p, m, results, m_bau
+    end
+
+    function finalize_models(models...)
+        for m in models
+            isnothing(m) && continue
+            finalize(backend(m))
+            empty!(m)
+        end
+        GC.gc()
+    end
+
+    @testset "Rate-limited fuel 1 with fuel 2" begin
+        max_fuel1_mmbtu_per_hour = 4.0
+        d = chp_dual_fuel_inputs()
         d["CHP"]["fuel_max_period"] = "hour"
-        d["CHP"]["fuel_max_mmbtu_per_period"] = 3.0
-        @test isnothing(Scenario(d).chps[1].fuel2_type)
+        d["CHP"]["fuel_max_mmbtu_per_period"] = max_fuel1_mmbtu_per_hour
+        s, p, m, results, _ = solve_chp_dual_fuel(d)
+        r = results["CHP"]
+        analysis_years = s.financial.analysis_years
+        tax_rate = s.financial.offtaker_tax_rate_fraction
+
+        # Fuel 1 is burned at its limit in every hour and fuel 2 supplies the rest of the fuel needed to serve the load
+        fuel1_kwh = [value(m[:dvFuelUsageFuel1]["CHP", ts]) for ts in p.time_steps]
+        fuel2_kwh = [value(m[:dvFuelUsageFuel2]["CHP", ts]) for ts in p.time_steps]
+        @test all(isapprox.(fuel1_kwh, max_fuel1_mmbtu_per_hour * kwh_per_mmbtu, rtol=1e-5))
+        @test all(isapprox.(fuel2_kwh, (full_load_fuel_mmbtu_per_hour - max_fuel1_mmbtu_per_hour) * kwh_per_mmbtu, rtol=1e-5))
+
+        # The CHP is sized to the peak total fuel use: size_kw = electric efficiency x peak fuel (kW), which serves the load
+        peak_fuel_kw = maximum(fuel1_kwh .+ fuel2_kwh)
+        @test r["size_kw"] ≈ electric_efficiency * peak_fuel_kw rtol=1e-4
+        @test r["size_kw"] ≈ load_kw rtol=1e-4
+
+        # Annual fuel use: the combined total, less fuel 2's, is fuel 1's
+        fuel1_mmbtu = max_fuel1_mmbtu_per_hour * 8760
+        fuel2_mmbtu = (full_load_fuel_mmbtu_per_hour - max_fuel1_mmbtu_per_hour) * 8760
+        @test r["annual_fuel2_consumption_mmbtu"] ≈ fuel2_mmbtu rtol=1e-4
+        @test r["annual_fuel_consumption_mmbtu"] - r["annual_fuel2_consumption_mmbtu"] ≈ fuel1_mmbtu rtol=1e-4
+        @test r["annual_fuel_consumption_mmbtu"] ≈ full_load_fuel_mmbtu_per_hour * 8760 rtol=1e-4
+
+        # Year-one fuel costs
+        @test r["year_one_fuel2_cost_before_tax"] ≈ fuel2_mmbtu * fuel2_cost_per_mmbtu rtol=1e-4
+        @test r["year_one_fuel_cost_before_tax"] ≈ fuel1_mmbtu * fuel1_cost_per_mmbtu + fuel2_mmbtu * fuel2_cost_per_mmbtu rtol=1e-4
+
+        # Lifecycle fuel costs: both fuels burn every year and escalate from year 1 at the Financial CHP fuel rate (fuel 2
+        # inherits fuel 1's rate)
+        pwf_fuel = REopt.annuity(analysis_years, s.financial.chp_fuel_cost_escalation_rate_fraction, s.financial.offtaker_discount_rate_fraction)
+        @test r["pwf_fuel"] ≈ pwf_fuel atol=1e-4
+        @test r["pwf_fuel2"] ≈ pwf_fuel atol=1e-4
+        @test r["lifecycle_fuel2_cost_after_tax"] ≈ fuel2_mmbtu * fuel2_cost_per_mmbtu * pwf_fuel * (1 - tax_rate) rtol=1e-4
+        @test r["lifecycle_fuel_cost_after_tax"] ≈ (fuel1_mmbtu * fuel1_cost_per_mmbtu + fuel2_mmbtu * fuel2_cost_per_mmbtu) * pwf_fuel * (1 - tax_rate) rtol=1e-4
+
+        # Onsite emissions blend the emissions factors of the two fuels
+        @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈
+            (fuel1_mmbtu * co2_lb_per_mmbtu_fuel1 + fuel2_mmbtu * co2_lb_per_mmbtu_fuel2) * REopt.TONNE_PER_LB rtol=1e-4
+
+        # Present worth factors in the Financial results
+        f = results["Financial"]
+        discount_rate = s.financial.offtaker_discount_rate_fraction
+        @test f["pwf_e"] ≈ REopt.annuity(analysis_years, s.financial.elec_cost_escalation_rate_fraction, discount_rate) atol=1e-4
+        @test f["pwf_om"] ≈ REopt.annuity(analysis_years, s.financial.om_cost_escalation_rate_fraction, s.financial.owner_discount_rate_fraction) atol=1e-4
+        @test f["pwf_offtaker"] ≈ REopt.annuity(analysis_years, 0.0, discount_rate) atol=1e-4
+        @test f["pwf_owner"] ≈ REopt.annuity(analysis_years, 0.0, s.financial.owner_discount_rate_fraction) atol=1e-4
+        @test f["third_party_factor"] == 1.0
+        @test !any(haskey(f, k) for k in ["pwf_fuel_existing_boiler", "pwf_fuel_boiler", "pwf_fuel_generator"])  # not modeled
+        for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
+            @test haskey(f, "pwf_emissions_cost_$(emissions_type)_grid")
+            @test haskey(f, "pwf_emissions_cost_$(emissions_type)_onsite")
+            @test haskey(f, "pwf_grid_emissions_$(emissions_type)")
+        end
+
+        finalize_models(m)
+    end
+
+    @testset "Volume-limited fuel 1 (monthly) with fuel 2" begin
+        max_fuel1_mmbtu_per_month = 1500.0  # below the fuel needed in any month, even February
+        d = chp_dual_fuel_inputs()
+        d["CHP"]["fuel_max_period"] = "month"
+        d["CHP"]["fuel_max_mmbtu_per_period"] = max_fuel1_mmbtu_per_month
+        s, p, m, results, _ = solve_chp_dual_fuel(d)
+        r = results["CHP"]
+
+        # In every month, fuel 1 is burned at its limit and fuel 2 supplies the rest of the fuel needed to serve the load
+        fuel1_kwh = [value(m[:dvFuelUsageFuel1]["CHP", ts]) for ts in p.time_steps]
+        fuel2_kwh = [value(m[:dvFuelUsageFuel2]["CHP", ts]) for ts in p.time_steps]
+        monthly_time_steps = REopt.get_monthly_time_steps(s.electric_load.year; time_steps_per_hour=s.settings.time_steps_per_hour)
+        for month_time_steps in monthly_time_steps
+            @test sum(fuel1_kwh[month_time_steps]) / kwh_per_mmbtu ≈ max_fuel1_mmbtu_per_month rtol=1e-4
+            @test sum(fuel2_kwh[month_time_steps]) / kwh_per_mmbtu ≈
+                full_load_fuel_mmbtu_per_hour * length(month_time_steps) - max_fuel1_mmbtu_per_month rtol=1e-4
+        end
+
+        # The CHP is sized to the peak total fuel use, which serves the load
+        peak_fuel_kw = maximum(fuel1_kwh .+ fuel2_kwh)
+        @test r["size_kw"] ≈ electric_efficiency * peak_fuel_kw rtol=1e-4
+        @test r["size_kw"] ≈ load_kw rtol=1e-4
+
+        fuel1_mmbtu = 12 * max_fuel1_mmbtu_per_month
+        fuel2_mmbtu = full_load_fuel_mmbtu_per_hour * 8760 - fuel1_mmbtu
+        @test r["annual_fuel2_consumption_mmbtu"] ≈ fuel2_mmbtu rtol=1e-4
+        @test r["annual_fuel_consumption_mmbtu"] - r["annual_fuel2_consumption_mmbtu"] ≈ fuel1_mmbtu rtol=1e-4
+        @test r["year_one_fuel_cost_before_tax"] ≈ fuel1_mmbtu * fuel1_cost_per_mmbtu + fuel2_mmbtu * fuel2_cost_per_mmbtu rtol=1e-4
+
+        finalize_models(m)
+    end
+
+    @testset "Rate-limited fuel 1 without fuel 2" begin
+        # Without fuel2_type, the limit is a hard cap on the CHP fuel use, which also limits the CHP size
+        max_fuel1_mmbtu_per_hour = 2.0
+        d = chp_dual_fuel_inputs(fuel2=false)
+        d["CHP"]["fuel_max_period"] = "hour"
+        d["CHP"]["fuel_max_mmbtu_per_period"] = max_fuel1_mmbtu_per_hour
+        s, p, m, results, _ = solve_chp_dual_fuel(d)
+        r = results["CHP"]
+
+        # No second fuel, so no fuel 2 results and no fuel 1 / fuel 2 split variables
+        @test !haskey(r, "annual_fuel2_consumption_mmbtu")
+        @test !haskey(m, :dvFuelUsageFuel1)
+
+        # The CHP burns the maximum fuel in every hour and is sized to the peak fuel use: size_kw = efficiency x peak fuel
+        fuel_kwh = [value(m[:dvFuelUsage]["CHP", ts]) for ts in p.time_steps]
+        @test all(isapprox.(fuel_kwh, max_fuel1_mmbtu_per_hour * kwh_per_mmbtu, rtol=1e-5))
+        @test r["size_kw"] ≈ electric_efficiency * maximum(fuel_kwh) rtol=1e-4
+        @test r["size_kw"] ≈ electric_efficiency * max_fuel1_mmbtu_per_hour * kwh_per_mmbtu rtol=1e-4
+        @test r["size_kw"] < load_kw  # the grid supplies the rest of the load
+
+        fuel_mmbtu = max_fuel1_mmbtu_per_hour * 8760
+        pwf_fuel = REopt.annuity(s.financial.analysis_years, s.financial.chp_fuel_cost_escalation_rate_fraction, s.financial.offtaker_discount_rate_fraction)
+        @test r["annual_fuel_consumption_mmbtu"] ≈ fuel_mmbtu rtol=1e-4
+        @test r["year_one_fuel_cost_before_tax"] ≈ fuel_mmbtu * fuel1_cost_per_mmbtu rtol=1e-4
+        @test r["pwf_fuel"] ≈ pwf_fuel atol=1e-4
+        @test r["lifecycle_fuel_cost_after_tax"] ≈ fuel_mmbtu * fuel1_cost_per_mmbtu * pwf_fuel * (1 - s.financial.offtaker_tax_rate_fraction) rtol=1e-4
+        @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ fuel_mmbtu * co2_lb_per_mmbtu_fuel1 * REopt.TONNE_PER_LB rtol=1e-4
+
+        finalize_models(m)
+    end
+
+    @testset "Long-term fuel switch with a heating load and a zero-emission fuel 2" begin
+        switch_year = 6
+        fuel2_escalation_rate = 0.02  # differs from fuel 1's rate (the Financial CHP fuel rate)
+        co2_cost_per_tonne = 100.0
+        co2_cost_escalation_rate = 0.04
+        d = chp_dual_fuel_inputs(heating=true)
+        d["CHP"]["fuel2_switch_start_year"] = switch_year
+        # A custom fuel 2 with no emissions, e.g. renewable hydrogen, for which every input must be provided
+        d["CHP"]["fuel2_type"] = "custom"
+        d["CHP"]["fuel2_cost_escalation_rate_fraction"] = fuel2_escalation_rate
+        d["CHP"]["fuel2_renewable_energy_fraction"] = 1.0
+        for k in ["CO2", "NOx", "SO2", "PM25"]
+            d["CHP"]["fuel2_emissions_factor_lb_$(k)_per_mmbtu"] = 0.0
+        end
+        # Monetize CO2 emissions in the objective
+        d["Settings"]["include_climate_in_objective"] = true
+        d["Financial"]["CO2_cost_per_tonne"] = co2_cost_per_tonne
+        d["Financial"]["CO2_cost_escalation_rate_fraction"] = co2_cost_escalation_rate
+        s, p, m, results, m_bau = solve_chp_dual_fuel(d; with_bau=true)
+        r = results["CHP"]
+        site = results["Site"]
+        analysis_years = s.financial.analysis_years
+        discount_rate = s.financial.offtaker_discount_rate_fraction
+        esc1 = s.financial.chp_fuel_cost_escalation_rate_fraction
+        tax_rate = s.financial.offtaker_tax_rate_fraction
+        n_fuel1_years = switch_year - 1
+        n_fuel2_years = analysis_years - n_fuel1_years
+        year_one_fuel_mmbtu = full_load_fuel_mmbtu_per_hour * 8760  # the same every year
+
+        # The dispatch is the same every year, so the CHP size is as in the other tests
+        fuel_kwh = [value(m[:dvFuelUsage]["CHP", ts]) for ts in p.time_steps]
+        @test r["size_kw"] ≈ electric_efficiency * maximum(fuel_kwh) rtol=1e-4
+        @test r["size_kw"] ≈ load_kw rtol=1e-4
+        @test r["annual_fuel_consumption_mmbtu"] ≈ year_one_fuel_mmbtu rtol=1e-4
+
+        # Year one burns only fuel 1: year_one_fuel2_cost_* is the hypothetical year-one cost of fuel 2
+        @test r["annual_fuel2_consumption_mmbtu"] == 0.0
+        @test r["year_one_fuel_cost_before_tax"] ≈ year_one_fuel_mmbtu * fuel1_cost_per_mmbtu rtol=1e-4
+        @test r["year_one_fuel2_cost_before_tax"] ≈ year_one_fuel_mmbtu * fuel2_cost_per_mmbtu rtol=1e-4
+        @test r["year_one_fuel2_cost_after_tax"] ≈ r["year_one_fuel2_cost_before_tax"] * (1 - tax_rate) rtol=1e-6
+
+        # Lifecycle fuel cost, built year by year: both prices are today's-dollars inputs that escalate from year 1 at their own
+        # rates, fuel 1 is used in years 1..(switch year - 1) and fuel 2 from the switch year on, and every year is discounted from year 1
+        expected_lifecycle_before_tax = sum(
+            year_one_fuel_mmbtu * (yr < switch_year ? fuel1_cost_per_mmbtu * (1 + esc1)^yr : fuel2_cost_per_mmbtu * (1 + fuel2_escalation_rate)^yr) /
+            (1 + discount_rate)^yr
+            for yr in 1:analysis_years
+        )
+        @test r["lifecycle_fuel_cost_after_tax"] ≈ expected_lifecycle_before_tax * (1 - tax_rate) rtol=1e-5
+
+        # The fuel present worth factors are split at the switch year
+        pwf_fuel1, pwf_fuel2 = REopt.annuity_split_periods(n_fuel1_years, n_fuel2_years, esc1, fuel2_escalation_rate, discount_rate)
+        @test r["pwf_fuel"] ≈ pwf_fuel1 atol=1e-4
+        @test r["pwf_fuel2"] ≈ pwf_fuel2 atol=1e-4
+        @test r["lifecycle_fuel2_cost_after_tax"] ≈ year_one_fuel_mmbtu * fuel2_cost_per_mmbtu * pwf_fuel2 * (1 - tax_rate) rtol=1e-5
+
+        # Heating load: the CHP thermal output is used in full and the existing boiler serves the rest of the thermal load
+        chp_thermal_mmbtu_per_hour = full_load_fuel_mmbtu_per_hour * thermal_efficiency
+        thermal_load_mmbtu_per_hour = heating_fuel_load_mmbtu_per_hour * boiler_efficiency
+        @test chp_thermal_mmbtu_per_hour < thermal_load_mmbtu_per_hour
+        @test r["annual_thermal_production_mmbtu"] ≈ chp_thermal_mmbtu_per_hour * 8760 rtol=1e-4
+        @test r["annual_thermal_curtailed_mmbtu"] ≈ 0.0 atol=1e-3
+        boiler_fuel_mmbtu = (thermal_load_mmbtu_per_hour - chp_thermal_mmbtu_per_hour) / boiler_efficiency * 8760
+        @test results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] ≈ boiler_fuel_mmbtu rtol=1e-4
+
+        # Lifecycle onsite emissions: fuel 1's emissions factor applies only in the years before the switch and fuel 2 has no
+        # emissions, while the boiler burns fuel in every year. Annual emissions are averaged over the analysis period.
+        chp_lb_per_mmbtu_fuel1 = Dict("CO2" => co2_lb_per_mmbtu_fuel1, "NOx" => 0.1, "SO2" => 0.01, "PM25" => 0.02)  # in chp_dual_fuel.json
+        for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
+            chp_lifecycle_lb = year_one_fuel_mmbtu * chp_lb_per_mmbtu_fuel1[emissions_type] * n_fuel1_years
+            boiler_lifecycle_lb = boiler_fuel_mmbtu * boiler_lb_per_mmbtu[emissions_type] * analysis_years
+            # The results are rounded to 2 decimals (lifecycle) and 3 decimals (annual)
+            @test site["lifecycle_emissions_from_fuelburn_tonnes_$(emissions_type)"] ≈ (chp_lifecycle_lb + boiler_lifecycle_lb) * REopt.TONNE_PER_LB rtol=1e-4 atol=0.01
+            @test site["annual_emissions_from_fuelburn_tonnes_$(emissions_type)"] ≈ (chp_lifecycle_lb + boiler_lifecycle_lb) * REopt.TONNE_PER_LB / analysis_years rtol=1e-4 atol=0.001
+        end
+
+        # Compared to the BAU, which only has the boiler, the CO2 reduction comes from the CHP fuel 1 years
+        bau_boiler_fuel_mmbtu = heating_fuel_load_mmbtu_per_hour * 8760
+        expected_lifecycle_co2_lb = year_one_fuel_mmbtu * co2_lb_per_mmbtu_fuel1 * n_fuel1_years + boiler_fuel_mmbtu * boiler_lb_per_mmbtu["CO2"] * analysis_years
+        bau_lifecycle_co2_lb = bau_boiler_fuel_mmbtu * boiler_lb_per_mmbtu["CO2"] * analysis_years
+        @test site["lifecycle_emissions_reduction_CO2_fraction"] ≈ 1 - expected_lifecycle_co2_lb / bau_lifecycle_co2_lb rtol=1e-4
+
+        # The monetized CO2 emissions use the same year-by-year emissions, escalated and discounted from year 1
+        expected_climate_cost = sum(
+            ((yr < switch_year ? year_one_fuel_mmbtu * co2_lb_per_mmbtu_fuel1 : 0.0) + boiler_fuel_mmbtu * boiler_lb_per_mmbtu["CO2"]) *
+            REopt.TONNE_PER_LB * co2_cost_per_tonne * (1 + co2_cost_escalation_rate)^yr / (1 + discount_rate)^yr
+            for yr in 1:analysis_years
+        )
+        @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ expected_climate_cost rtol=1e-4
+
+        # The pro forma cash flows are consistent with the lifecycle cost, which also includes the monetized emissions
+        optimal_lcc = results["Financial"]["lcc"] - results["Financial"]["lifecycle_emissions_cost_climate"]
+        optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])
+        @test isapprox(optimal_lcc, optimal_cashflow_sum, rtol=0.001)
+
+        # A switch year beyond the analysis period never reaches fuel 2 (the dispatch does not depend on the switch year)
+        d["CHP"]["fuel2_switch_start_year"] = analysis_years + 1
+        breakdown = REopt.chp_fuel_cost_breakdown(m, REoptInputs(Scenario(d)), "CHP")
+        @test breakdown.pwf_fuel2 == 0.0 && breakdown.lifecycle_fuel2 == 0.0 && breakdown.yr1_equivalent_fuel2 == 0.0
+        @test breakdown.pwf_fuel1 ≈ REopt.annuity(analysis_years, esc1, discount_rate) rtol=1e-12
+        @test breakdown.lifecycle_fuel1 ≈ year_one_fuel_mmbtu * fuel1_cost_per_mmbtu * REopt.annuity(analysis_years, esc1, discount_rate) rtol=1e-4
+
+        finalize_models(m, m_bau)
     end
 end
