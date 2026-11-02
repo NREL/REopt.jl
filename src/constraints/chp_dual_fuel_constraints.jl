@@ -189,8 +189,8 @@ function chp_fuel_switch_yr1_emissions_contributions(m, p, t::String, pollutant:
     chp = get_chp_by_name(t, p.s.chps)
     factor1 = getproperty(p, Symbol("tech_emissions_factors_$(pollutant)"))[t]
     factor2 = getproperty(chp, Symbol("fuel2_emissions_factor_lb_$(pollutant)_per_mmbtu")) / KWH_PER_MMBTU
-    yr1_fuel1 = @expression(m, p.hours_per_time_step * sum(m[:dvFuelUsage][t, ts] * factor1 for ts in p.time_steps))
-    yr1_fuel2 = @expression(m, p.hours_per_time_step * sum(m[:dvFuelUsage][t, ts] * factor2 for ts in p.time_steps))
+    yr1_fuel1 = @expression(m, sum(m[:dvFuelUsage][t, ts] * factor1 for ts in p.time_steps))
+    yr1_fuel2 = @expression(m, sum(m[:dvFuelUsage][t, ts] * factor2 for ts in p.time_steps))
     return yr1_fuel1, yr1_fuel2
 end
 

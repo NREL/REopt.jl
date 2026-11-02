@@ -71,16 +71,16 @@ function calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burnin
 	dual_fuel_chps = intersect(tech_array, chp_names_with_capacity_limited_dual_fuel(p))
 	single_factor_tech_array = setdiff(tech_array, dual_fuel_chps)
 
-	yr1_emissions_onsite_fuel_lbs_CO2 = @expression(m,p.hours_per_time_step*
+	yr1_emissions_onsite_fuel_lbs_CO2 = @expression(m,
 		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_CO2[t] for t in single_factor_tech_array, ts in p.time_steps))
 
-	yr1_emissions_onsite_fuel_lbs_NOx = @expression(m,p.hours_per_time_step*
+	yr1_emissions_onsite_fuel_lbs_NOx = @expression(m,
 		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_NOx[t] for t in single_factor_tech_array, ts in p.time_steps))
 
-	yr1_emissions_onsite_fuel_lbs_SO2 = @expression(m,p.hours_per_time_step*
+	yr1_emissions_onsite_fuel_lbs_SO2 = @expression(m,
 		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_SO2[t] for t in single_factor_tech_array, ts in p.time_steps))
 
-	yr1_emissions_onsite_fuel_lbs_PM25 = @expression(m,p.hours_per_time_step*
+	yr1_emissions_onsite_fuel_lbs_PM25 = @expression(m,
 		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_PM25[t] for t in single_factor_tech_array, ts in p.time_steps))
 
 	for t in dual_fuel_chps
@@ -90,16 +90,16 @@ function calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burnin
 		fuel2_factor_SO2 = chp.fuel2_emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
 		fuel2_factor_PM25 = chp.fuel2_emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU
 
-		yr1_emissions_onsite_fuel_lbs_CO2 += @expression(m, p.hours_per_time_step*sum(
+		yr1_emissions_onsite_fuel_lbs_CO2 += @expression(m, sum(
 			m[:dvFuelUsageFuel1][t,ts]*p.tech_emissions_factors_CO2[t] + m[:dvFuelUsageFuel2][t,ts]*fuel2_factor_CO2
 			for ts in p.time_steps))
-		yr1_emissions_onsite_fuel_lbs_NOx += @expression(m, p.hours_per_time_step*sum(
+		yr1_emissions_onsite_fuel_lbs_NOx += @expression(m, sum(
 			m[:dvFuelUsageFuel1][t,ts]*p.tech_emissions_factors_NOx[t] + m[:dvFuelUsageFuel2][t,ts]*fuel2_factor_NOx
 			for ts in p.time_steps))
-		yr1_emissions_onsite_fuel_lbs_SO2 += @expression(m, p.hours_per_time_step*sum(
+		yr1_emissions_onsite_fuel_lbs_SO2 += @expression(m, sum(
 			m[:dvFuelUsageFuel1][t,ts]*p.tech_emissions_factors_SO2[t] + m[:dvFuelUsageFuel2][t,ts]*fuel2_factor_SO2
 			for ts in p.time_steps))
-		yr1_emissions_onsite_fuel_lbs_PM25 += @expression(m, p.hours_per_time_step*sum(
+		yr1_emissions_onsite_fuel_lbs_PM25 += @expression(m, sum(
 			m[:dvFuelUsageFuel1][t,ts]*p.tech_emissions_factors_PM25[t] + m[:dvFuelUsageFuel2][t,ts]*fuel2_factor_PM25
 			for ts in p.time_steps))
 	end
