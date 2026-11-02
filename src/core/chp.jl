@@ -111,6 +111,12 @@ const CHP_CUSTOM_FUEL_INPUTS = [
 
     `fuel_cost_per_mmbtu` is always required and can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 
+!!! note "Dual-fuel limitations"
+    Fuel 2 is only used with a fuel limit (`fuel_max_period` and `fuel_max_mmbtu_per_period`) or a fuel switch (`fuel2_switch_start_year`); fuel2 inputs without either are rejected.
+    The fuel limits and the fuel 2 split apply to the normal (grid-connected) dispatch only, not to the CHP dispatch during modeled outages.
+    The renewable energy accounting (renewable electricity and heat fractions) uses only fuel 1's `fuel_renewable_energy_fraction`; `fuel2_renewable_energy_fraction` is not used in it.
+    A fuel switch cannot be combined with `existing_kw` > 0, because the business-as-usual emissions would not reflect the switch.
+
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
     # Required input
