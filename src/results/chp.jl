@@ -30,6 +30,8 @@
 - `thermal_production_series_mmbtu_per_hour`
 - `initial_capital_costs` Initial capital costs of the CHP system, before incentives [\$]
 - `annual_fuel2_consumption_mmbtu` Fuel 2 consumed in a year [MMBtu] (dual-fuel CHPs only; `annual_fuel_consumption_mmbtu` is the combined fuel 1 + fuel 2 total, same as for a single-fuel CHP — fuel 1's own consumption is that total minus this field)
+- `pwf_fuel` Present worth factor for the CHP fuel cost: the annuity over the analysis period at the CHP fuel cost escalation rate and the offtaker discount rate. With a long-term fuel switch (`fuel2_switch_start_year`), it covers only the years before the switch
+- `pwf_fuel2` Present worth factor for the fuel 2 cost (dual-fuel CHPs only): the annuity at the fuel 2 cost escalation rate and the offtaker discount rate. With a long-term fuel switch, it covers only the years from `fuel2_switch_start_year` on (0.0 if that is beyond the analysis period)
 - `year_one_fuel2_cost_before_tax`/`_after_tax` Year-one fuel 2 cost (dual-fuel CHPs only; `year_one_fuel_cost_before_tax`/`_after_tax` remain the combined fuel 1 + fuel 2 total). With a long-term fuel switch, fuel 2 is not used in year one, so this is the hypothetical year-one cost of fuel 2 (its input, today's-dollars price applied to the year-one dispatch) and `year_one_fuel_cost_before_tax`/`_after_tax` are fuel 1 only
 - `lifecycle_fuel2_cost_after_tax` Present value of fuel 2 cost, after tax (dual-fuel CHPs only; `lifecycle_fuel_cost_after_tax` remains the combined fuel 1 + fuel 2 total)
 !!! note "'Series' and 'Annual' energy outputs are average annual"
@@ -183,6 +185,7 @@ function get_chp_results_for_tech(m::JuMP.AbstractModel, p::REoptInputs, chp_nam
 	r["year_one_fuel_cost_before_tax"] = round(fuel_cost.yr1_fuel1 + fuel_cost.yr1_fuel2, digits=3)
 	r["year_one_fuel_cost_after_tax"] = r["year_one_fuel_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 	r["lifecycle_fuel_cost_after_tax"] = round(chp_fuel_cost_lifecycle * (1- p.s.financial.offtaker_tax_rate_fraction), digits=3)
+	r["pwf_fuel"] = round(fuel_cost.pwf_fuel1, digits=4)
 
 	is_dual_fuel = !isnothing(chp.fuel2_type)
 	if is_dual_fuel
@@ -195,6 +198,7 @@ function get_chp_results_for_tech(m::JuMP.AbstractModel, p::REoptInputs, chp_nam
 		r["year_one_fuel2_cost_before_tax"] = round(fuel_cost.yr1_equivalent_fuel2, digits=3)
 		r["year_one_fuel2_cost_after_tax"] = r["year_one_fuel2_cost_before_tax"] * (1 - p.s.financial.offtaker_tax_rate_fraction)
 		r["lifecycle_fuel2_cost_after_tax"] = round(fuel_cost.lifecycle_fuel2 * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=3)
+		r["pwf_fuel2"] = round(fuel_cost.pwf_fuel2, digits=4)
 	end
 
 	#Standby charges and hourly O&M

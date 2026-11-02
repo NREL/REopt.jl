@@ -11,6 +11,30 @@
 # DotEnv.load!()
 
 
+@testset "CHP monthly fuel costs" begin
+    monthly_costs = collect(1.0:12.0)
+    month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    for time_steps_per_hour in (1, 4)
+        input_data = JSON.parsefile(joinpath(@__DIR__, "scenarios", "chp_sizing.json"))
+        input_data["CHP"]["fuel_cost_per_mmbtu"] = JSON.parse(JSON.json(monthly_costs))
+        input_data["Settings"] = Dict("time_steps_per_hour" => time_steps_per_hour)
+        scenario = Scenario(input_data)
+        inputs = REoptInputs(scenario)
+        chp = only(scenario.chps)
+        fuel_costs = inputs.fuel_cost_per_kwh[chp.name]
+
+        @test chp.fuel_cost_per_mmbtu == monthly_costs
+        @test length(fuel_costs) == 8760 * time_steps_per_hour
+        first_step = 1
+        for month_index in 1:12
+            last_step = first_step + month_days[month_index] * 24 * time_steps_per_hour - 1
+            @test all(cost -> isapprox(cost, monthly_costs[month_index] / REopt.KWH_PER_MMBTU),
+                fuel_costs[first_step:last_step])
+            first_step = last_step + 1
+        end
+    end
+end
+
 ###############   Multiple CHPs Test    ###################
 @testset "Multiple CHPs" begin
     # With BAU Scenario
@@ -650,6 +674,11 @@ end
         @test r["annual_fuel_consumption_mmbtu"] - r["annual_fuel2_consumption_mmbtu"] > 0.0
         @test r["year_one_fuel_cost_before_tax"] - r["year_one_fuel2_cost_before_tax"] > 0.0
 
+        # Both fuels are burned every year, so both present worth factors cover the whole analysis period
+        pwf_all_years = REopt.annuity(s.financial.analysis_years, s.financial.chp_fuel_cost_escalation_rate_fraction, s.financial.offtaker_discount_rate_fraction)
+        @test isapprox(r["pwf_fuel"], pwf_all_years, atol=1e-4)
+        @test isapprox(r["pwf_fuel2"], pwf_all_years, atol=1e-4)  # fuel 2 inherits fuel 1's escalation rate
+
         optimal_lcc = results["Financial"]["lcc"]
         optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])
         @test isapprox(optimal_lcc, optimal_cashflow_sum, rtol=0.001)
@@ -734,6 +763,26 @@ end
             for yr in 1:analysis_years
         )
         @test isapprox(actual_lifecycle_before_tax, expected_lifecycle_before_tax, rtol=1e-5)
+
+        # Reported present worth factors: the CHP fuel factors are split at the switch year, so that
+        # lifecycle cost = year-one (or year-one equivalent) cost x factor for each fuel
+        pwf_fuel1, pwf_fuel2 = REopt.annuity_split_periods(switch_year - 1, analysis_years - switch_year + 1, esc, esc, discount_rate)
+        @test isapprox(r["pwf_fuel"], pwf_fuel1, atol=1e-4)
+        @test isapprox(r["pwf_fuel2"], pwf_fuel2, atol=1e-4)
+        financial = results["Financial"]
+        @test isapprox(financial["pwf_e"], REopt.annuity(analysis_years, s.financial.elec_cost_escalation_rate_fraction, discount_rate), atol=1e-4)
+        @test isapprox(financial["pwf_om"], REopt.annuity(analysis_years, s.financial.om_cost_escalation_rate_fraction, s.financial.owner_discount_rate_fraction), atol=1e-4)
+        @test isapprox(financial["pwf_offtaker"], REopt.annuity(analysis_years, 0.0, discount_rate), atol=1e-4)
+        @test isapprox(financial["pwf_owner"], REopt.annuity(analysis_years, 0.0, s.financial.owner_discount_rate_fraction), atol=1e-4)
+        @test financial["third_party_factor"] == 1.0
+        @test isapprox(financial["pwf_fuel_existing_boiler"],
+            REopt.annuity(analysis_years, s.financial.existing_boiler_fuel_cost_escalation_rate_fraction, discount_rate), atol=1e-4)
+        @test !haskey(financial, "pwf_fuel_boiler") && !haskey(financial, "pwf_fuel_generator")  # not modeled
+        for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
+            @test haskey(financial, "pwf_emissions_cost_$(emissions_type)_grid")
+            @test haskey(financial, "pwf_emissions_cost_$(emissions_type)_onsite")
+            @test haskey(financial, "pwf_grid_emissions_$(emissions_type)")
+        end
 
         optimal_lcc = results["Financial"]["lcc"]
         optimal_cashflow_sum = -1*sum(results["Financial"]["offtaker_discounted_annual_free_cashflows"])

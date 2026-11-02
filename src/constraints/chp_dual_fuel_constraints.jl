@@ -232,9 +232,11 @@ end
 """
     chp_fuel_cost_breakdown(m, p, chp_name::String)
 
-Return a `NamedTuple` `(yr1_fuel1, yr1_fuel2, yr1_equivalent_fuel2, lifecycle_fuel1, lifecycle_fuel2)`
-of \$ fuel costs for the (solved) CHP `chp_name`, correctly split across fuel 1 and fuel 2 for both
-dual-fuel modes. `yr1_*` are the actual year-1 dollar costs (for the long-term fuel-switch mode,
+Return a `NamedTuple` `(yr1_fuel1, yr1_fuel2, yr1_equivalent_fuel2, lifecycle_fuel1, lifecycle_fuel2, pwf_fuel1, pwf_fuel2)`
+of \$ fuel costs and the present worth factors applied to them (`lifecycle_fuel1 = yr1_fuel1 * pwf_fuel1`,
+`lifecycle_fuel2 = yr1_equivalent_fuel2 * pwf_fuel2`) for the (solved) CHP `chp_name`, correctly split across
+fuel 1 and fuel 2 for both dual-fuel modes. For the long-term fuel-switch mode, `pwf_fuel1` covers only the years
+before `fuel2_switch_start_year` and `pwf_fuel2` only the years from it on; `pwf_fuel2` is `0.0` without a fuel 2. `yr1_*` are the actual year-1 dollar costs (for the long-term fuel-switch mode,
 `yr1_fuel2` is always `0.0` since fuel 2 is never used in year 1). `yr1_equivalent_fuel2` is the basis
 used to escalate fuel 2's cost in `chp_annual_fuel_cost_nominal_series` (for the fuel-switch mode this
 is fuel 2's today's-dollars price applied to the year-1-repeating dispatch — not a real year-1 cost,
@@ -265,22 +267,24 @@ function chp_fuel_cost_breakdown(m, p, chp_name::String)
             lifecycle_fuel2 = yr1_equivalent_fuel2 * pwf2
         end
         return (yr1_fuel1=yr1_fuel1, yr1_fuel2=0.0, yr1_equivalent_fuel2=yr1_equivalent_fuel2,
-            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=lifecycle_fuel2)
+            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=lifecycle_fuel2, pwf_fuel1=pwf1, pwf_fuel2=pwf2)
 
     elseif !isnothing(chp.fuel2_type) && chp_has_fuel_capacity_limit(chp)
         yr1_fuel1 = sum(value(m[:dvFuelUsageFuel1][chp_name, ts]) * p.fuel_cost_per_kwh[chp_name][ts] for ts in p.time_steps)
         lifecycle_fuel1 = yr1_fuel1 * p.pwf_fuel[chp_name]
         fuel2_cost_per_kwh = chp_fuel2_cost_per_kwh(p, chp)
         yr1_fuel2 = sum(value(m[:dvFuelUsageFuel2][chp_name, ts]) * fuel2_cost_per_kwh[ts] for ts in p.time_steps)
-        lifecycle_fuel2 = yr1_fuel2 * chp_fuel2_pwf(p, chp)
+        pwf_fuel2 = chp_fuel2_pwf(p, chp)
+        lifecycle_fuel2 = yr1_fuel2 * pwf_fuel2
         return (yr1_fuel1=yr1_fuel1, yr1_fuel2=yr1_fuel2, yr1_equivalent_fuel2=yr1_fuel2,
-            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=lifecycle_fuel2)
+            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=lifecycle_fuel2,
+            pwf_fuel1=p.pwf_fuel[chp_name], pwf_fuel2=pwf_fuel2)
 
     else
         yr1_fuel1 = sum(value(m[:dvFuelUsage][chp_name, ts]) * p.fuel_cost_per_kwh[chp_name][ts] for ts in p.time_steps)
         lifecycle_fuel1 = yr1_fuel1 * p.pwf_fuel[chp_name]
         return (yr1_fuel1=yr1_fuel1, yr1_fuel2=0.0, yr1_equivalent_fuel2=0.0,
-            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=0.0)
+            lifecycle_fuel1=lifecycle_fuel1, lifecycle_fuel2=0.0, pwf_fuel1=p.pwf_fuel[chp_name], pwf_fuel2=0.0)
     end
 end
 
