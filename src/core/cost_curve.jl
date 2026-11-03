@@ -333,17 +333,29 @@ function cost_curve(tech::AbstractTech, financial::Financial)
 
         replacement_cost = 0.0
         replacement_year = financial.analysis_years
-        if nameof(T) in [:Generator, :GHP]  # Generator and GHP are currently only Techs with replacement year and cost
-            if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
-                replacement_cost = 0.0
+        if nameof(T) in [:Generator, :GHP] # Generator and GHP are currently only Techs with replacement year and cost
+            if nameof(T) in [:GHP]
+                if tech.replacement_year_1 >= financial.analysis_years # assume no replacement in final year of project
+                    replacement_cost_1 = 0.0
+                else
+                    replacement_cost_1 = tech.replace_cost_per_ton_1 
+                end
+                if tech.replacement_year_2 >= financial.analysis_years
+                    replacement_cost_2 = 0.0
+                else
+                    replacement_cost_2 = tech.replace_cost_per_ton_2 
+                end
+                replacement_cost = replacement_cost_1 + replacement_cost_2
+                replacement_year = min(tech.replacement_year_1, tech.replacement_year_2)
             else
-                if nameof(T) in [:GHP]
-                    replacement_cost = tech.replace_cost_per_ton
+                if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
+                    replacement_cost = 0.0
                 else
                     replacement_cost = tech.replace_cost_per_kw
                 end
+                replacement_year = tech.replacement_year
             end
-            replacement_year = tech.replacement_year
+            
         end
         updated_slope = effective_cost(;
             itc_basis = itc_unit_basis,  # input tech cost with incentives, but no ITC
