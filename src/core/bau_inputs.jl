@@ -1,4 +1,4 @@
-# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+# REopt®, Copyright (c) Alliance for Energy Innovation, LLC. See also https://github.com/NatLabRockies/REopt.jl/blob/master/LICENSE.
 """
     BAUInputs(p::REoptInputs)
 
@@ -25,11 +25,15 @@ function BAUInputs(p::REoptInputs)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
-    cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
-    heating_cop = Dict{String, Float64}()
+    heating_cop = Dict{String, Array{Float64,1}}()
+    cooling_cop = Dict{String, Array{Float64,1}}()
+    chp_params = Dict{String, Dict{Symbol, Float64}}()
+    heating_cf = Dict{String, Array{Float64,1}}() 
+    cooling_cf = Dict{String, Array{Float64,1}}() 
+    avoided_capex_by_ashp_present_value = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
-    tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
+    tech_renewable_energy_fraction = Dict(t => 0.0 for t in union(techs.fuel_burning, techs.elec))
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
@@ -39,6 +43,8 @@ function BAUInputs(p::REoptInputs)
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in p.s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+    storage_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in p.s.electric_tariff.export_bins) # Empty for BAU since cannot model "existing storage"
+    export_bins_by_storage = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
@@ -61,10 +67,13 @@ function BAUInputs(p::REoptInputs)
         levelization_factor[pvname] = p.levelization_factor[pvname]
         cap_cost_slope[pvname] = 0.0
         tech_renewable_energy_fraction[pvname] = 1.0
+        if pvname in p.techs.pbi
+            push!(techs.pbi, pvname)
+        end
         pv = get_pv_by_name(pvname, p.s.pvs)
-        fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
+        fillin_techs_by_exportbin(techs_by_exportbin, pv, pvname)
         if !pv.can_curtail
-            push!(techs.no_curtail, pv.name)
+            push!(techs.no_curtail, pvname)
         end
     end
 
@@ -75,7 +84,11 @@ function BAUInputs(p::REoptInputs)
         cap_cost_slope["Generator"] = 0.0
         om_cost_per_kw["Generator"] = p.s.generator.om_cost_per_kw
         production_factor["Generator", :] = p.production_factor["Generator", :]
+        tech_renewable_energy_fraction["Generator"] = p.s.generator.fuel_renewable_energy_fraction
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
+        if "Generator" in p.techs.pbi
+            push!(techs.pbi, "Generator")
+        end
         if !p.s.generator.can_curtail
             push!(techs.no_curtail, "Generator")
         end
@@ -84,15 +97,51 @@ function BAUInputs(p::REoptInputs)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(bau_scenario, techs)
 
-    if "ExistingBoiler" in techs.all
-        setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+    for chp in bau_scenario.chps
+        chp_name = chp.name
+        max_sizes[chp_name] = chp.existing_kw
+        min_sizes[chp_name] = chp.existing_kw
+        existing_sizes[chp_name] = chp.existing_kw
+        cap_cost_slope[chp_name] = 0.0
+        om_cost_per_kw[chp_name] = chp.om_cost_per_kw
+        production_factor[chp_name, :] = p.production_factor[chp_name, :]
+        tech_renewable_energy_fraction[chp_name] = chp.fuel_renewable_energy_fraction
+        tech_emissions_factors_CO2[chp_name] = chp.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU
+        tech_emissions_factors_NOx[chp_name] = chp.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
+        tech_emissions_factors_SO2[chp_name] = chp.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
+        tech_emissions_factors_PM25[chp_name] = chp.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU
+        fillin_techs_by_exportbin(techs_by_exportbin, chp, chp_name)
+        if chp_name in p.techs.pbi
+            push!(techs.pbi, chp_name)
+        end
+        if !chp.can_curtail
+            push!(techs.no_curtail, chp_name)
+        end
+        chp_fuel_cost_per_kwh = chp.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
+        fuel_cost_per_kwh[chp_name] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, p.s.settings.time_steps_per_hour, chp_name)
+        heating_cf[chp_name] = ones(8760 * p.s.settings.time_steps_per_hour)
+        chp_params[chp_name] = Dict{Symbol, Float64}(
+            :electric_efficiency_full_load => chp.electric_efficiency_full_load,
+            :electric_efficiency_half_load => chp.electric_efficiency_half_load,
+            :thermal_efficiency_full_load => chp.thermal_efficiency_full_load,
+            :thermal_efficiency_half_load => chp.thermal_efficiency_half_load,
+            :min_turn_down_fraction => chp.min_turn_down_fraction,
+            :supplementary_firing_efficiency => chp.supplementary_firing_efficiency,
+            :supplementary_firing_max_ratio => chp.supplementary_firing_max_ratio,
+            :om_cost_per_kwh => chp.om_cost_per_kwh,
+            :ramp_rate_fraction_per_hour => chp.ramp_rate_fraction_per_hour
+        )
     end
 
+    if "ExistingBoiler" in techs.all
+        setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+            heating_cf)
+    end
+
+    cooling_cop["ExistingChiller"] = ones(length(p.time_steps))
     if "ExistingChiller" in techs.all
-        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
-    else
-        cop["ExistingChiller"] = 1.0
+        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop, cooling_cf)
     end
 
     # Assign null GHP parameters for REoptInputs
@@ -166,7 +215,6 @@ function BAUInputs(p::REoptInputs)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        cop,
         thermal_cop,
         p.time_steps,
         p.time_steps_with_grid,
@@ -190,11 +238,13 @@ function BAUInputs(p::REoptInputs)
         p.ratchets,
         techs_by_exportbin,
         export_bins_by_tech,
+        storage_by_exportbin,
+        export_bins_by_storage,
         n_segs_by_tech,
         seg_min_size,
         seg_max_size,
         seg_yint,
-        pbi_pwf, 
+        pbi_pwf, # Same pbi dict as optimal case
         pbi_max_benefit, 
         pbi_max_kw, 
         pbi_benefit_per_kwh,
@@ -219,11 +269,16 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
         heating_cop,
+        cooling_cop,
+        heating_cf,
+        cooling_cf,
         heating_loads,
         heating_loads_kw,
         heating_loads_served_by_tes,
         unavailability,
-        absorption_chillers_using_heating_load
+        absorption_chillers_using_heating_load,
+        avoided_capex_by_ashp_present_value,
+        chp_params
     )
 end
 
@@ -265,6 +320,40 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
         bau_grid_to_load_critical .-= p.levelization_factor[pv.name] * pv.existing_kw * p.production_factor[pv.name, :].data
     end end
 
+    ## Existing CHP net emissions estimate. Accounts for: fuel-burn emissions, displaced boiler fuel, displaced grid electricity
+    bau_chp_fuel_emissions_lb_CO2_per_year = 0.0
+    for chp in p.s.chps
+        if chp.existing_kw > 0
+            avg_prod_factor = sum(p.production_factor[chp.name, :].data) / length(p.time_steps)
+            annual_elec_kwh = chp.existing_kw * avg_prod_factor * 8760.0
+
+            # Fuel consumption and associated emissions
+            annual_fuel_kwh = annual_elec_kwh / chp.electric_efficiency_full_load
+            annual_fuel_mmbtu = annual_fuel_kwh / KWH_PER_MMBTU
+            bau_chp_fuel_emissions_lb_CO2_per_year += annual_fuel_mmbtu * chp.emissions_factor_lb_CO2_per_mmbtu
+
+            # Credit for displaced boiler fuel (capped at total heating load)
+            annual_thermal_mmbtu = annual_fuel_mmbtu * chp.thermal_efficiency_full_load
+            if !isnothing(p.s.existing_boiler)
+                total_heating_load_mmbtu = sum(
+                    getproperty(p.s, Symbol("$(ht)_load")).annual_mmbtu 
+                    for ht in ["space_heating", "dhw", "process_heat"]
+                    if hasproperty(p.s, Symbol("$(ht)_load")) && !isnothing(getproperty(p.s, Symbol("$(ht)_load")))
+                )
+                boiler_fuel_displaced_mmbtu = min(
+                    annual_thermal_mmbtu / p.s.existing_boiler.efficiency,
+                    total_heating_load_mmbtu / p.s.existing_boiler.efficiency
+                )
+                bau_chp_fuel_emissions_lb_CO2_per_year -= boiler_fuel_displaced_mmbtu * p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
+            end
+
+            # Credit for displaced grid electricity (capped at total electric load)
+            chp_elec_displacement_kwh = min(annual_elec_kwh, sum(s_bau.electric_load.loads_kw) * p.hours_per_time_step)
+            avg_grid_ef = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / length(p.time_steps)
+            bau_chp_fuel_emissions_lb_CO2_per_year -= chp_elec_displacement_kwh * avg_grid_ef
+        end
+    end
+
     #No grid emissions, or pv exporting to grid, during an outage
     if p.s.electric_utility.outage_start_time_step != 0 && p.s.electric_utility.outage_end_time_step != 0
         for i in range(p.s.electric_utility.outage_start_time_step, stop=p.s.electric_utility.outage_end_time_step)
@@ -277,7 +366,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
         bau_grid_to_load = [max(i,0) for i in bau_grid_to_load]
     end
 
-    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
+    bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) * p.hours_per_time_step
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
     ## Generator emissions (during outages)
@@ -294,6 +383,9 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
                                                 p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
         end
     end
+
+    ## Existing CHP net emissions
+    bau_emissions_lb_CO2_per_year += bau_chp_fuel_emissions_lb_CO2_per_year
 
     p.s.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
     p.s.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year

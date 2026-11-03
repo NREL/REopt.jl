@@ -1,4 +1,4 @@
-# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+# REopt®, Copyright (c) Alliance for Energy Innovation, LLC. See also https://github.com/NatLabRockies/REopt.jl/blob/master/LICENSE.
 """
     Techs(p::REoptInputs, s::BAUScenario)
 
@@ -29,6 +29,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     techs_can_serve_dhw = String[]
     techs_can_serve_process_heat = String[]
     ghp_techs = String[]
+    ashp_techs = String[]
+    ashp_wh_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -54,6 +56,27 @@ function Techs(p::REoptInputs, s::BAUScenario)
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
         push!(electric_chillers, "ExistingChiller")
+    end
+
+    for chp in s.chps
+        push!(all_techs, chp.name)
+        push!(chp_techs, chp.name)
+        push!(elec, chp.name)
+        if !chp.is_electric_only
+            push!(heating_techs, chp.name)
+        end
+        if chp.can_serve_space_heating
+            push!(techs_can_serve_space_heating, chp.name)
+        end
+        if chp.can_serve_dhw
+            push!(techs_can_serve_dhw, chp.name)
+        end
+        if chp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, chp.name)
+        end
+        if chp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, chp.name)
+        end
     end
 
     cooling_techs = union(electric_chillers, absorption_chillers)
@@ -85,7 +108,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         techs_can_serve_space_heating,
         techs_can_serve_dhw,
         techs_can_serve_process_heat,
-        ghp_techs
+        ghp_techs,
+        ashp_techs,
+        ashp_wh_techs
     )
 end
 
@@ -100,6 +125,11 @@ function Techs(s::Scenario)
     pvtechs = String[pv.name for pv in s.pvs]
     if length(Base.Set(pvtechs)) != length(pvtechs)
         throw(@error("PV names must be unique, got $(pvtechs)"))
+    end
+
+    chp_names = String[chp.name for chp in s.chps]
+    if length(Base.Set(chp_names)) != length(chp_names)
+        throw(@error("CHP names must be unique, got $(chp_names)"))
     end
 
     all_techs = copy(pvtechs)
@@ -124,6 +154,8 @@ function Techs(s::Scenario)
     techs_can_serve_dhw = String[] 
     techs_can_serve_process_heat = String[]
     ghp_techs = String[]
+    ashp_techs = String[]
+    ashp_wh_techs = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -180,21 +212,28 @@ function Techs(s::Scenario)
         end
     end
     
-    if !isnothing(s.chp)
-        push!(all_techs, "CHP")
-        push!(elec, "CHP")
-        push!(chp_techs, "CHP")
-        if s.chp.can_supply_steam_turbine
-            push!(techs_can_supply_steam_turbine, "CHP")
+    for chp in s.chps
+        push!(all_techs, chp.name)
+        push!(chp_techs, chp.name)
+        push!(elec, chp.name)
+        if chp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, chp.name)
         end
-        if s.chp.can_serve_space_heating
-            push!(techs_can_serve_space_heating, "CHP")
+        if chp.can_serve_space_heating
+            push!(techs_can_serve_space_heating, chp.name)
         end
-        if s.chp.can_serve_dhw
-            push!(techs_can_serve_dhw, "CHP")
+        if chp.can_serve_dhw
+            push!(techs_can_serve_dhw, chp.name)
         end
-        if s.chp.can_serve_process_heat
-            push!(techs_can_serve_process_heat, "CHP")
+        if chp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, chp.name)
+        end
+        if s.settings.off_grid_flag
+            if chp.operating_reserve_required_fraction > 0.0
+                push!(requiring_oper_res, chp.name)
+            else
+                push!(providing_oper_res, chp.name)
+            end
         end
     end
 
@@ -262,14 +301,109 @@ function Techs(s::Scenario)
             push!(techs_can_serve_process_heat, "ElectricHeater")
         end
     end
+    
+    if !isnothing(s.cst)
+        push!(all_techs, "CST")
+        push!(heating_techs, "CST")
+        push!(electric_heaters, "CST")
+        if s.cst.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "CST")
+        end
+        if s.cst.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "CST")
+        end
+        if s.cst.can_serve_dhw
+            push!(techs_can_serve_dhw, "CST")
+        end
+        if s.cst.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "CST")
+        end
+    end
+
+    if !isnothing(s.ashp)
+        push!(all_techs, "ASHPSpaceHeater")
+        push!(heating_techs, "ASHPSpaceHeater")
+        push!(electric_heaters, "ASHPSpaceHeater")
+        push!(ashp_techs, "ASHPSpaceHeater")
+        if s.ashp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ASHPSpaceHeater")
+        end
+        if s.ashp.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ASHPSpaceHeater")
+        end
+        if s.ashp.can_serve_dhw
+            push!(techs_can_serve_dhw, "ASHPSpaceHeater")
+        end
+        if s.ashp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ASHPSpaceHeater")
+        end
+        if s.ashp.can_serve_cooling
+            push!(cooling_techs, "ASHPSpaceHeater")
+        end
+    end
+
+    if !isnothing(s.ashp_wh)
+        push!(all_techs, "ASHPWaterHeater")
+        push!(heating_techs, "ASHPWaterHeater")
+        push!(electric_heaters, "ASHPWaterHeater")
+        push!(ashp_techs, "ASHPWaterHeater")
+        push!(ashp_wh_techs, "ASHPWaterHeater")
+        if s.ashp_wh.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ASHPWaterHeater")
+        end
+        if s.ashp_wh.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ASHPWaterHeater")
+        end
+        if s.ashp_wh.can_serve_dhw
+            push!(techs_can_serve_dhw, "ASHPWaterHeater")
+        end
+        if s.ashp_wh.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ASHPWaterHeater")
+        end
+        if s.ashp_wh.can_serve_cooling
+            push!(cooling_techs, "ASHPWaterHeater")
+        end
+    end
 
     if s.settings.off_grid_flag
         append!(requiring_oper_res, pvtechs)
         append!(providing_oper_res, pvtechs)
     end
 
+    # Zero out can_serve_* lists when the corresponding load is zero,
+    # UNLESS AbsorptionChiller is using that heating quality as its heat source
+    # (in which case techs must remain available to supply heat to the AC even though direct load is zero).
+    ac_heating_load = !isnothing(s.absorption_chiller) ? s.absorption_chiller.heating_load_input : nothing
+    if sum(s.dhw_load.loads_kw) == 0.0 && ac_heating_load != "DomesticHotWater"
+        techs_can_serve_dhw = String[]
+    end
+    if sum(s.space_heating_load.loads_kw) == 0.0 && ac_heating_load != "SpaceHeating"
+        techs_can_serve_space_heating = String[]
+    end
+    if sum(s.process_heat_load.loads_kw) == 0.0 && ac_heating_load != "ProcessHeat"
+        techs_can_serve_process_heat = String[]
+    end
+
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
+
+    # check for ability of new technologies to meet heating loads if retire_in_optimal
+    if !isnothing(s.existing_boiler) && s.existing_boiler.retire_in_optimal
+        if !isnothing(s.dhw_load) && s.dhw_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_dhw, "ExistingBoiler"))
+            throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet DomesticHotWater load."))
+        end
+        if !isnothing(s.space_heating_load) && s.space_heating_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_space_heating, "ExistingBoiler"))
+            throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet SpaceHeating load."))
+        end
+        if !isnothing(s.process_heat_load) && s.process_heat_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_process_heat, "ExistingBoiler"))
+            throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load."))
+        end 
+    end
+    if !isnothing(s.existing_chiller) && s.existing_chiller.retire_in_optimal
+        if !isnothing(s.cooling_load) && sum(s.cooling_load.loads_kw_thermal) > 0 && isempty(setdiff(cooling_techs, "ExistingChiller"))
+            throw(@error("ExisitingChiller.retire_in_optimal is true, but no other technologies can meet cooling load."))
+        end 
+    end
 
     Techs(
         all_techs,
@@ -296,7 +430,9 @@ function Techs(s::Scenario)
         techs_can_serve_space_heating,
         techs_can_serve_dhw,
         techs_can_serve_process_heat,
-        ghp_techs
+        ghp_techs,
+        ashp_techs,
+        ashp_wh_techs
     )
 end
 
@@ -328,6 +464,8 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
+        String[],
         String[],
         String[],
         String[],
