@@ -95,8 +95,6 @@ function BAUInputs(p::REoptInputs)
         fuel_cost_per_kwh["Generator"] = p.fuel_cost_per_kwh["Generator"]        
     end
 
-    pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(bau_scenario, techs)
-
     for chp in bau_scenario.chps
         chp_name = chp.name
         max_sizes[chp_name] = chp.existing_kw
@@ -244,10 +242,10 @@ function BAUInputs(p::REoptInputs)
         seg_min_size,
         seg_max_size,
         seg_yint,
-        pbi_pwf, # Same pbi dict as optimal case
-        pbi_max_benefit, 
-        pbi_max_kw, 
-        pbi_benefit_per_kwh,
+        p.pbi_pwf, # Same pbi dict as optimal case
+        p.pbi_max_benefit, 
+        p.pbi_max_kw, 
+        p.pbi_benefit_per_kwh,
         boiler_efficiency,
         fuel_cost_per_kwh,
         ghp_options,
