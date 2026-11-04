@@ -225,8 +225,8 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
             ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.generator.replacement_year)
     end
     
-    write("/Users/apham/Documents/Projects/REopt_Projects/FY27/GHP replacement cost/test/p.json",JSON.json(p))
-    write("/Users/apham/Documents/Projects/REopt_Projects/FY27/GHP replacement cost/test/ps.json",JSON.json(p.s))
+    #write("/Users/apham/Documents/Projects/REopt_Projects/FY27/GHP replacement cost/test/p.json",JSON.json(p))
+    #write("/Users/apham/Documents/Projects/REopt_Projects/FY27/GHP replacement cost/test/ps.json",JSON.json(p.s))
 
     ghp_option_chosen = 1
     """
